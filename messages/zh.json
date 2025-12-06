@@ -1,0 +1,193 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "search": "搜索",
+    "submit": "提交",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "close": "关闭",
+    "retry": "重试",
+    "progress": "进度",
+    "continue": "继续",
+    "result": "结果",
+    "minutesAgo": "分钟前",
+    "hoursAgo": "小时前",
+    "daysAgo": "天前"
+  },
+  "language": {
+    "interfaceLanguage": "界面语言",
+    "interfaceLanguageTooltip": "切换应用界面的显示语言",
+    "currentInterfaceLanguage": "当前界面语言",
+    "changeInterfaceLanguage": "切换界面语言",
+    "languageUpdated": "语言设置已更新",
+    "use": "使用"
+  },
+  "nav": {
+    "home": "首页",
+    "dashboard": "控制台",
+    "admin": "管理后台",
+    "login": "登录",
+    "getStarted": "开始使用",
+    "startCreating": "开始创作",
+    "myProjects": "我的项目",
+    "createProject": "开始创作",
+    "logout": "退出登录",
+    "profile": "个人资料"
+  },
+  "admin": {
+    "title": "管理后台",
+    "settings": "设置"
+  },
+  "auth": {
+    "title": "欢迎回来",
+    "subtitle": "使用您的 Google 账号继续",
+    "description": "登录以访问您的控制台",
+    "googleLogin": "使用 Google 登录",
+    "loggingIn": "连接中...",
+    "loginError": "登录失败，请重试",
+    "loginRequired": "请登录后访问此页面",
+    "agreeToTerms": "继续即表示您同意我们的",
+    "termsOfService": "用户协议",
+    "privacyPolicy": "隐私政策",
+    "and": "和"
+  },
+  "home": {
+    "title": "CineQo",
+    "subtitle": "专业的微短剧创作工具",
+    "slogan": "让创作更简单，让故事更精彩",
+    "description": "从剧本到成片，一站式微短剧创作平台。AI 辅助创作，助力内容创作者高效产出优质微短剧作品。",
+    "getStarted": "开始创作",
+    "learnMore": "了解更多",
+    "hero": {
+      "title": "专业的微短剧",
+      "titleHighlight": "创作工具",
+      "subtitle": "从剧本到成片，一站式微短剧创作平台"
+    },
+    "features": {
+      "title": "强大的创作功能",
+      "subtitle": "完整的微短剧创作工具链，助力您的创作之旅",
+      "script": {
+        "title": "AI 剧本创作",
+        "description": "智能剧本生成与编辑，支持分集管理。AI 辅助对话创作，让故事更生动精彩。",
+        "badge": "已上线"
+      },
+      "storyboard": {
+        "title": "分镜设计",
+        "description": "可视化分镜编辑器，精准把控每个镜头。支持镜头类型、运镜方式等专业设置。",
+        "badge": "即将推出"
+      },
+      "character": {
+        "title": "角色管理",
+        "description": "统一管理剧中角色，设定角色属性、关系与弧光。确保角色形象的一致性。",
+        "badge": "即将推出"
+      },
+      "scene": {
+        "title": "场景管理",
+        "description": "场景库管理与复用，支持场景描述、道具清单。让每个场景都独具特色。",
+        "badge": "即将推出"
+      },
+      "ai": {
+        "title": "AI 成片",
+        "description": "AI 驱动的自动化成片流程，从文字到视频一键生成。大幅提升创作效率。",
+        "badge": "即将推出"
+      },
+      "edit": {
+        "title": "智能剪辑",
+        "description": "智能视频剪辑工具，支持快速调色、转场、特效。让作品更具专业质感。",
+        "badge": "即将推出"
+      }
+    },
+    "workflow": {
+      "title": "完整的创作工作流",
+      "step1": {
+        "title": "剧本创作",
+        "description": "使用 AI 辅助创作精彩剧本"
+      },
+      "step2": {
+        "title": "角色与场景",
+        "description": "设计角色形象与场景氛围"
+      },
+      "step3": {
+        "title": "分镜设计",
+        "description": "规划每一个镜头与运镜"
+      },
+      "step4": {
+        "title": "AI 成片",
+        "description": "自动化生成高质量视频"
+      }
+    },
+    "cta": {
+      "title": "开始创作您的微短剧",
+      "description": "加入 CineQo，体验专业的创作工具，让您的故事触动更多人",
+      "button": "免费开始创作"
+    }
+  },
+  "dashboard": {
+    "title": "控制台",
+    "welcome": "欢迎回来，{name}"
+  },
+  "chat": {
+    "me": "我",
+    "typing": "正在输入...",
+    "send": "发送",
+    "inputPlaceholder": "输入消息..."
+  },
+  "errors": {
+    "notFound": "页面未找到",
+    "unauthorized": "未授权",
+    "forbidden": "禁止访问",
+    "serverError": "服务器错误",
+    "networkError": "网络错误",
+    "unknownError": "未知错误"
+  },
+  "sidebar": {
+    "discover": "控制台"
+  },
+  "projects": {
+    "nav": {
+      "scripts": "剧本",
+      "storyboard": "分镜",
+      "characters": "角色管理",
+      "settings": "项目设置"
+    },
+    "storyboard": {
+      "selectEpisode": "选择剧集",
+      "pleaseSelectEpisode": "请选择剧集",
+      "episode": "第 {order} 集",
+      "shots": "{count} 个分镜",
+      "noEpisodes": {
+        "title": "还没有剧集",
+        "description": "请先在剧本页面创建剧集，然后再添加分镜",
+        "action": "前往剧本"
+      },
+      "incompleteEpisode": {
+        "title": "剧集信息待完善",
+        "description": "建议梳理清楚剧集信息（梗概、钩子、剧本），这样会有更好的创作思路",
+        "detail": "",
+        "action": "去补充"
+      },
+      "noShots": {
+        "title": "还没有分镜",
+        "description": "点击下方按钮为「{title}」添加第一个分镜",
+        "action": "添加分镜"
+      },
+      "addShot": "添加分镜"
+    }
+  },
+  "footer": {
+    "privacy": "隐私政策",
+    "terms": "用户协议",
+    "copyright": "保留所有权利"
+  },
+  "tools": {
+  }
+}

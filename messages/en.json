@@ -1,0 +1,193 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "retry": "Retry",
+    "progress": "Progress",
+    "continue": "Continue",
+    "result": "Result",
+    "minutesAgo": "min ago",
+    "hoursAgo": "hr ago",
+    "daysAgo": "d ago"
+  },
+  "language": {
+    "interfaceLanguage": "Interface Language",
+    "interfaceLanguageTooltip": "Switch the display language of the app interface",
+    "currentInterfaceLanguage": "Current Interface Language",
+    "changeInterfaceLanguage": "Change Interface Language",
+    "languageUpdated": "Language settings updated",
+    "use": "Use"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "startCreating": "Start Creating",
+    "myProjects": "My Projects",
+    "createProject": "Start Creating",
+    "logout": "Logout",
+    "profile": "Profile"
+  },
+  "admin": {
+    "title": "Admin",
+    "settings": "Settings"
+  },
+  "auth": {
+    "title": "Welcome Back",
+    "subtitle": "Continue with your Google account",
+    "description": "Sign in to access your dashboard",
+    "googleLogin": "Continue with Google",
+    "loggingIn": "Connecting...",
+    "loginError": "Login failed, please try again",
+    "loginRequired": "Please login to access this page",
+    "agreeToTerms": "By continuing, you agree to our",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "and": "and"
+  },
+  "home": {
+    "title": "CineQo",
+    "subtitle": "Professional Micro-Drama Creation Tool",
+    "slogan": "Make creation easier, make stories better",
+    "description": "From script to final cut, an all-in-one micro-drama creation platform. AI-assisted creation to help content creators efficiently produce high-quality micro-drama works.",
+    "getStarted": "Start Creating",
+    "learnMore": "Learn More",
+    "hero": {
+      "title": "Professional Micro-Drama",
+      "titleHighlight": "Creation Tool",
+      "subtitle": "From script to final cut, an all-in-one micro-drama creation platform"
+    },
+    "features": {
+      "title": "Powerful Creation Features",
+      "subtitle": "Complete micro-drama creation toolchain to empower your creative journey",
+      "script": {
+        "title": "AI Script Writing",
+        "description": "Intelligent script generation and editing with episode management. AI-assisted dialogue creation for more vivid stories.",
+        "badge": "Available Now"
+      },
+      "storyboard": {
+        "title": "Storyboard Design",
+        "description": "Visual storyboard editor for precise shot control. Support for professional settings like shot types and camera movements.",
+        "badge": "Coming Soon"
+      },
+      "character": {
+        "title": "Character Management",
+        "description": "Unified character management with attributes, relationships, and arcs. Ensure consistency in character portrayal.",
+        "badge": "Coming Soon"
+      },
+      "scene": {
+        "title": "Scene Management",
+        "description": "Scene library management and reuse with descriptions and prop lists. Make every scene unique.",
+        "badge": "Coming Soon"
+      },
+      "ai": {
+        "title": "AI Video Production",
+        "description": "AI-powered automated video production workflow. Generate videos from text with one click. Dramatically improve creation efficiency.",
+        "badge": "Coming Soon"
+      },
+      "edit": {
+        "title": "Smart Editing",
+        "description": "Intelligent video editing tools with quick color grading, transitions, and effects. Give your work a professional touch.",
+        "badge": "Coming Soon"
+      }
+    },
+    "workflow": {
+      "title": "Complete Creation Workflow",
+      "step1": {
+        "title": "Script Writing",
+        "description": "Create amazing scripts with AI assistance"
+      },
+      "step2": {
+        "title": "Characters & Scenes",
+        "description": "Design character images and scene atmosphere"
+      },
+      "step3": {
+        "title": "Storyboard Design",
+        "description": "Plan every shot and camera movement"
+      },
+      "step4": {
+        "title": "AI Production",
+        "description": "Automatically generate high-quality videos"
+      }
+    },
+    "cta": {
+      "title": "Start Creating Your Micro-Drama",
+      "description": "Join CineQo and experience professional creation tools that bring your stories to life",
+      "button": "Start Creating for Free"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {name}"
+  },
+  "chat": {
+    "me": "Me",
+    "typing": "typing...",
+    "send": "Send",
+    "inputPlaceholder": "Type a message..."
+  },
+  "errors": {
+    "notFound": "Page Not Found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "serverError": "Server Error",
+    "networkError": "Network Error",
+    "unknownError": "Unknown Error"
+  },
+  "sidebar": {
+    "discover": "Dashboard"
+  },
+  "projects": {
+    "nav": {
+      "scripts": "Scripts",
+      "storyboard": "Storyboard",
+      "characters": "Characters",
+      "settings": "Project Settings"
+    },
+    "storyboard": {
+      "selectEpisode": "Select Episode",
+      "pleaseSelectEpisode": "Please select an episode",
+      "episode": "Episode {order}",
+      "shots": "{count} shots",
+      "noEpisodes": {
+        "title": "No Episodes Yet",
+        "description": "Please create episodes in the scripts page first, then add storyboards",
+        "action": "Go to Scripts"
+      },
+      "incompleteEpisode": {
+        "title": "Episode Information Incomplete",
+        "description": "It is recommended to complete the episode information (summary, hook, script) for better creative ideas.",
+        "detail": "",
+        "action": "Edit Script"
+      },
+      "noShots": {
+        "title": "No Shots Yet",
+        "description": "Click the button below to add the first shot for \"{title}\"",
+        "action": "Add Shot"
+      },
+      "addShot": "Add Shot"
+    }
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "copyright": "All rights reserved"
+  },
+  "tools": {
+  }
+}

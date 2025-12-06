@@ -1,0 +1,18 @@
+User-agent: *
+
+# 允许公开页面
+
+# 禁止抓取
+
+# Sitemap
+
+# 搜索引擎特定配置
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
