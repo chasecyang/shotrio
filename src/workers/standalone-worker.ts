@@ -10,6 +10,7 @@
 
 import { getPendingJobs } from "../lib/actions/job-actions";
 import { processJob } from "../lib/workers/job-processor";
+import { getWorkerToken } from "../lib/workers/auth";
 
 const POLL_INTERVAL = 10000; // 10 秒轮询一次
 const MAX_CONCURRENT_JOBS = 5; // 最多同时处理 5 个任务
@@ -17,6 +18,7 @@ const ERROR_RETRY_DELAY = 30000; // 错误后等待 30 秒再重试
 
 let isProcessing = false;
 let processingCount = 0;
+let workerToken: string;
 
 /**
  * 主处理循环
@@ -37,7 +39,7 @@ async function processQueue() {
       return;
     }
 
-    const result = await getPendingJobs(availableSlots);
+    const result = await getPendingJobs(availableSlots, workerToken);
 
     if (!result.success || !result.jobs || result.jobs.length === 0) {
       // 没有任务，静默等待
@@ -82,6 +84,18 @@ async function startWorker() {
   console.log(`最大并发: ${MAX_CONCURRENT_JOBS}`);
   console.log(`环境: ${process.env.NODE_ENV || "development"}`);
   console.log("=================================\n");
+
+  // 验证 Worker Token
+  try {
+    workerToken = getWorkerToken();
+    console.log("✅ Worker 认证 Token 已加载");
+  } catch (error) {
+    console.error("❌ Worker 认证失败:", error);
+    console.error("请确保在环境变量中设置了 WORKER_API_SECRET");
+    process.exit(1);
+  }
+
+  console.log("\n开始处理任务队列...\n");
 
   // 立即执行一次
   await processQueue();

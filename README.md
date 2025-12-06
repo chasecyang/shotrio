@@ -71,7 +71,13 @@ R2_ACCESS_KEY_ID=xxx
 R2_SECRET_ACCESS_KEY=xxx
 R2_BUCKET_NAME=xxx
 R2_PUBLIC_URL=https://xxx
+
+# Worker 认证（重要！）
+# 生成方法：node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+WORKER_API_SECRET=your-64-character-random-token
 ```
+
+⚠️ **安全提示**：`WORKER_API_SECRET` 用于保护内部 Worker API，请务必设置强随机值。详见 [安全配置指南](./docs/SECURITY.md)。
 
 ### 初始化数据库
 
@@ -174,7 +180,16 @@ Cineqo 使用 PostgreSQL 作为任务队列，通过独立的 Worker 进程处�
 - 批量图像生成
 - 视频生成
 
-详见：[Worker 部署指南](./docs/worker-deployment-guide.md)
+**安全特性**：
+- Worker 进程认证保护
+- 项目所有权验证
+- 输入验证和清理
+- 速率限制（单用户最多 10 个待处理任务）
+- SQL 注入防护
+
+详见：
+- [Worker 部署指南](./docs/worker-deployment-guide.md)
+- [安全配置指南](./docs/SECURITY.md)
 
 ### 数据库 Schema
 
@@ -247,17 +262,29 @@ SELECT status, COUNT(*) FROM job GROUP BY status;
    - 检查 Worker 进程是否运行
    - 查看日志中的错误信息
    - 确认数据库连接正常
+   - **检查 `WORKER_API_SECRET` 是否正确配置**
 
-2. **任务失败**
+2. **Worker 启动失败**
+   - 错误信息：`WORKER_API_SECRET 未配置`
+   - 解决方案：在 `.env` 中设置 `WORKER_API_SECRET`
+   - 生成方法：`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+
+3. **任务失败**
    - 检查 API 密钥是否有效
    - 查看 `job` 表中的 `error_message`
    - 使用"重试"功能重新执行
 
-3. **SSE 连接断开**
+4. **SSE 连接断开**
    - 检查 Nginx 配置（如使用）
    - 确认防火墙允许长连接
 
-详见：[Worker 部署指南](./docs/worker-deployment-guide.md)
+5. **安全警告**
+   - 日志中出现 `[Security] 未授权的 xxx 调用`
+   - 说明有未授权访问尝试，检查 Worker Token 配置
+
+详见：
+- [Worker 部署指南](./docs/worker-deployment-guide.md)
+- [安全配置指南](./docs/SECURITY.md)
 
 ## 贡献指南
 
