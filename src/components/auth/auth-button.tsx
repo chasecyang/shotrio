@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, Link } from "@/i18n/routing";
 import { authClient } from "@/lib/auth/auth-client";
 import { Button } from "@/components/ui/button";
-import { UserNav } from "@/components/user/user-nav";
+import { UserNav } from "@/components/auth/user-nav";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from 'next-intl';
 

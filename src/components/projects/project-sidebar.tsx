@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProjectSelector } from "./project-selector";
-import { UserNav } from "@/components/user/user-nav";
+import { UserNav } from "@/components/auth/user-nav";
 import { TaskCenter } from "@/components/tasks/task-center";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
 

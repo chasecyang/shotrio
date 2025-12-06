@@ -440,6 +440,52 @@ async function processCharacterExtraction(jobData: Job, workerToken: string): Pr
 }
 
 /**
+ * 构建角色设定图 Prompt
+ * 生成专业的动漫角色设定图，包含三视图、表情集、细节特写、身高比例图
+ */
+function buildCharacterSheetPrompt(params: {
+  characterName: string;
+  baseAppearance: string;
+  styleDescription: string;
+}): string {
+  const { characterName, baseAppearance, styleDescription } = params;
+
+  // 基础设定图关键词
+  const sheetType = "character design sheet, character reference sheet, turnaround character sheet";
+  
+  // 包含的元素
+  const elements = [
+    "three views (front view, side view, back view)",
+    "multiple expressions and emotions",
+    "detail closeups (eyes, hands, clothing details)",
+    "height chart with proportions",
+    "full body standing pose"
+  ].join(", ");
+
+  // 角色信息
+  const characterInfo = [
+    characterName,
+    baseAppearance,
+    styleDescription
+  ].filter(Boolean).join(", ");
+
+  // 质量和风格标签
+  const qualityTags = [
+    "high quality",
+    "clean line art",
+    "cel shading",
+    "white background",
+    "professional character design",
+    "anime style",
+    "detailed",
+    "masterpiece"
+  ].join(", ");
+
+  // 组合完整 Prompt
+  return `${sheetType}, ${characterInfo}, ${elements}, ${qualityTags}`;
+}
+
+/**
  * 处理角色造型生成任务
  * 为已有的造型（characterImage）生成图片
  */
@@ -503,18 +549,21 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
     workerToken
   );
 
-  // 构建完整 Prompt
+  // 构建完整 Prompt - 使用专业的角色设定图 Prompt
   const baseAppearance = imageRecord.character.appearance || "";
   const stylePrompt = imageRecord.imagePrompt;
   
-  // 组合 Prompt：角色名 + 基础外貌 + 造型描述 + 质量标签
-  const fullPrompt = `Character portrait of ${imageRecord.character.name}, ${baseAppearance}, ${stylePrompt}, masterpiece, best quality, highly detailed, professional photography, 8k`;
+  const fullPrompt = buildCharacterSheetPrompt({
+    characterName: imageRecord.character.name,
+    baseAppearance: baseAppearance,
+    styleDescription: stylePrompt,
+  });
 
-  // 调用 fal.ai 生成图像
+  // 调用 fal.ai 生成图像 - 使用横版比例适配设定图布局
   const result = await generateImagePro({
     prompt: fullPrompt,
     num_images: 1,
-    aspect_ratio: "3:4",
+    aspect_ratio: "16:9", // 横版设定图，适合展示三视图和多元素
     resolution: "2K",
     output_format: "png",
   });

@@ -10,6 +10,9 @@ export const routing = defineRouting({
 
   // 使用 URL 路径前缀策略
   localePrefix: 'always',
+  
+  // 启用语言检测（根据 Cookie、Accept-Language 自动检测）
+  localeDetection: true,
 });
 
 // 创建类型安全的导航助手
