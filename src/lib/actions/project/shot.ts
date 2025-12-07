@@ -11,6 +11,7 @@ import {
   type NewShot,
   type ShotDetail,
   type ShotSize,
+  type CameraMovement,
 } from "@/types/project";
 
 /**
@@ -49,6 +50,7 @@ export async function createShot(data: {
   episodeId: string;
   order: number;
   shotSize: ShotSize;
+  cameraMovement?: CameraMovement;
   duration?: number;
   visualDescription?: string;
   visualPrompt?: string;
@@ -78,6 +80,7 @@ export async function createShot(data: {
       episodeId: data.episodeId,
       order: data.order,
       shotSize: data.shotSize,
+      cameraMovement: data.cameraMovement || "static",
       duration: data.duration || 3000,
       visualDescription: data.visualDescription || null,
       visualPrompt: data.visualPrompt || null,

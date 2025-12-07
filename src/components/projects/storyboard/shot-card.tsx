@@ -1,6 +1,6 @@
 "use client";
 
-import { ShotDetail, ShotSize } from "@/types/project";
+import { ShotDetail, ShotSize, CameraMovement } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, Clock, MessageSquare, Trash2, GripVertical, Loader2, Check, AlertCircle } from "lucide-react";
-import { getShotSizeLabel, formatDuration, getShotSizeOptions, millisecondsToSeconds, secondsToMilliseconds } from "@/lib/utils/shot-utils";
+import { Image as ImageIcon, Clock, MessageSquare, Trash2, GripVertical, Loader2, Check, AlertCircle, Video } from "lucide-react";
+import { 
+  getShotSizeLabel, 
+  formatDuration, 
+  getShotSizeOptions, 
+  getCameraMovementOptions,
+  millisecondsToSeconds, 
+  secondsToMilliseconds 
+} from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { deleteShot, updateShot } from "@/lib/actions/project";
@@ -46,6 +53,7 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
   // 编辑状态
   const [formData, setFormData] = useState({
     shotSize: shot.shotSize,
+    cameraMovement: shot.cameraMovement || "static",
     visualDescription: shot.visualDescription || "",
     dialogue: shot.dialogue || "",
     duration: millisecondsToSeconds(shot.duration || 3000),
@@ -79,6 +87,7 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
     // 检查是否有更改
     const hasChanges =
       formData.shotSize !== shot.shotSize ||
+      formData.cameraMovement !== (shot.cameraMovement || "static") ||
       formData.visualDescription !== (shot.visualDescription || "") ||
       formData.dialogue !== (shot.dialogue || "") ||
       formData.duration !== millisecondsToSeconds(shot.duration || 3000);
@@ -92,6 +101,7 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
         try {
           const result = await updateShot(shot.id, {
             shotSize: formData.shotSize,
+            cameraMovement: formData.cameraMovement,
             visualDescription: formData.visualDescription || null,
             dialogue: formData.dialogue || null,
             duration: secondsToMilliseconds(formData.duration),
@@ -163,6 +173,7 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
   };
   
   const shotSizeOptions = getShotSizeOptions();
+  const cameraMovementOptions = getCameraMovementOptions();
 
   return (
     <>
@@ -177,9 +188,9 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* 顶部：镜号 + 景别 + 删除 */}
+        {/* 顶部：镜号 + 景别 + 运镜 + 删除 */}
         <div className="p-2 border-b bg-muted/30 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
             <button
               {...attributes}
               {...listeners}
@@ -201,6 +212,23 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
                 </SelectTrigger>
                 <SelectContent>
                     {shotSizeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="text-xs">
+                            {option.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {/* 运镜选择 */}
+            <Select
+                value={formData.cameraMovement}
+                onValueChange={(value) => setFormData({ ...formData, cameraMovement: value as CameraMovement })}
+            >
+                <SelectTrigger className="h-6 text-xs border-transparent bg-transparent hover:bg-background hover:border-input px-2 w-auto min-w-[70px] p-0 gap-1 focus:ring-0">
+                    <SelectValue placeholder="运镜" />
+                </SelectTrigger>
+                <SelectContent>
+                    {cameraMovementOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value} className="text-xs">
                             {option.label}
                         </SelectItem>

@@ -22,6 +22,24 @@ export const shotSizeEnum = pgEnum("shot_size", [
   "extreme_close_up", // 大特写
 ]);
 
+// 运镜方式 (摄影机运动)
+export const cameraMovementEnum = pgEnum("camera_movement", [
+  "static", // 固定镜头
+  "push_in", // 推镜头
+  "pull_out", // 拉镜头
+  "pan_left", // 左摇
+  "pan_right", // 右摇
+  "tilt_up", // 上摇
+  "tilt_down", // 下摇
+  "tracking", // 移动跟拍
+  "crane_up", // 升镜头
+  "crane_down", // 降镜头
+  "orbit", // 环绕
+  "zoom_in", // 变焦推进
+  "zoom_out", // 变焦拉远
+  "handheld", // 手持
+]);
+
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
   "novel_split", // 小说拆分
@@ -133,6 +151,7 @@ export const shot = pgTable("shot", {
   // 排序与属性
   order: integer("order").notNull(), // 镜号 (1, 2, 3...)
   shotSize: shotSizeEnum("shot_size").notNull(), // 景别
+  cameraMovement: cameraMovementEnum("camera_movement").default("static"), // 运镜方式
   duration: integer("duration").default(3000), // 预估时长 (毫秒)
 
   // 视觉内容 (Visuals)
