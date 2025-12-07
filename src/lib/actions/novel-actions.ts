@@ -8,7 +8,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { getChatCompletion } from "@/lib/services/openai.service";
-import { createJob } from "@/lib/actions/job-actions";
+import { createJob } from "@/lib/actions/job";
 import type { 
   NovelSplitResult, 
   NovelImportOptions, 

@@ -148,10 +148,11 @@ if (todayJobsCount >= MAX_JOBS_PER_DAY) {
 
 ## 🔧 修改的文件
 
-1. **`src/lib/actions/job-actions.ts`**
+1. **`src/lib/actions/job/`** (已重构为模块)
    - 所有核心函数增加 `workerToken` 参数
    - 添加速率限制检查
    - 修复 SQL 注入问题
+   - 原文件 `job-actions.ts` 已拆分为多个模块文件
 
 2. **`src/lib/workers/job-processor.ts`**
    - 所有处理函数增加项目所有权验证

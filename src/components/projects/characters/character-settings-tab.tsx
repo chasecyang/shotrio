@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { upsertCharacter } from "@/lib/actions/character-actions";
+import { upsertCharacter } from "@/lib/actions/character";
 import { Character } from "@/types/project";
 import { Loader2, Save, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

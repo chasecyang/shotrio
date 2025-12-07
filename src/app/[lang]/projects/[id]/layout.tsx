@@ -1,9 +1,9 @@
 import { ReactNode, Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
-import { getUserProjects, getProjectDetail, getEpisodeShots } from "@/lib/actions/project-actions";
+import { getUserProjects, getProjectDetail, getEpisodeShots } from "@/lib/actions/project";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { ProjectSidebar } from "@/components/projects/project-sidebar";
+import { ProjectSidebar } from "@/components/projects/layout/project-sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProjectIdLayoutProps {

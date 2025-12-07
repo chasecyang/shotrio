@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TaskItem } from "./task-item";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
-import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job-actions";
+import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, ListTodo, AlertCircle, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";

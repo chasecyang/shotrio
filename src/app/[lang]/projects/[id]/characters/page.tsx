@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { getProjectDetail } from "@/lib/actions/project-actions";
+import { getProjectDetail } from "@/lib/actions/project";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
-import { CharactersSection } from "@/components/projects/characters-section";
+import { CharactersSection } from "@/components/projects/characters/characters-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Breadcrumb,

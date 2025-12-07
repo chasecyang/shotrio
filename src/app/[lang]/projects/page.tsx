@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getUserProjects } from "@/lib/actions/project-actions";
+import { getUserProjects } from "@/lib/actions/project";
 import { Film } from "lucide-react";
 
 export default async function ProjectsPage() {

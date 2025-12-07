@@ -16,7 +16,7 @@ import { Image as ImageIcon, Clock, MessageSquare, Trash2, GripVertical, Loader2
 import { getShotSizeLabel, formatDuration, getShotSizeOptions, millisecondsToSeconds, secondsToMilliseconds } from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
-import { deleteShot, updateShot } from "@/lib/actions/project-actions";
+import { deleteShot, updateShot } from "@/lib/actions/project";
 import { toast } from "sonner";
 import {
   AlertDialog,

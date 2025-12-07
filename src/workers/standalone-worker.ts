@@ -8,7 +8,7 @@
  * - 使用 PM2：pm2 start ecosystem.config.js
  */
 
-import { getPendingJobs } from "../lib/actions/job-actions";
+import { getPendingJobs } from "../lib/actions/job";
 import { processJob } from "../lib/workers/job-processor";
 import { getWorkerToken } from "../lib/workers/auth";
 

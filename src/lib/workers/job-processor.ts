@@ -12,7 +12,7 @@ import {
   updateJobProgress,
   completeJob,
   failJob,
-} from "@/lib/actions/job-actions";
+} from "@/lib/actions/job";
 import { getWorkerToken } from "@/lib/workers/auth";
 import type {
   Job,

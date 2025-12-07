@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Episode, Character, ShotDetail } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import { Plus, Clapperboard, Loader2 } from "lucide-react";
-import { getEpisodeShots, reorderShots, createShot } from "@/lib/actions/project-actions";
+import { getEpisodeShots, reorderShots, createShot } from "@/lib/actions/project";
 import { ShotCard } from "./shot-card";
 import { useTranslations } from "next-intl";
 import {

@@ -5,8 +5,8 @@ import { ProjectDetail, isEpisodeComplete } from "@/types/project";
 import { Clapperboard, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
-import { EpisodeSelector } from "./storyboard/episode-selector";
-import { ShotGrid } from "./storyboard/shot-grid";
+import { EpisodeSelector } from "./episode-selector";
+import { ShotGrid } from "./shot-grid";
 import { useTranslations } from "next-intl";
 
 interface StoryboardSectionProps {

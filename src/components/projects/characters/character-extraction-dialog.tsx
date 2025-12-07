@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles, Users, CheckCircle2, AlertCircle, ChevronRight, Pencil, Trash2, Plus } from "lucide-react";
-import { extractCharactersFromScript, importExtractedCharacters } from "@/lib/actions/character-actions";
+import { extractCharactersFromScript, importExtractedCharacters } from "@/lib/actions/character";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";

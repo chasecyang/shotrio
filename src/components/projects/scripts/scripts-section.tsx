@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ProjectDetail, Episode } from "@/types/project";
-import { updateEpisode, deleteEpisode, createEpisode } from "@/lib/actions/project-actions";
+import { updateEpisode, deleteEpisode, createEpisode } from "@/lib/actions/project";
 import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
 import { toast } from "sonner";
 import { 
@@ -28,7 +28,7 @@ import {
   Users
 } from "lucide-react";
 import { NovelImportDialog } from "./novel-import-dialog";
-import { CharacterExtractionDialog } from "./character-extraction-dialog";
+import { CharacterExtractionDialog } from "../characters/character-extraction-dialog";
 import {
   AlertDialog,
   AlertDialogAction,

@@ -34,7 +34,7 @@ import {
   setCharacterPrimaryImage,
   generateImageForCharacterStyle,
   regenerateCharacterStyleImage
-} from "@/lib/actions/character-actions";
+} from "@/lib/actions/character";
 import { toast } from "sonner";
 import {
   DropdownMenu,

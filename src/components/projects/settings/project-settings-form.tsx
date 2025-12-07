@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProjectDetail } from "@/types/project";
-import { updateProject, deleteProject } from "@/lib/actions/project-actions";
+import { updateProject, deleteProject } from "@/lib/actions/project";
 import { toast } from "sonner";
 import { Loader2, Save, Trash2 } from "lucide-react";
 import {

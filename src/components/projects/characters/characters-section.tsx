@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { Character, CharacterImage, ProjectDetail } from "@/types/project";
 import { Card } from "@/components/ui/card";
 import { Users, MoreHorizontal, Pencil, Trash2, User, Sparkles, Plus } from "lucide-react";
-import { CharacterDialog } from "./characters/character-dialog";
-import { CharacterDetailSheet } from "./characters/character-detail-sheet";
+import { CharacterDialog } from "./character-dialog";
+import { CharacterDetailSheet } from "./character-detail-sheet";
 import { CharacterExtractionDialog } from "./character-extraction-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { deleteCharacter } from "@/lib/actions/character-actions";
+import { deleteCharacter } from "@/lib/actions/character";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useSearchParams } from "next/navigation";

@@ -27,7 +27,7 @@ import {
   BookOpen
 } from "lucide-react";
 import { parseNovelFile, splitNovelByAIAsync, importNovelToProject } from "@/lib/actions/novel-actions";
-import { getJobStatus } from "@/lib/actions/job-actions";
+import { getJobStatus } from "@/lib/actions/job";
 import type { NovelEpisodeData } from "@/types/project";
 import type { NovelSplitResult } from "@/types/job";
 import { cn } from "@/lib/utils";

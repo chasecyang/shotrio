@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { upsertCharacter } from "@/lib/actions/character-actions";
+import { upsertCharacter } from "@/lib/actions/character";
 import { Character } from "@/types/project";
 import { Loader2, Plus, Edit2 } from "lucide-react";
 
@@ -56,7 +56,7 @@ export function CharacterDialog({
 
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
-  const setOpen = isControlled ? setControlledOpen : setInternalOpen;
+  const setOpen = setControlledOpen || setInternalOpen;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,7 +77,7 @@ export function CharacterDialog({
 
       if (result.success) {
         toast.success(character ? "角色已更新" : "角色已创建");
-        setOpen(false);
+        setOpen?.(false);
         if (!character) {
           form.reset();
         }

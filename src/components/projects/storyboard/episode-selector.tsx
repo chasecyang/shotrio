@@ -4,7 +4,7 @@ import { Episode, isEpisodeComplete } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getEpisodeShots } from "@/lib/actions/project-actions";
+import { getEpisodeShots } from "@/lib/actions/project";
 import {
   Select,
   SelectContent,
