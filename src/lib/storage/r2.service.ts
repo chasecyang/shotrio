@@ -27,6 +27,7 @@ export enum ImageCategory {
   AVATARS = "avatars",       // 用户头像
   PROJECTS = "projects",      // 项目相关图片
   CHARACTERS = "characters",  // 角色图片
+  SCENES = "scenes",          // 场景图片
   EPISODES = "episodes",      // 剧集图片
   COVERS = "covers",          // 封面图片
   OTHER = "other",            // 其他

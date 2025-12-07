@@ -417,7 +417,7 @@ export function NovelImportDialog({ open, onOpenChange, projectId }: NovelImport
             <Button
               variant="outline"
               onClick={() => {
-                toast.info("任务将在后台继续运行，您可以在任务中心查看进度");
+                toast.info("任务将在后台继续运行，您可以在后台任务查看进度");
                 onOpenChange(false);
                 resetDialog();
               }}

@@ -156,8 +156,9 @@
     "nav": {
       "scripts": "剧本",
       "storyboard": "分镜",
-      "characters": "角色管理",
-      "settings": "项目设置"
+      "characters": "角色",
+      "scenes": "场景",
+      "settings": "设置"
     },
     "storyboard": {
       "selectEpisode": "选择剧集",

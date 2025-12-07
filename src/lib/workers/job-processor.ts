@@ -14,6 +14,7 @@ import {
   failJob,
 } from "@/lib/actions/job";
 import { getWorkerToken } from "@/lib/workers/auth";
+import { buildCharacterSheetPrompt } from "@/lib/prompts/character";
 import type {
   Job,
   NovelSplitInput,
@@ -109,6 +110,9 @@ export async function processJob(jobData: Job): Promise<void> {
         break;
       case "character_image_generation":
         await processCharacterImageGeneration(jobData, workerToken);
+        break;
+      case "scene_image_generation":
+        await processSceneImageGeneration(jobData, workerToken);
         break;
       case "storyboard_generation":
         await processStoryboardGeneration(jobData, workerToken);
@@ -439,51 +443,6 @@ async function processCharacterExtraction(jobData: Job, workerToken: string): Pr
   );
 }
 
-/**
- * 构建角色设定图 Prompt
- * 生成专业的动漫角色设定图，包含三视图、表情集、细节特写、身高比例图
- */
-function buildCharacterSheetPrompt(params: {
-  characterName: string;
-  baseAppearance: string;
-  styleDescription: string;
-}): string {
-  const { characterName, baseAppearance, styleDescription } = params;
-
-  // 基础设定图关键词
-  const sheetType = "character design sheet, character reference sheet, turnaround character sheet";
-  
-  // 包含的元素
-  const elements = [
-    "three views (front view, side view, back view)",
-    "multiple expressions and emotions",
-    "detail closeups (eyes, hands, clothing details)",
-    "height chart with proportions",
-    "full body standing pose"
-  ].join(", ");
-
-  // 角色信息
-  const characterInfo = [
-    characterName,
-    baseAppearance,
-    styleDescription
-  ].filter(Boolean).join(", ");
-
-  // 质量和风格标签
-  const qualityTags = [
-    "high quality",
-    "clean line art",
-    "cel shading",
-    "white background",
-    "professional character design",
-    "anime style",
-    "detailed",
-    "masterpiece"
-  ].join(", ");
-
-  // 组合完整 Prompt
-  return `${sheetType}, ${characterInfo}, ${elements}, ${qualityTags}`;
-}
 
 /**
  * 处理角色造型生成任务
@@ -617,6 +576,189 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
     .where(eq(characterImage.id, imageId));
 
   const resultData: CharacterImageGenerationResult = {
+    imageId,
+    imageUrl: finalImageUrl,
+  };
+
+  await completeJob(
+    {
+      jobId: jobData.id,
+      resultData,
+    },
+    workerToken
+  );
+}
+
+/**
+ * 构建场景图 Prompt
+ * 生成专业的场景概念图
+ */
+function buildScenePrompt(params: {
+  sceneName: string;
+  sceneDescription: string;
+  location: string;
+  timeOfDay: string;
+  viewLabel: string;
+  viewDescription: string;
+}): string {
+  const { sceneName, sceneDescription, location, timeOfDay, viewLabel, viewDescription } = params;
+
+  const prompt = `Create a cinematic location concept art for ${sceneName}.
+
+Scene Description: ${sceneDescription}.
+View: ${viewLabel}. ${viewDescription}.
+Setting: ${location}, ${timeOfDay} lighting.
+
+This is an establishing shot of the location for film production. The image should show:
+- Professional film production design aesthetic
+- Highly detailed environment with clear spatial layout
+- Atmospheric lighting that matches the ${timeOfDay} setting
+- ${location} environment characteristics
+- Cinematic composition suitable for ${viewLabel}
+- Rich textures and realistic materials
+- Depth and dimension appropriate for the viewing angle
+
+Style Requirements: Cinematic concept art, photorealistic rendering, professional matte painting quality, 8k resolution, masterpiece quality with attention to architectural and environmental details.`;
+
+  return prompt;
+}
+
+/**
+ * 处理场景视角生成任务
+ * 为已有的场景视角（sceneImage）生成图片
+ */
+async function processSceneImageGeneration(jobData: Job, workerToken: string): Promise<void> {
+  const input: SceneImageGenerationInput = JSON.parse(
+    jobData.inputData || "{}"
+  );
+  const { sceneId, imageId, regenerate = false } = input;
+
+  // 验证项目所有权
+  if (jobData.projectId) {
+    const hasAccess = await verifyProjectOwnership(
+      jobData.projectId,
+      jobData.userId
+    );
+    if (!hasAccess) {
+      throw new Error("无权访问该项目");
+    }
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 10,
+      progressMessage: "正在读取场景信息...",
+    },
+    workerToken
+  );
+
+  // 获取场景视角信息（包含场景信息）
+  const imageRecord = await db.query.sceneImage.findFirst({
+    where: eq(sceneImage.id, imageId),
+    with: {
+      scene: true,
+    },
+  });
+
+  if (!imageRecord) {
+    throw new Error("场景视角不存在");
+  }
+
+  if (imageRecord.scene.id !== sceneId) {
+    throw new Error("视角与场景不匹配");
+  }
+
+  // 验证场景是否属于该项目
+  if (jobData.projectId && imageRecord.scene.projectId !== jobData.projectId) {
+    throw new Error("场景不属于该项目");
+  }
+
+  if (!imageRecord.imagePrompt) {
+    throw new Error("该视角没有生成描述，无法生成图片");
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 20,
+      progressMessage: regenerate ? "正在重新生成图片..." : "正在生成图片...",
+    },
+    workerToken
+  );
+
+  // 构建完整 Prompt
+  const sceneDescription = imageRecord.scene.description || "";
+  const location = imageRecord.scene.location || "interior";
+  const timeOfDay = imageRecord.scene.timeOfDay || "day";
+  const viewPrompt = imageRecord.imagePrompt;
+  
+  const fullPrompt = buildScenePrompt({
+    sceneName: imageRecord.scene.name,
+    sceneDescription: sceneDescription,
+    location: location,
+    timeOfDay: timeOfDay,
+    viewLabel: imageRecord.label,
+    viewDescription: viewPrompt,
+  });
+
+  // 调用 fal.ai 生成图像 - 使用横版比例适配场景图
+  const result = await generateImagePro({
+    prompt: fullPrompt,
+    num_images: 1,
+    aspect_ratio: "16:9", // 横版场景图
+    resolution: "2K",
+    output_format: "png",
+  });
+
+  if (!result.images || result.images.length === 0) {
+    throw new Error("生成失败，没有返回图片");
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 70,
+      progressMessage: "正在上传图片...",
+    },
+    workerToken
+  );
+
+  // 获取生成的图片
+  const generatedImage = result.images[0];
+  const imageUrl = generatedImage.url;
+  const seed = null;
+
+  // 上传到 R2
+  let finalImageUrl = imageUrl;
+  try {
+    const uploadResult = await uploadImageFromUrl(imageUrl, undefined, jobData.userId);
+    if (uploadResult.success && uploadResult.url) {
+      finalImageUrl = uploadResult.url;
+    }
+  } catch (error) {
+    console.error("上传图片到 R2 失败，使用原始 URL:", error);
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 90,
+      progressMessage: "正在保存图片...",
+    },
+    workerToken
+  );
+
+  // 更新数据库中的 imageUrl 和 seed
+  await db
+    .update(sceneImage)
+    .set({
+      imageUrl: finalImageUrl,
+      seed,
+    })
+    .where(eq(sceneImage.id, imageId));
+
+  const resultData: SceneImageGenerationResult = {
     imageId,
     imageUrl: finalImageUrl,
   };

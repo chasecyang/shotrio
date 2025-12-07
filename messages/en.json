@@ -157,6 +157,7 @@
       "scripts": "Scripts",
       "storyboard": "Storyboard",
       "characters": "Characters",
+      "scenes": "Scenes",
       "settings": "Project Settings"
     },
     "storyboard": {

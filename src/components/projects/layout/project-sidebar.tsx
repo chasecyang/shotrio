@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Users, Settings, Clapperboard, ListTodo } from "lucide-react";
+import { FileText, Users, Settings, Clapperboard, Map } from "lucide-react";
 import { Link, usePathname } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import {
@@ -16,11 +16,8 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ProjectSelector } from "./project-selector";
 import { UserNav } from "@/components/auth/user-nav";
-import { TaskCenter } from "@/components/tasks/task-center";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
 
 interface Episode {
   id: string;
@@ -39,6 +36,7 @@ interface ProjectDetail {
   title: string;
   episodes: Episode[];
   characters: Array<{ id: string }>;
+  scenes?: Array<{ id: string }>;
   shotCount?: number;
 }
 
@@ -57,10 +55,8 @@ interface ProjectSidebarProps {
 export function ProjectSidebar({ projects, currentProject, user }: ProjectSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('projects.nav');
-  const { jobs: activeJobs } = useTaskSubscription();
 
   const isActive = (path: string) => pathname === path;
-  const activeTaskCount = activeJobs.length;
 
   const navigation = currentProject
     ? [
@@ -81,6 +77,12 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
           href: `/projects/${currentProject.id}/characters`,
           icon: Users,
           badge: currentProject.characters.length,
+        },
+        {
+          name: t('scenes'),
+          href: `/projects/${currentProject.id}/scenes`,
+          icon: Map,
+          badge: currentProject.scenes?.length || 0,
         },
         {
           name: t('settings'),
@@ -147,32 +149,6 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-
-        {/* 任务中心 */}
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <TaskCenter 
-              trigger={
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start px-2 h-9"
-                >
-                  <ListTodo className="mr-2 h-4 w-4" />
-                  <span>任务中心</span>
-                  {activeTaskCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-auto h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
-                    >
-                      {activeTaskCount}
-                    </Badge>
-                  )}
-                </Button>
-              }
-            />
-          </SidebarGroupContent>
-        </SidebarGroup>
-
       </SidebarContent>
 
       {/* Footer - 用户菜单 */}

@@ -45,6 +45,7 @@ export const jobTypeEnum = pgEnum("job_type", [
   "novel_split", // 小说拆分
   "character_extraction", // 角色提取
   "character_image_generation", // 角色造型生成
+  "scene_image_generation", // 场景视角生成
   "storyboard_generation", // 剧本自动分镜
   "batch_image_generation", // 批量图像生成
   "video_generation", // 视频生成
@@ -121,6 +122,46 @@ export const characterImage = pgTable("character_image", {
     .notNull(),
 });
 
+// 2.2 场景表 (Scene) - 拍摄场景/地点
+export const scene = pgTable("scene", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => project.id, { onDelete: "cascade" }),
+
+  name: text("name").notNull(), // 场景名称 (e.g. "咖啡厅", "主角的家-客厅")
+  description: text("description"), // 场景描述
+  location: text("location"), // 位置标注 (e.g. "内景", "exterior", "半室内")
+  timeOfDay: text("time_of_day"), // 时间段 (e.g. "白天", "黄昏", "night")
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+// 2.3 场景视角图表 (Scene Image) - 场景的不同视角参考图
+export const sceneImage = pgTable("scene_image", {
+  id: text("id").primaryKey(),
+  sceneId: text("scene_id")
+    .notNull()
+    .references(() => scene.id, { onDelete: "cascade" }),
+
+  label: text("label").notNull(), // 视角名称 (e.g. "全景", "正面视角", "鸟瞰图")
+  imagePrompt: text("image_prompt"), // 该视角的图像生成prompt
+  imageUrl: text("image_url"), // 生成并选定后的图片地址
+  seed: integer("seed"), // 固定 Seed
+  
+  isPrimary: boolean("is_primary").default(false), // 是否为主图/封面
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
 // 3. 剧集表 (Episode) - 每一集短剧
 export const episode = pgTable("episode", {
   id: text("id").primaryKey(),
@@ -170,6 +211,8 @@ export const shot = pgTable("shot", {
   // 关联 (用于辅助生成)
   // 关联这个镜头里出现的主要角色，方便提取角色的 Prompt
   mainCharacterId: text("main_character_id").references(() => character.id),
+  // 关联场景，用于提取场景的视觉风格
+  sceneId: text("scene_id").references(() => scene.id),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -219,6 +262,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     references: [user.id],
   }),
   characters: many(character),
+  scenes: many(scene),
   episodes: many(episode),
   jobs: many(job),
 }));
@@ -235,6 +279,21 @@ export const characterImageRelations = relations(characterImage, ({ one }) => ({
   character: one(character, {
     fields: [characterImage.characterId],
     references: [character.id],
+  }),
+}));
+
+export const sceneRelations = relations(scene, ({ one, many }) => ({
+  project: one(project, {
+    fields: [scene.projectId],
+    references: [project.id],
+  }),
+  images: many(sceneImage),
+}));
+
+export const sceneImageRelations = relations(sceneImage, ({ one }) => ({
+  scene: one(scene, {
+    fields: [sceneImage.sceneId],
+    references: [scene.id],
   }),
 }));
 
@@ -255,6 +314,11 @@ export const shotRelations = relations(shot, ({ one }) => ({
   mainCharacter: one(character, {
     fields: [shot.mainCharacterId],
     references: [character.id],
+  }),
+  // 关联场景，用于提取场景视觉参考
+  scene: one(scene, {
+    fields: [shot.sceneId],
+    references: [scene.id],
   }),
 }));
 

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getProjectDetail } from "@/lib/actions/project";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
-import { StoryboardSection } from "@/components/projects/storyboard/storyboard-section";
+import { ScenesSection } from "@/components/projects/scenes/scenes-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Breadcrumb,
@@ -16,11 +16,11 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { BackgroundTasks } from "@/components/projects/layout/background-tasks";
 
-interface StoryboardPageProps {
+interface ScenesPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function StoryboardPage({ params }: StoryboardPageProps) {
+export default async function ScenesPage({ params }: ScenesPageProps) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
@@ -46,8 +46,8 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
         </div>
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-        <Suspense fallback={<StoryboardSkeleton />}>
-          <StoryboardWrapper projectId={projectId} />
+        <Suspense fallback={<ScenesSkeleton />}>
+          <ScenesWrapper projectId={projectId} />
         </Suspense>
       </div>
     </>
@@ -69,37 +69,32 @@ async function ProjectBreadcrumb({ projectId }: { projectId: string }) {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbPage>分镜</BreadcrumbPage>
+          <BreadcrumbPage>场景管理</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
   );
 }
 
-async function StoryboardWrapper({ projectId }: { projectId: string }) {
+async function ScenesWrapper({ projectId }: { projectId: string }) {
   const project = await getProjectDetail(projectId);
 
   if (!project) {
     notFound();
   }
 
-  return <StoryboardSection project={project} />;
+  return <ScenesSection project={project} />;
 }
 
-function StoryboardSkeleton() {
+function ScenesSkeleton() {
   return (
-    <div className="flex gap-4 h-full">
-      <Skeleton className="h-full w-60" />
-      <div className="flex-1 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-48" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     </div>
   );
 }
-

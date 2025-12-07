@@ -4,6 +4,7 @@ export type JobType =
   | "novel_split" // 小说拆分
   | "character_extraction" // 角色提取
   | "character_image_generation" // 角色造型生成
+  | "scene_image_generation" // 场景视角生成
   | "storyboard_generation" // 剧本自动分镜
   | "batch_image_generation" // 批量图像生成
   | "video_generation"; // 视频生成
@@ -50,6 +51,12 @@ export interface CharacterImageGenerationInput {
   regenerate?: boolean; // 是否重新生成已有图片
 }
 
+export interface SceneImageGenerationInput {
+  sceneId: string;
+  imageId: string; // sceneImage 的 ID，用于更新
+  regenerate?: boolean; // 是否重新生成已有图片
+}
+
 export interface StoryboardGenerationInput {
   episodeId: string;
   autoGenerateImages?: boolean;
@@ -82,6 +89,11 @@ export interface CharacterExtractionResult {
 
 export interface CharacterImageGenerationResult {
   imageId: string; // 生成的 characterImage ID
+  imageUrl: string; // 生成的图片URL
+}
+
+export interface SceneImageGenerationResult {
+  imageId: string; // 生成的 sceneImage ID
   imageUrl: string; // 生成的图片URL
 }
 

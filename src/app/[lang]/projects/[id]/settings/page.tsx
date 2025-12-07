@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { BackgroundTasks } from "@/components/projects/layout/background-tasks";
 
 interface SettingsPageProps {
   params: Promise<{ id: string }>;
@@ -29,7 +30,7 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2">
+      <header className="flex h-16 shrink-0 items-center gap-2 justify-between">
         <div className="flex items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator
@@ -39,6 +40,9 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
           <Suspense fallback={<Skeleton className="h-5 w-48" />}>
             <ProjectBreadcrumb projectId={projectId} />
           </Suspense>
+        </div>
+        <div className="px-4">
+          <BackgroundTasks />
         </div>
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">

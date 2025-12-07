@@ -1,4 +1,4 @@
-import { project, episode, character, shot, characterImage } from "@/lib/db/schemas/project";
+import { project, episode, character, shot, characterImage, scene, sceneImage } from "@/lib/db/schemas/project";
 
 // 类型推导
 export type Project = typeof project.$inferSelect;
@@ -12,6 +12,12 @@ export type NewCharacter = typeof character.$inferInsert;
 
 export type CharacterImage = typeof characterImage.$inferSelect;
 export type NewCharacterImage = typeof characterImage.$inferInsert;
+
+export type Scene = typeof scene.$inferSelect;
+export type NewScene = typeof scene.$inferInsert;
+
+export type SceneImage = typeof sceneImage.$inferSelect;
+export type NewSceneImage = typeof sceneImage.$inferInsert;
 
 export type Shot = typeof shot.$inferSelect;
 export type NewShot = typeof shot.$inferInsert;
@@ -30,6 +36,7 @@ export interface EpisodeWithShots extends Episode {
 export interface ProjectDetail extends Project {
   episodes: Episode[];
   characters: (Character & { images: CharacterImage[] })[];
+  scenes?: (Scene & { images: SceneImage[] })[];
 }
 
 // 剧本详情类型
@@ -123,6 +130,17 @@ export interface CharacterToImport extends ExtractedCharacter {
   selected: boolean; // 是否选中要导入
 }
 
+// 场景相关类型
+export interface SceneWithImages extends Scene {
+  images: SceneImage[];
+}
 
+export interface SceneDetail extends Scene {
+  images: SceneImage[];
+}
 
-
+// 场景视角预设
+export interface SceneViewPreset {
+  label: string;
+  prompt: string;
+}
