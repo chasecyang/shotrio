@@ -50,10 +50,10 @@ export async function generateSceneImage(params: {
     const imagesWithR2 = await Promise.all(
       result.images.map(async (img) => {
         try {
-          const r2Key = await uploadImageFromUrl(img.url);
+          const uploadResult = await uploadImageFromUrl(img.url);
           return {
-            url: img.url,
-            r2Key: r2Key ?? undefined,
+            url: uploadResult.success && uploadResult.url ? uploadResult.url : img.url,
+            r2Key: uploadResult.key ?? undefined,
           };
         } catch (error) {
           console.error("上传到 R2 失败:", error);
@@ -150,10 +150,10 @@ export async function generateCharacterImage(params: {
     const imagesWithR2 = await Promise.all(
       result.images.map(async (img) => {
         try {
-          const r2Key = await uploadImageFromUrl(img.url);
+          const uploadResult = await uploadImageFromUrl(img.url);
           return {
-            url: img.url,
-            r2Key: r2Key ?? undefined,
+            url: uploadResult.success && uploadResult.url ? uploadResult.url : img.url,
+            r2Key: uploadResult.key ?? undefined,
           };
         } catch (error) {
           console.error("上传到 R2 失败:", error);
@@ -213,10 +213,10 @@ export async function editCharacterImage(params: {
     const imagesWithR2 = await Promise.all(
       result.images.map(async (img) => {
         try {
-          const r2Key = await uploadImageFromUrl(img.url);
+          const uploadResult = await uploadImageFromUrl(img.url);
           return {
-            url: img.url,
-            r2Key: r2Key ?? undefined,
+            url: uploadResult.success && uploadResult.url ? uploadResult.url : img.url,
+            r2Key: uploadResult.key ?? undefined,
           };
         } catch (error) {
           console.error("上传到 R2 失败:", error);
@@ -280,10 +280,10 @@ export async function composeCharacterInScene(params: {
     const imagesWithR2 = await Promise.all(
       result.images.map(async (img) => {
         try {
-          const r2Key = await uploadImageFromUrl(img.url);
+          const uploadResult = await uploadImageFromUrl(img.url);
           return {
-            url: img.url,
-            r2Key: r2Key ?? undefined,
+            url: uploadResult.success && uploadResult.url ? uploadResult.url : img.url,
+            r2Key: uploadResult.key ?? undefined,
           };
         } catch (error) {
           console.error("上传到 R2 失败:", error);
@@ -367,10 +367,10 @@ export async function getImageGenerationResult(params: {
     const imagesWithR2 = await Promise.all(
       result.images.map(async (img) => {
         try {
-          const r2Key = await uploadImageFromUrl(img.url);
+          const uploadResult = await uploadImageFromUrl(img.url);
           return {
-            url: img.url,
-            r2Key: r2Key ?? undefined,
+            url: uploadResult.success && uploadResult.url ? uploadResult.url : img.url,
+            r2Key: uploadResult.key ?? undefined,
           };
         } catch (error) {
           console.error("上传到 R2 失败:", error);

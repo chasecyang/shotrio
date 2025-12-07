@@ -50,8 +50,9 @@ export async function uploadImage(
  */
 export async function uploadImageFromUrl(
   imageUrl: string,
-  category: ImageCategory = ImageCategory.OTHER
-): Promise<string | null> {
+  category: ImageCategory = ImageCategory.OTHER,
+  userId?: string
+): Promise<{ success: boolean; url?: string; key?: string; error?: string }> {
   try {
     // 下载图片
     const response = await fetch(imageUrl);
@@ -71,20 +72,19 @@ export async function uploadImageFromUrl(
     const filename = `generated-${Date.now()}.${extension}`;
     const file = new File([buffer], filename, { type: contentType });
 
-    // 上传到 R2（不需要用户认证，因为是服务端生成的）
+    // 上传到 R2
     const result = await uploadImageToR2(file, {
-      userId: "system", // 使用系统用户ID，表示这是AI生成的图片
+      userId: userId || "system", // 使用提供的用户ID或系统用户ID
       category,
     });
 
-    if (result.success && result.key) {
-      return result.key;
-    }
-
-    return null;
+    return result;
   } catch (error) {
     console.error("从 URL 上传图片失败:", error);
-    return null;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "上传失败",
+    };
   }
 }
 

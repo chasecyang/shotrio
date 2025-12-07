@@ -10,6 +10,8 @@ import { randomUUID } from "crypto";
 import { generateImage } from "@/lib/services/fal.service";
 import { createJob } from "@/lib/actions/job";
 import type { CharacterImageGenerationInput } from "@/types/job";
+import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
+import { ImageCategory } from "@/lib/storage";
 
 /**
  * 生成角色图片 (调用 AI)
@@ -216,6 +218,26 @@ export async function saveCharacterImage(
       throw new Error("项目不存在或无权限");
     }
 
+    // 将临时图片URL上传到R2存储，获取永久URL
+    let finalImageUrl = data.imageUrl;
+    
+    // 检查是否是外部URL（fal.ai等临时URL），如果是则需要上传到R2
+    if (data.imageUrl.startsWith("http") && !data.imageUrl.includes(process.env.R2_PUBLIC_DOMAIN || "")) {
+      console.log("检测到外部图片URL，开始上传到R2:", data.imageUrl);
+      const uploadResult = await uploadImageFromUrl(
+        data.imageUrl,
+        ImageCategory.CHARACTERS,
+        session.user.id
+      );
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || "上传图片到R2失败");
+      }
+
+      finalImageUrl = uploadResult.url;
+      console.log("图片已上传到R2:", finalImageUrl);
+    }
+
     // 如果设为 Primary，先把其他的 Primary 取消
     if (data.isPrimary) {
       await db
@@ -228,7 +250,7 @@ export async function saveCharacterImage(
       id: randomUUID(),
       characterId,
       label: data.label,
-      imageUrl: data.imageUrl,
+      imageUrl: finalImageUrl, // 使用R2的永久URL
       imagePrompt: data.imagePrompt,
       seed: data.seed,
       isPrimary: data.isPrimary || false,

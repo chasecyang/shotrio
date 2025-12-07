@@ -590,9 +590,9 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
   // 上传到 R2（可选，如果需要持久化存储）
   let finalImageUrl = imageUrl;
   try {
-    const r2Key = await uploadImageFromUrl(imageUrl);
-    if (r2Key) {
-      finalImageUrl = r2Key;
+    const uploadResult = await uploadImageFromUrl(imageUrl, undefined, jobData.userId);
+    if (uploadResult.success && uploadResult.url) {
+      finalImageUrl = uploadResult.url;
     }
   } catch (error) {
     console.error("上传图片到 R2 失败，使用原始 URL:", error);
