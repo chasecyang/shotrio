@@ -208,10 +208,11 @@ function StyleCard({
   };
 
   return (
-    <div className="group relative rounded-lg overflow-hidden border bg-background hover:shadow-md transition-shadow">
+    <div className="group relative rounded-lg overflow-hidden border bg-background hover:shadow-md transition-shadow flex flex-col lg:flex-row">
+      {/* 图片区域 - 窄屏时较小，宽屏时恢复正常 */}
       <div
         className={cn(
-          "aspect-square relative",
+          "relative aspect-video lg:aspect-square lg:w-40 shrink-0",
           hasImage && "cursor-pointer"
         )}
         onClick={hasImage ? onPreview : undefined}
@@ -245,37 +246,66 @@ function StyleCard({
           </div>
         )}
       </div>
-      <div className="p-2 flex items-center justify-between">
-        <span className="text-sm font-medium truncate" title={image.label}>
-          {image.label}
-        </span>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-              <MoreVertical className="h-3 w-3" />
+      {/* 信息区域 - 响应式布局 */}
+      <div className="p-3 flex flex-col gap-2 flex-1">
+        {/* 造型名称 */}
+        <h4 className="text-sm font-semibold truncate" title={image.label}>
+          {image.label}
+        </h4>
+
+        {/* 造型描述 */}
+        {image.imagePrompt && (
+          <p className="text-xs text-muted-foreground line-clamp-2" title={image.imagePrompt}>
+            {image.imagePrompt}
+          </p>
+        )}
+
+        {/* 功能按钮组 */}
+        <div className="flex flex-wrap gap-1.5 mt-auto">
+          {hasImage ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onPreview}
+                className="flex-1 h-7 text-xs min-w-[70px]"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                查看
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSetPrimary}
+                disabled={image.isPrimary || false}
+                className="flex-1 h-7 text-xs min-w-[70px]"
+              >
+                <Star className="w-3 h-3 mr-1" />
+                {image.isPrimary ? "主图" : "设为主图"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerate}
+              className="flex-1 h-7 text-xs"
+            >
+              <Sparkles className="w-3 h-3 mr-1" />
+              生成图片
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {hasImage && (
-              <DropdownMenuItem onClick={onPreview}>
-                <Eye className="mr-2 h-3 w-3" /> 查看大图
-              </DropdownMenuItem>
-            )}
-            {hasImage ? (
-              <DropdownMenuItem onClick={handleSetPrimary} disabled={image.isPrimary || false}>
-                <Star className="mr-2 h-3 w-3" /> 设为主图
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={handleGenerate}>
-                <Sparkles className="mr-2 h-3 w-3" /> 生成图片
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-              <Trash2 className="mr-2 h-3 w-3" /> 删除
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDelete}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs min-w-[60px]"
+          >
+            <Trash2 className="w-3 h-3 mr-1" />
+            删除
+          </Button>
+        </div>
       </div>
     </div>
   );

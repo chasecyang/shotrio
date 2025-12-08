@@ -4,17 +4,7 @@ import { getProjectDetail } from "@/lib/actions/project";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
 import { ScriptsSection } from "@/components/projects/scripts/scripts-section";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { BackgroundTasks } from "@/components/projects/layout/background-tasks";
+import { ProjectHeader } from "@/components/projects/layout/project-header";
 
 interface ScriptsPageProps {
   params: Promise<{ id: string }>;
@@ -30,49 +20,15 @@ export default async function ScriptsPage({ params }: ScriptsPageProps) {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 justify-between">
-        <div className="flex items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Suspense fallback={<Skeleton className="h-5 w-48" />}>
-            <ProjectBreadcrumb projectId={projectId} />
+      <ProjectHeader projectId={projectId} pageName="剧本" />
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-4 p-4">
+          <Suspense fallback={<ScriptsSkeleton />}>
+            <ScriptsWrapper projectId={projectId} />
           </Suspense>
         </div>
-        <div className="px-4">
-          <BackgroundTasks />
-        </div>
-      </header>
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-        <Suspense fallback={<ScriptsSkeleton />}>
-          <ScriptsWrapper projectId={projectId} />
-        </Suspense>
       </div>
     </>
-  );
-}
-
-async function ProjectBreadcrumb({ projectId }: { projectId: string }) {
-  const project = await getProjectDetail(projectId);
-  
-  if (!project) {
-    return null;
-  }
-
-  return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink href="/projects">{project.title}</BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>剧本</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
   );
 }
 
