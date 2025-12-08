@@ -3,10 +3,10 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Download } from "lucide-react";
-import { CharacterImage } from "@/types/project";
+import { CharacterImage, SceneImage } from "@/types/project";
 
 interface ImagePreviewDialogProps {
-  image: CharacterImage | null;
+  image: CharacterImage | SceneImage | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

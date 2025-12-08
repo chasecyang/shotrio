@@ -6,6 +6,9 @@
 // CRUD 操作
 export { upsertCharacter, deleteCharacter } from "./crud";
 
+// 角色信息更新
+export { updateCharacterInfo, updateCharacterStyleInfo, createCharacterStyle } from "./style";
+
 // 图片管理
 export {
   generateCharacterImages,

@@ -1,14 +1,21 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Character, CharacterImage } from "@/types/project";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { StyleSidebar } from "./style-sidebar";
-import { StyleDetailPanel } from "./style-detail-panel";
-import { createCharacterStyle } from "@/lib/actions/character";
+import { AlertCircle, Plus, Loader2, Image as ImageIcon, Sparkles, MoreVertical, Trash2, Eye, Star } from "lucide-react";
+import { createCharacterStyle, deleteCharacterImage, setCharacterPrimaryImage, generateImageForCharacterStyle } from "@/lib/actions/character";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { ImagePreviewDialog } from "./image-preview-dialog";
 
 interface StylesManagerProps {
   projectId: string;
@@ -26,13 +33,7 @@ interface StylesManagerProps {
 }
 
 /**
- * 造型管理器组件 - 新的侧边栏布局
- * 
- * 功能：
- * - 左侧：造型侧边栏列表（带缩略图）
- * - 右侧：当前选中造型的详情面板
- * - 处理造型创建逻辑
- * - 修复 render 中调用 setState 的 bug
+ * 造型管理器组件 - 简化版网格布局
  */
 export function StylesManager({
   projectId,
@@ -43,17 +44,9 @@ export function StylesManager({
 }: StylesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [activeStyleId, setActiveStyleId] = useState<string | null>(
-    character.images[0]?.id || null
-  );
   const [isCreatingStyle, setIsCreatingStyle] = useState(false);
-
-  // 修复 bug：使用 useEffect 而不是在 render 中调用 setState
-  useEffect(() => {
-    if (!activeStyleId && character.images.length > 0) {
-      setActiveStyleId(character.images[0].id);
-    }
-  }, [character.images, activeStyleId]);
+  const [previewImage, setPreviewImage] = useState<CharacterImage | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const handleCreateStyle = async () => {
     if (!hasBasicInfo) {
@@ -79,7 +72,6 @@ export function StylesManager({
       if (result.success && result.imageId) {
         console.log("✅ 创建成功，准备刷新页面");
         toast.success("造型已创建");
-        setActiveStyleId(result.imageId);
         // 使用 startTransition 包装 router.refresh，确保状态更新正确
         startTransition(() => {
           console.log("🔄 开始刷新页面...");
@@ -98,63 +90,193 @@ export function StylesManager({
     }
   };
 
-  // 如果没有造型，显示空状态
-  if (character.images.length === 0) {
-    return (
-      <div className="p-6">
+  return (
+    <div className="p-6 space-y-6">
+      {/* 标题和创建按钮 */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">
+          造型列表 ({character.images.length})
+        </h3>
+        <Button
+          onClick={handleCreateStyle}
+          disabled={!hasBasicInfo || isCreatingStyle || isPending}
+          size="sm"
+        >
+          {isCreatingStyle || isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              创建中...
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4 mr-2" />
+              新建造型
+            </>
+          )}
+        </Button>
+      </div>
+
+      {!hasBasicInfo && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            请先在「基本信息」标签完善角色的外貌描述，才能创建造型。
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* 造型网格 */}
+      {character.images.length === 0 ? (
         <Alert className="border-dashed">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            还没有造型。{!hasBasicInfo ? "请先完善角色的外貌描述，" : ""}
-            点击下方的创建按钮创建第一个造型吧！
+            还没有造型。完善角色的外貌描述后，点击上方按钮创建第一个造型吧！
           </AlertDescription>
         </Alert>
-        
-        {/* 创建按钮（空状态下也显示） */}
-        <div className="mt-4">
-          <StyleSidebar
-            styles={[]}
-            activeStyleId={null}
-            onStyleSelect={() => {}}
-            onCreateStyle={handleCreateStyle}
-            isCreatingStyle={isCreatingStyle || isPending}
-            hasBasicInfo={hasBasicInfo}
-            jobs={jobs}
-          />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {character.images.map((image) => (
+            <StyleCard
+              key={image.id}
+              image={image}
+              projectId={projectId}
+              characterId={character.id}
+              onPreview={() => {
+                setPreviewImage(image);
+                setPreviewOpen(true);
+              }}
+            />
+          ))}
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // 当前激活的造型
-  const activeStyle = character.images.find((img) => img.id === activeStyleId);
+      {/* 预览对话框 */}
+      <ImagePreviewDialog
+        image={previewImage}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
+    </div>
+  );
+}
 
-  // 如果找不到激活的造型，返回 null（useEffect 会自动设置）
-  if (!activeStyle) {
-    return null;
-  }
+// 造型卡片组件
+function StyleCard({
+  image,
+  projectId,
+  characterId,
+  onPreview,
+}: {
+  image: CharacterImage;
+  projectId: string;
+  characterId: string;
+  onPreview: () => void;
+}) {
+  const hasImage = image.imageUrl !== null;
+
+  const handleDelete = async () => {
+    if (!confirm(`确定要删除「${image.label}」吗？`)) return;
+
+    try {
+      await deleteCharacterImage(projectId, image.id);
+      toast.success("已删除");
+    } catch {
+      toast.error("删除失败");
+    }
+  };
+
+  const handleSetPrimary = async () => {
+    try {
+      await setCharacterPrimaryImage(projectId, characterId, image.id);
+      toast.success("已设为主图");
+    } catch {
+      toast.error("设置失败");
+    }
+  };
+
+  const handleGenerate = async () => {
+    try {
+      const result = await generateImageForCharacterStyle(projectId, characterId, image.id);
+      if (result.success) {
+        toast.success("已提交图片生成任务，请在任务中心查看进度");
+      } else {
+        toast.error(result.error || "提交任务失败");
+      }
+    } catch {
+      toast.error("提交任务出错");
+    }
+  };
 
   return (
-    <div className="flex flex-col md:flex-row h-full">
-      {/* 左侧：造型侧边栏 */}
-      <StyleSidebar
-        styles={character.images}
-        activeStyleId={activeStyleId}
-        onStyleSelect={setActiveStyleId}
-        onCreateStyle={handleCreateStyle}
-        isCreatingStyle={isCreatingStyle || isPending}
-        hasBasicInfo={hasBasicInfo}
-        jobs={jobs}
-      />
+    <div className="group relative rounded-lg overflow-hidden border bg-background hover:shadow-md transition-shadow">
+      <div
+        className={cn(
+          "aspect-square relative",
+          hasImage && "cursor-pointer"
+        )}
+        onClick={hasImage ? onPreview : undefined}
+      >
+        {hasImage ? (
+          <>
+            <img
+              src={image.imageUrl || ""}
+              alt={image.label}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            {image.isPrimary && (
+              <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full flex items-center shadow-sm">
+                <Star className="w-3 h-3 mr-1 fill-current" /> 主图
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <Eye className="w-8 h-8 text-white drop-shadow-lg" />
+            </div>
+          </>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-muted/50 to-muted/30 border-2 border-dashed border-muted-foreground/20">
+            <ImageIcon className="w-10 h-10 text-muted-foreground/40 mb-2" />
+            <Button size="sm" onClick={handleGenerate} className="mt-2">
+              <Sparkles className="w-3 h-3 mr-1" />
+              生成图片
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 px-2 text-center">
+              已有描述
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="p-2 flex items-center justify-between">
+        <span className="text-sm font-medium truncate" title={image.label}>
+          {image.label}
+        </span>
 
-      {/* 右侧：造型详情 */}
-      <StyleDetailPanel
-        projectId={projectId}
-        characterId={character.id}
-        style={activeStyle}
-        jobs={jobs}
-        onPreview={onPreview}
-      />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+              <MoreVertical className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {hasImage && (
+              <DropdownMenuItem onClick={onPreview}>
+                <Eye className="mr-2 h-3 w-3" /> 查看大图
+              </DropdownMenuItem>
+            )}
+            {hasImage ? (
+              <DropdownMenuItem onClick={handleSetPrimary} disabled={image.isPrimary || false}>
+                <Star className="mr-2 h-3 w-3" /> 设为主图
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={handleGenerate}>
+                <Sparkles className="mr-2 h-3 w-3" /> 生成图片
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 h-3 w-3" /> 删除
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }
