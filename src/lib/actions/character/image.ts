@@ -7,47 +7,11 @@ import { characterImage, project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
-import { generateImage } from "@/lib/services/fal.service";
 import { createJob } from "@/lib/actions/job";
 import type { CharacterImageGenerationInput } from "@/types/job";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import { ImageCategory } from "@/lib/storage";
-
-/**
- * 生成角色图片 (调用 AI)
- * 返回生成的图片 URL 列表，不保存到数据库
- */
-export async function generateCharacterImages(
-  prompt: string,
-  aspectRatio: "1:1" | "9:16" | "16:9" = "1:1",
-  count: number = 4
-): Promise<{ success: boolean; images?: string[]; error?: string }> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  try {
-    const result = await generateImage({
-      prompt,
-      num_images: count,
-      aspect_ratio: aspectRatio,
-    });
-
-    return {
-      success: true,
-      images: result.images.map((img) => img.url),
-    };
-  } catch (error) {
-    console.error("生成图片失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "生成图片失败",
-    };
-  }
-}
+import { generateStylePromptFromDescription } from "./prompt-generation";
 
 /**
  * 为单个造型生成图片（异步任务版本）
@@ -94,8 +58,31 @@ export async function generateImageForCharacterStyle(
       return { success: false, error: "造型与角色不匹配" };
     }
 
+    // 如果没有造型描述，自动生成
     if (!imageRecord.imagePrompt) {
-      return { success: false, error: "该造型没有生成描述，无法生成图片" };
+      console.log(`造型 ${imageId} 没有描述，开始自动生成...`);
+      
+      // 使用造型名称作为简单描述来生成专业prompt
+      const description = imageRecord.label || "default style";
+      const generateResult = await generateStylePromptFromDescription(
+        characterId,
+        description
+      );
+
+      if (!generateResult.success || !generateResult.prompt) {
+        return { 
+          success: false, 
+          error: `自动生成造型描述失败: ${generateResult.error || "未知错误"}` 
+        };
+      }
+
+      // 保存生成的描述到数据库
+      await db
+        .update(characterImage)
+        .set({ imagePrompt: generateResult.prompt })
+        .where(eq(characterImage.id, imageId));
+
+      console.log(`造型描述已自动生成并保存: ${generateResult.prompt.substring(0, 100)}...`);
     }
 
     // 创建图片生成任务

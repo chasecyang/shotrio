@@ -11,7 +11,6 @@ export { updateCharacterInfo, updateCharacterStyleInfo, createCharacterStyle } f
 
 // 图片管理
 export {
-  generateCharacterImages,
   generateImageForCharacterStyle,
   regenerateCharacterStyleImage,
   saveCharacterImage,
@@ -21,3 +20,10 @@ export {
 
 // 角色提取
 export { extractCharactersFromScript, importExtractedCharacters } from "./extraction";
+
+// Prompt生成
+export { 
+  generateStylePrompt, 
+  generateStylePromptFromDescription, 
+  optimizeStylePrompt 
+} from "./prompt-generation";

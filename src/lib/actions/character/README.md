@@ -19,9 +19,8 @@ character/
 - `upsertCharacter` - 创建或更新角色
 - `deleteCharacter` - 删除角色
 
-### image.ts (334行)
+### image.ts
 角色图片管理：
-- `generateCharacterImages` - 生成角色图片（调用 AI）
 - `generateImageForCharacterStyle` - 为单个造型生成图片（异步任务）
 - `regenerateCharacterStyleImage` - 重新生成造型图片（异步任务）
 - `saveCharacterImage` - 保存角色图片状态
@@ -37,13 +36,14 @@ character/
 统一导出所有 actions，保持向后兼容：
 ```typescript
 export { upsertCharacter, deleteCharacter } from "./crud";
-export { generateCharacterImages, ... } from "./image";
+export { generateImageForCharacterStyle, ... } from "./image";
 export { extractCharactersFromScript, ... } from "./extraction";
 ```
 
 ## 删除的冗余代码
 
 - ❌ `extractCharactersFromScriptAsync` - 异步版本的角色提取函数，从未被使用
+- ❌ `generateCharacterImages` - 同步生成图片函数，已被异步任务版本取代
 
 ## 迁移说明
 

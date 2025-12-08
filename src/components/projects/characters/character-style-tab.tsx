@@ -122,6 +122,7 @@ export function CharacterStyleTab({
           label={styleLabel}
           imagePrompt={imagePrompt}
           saveStatus={saveStatus}
+          characterId={characterId}
           onLabelChange={onLabelChange}
           onImagePromptChange={onImagePromptChange}
         />

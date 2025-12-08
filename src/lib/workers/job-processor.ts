@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions/job";
 import { getWorkerToken } from "@/lib/workers/auth";
 import { buildCharacterSheetPrompt } from "@/lib/prompts/character";
+import { generateStylePromptFromDescription } from "@/lib/actions/character/prompt-generation";
 import type {
   Job,
   NovelSplitInput,
@@ -495,8 +496,42 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
     throw new Error("角色不属于该项目");
   }
 
-  if (!imageRecord.imagePrompt) {
-    throw new Error("该造型没有生成描述，无法生成图片");
+  // 如果没有造型描述，自动生成
+  let finalImagePrompt = imageRecord.imagePrompt;
+  if (!finalImagePrompt) {
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 15,
+        progressMessage: "造型描述为空，正在自动生成...",
+      },
+      workerToken
+    );
+
+    console.log(`造型 ${imageId} 没有描述，开始自动生成...`);
+    
+    // 使用造型名称作为简单描述来生成专业prompt
+    const description = imageRecord.label || "default style";
+    const generateResult = await generateStylePromptFromDescription(
+      characterId,
+      description
+    );
+
+    if (!generateResult.success || !generateResult.prompt) {
+      throw new Error(
+        `自动生成造型描述失败: ${generateResult.error || "未知错误"}`
+      );
+    }
+
+    finalImagePrompt = generateResult.prompt;
+
+    // 保存生成的描述到数据库
+    await db
+      .update(characterImage)
+      .set({ imagePrompt: finalImagePrompt })
+      .where(eq(characterImage.id, imageId));
+
+    console.log(`造型描述已自动生成并保存: ${finalImagePrompt.substring(0, 100)}...`);
   }
 
   await updateJobProgress(
@@ -510,7 +545,7 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
 
   // 构建完整 Prompt - 使用专业的角色设定图 Prompt
   const baseAppearance = imageRecord.character.appearance || "";
-  const stylePrompt = imageRecord.imagePrompt;
+  const stylePrompt = finalImagePrompt; // 使用自动生成的或原有的描述
   
   const fullPrompt = buildCharacterSheetPrompt({
     characterName: imageRecord.character.name,
