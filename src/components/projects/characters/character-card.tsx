@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Character, CharacterImage } from "@/types/project";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Loader2, Plus, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +20,7 @@ import { CharacterBasicInfoTab } from "./character-basic-info-tab";
 import { CharacterStyleTab } from "./character-style-tab";
 import { ImagePreviewDialog } from "./image-preview-dialog";
 import { useAutoSave, SaveStatus } from "./hooks/use-auto-save";
+import { ChipNav, ChipNavItem } from "./chip-nav";
 
 interface CharacterCardProps {
   character: Character & { images: CharacterImage[] };
@@ -51,14 +51,12 @@ export function CharacterCard({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   
-  // 基础信息表单数据
   const [formData, setFormData] = useState<FormData>({
     name: character.name,
     description: character.description || "",
     appearance: character.appearance || "",
   });
 
-  // 造型信息数据
   const [styleDataMap, setStyleDataMap] = useState<Record<string, StyleData>>(() => {
     const initialMap: Record<string, StyleData> = {};
     character.images.forEach(image => {
@@ -75,7 +73,6 @@ export function CharacterCard({
 
   const hasBasicInfo = !!(formData.appearance || formData.description);
 
-  // 基础信息自动保存
   const { saveStatus } = useAutoSave({
     data: formData,
     originalData: {
@@ -92,9 +89,7 @@ export function CharacterCard({
     },
   });
 
-  // 更新造型信息（带防抖自动保存）
   const updateStyleData = (imageId: string, field: keyof StyleData, value: string) => {
-    // 更新本地状态
     setStyleDataMap(prev => ({
       ...prev,
       [imageId]: {
@@ -103,12 +98,10 @@ export function CharacterCard({
       },
     }));
 
-    // 清除旧的定时器
     if (styleTimers[imageId]) {
       clearTimeout(styleTimers[imageId]);
     }
 
-    // 设置新的防抖定时器
     const timer = setTimeout(async () => {
       const currentData = { ...styleDataMap[imageId], [field]: value };
       setStyleSaveStatus(prev => ({ ...prev, [imageId]: "saving" }));
@@ -191,7 +184,6 @@ export function CharacterCard({
           isHighlighted && "animate-in fade-in zoom-in duration-500 border-primary shadow-lg shadow-primary/20"
         )}
       >
-        {/* 顶部区域 */}
         <CharacterCardHeader
           name={formData.name}
           onNameChange={(name) => setFormData({ ...formData, name })}
@@ -202,98 +194,90 @@ export function CharacterCard({
           onDelete={handleDelete}
         />
 
-        {/* Tab导航栏和内容 */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-0">
-          {/* Tab导航栏 */}
-          <div className="px-4 py-3 overflow-x-auto overflow-y-hidden scrollbar-hide">
-            <div className="flex items-center gap-2 min-w-max">
-              <TabsList className="h-10">
-                <TabsTrigger value="basic-info">
-                  基础信息
-                </TabsTrigger>
-                {character.images.map((image, index) => (
-                  <TabsTrigger 
-                    key={image.id}
-                    value={`style-${image.id}`}
-                  >
-                    {image.isPrimary && (
-                      <Star className="w-3 h-3 text-amber-500 fill-amber-500 drop-shadow-sm" />
-                    )}
-                    {image.label || `造型 ${index + 1}`}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {/* 新建造型按钮 */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleCreateStyle}
-                    disabled={!hasBasicInfo || isCreatingStyle || isPending}
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0 shrink-0 rounded-lg"
-                  >
-                    {isCreatingStyle || isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="w-3.5 h-3.5" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  创建新造型
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+        <div className="px-3 py-1.5 sm:px-4 sm:py-2">
+          <ChipNav>
+            <ChipNavItem 
+              active={activeTab === "basic-info"}
+              onClick={() => setActiveTab("basic-info")}
+            >
+              基础信息
+            </ChipNavItem>
+            {character.images.map((image, index) => (
+              <ChipNavItem 
+                key={image.id}
+                active={activeTab === `style-${image.id}`}
+                onClick={() => setActiveTab(`style-${image.id}`)}
+              >
+                {image.isPrimary && (
+                  <Star className="w-3 h-3 text-amber-500 fill-amber-500 drop-shadow-sm" />
+                )}
+                {image.label || `造型 ${index + 1}`}
+              </ChipNavItem>
+            ))}
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleCreateStyle}
+                  disabled={!hasBasicInfo || isCreatingStyle || isPending}
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 shrink-0 rounded-lg"
+                >
+                  {isCreatingStyle || isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                创建新造型
+              </TooltipContent>
+            </Tooltip>
+          </ChipNav>
+        </div>
 
-          {/* Tab内容区域 */}
-          <div className="min-h-[300px]">
-            {/* 基础信息Tab */}
-            <TabsContent value="basic-info" className="m-0">
-              <CharacterBasicInfoTab
-                description={formData.description}
-                appearance={formData.appearance}
-                onDescriptionChange={(value) => setFormData({ ...formData, description: value })}
-                onAppearanceChange={(value) => setFormData({ ...formData, appearance: value })}
-                hasBasicInfo={hasBasicInfo}
+        <div className="min-h-[300px]">
+          {activeTab === "basic-info" && (
+            <CharacterBasicInfoTab
+              description={formData.description}
+              appearance={formData.appearance}
+              onDescriptionChange={(value) => setFormData({ ...formData, description: value })}
+              onAppearanceChange={(value) => setFormData({ ...formData, appearance: value })}
+              hasBasicInfo={hasBasicInfo}
+            />
+          )}
+
+          {character.images.map((image) => {
+            const styleData = styleDataMap[image.id] || { 
+              label: image.label, 
+              imagePrompt: image.imagePrompt || "" 
+            };
+            const styleSaveState = styleSaveStatus[image.id] || "idle";
+
+            return activeTab === `style-${image.id}` ? (
+              <CharacterStyleTab
+                key={image.id}
+                image={image}
+                projectId={projectId}
+                characterId={character.id}
+                styleLabel={styleData.label}
+                imagePrompt={styleData.imagePrompt}
+                saveStatus={styleSaveState}
+                onLabelChange={(value) => updateStyleData(image.id, "label", value)}
+                onImagePromptChange={(value) => updateStyleData(image.id, "imagePrompt", value)}
+                onPreview={() => {
+                  setPreviewImage(image);
+                  setPreviewOpen(true);
+                }}
+                onDeleted={() => setActiveTab("basic-info")}
               />
-            </TabsContent>
-
-            {/* 造型Tabs */}
-            {character.images.map((image) => {
-              const styleData = styleDataMap[image.id] || { 
-                label: image.label, 
-                imagePrompt: image.imagePrompt || "" 
-              };
-              const styleSaveState = styleSaveStatus[image.id] || "idle";
-
-              return (
-                <TabsContent key={image.id} value={`style-${image.id}`} className="m-0">
-                  <CharacterStyleTab
-                    image={image}
-                    projectId={projectId}
-                    characterId={character.id}
-                    styleLabel={styleData.label}
-                    imagePrompt={styleData.imagePrompt}
-                    saveStatus={styleSaveState}
-                    onLabelChange={(value) => updateStyleData(image.id, "label", value)}
-                    onImagePromptChange={(value) => updateStyleData(image.id, "imagePrompt", value)}
-                    onPreview={() => {
-                      setPreviewImage(image);
-                      setPreviewOpen(true);
-                    }}
-                    onDeleted={() => setActiveTab("basic-info")}
-                  />
-                </TabsContent>
-              );
-            })}
-          </div>
-        </Tabs>
+            ) : null;
+          })}
+        </div>
       </Card>
 
-      {/* 预览对话框 */}
       <ImagePreviewDialog
         image={previewImage}
         open={previewOpen}
