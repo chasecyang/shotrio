@@ -18,8 +18,6 @@ export async function upsertScene(
     id?: string;
     name: string;
     description?: string;
-    location?: string;
-    timeOfDay?: string;
   }
 ) {
   const session = await auth.api.getSession({
@@ -49,8 +47,6 @@ export async function upsertScene(
         .set({
           name: data.name,
           description: data.description,
-          location: data.location,
-          timeOfDay: data.timeOfDay,
         })
         .where(eq(scene.id, data.id));
     } else {
@@ -60,8 +56,6 @@ export async function upsertScene(
         projectId,
         name: data.name,
         description: data.description,
-        location: data.location,
-        timeOfDay: data.timeOfDay,
       });
     }
 

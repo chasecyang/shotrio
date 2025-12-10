@@ -181,8 +181,8 @@ export function CharacterCard({
     <>
       <Card 
         className={cn(
-          "group relative overflow-hidden transition-all duration-300 bg-card hover:ring-2 hover:ring-primary/30",
-          isHighlighted && "animate-in fade-in zoom-in duration-500 border-primary ring-2 ring-primary/40"
+          "group relative overflow-hidden transition-all duration-300 bg-card hover:border-primary/40 rounded-lg shadow-none",
+          isHighlighted && "animate-in fade-in zoom-in duration-500 border-primary ring-1 ring-primary/40"
         )}
       >
         <CharacterCardHeader

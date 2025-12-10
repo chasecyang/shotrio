@@ -177,7 +177,7 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          "border rounded-lg bg-card overflow-hidden transition-all hover:ring-2 hover:ring-primary/30 flex flex-col h-full",
+          "border rounded-lg bg-card overflow-hidden transition-all hover:border-primary/40 flex flex-col h-full",
           isDragging && "opacity-50 z-50"
         )}
         onMouseEnter={() => setIsHovered(true)}

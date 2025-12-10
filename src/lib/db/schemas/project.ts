@@ -40,6 +40,12 @@ export const cameraMovementEnum = pgEnum("camera_movement", [
   "handheld", // 手持
 ]);
 
+// 场景图片类型
+export const sceneImageTypeEnum = pgEnum("scene_image_type", [
+  "master_layout", // 全景布局图
+  "quarter_view", // 45度视角
+]);
+
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
   "novel_split", // 小说拆分
@@ -131,8 +137,6 @@ export const scene = pgTable("scene", {
 
   name: text("name").notNull(), // 场景名称 (e.g. "咖啡厅", "主角的家-客厅")
   description: text("description"), // 场景描述
-  location: text("location"), // 位置标注 (e.g. "内景", "exterior", "半室内")
-  timeOfDay: text("time_of_day"), // 时间段 (e.g. "白天", "黄昏", "night")
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -148,12 +152,10 @@ export const sceneImage = pgTable("scene_image", {
     .notNull()
     .references(() => scene.id, { onDelete: "cascade" }),
 
-  label: text("label").notNull(), // 视角名称 (e.g. "全景", "正面视角", "鸟瞰图")
+  imageType: sceneImageTypeEnum("image_type").notNull(), // 图片类型: master_layout | quarter_view
   imagePrompt: text("image_prompt"), // 该视角的图像生成prompt
   imageUrl: text("image_url"), // 生成并选定后的图片地址
   seed: integer("seed"), // 固定 Seed
-  
-  isPrimary: boolean("is_primary").default(false), // 是否为主图/封面
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

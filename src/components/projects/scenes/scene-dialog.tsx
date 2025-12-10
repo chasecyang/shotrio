@@ -27,8 +27,6 @@ export function SceneDialog({ projectId, trigger }: SceneDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    location: "",
-    timeOfDay: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,7 +42,7 @@ export function SceneDialog({ projectId, trigger }: SceneDialogProps) {
       if (result.success) {
         toast.success("场景创建成功");
         setOpen(false);
-        setFormData({ name: "", description: "", location: "", timeOfDay: "" });
+        setFormData({ name: "", description: "" });
       } else {
         toast.error(result.error || "创建失败");
       }
@@ -85,33 +83,14 @@ export function SceneDialog({ projectId, trigger }: SceneDialogProps) {
             <Label htmlFor="description">场景描述</Label>
             <Textarea
               id="description"
-              placeholder="描述场景的氛围、环境、装饰风格等..."
+              placeholder="详细描述场景的氛围、环境特征、装饰风格、光线条件等，这将作为 AI 生成场景图片的基础..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
+              rows={4}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="location">位置标注</Label>
-              <Input
-                id="location"
-                placeholder="如：内景、exterior"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="timeOfDay">时间段</Label>
-              <Input
-                id="timeOfDay"
-                placeholder="如：白天、night"
-                value={formData.timeOfDay}
-                onChange={(e) => setFormData({ ...formData, timeOfDay: e.target.value })}
-              />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              提示：可以包含时间（白天/夜晚）、位置（内景/外景）、氛围等信息
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

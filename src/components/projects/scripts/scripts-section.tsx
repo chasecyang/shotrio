@@ -378,7 +378,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
 
   return (
     <>
-      <div className="border rounded-lg bg-card hover:ring-2 hover:ring-primary/30 transition-all">
+      <div className="border rounded-lg bg-card hover:border-primary/40 transition-all">
         {/* 剧集标题栏 */}
         <div className="p-3 border-b bg-muted/50">
           <div className="flex items-center justify-between gap-2">

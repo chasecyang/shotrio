@@ -116,7 +116,7 @@ export async function getProjectDetail(
         scenes: {
           with: {
             images: {
-              orderBy: (images, { desc }) => [desc(images.isPrimary), desc(images.createdAt)],
+              orderBy: (images, { desc }) => [desc(images.createdAt)],
             },
           },
         },

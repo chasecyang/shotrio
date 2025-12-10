@@ -1,10 +1,11 @@
 // 导出所有 scene actions
 export { upsertScene, deleteScene } from "./crud";
 export {
-  saveSceneImage,
+  generateMasterLayout,
+  generateQuarterView,
+  saveMasterLayout,
+  saveQuarterView,
+  regenerateSceneImage,
   deleteSceneImage,
-  setScenePrimaryImage,
-  generateImageForSceneView,
-  regenerateSceneViewImage,
-  generateSceneImages,
+  getSceneImages,
 } from "./image";

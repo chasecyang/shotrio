@@ -19,6 +19,9 @@ export type NewScene = typeof scene.$inferInsert;
 export type SceneImage = typeof sceneImage.$inferSelect;
 export type NewSceneImage = typeof sceneImage.$inferInsert;
 
+// 场景图片类型
+export type SceneImageType = "master_layout" | "quarter_view";
+
 export type Shot = typeof shot.$inferSelect;
 export type NewShot = typeof shot.$inferInsert;
 
@@ -137,10 +140,6 @@ export interface SceneWithImages extends Scene {
 
 export interface SceneDetail extends Scene {
   images: SceneImage[];
-}
-
-// 场景视角预设
-export interface SceneViewPreset {
-  label: string;
-  prompt: string;
+  masterLayout?: SceneImage;
+  quarterView?: SceneImage;
 }
