@@ -1,6 +1,5 @@
-import { HelpCircle, Sparkles } from "lucide-react";
-import { EditableTextarea } from "./editable-field";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sparkles, User, Eye } from "lucide-react";
+import { EditableField, EditableTextarea } from "@/components/ui/inline-editable-field";
 
 interface CharacterBasicInfoTabProps {
   description: string;
@@ -21,18 +20,11 @@ export function CharacterBasicInfoTab({
     <div className="p-3 space-y-3">
       <div className="space-y-3">
         {/* 角色设定 */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            角色设定
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="w-3 h-3 text-muted-foreground/60 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[280px]">
-                描述角色的性格、背景、职业等基本设定信息
-              </TooltipContent>
-            </Tooltip>
-          </label>
+        <EditableField
+          label="角色设定"
+          icon={User}
+          tooltip="描述角色的性格、背景、职业等基本设定信息"
+        >
           <EditableTextarea
             value={description}
             onChange={onDescriptionChange}
@@ -40,21 +32,14 @@ export function CharacterBasicInfoTab({
             emptyText="点击输入角色设定"
             minHeight="min-h-[80px]"
           />
-        </div>
+        </EditableField>
 
         {/* 外貌描述 */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            外貌描述
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="w-3 h-3 text-muted-foreground/60 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[280px]">
-                描述角色固定的外貌特征，如发色、瞳色、身高、体型等不会变化的特点
-              </TooltipContent>
-            </Tooltip>
-          </label>
+        <EditableField
+          label="外貌描述"
+          icon={Eye}
+          tooltip="描述角色固定的外貌特征，如发色、瞳色、身高、体型等不会变化的特点"
+        >
           <EditableTextarea
             value={appearance}
             onChange={onAppearanceChange}
@@ -62,7 +47,7 @@ export function CharacterBasicInfoTab({
             emptyText="点击输入外貌描述"
             minHeight="min-h-[80px]"
           />
-        </div>
+        </EditableField>
 
         {/* 提示信息 */}
         {!hasBasicInfo && (

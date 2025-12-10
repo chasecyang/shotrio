@@ -3,10 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { ProjectDetail, Episode } from "@/types/project";
 import { updateEpisode, deleteEpisode, createEpisode } from "@/lib/actions/project";
 import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
@@ -15,18 +12,21 @@ import {
   Trash2, 
   Film,
   Loader2,
-  Check,
-  AlertCircle,
-  Edit2,
   BookOpen,
   Plus,
-  Sparkles,
-  X,
   FileText,
   Zap,
   ScrollText,
-  Users
+  Users,
+  Sparkles
 } from "lucide-react";
+import { 
+  EditableField, 
+  EditableInput, 
+  EditableTextarea, 
+  AIGenerationPanel,
+  SaveStatus 
+} from "@/components/ui/inline-editable-field";
 import { NovelImportDialog } from "./novel-import-dialog";
 import { CharacterExtractionDialog } from "../characters/character-extraction-dialog";
 import {
@@ -39,13 +39,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
 
 interface ScriptsSectionProps {
   project: ProjectDetail;
 }
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function ScriptsSection({ project }: ScriptsSectionProps) {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -159,8 +156,6 @@ interface EpisodeRowProps {
 
 function EpisodeRow({ episode }: EpisodeRowProps) {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: episode.title,
     summary: episode.summary || "",
@@ -198,7 +193,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
       formData.hook !== (episode.hook || "") ||
       formData.scriptContent !== (episode.scriptContent || "");
 
-    if (hasChanges && isEditing) {
+    if (hasChanges) {
       setSaveStatus("idle");
       
       // 1.5秒后自动保存
@@ -238,7 +233,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [formData, episode, isEditing]);
+  }, [formData, episode]);
 
   // 清理定时器
   useEffect(() => {
@@ -272,13 +267,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
     }
   };
 
-  const handleFieldClick = (field: string) => {
-    setIsEditing(true);
-    setEditingField(field);
-  };
-
-  const handleGenerateSummary = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // 防止触发 handleFieldClick
+  const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true);
     setGeneratedSummary(null);
 
@@ -306,7 +295,6 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
   const handleAcceptSummary = () => {
     if (generatedSummary) {
       setFormData(prev => ({ ...prev, summary: generatedSummary }));
-      setIsEditing(true); // 确保触发保存逻辑
       setGeneratedSummary(null);
     }
   };
@@ -315,8 +303,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
     setGeneratedSummary(null);
   };
 
-  const handleGenerateHook = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleGenerateHook = async () => {
     setIsGeneratingHook(true);
     setGeneratedHook(null);
 
@@ -344,7 +331,6 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
   const handleAcceptHook = () => {
     if (generatedHook) {
       setFormData(prev => ({ ...prev, hook: generatedHook }));
-      setIsEditing(true);
       setGeneratedHook(null);
     }
   };
@@ -353,8 +339,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
     setGeneratedHook(null);
   };
 
-  const handleGenerateScript = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleGenerateScript = async () => {
     setIsGeneratingScript(true);
     setGeneratedScript(null);
 
@@ -383,7 +368,6 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
   const handleAcceptScript = () => {
     if (generatedScript) {
       setFormData(prev => ({ ...prev, scriptContent: generatedScript }));
-      setIsEditing(true);
       setGeneratedScript(null);
     }
   };
@@ -394,7 +378,7 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
 
   return (
     <>
-      <div className="border rounded-lg bg-card hover:shadow-sm transition-shadow">
+      <div className="border rounded-lg bg-card hover:ring-2 hover:ring-primary/30 transition-all">
         {/* 剧集标题栏 */}
         <div className="p-3 border-b bg-muted/50">
           <div className="flex items-center justify-between gap-2">
@@ -402,33 +386,18 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
               <Badge variant="outline" className="font-mono flex-shrink-0 text-xs">
                 第 {episode.order} 集
               </Badge>
-              <div 
-                className="flex-1 min-w-0 cursor-pointer group"
-                onClick={() => handleFieldClick('title')}
-              >
-                {isEditing && editingField === 'title' ? (
-                  <Input
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    placeholder="输入剧集标题..."
-                    className="h-8 text-sm font-medium"
-                    autoFocus
-                    onBlur={() => setEditingField(null)}
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 px-2 py-1 -mx-2 -my-1 rounded group-hover:bg-muted/50 transition-all">
-                    <h3 className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                      {formData.title || "未命名"}
-                    </h3>
-                    <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                  </div>
-                )}
+              <div className="flex-1 min-w-0">
+                <EditableInput
+                  value={formData.title}
+                  onChange={(value) => setFormData({ ...formData, title: value })}
+                  placeholder="输入剧集标题..."
+                  emptyText="未命名"
+                  className="px-2 py-1 -mx-2 -my-1"
+                  inputClassName="h-8 text-sm font-medium"
+                />
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <SaveStatusIndicator status={saveStatus} />
               <Button
                 variant="ghost"
                 size="sm"
@@ -447,280 +416,95 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* 梗概 */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div 
-                  className="flex items-center gap-1.5 cursor-pointer group"
-                  onClick={() => handleFieldClick('summary')}
-                >
-                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Label className="text-xs font-semibold text-foreground cursor-pointer">梗概</Label>
-                  <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                  onClick={handleGenerateSummary}
-                  disabled={isGeneratingSummary}
-                  title="AI 生成/优化梗概"
-                >
-                  {isGeneratingSummary ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
-                  )}
-                </Button>
-              </div>
-              
-              <div 
-                className="cursor-pointer group"
-                onClick={() => handleFieldClick('summary')}
+              <EditableField
+                label="梗概"
+                icon={FileText}
+                saveStatus={saveStatus}
+                onAIGenerate={handleGenerateSummary}
+                isAIGenerating={isGeneratingSummary}
+                aiButtonTitle="AI 生成/优化梗概"
               >
-                {isEditing && editingField === 'summary' ? (
-                  <Textarea
-                    value={formData.summary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, summary: e.target.value })
-                    }
-                    placeholder="简要描述本集的主要内容..."
-                    rows={3}
-                    className="text-sm resize-none"
-                    autoFocus
-                    onBlur={() => setEditingField(null)}
-                  />
-                ) : (
-                  <div className={cn(
-                    "px-2.5 py-2 rounded-md border border-transparent group-hover:border-muted group-hover:bg-muted/30 transition-all",
-                    !formData.summary && "py-1.5"
-                  )}>
-                    <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                      {formData.summary || (
-                        <span className="text-xs text-muted-foreground/60 italic">点击添加梗概</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
+                <EditableTextarea
+                  value={formData.summary}
+                  onChange={(value) => setFormData({ ...formData, summary: value })}
+                  placeholder="简要描述本集的主要内容..."
+                  emptyText="点击添加梗概"
+                  rows={3}
+                />
+              </EditableField>
 
               {/* AI 生成结果预览区 */}
               {generatedSummary && (
-                <div className="bg-purple-50/50 border border-purple-100 rounded-md p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-purple-700 flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3" />
-                      AI 建议
-                    </span>
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={handleAcceptSummary}
-                      >
-                        <Check className="w-3.5 h-3.5 mr-1" />
-                        接受
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-muted-foreground hover:text-foreground"
-                        onClick={handleRejectSummary}
-                      >
-                        <X className="w-3.5 h-3.5 mr-1" />
-                        拒绝
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-foreground/80">{generatedSummary}</p>
-                </div>
+                <AIGenerationPanel
+                  content={generatedSummary}
+                  onAccept={handleAcceptSummary}
+                  onReject={handleRejectSummary}
+                />
               )}
             </div>
 
             {/* 钩子/亮点 */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div 
-                  className="flex items-center gap-1.5 cursor-pointer group"
-                  onClick={() => handleFieldClick('hook')}
-                >
-                  <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Label className="text-xs font-semibold text-foreground cursor-pointer">钩子/亮点</Label>
-                  <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                  onClick={handleGenerateHook}
-                  disabled={isGeneratingHook}
-                  title="AI 生成/优化钩子"
-                >
-                  {isGeneratingHook ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
-                  )}
-                </Button>
-              </div>
-              
-              <div 
-                className="cursor-pointer group"
-                onClick={() => handleFieldClick('hook')}
+              <EditableField
+                label="钩子/亮点"
+                icon={Zap}
+                saveStatus={saveStatus}
+                onAIGenerate={handleGenerateHook}
+                isAIGenerating={isGeneratingHook}
+                aiButtonTitle="AI 生成/优化钩子"
               >
-                {isEditing && editingField === 'hook' ? (
-                  <Textarea
-                    value={formData.hook}
-                    onChange={(e) =>
-                      setFormData({ ...formData, hook: e.target.value })
-                    }
-                    placeholder="本集的核心冲突、悬念点或情感高潮..."
-                    rows={3}
-                    className="text-sm resize-none"
-                    autoFocus
-                    onBlur={() => setEditingField(null)}
-                  />
-                ) : (
-                  <div className={cn(
-                    "px-2.5 py-2 rounded-md border border-transparent group-hover:border-muted group-hover:bg-muted/30 transition-all",
-                    !formData.hook && "py-1.5"
-                  )}>
-                    <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                      {formData.hook || (
-                        <span className="text-xs text-muted-foreground/60 italic">点击添加钩子/亮点</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
+                <EditableTextarea
+                  value={formData.hook}
+                  onChange={(value) => setFormData({ ...formData, hook: value })}
+                  placeholder="本集的核心冲突、悬念点或情感高潮..."
+                  emptyText="点击添加钩子/亮点"
+                  rows={3}
+                />
+              </EditableField>
 
               {/* AI 生成结果预览区 */}
               {generatedHook && (
-                <div className="bg-purple-50/50 border border-purple-100 rounded-md p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-purple-700 flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3" />
-                      AI 建议
-                    </span>
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={handleAcceptHook}
-                      >
-                        <Check className="w-3.5 h-3.5 mr-1" />
-                        接受
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-muted-foreground hover:text-foreground"
-                        onClick={handleRejectHook}
-                      >
-                        <X className="w-3.5 h-3.5 mr-1" />
-                        拒绝
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-foreground/80">{generatedHook}</p>
-                </div>
+                <AIGenerationPanel
+                  content={generatedHook}
+                  onAccept={handleAcceptHook}
+                  onReject={handleRejectHook}
+                />
               )}
             </div>
           </div>
 
           {/* 剧本内容 - 全宽显示 */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <div 
-                className="flex items-center gap-1.5 cursor-pointer group"
-                onClick={() => handleFieldClick('scriptContent')}
-              >
-                <ScrollText className="w-3.5 h-3.5 text-muted-foreground" />
-                <Label className="text-xs font-semibold text-foreground cursor-pointer">剧本内容</Label>
-                <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                onClick={handleGenerateScript}
-                disabled={isGeneratingScript}
-                title="AI 生成/优化剧本"
-              >
-                {isGeneratingScript ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5" />
-                )}
-              </Button>
-            </div>
-            
-            <div 
-              className="cursor-pointer group"
-              onClick={() => handleFieldClick('scriptContent')}
+            <EditableField
+              label="剧本内容"
+              icon={ScrollText}
+              saveStatus={saveStatus}
+              onAIGenerate={handleGenerateScript}
+              isAIGenerating={isGeneratingScript}
+              aiButtonTitle="AI 生成/优化剧本"
             >
-              {isEditing && editingField === 'scriptContent' ? (
-                <Textarea
-                  value={formData.scriptContent}
-                  onChange={(e) =>
-                    setFormData({ ...formData, scriptContent: e.target.value })
-                  }
-                  placeholder="编写完整的剧本内容，包括场景描述、人物对话、动作等..."
-                  className="min-h-[180px] font-mono text-xs leading-relaxed"
-                  autoFocus
-                  onBlur={() => setEditingField(null)}
-                />
-              ) : (
-                <div className={cn(
-                  "px-2.5 py-2 rounded-md border border-transparent group-hover:border-muted group-hover:bg-muted/30 transition-all max-h-[280px] overflow-auto",
-                  formData.scriptContent ? "min-h-[180px]" : "py-1.5"
-                )}>
-                  <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                    {formData.scriptContent ? (
-                      <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
-                        {formData.scriptContent}
-                      </pre>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60 italic">点击编写剧本内容</span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+              <EditableTextarea
+                value={formData.scriptContent}
+                onChange={(value) => setFormData({ ...formData, scriptContent: value })}
+                placeholder="编写完整的剧本内容，包括场景描述、人物对话、动作等..."
+                emptyText="点击编写剧本内容"
+                textareaClassName="min-h-[180px] font-mono text-xs leading-relaxed"
+                minHeight="min-h-[180px]"
+                className="max-h-[280px] overflow-auto"
+              />
+            </EditableField>
 
             {/* AI 生成结果预览区 */}
             {generatedScript && (
-              <div className="bg-purple-50/50 border border-purple-100 rounded-md p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-purple-700 flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3" />
-                    AI 建议
-                  </span>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={handleAcceptScript}
-                    >
-                      <Check className="w-3.5 h-3.5 mr-1" />
-                      接受
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-muted-foreground hover:text-foreground"
-                      onClick={handleRejectScript}
-                    >
-                      <X className="w-3.5 h-3.5 mr-1" />
-                      拒绝
-                    </Button>
-                  </div>
-                </div>
-                <pre className="text-sm text-foreground/80 font-mono whitespace-pre-wrap max-h-[280px] overflow-auto bg-white/50 p-2 rounded">
-                  {generatedScript}
-                </pre>
-              </div>
+              <AIGenerationPanel
+                content={
+                  <pre className="font-mono whitespace-pre-wrap max-h-[280px] overflow-auto bg-white/50 p-2 rounded">
+                    {generatedScript}
+                  </pre>
+                }
+                onAccept={handleAcceptScript}
+                onReject={handleRejectScript}
+              />
             )}
           </div>
         </div>
@@ -752,40 +536,3 @@ function EpisodeRow({ episode }: EpisodeRowProps) {
   );
 }
 
-interface SaveStatusIndicatorProps {
-  status: SaveStatus;
-}
-
-function SaveStatusIndicator({ status }: SaveStatusIndicatorProps) {
-  if (status === "idle") {
-    return null;
-  }
-
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 text-sm transition-opacity",
-        status === "saved" && "animate-in fade-in"
-      )}
-    >
-      {status === "saving" && (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-          <span className="text-muted-foreground">保存中...</span>
-        </>
-      )}
-      {status === "saved" && (
-        <>
-          <Check className="w-4 h-4 text-green-600" />
-          <span className="text-green-600">已保存</span>
-        </>
-      )}
-      {status === "error" && (
-        <>
-          <AlertCircle className="w-4 h-4 text-destructive" />
-          <span className="text-destructive">保存失败</span>
-        </>
-      )}
-    </div>
-  );
-}

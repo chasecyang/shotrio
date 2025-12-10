@@ -27,8 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { upsertCharacter } from "@/lib/actions/character";
-import { Character } from "@/types/project";
-import { Loader2, Plus, Edit2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "角色名称不能为空"),
@@ -38,7 +37,6 @@ const formSchema = z.object({
 
 interface CharacterDialogProps {
   projectId: string;
-  character?: Character;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -46,7 +44,6 @@ interface CharacterDialogProps {
 
 export function CharacterDialog({
   projectId,
-  character,
   trigger,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
@@ -61,28 +58,23 @@ export function CharacterDialog({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: character?.name || "",
-      description: character?.description || "",
-      appearance: character?.appearance || "",
+      name: "",
+      description: "",
+      appearance: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      const result = await upsertCharacter(projectId, {
-        id: character?.id,
-        ...values,
-      });
+      const result = await upsertCharacter(projectId, values);
 
       if (result.success) {
-        toast.success(character ? "角色已更新" : "角色已创建");
+        toast.success("角色已创建");
         setOpen?.(false);
-        if (!character) {
-          form.reset();
-        }
+        form.reset();
       } else {
-        toast.error(result.error || "操作失败");
+        toast.error(result.error || "创建失败");
       }
     } catch (error) {
       toast.error("发生意外错误");
@@ -95,16 +87,17 @@ export function CharacterDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant={character ? "ghost" : "default"} size={character ? "icon" : "default"}>
-            {character ? <Edit2 className="h-4 w-4" /> : <><Plus className="mr-2 h-4 w-4" />新建角色</>}
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            新建角色
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{character ? "编辑角色" : "创建新角色"}</DialogTitle>
+          <DialogTitle>创建新角色</DialogTitle>
           <DialogDescription>
-            {character ? "修改角色的基础设定" : "快速创建角色，稍后可完善详细设定并生成造型"}
+            快速创建角色，稍后可完善详细设定并生成造型
           </DialogDescription>
         </DialogHeader>
 
@@ -169,7 +162,7 @@ export function CharacterDialog({
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {character ? "保存" : "创建角色"}
+                创建角色
               </Button>
             </DialogFooter>
           </form>

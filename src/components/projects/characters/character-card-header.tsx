@@ -7,11 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Character, CharacterImage } from "@/types/project";
-import { Check, ImageIcon, Loader2, MoreHorizontal, Sparkles, Trash2, X } from "lucide-react";
-import { EditableInput } from "./editable-field";
+import { CharacterImage } from "@/types/project";
+import { ImageIcon, MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
+import { EditableInput, SaveStatusBadge, SaveStatus } from "@/components/ui/inline-editable-field";
 import { cn } from "@/lib/utils";
-import { SaveStatus } from "./hooks/use-auto-save";
 
 interface CharacterCardHeaderProps {
   name: string;
@@ -92,20 +91,7 @@ export function CharacterCardHeader({
 
         {/* 右侧：操作区 */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* 保存状态指示器 */}
-          {saveStatus !== "idle" && (
-            <div className="flex items-center">
-              {saveStatus === "saving" && (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-              )}
-              {saveStatus === "saved" && (
-                <Check className="h-3.5 w-3.5 text-green-600" />
-              )}
-              {saveStatus === "error" && (
-                <X className="h-3.5 w-3.5 text-destructive" />
-              )}
-            </div>
-          )}
+          <SaveStatusBadge status={saveStatus} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -74,9 +74,27 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
       }
 
       case "character_extraction": {
-        const input = inputData as CharacterExtractionInput;
-        const episodeCount = input.episodeIds.length;
-        baseDetails.displaySubtitle = `${episodeCount} 个剧集`;
+        // 如果任务已完成，显示提取的角色数量
+        if (job.status === "completed" && job.resultData) {
+          try {
+            const resultData = JSON.parse(job.resultData);
+            const characterCount = resultData.characterCount || resultData.characters?.length || 0;
+            const totalStylesCount = resultData.characters?.reduce(
+              (sum: number, char: any) => sum + (char.styles?.length || 0),
+              0
+            ) || 0;
+            baseDetails.displayTitle = "角色提取";
+            baseDetails.displaySubtitle = `已提取 ${characterCount} 个角色，${totalStylesCount} 个造型`;
+          } catch {
+            const input = inputData as CharacterExtractionInput;
+            const episodeCount = input.episodeIds.length;
+            baseDetails.displaySubtitle = `${episodeCount} 个剧集`;
+          }
+        } else {
+          const input = inputData as CharacterExtractionInput;
+          const episodeCount = input.episodeIds.length;
+          baseDetails.displaySubtitle = `分析 ${episodeCount} 个剧集`;
+        }
         break;
       }
 

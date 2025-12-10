@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { CharacterImage } from "@/types/project";
 import { CharacterImageDisplay } from "./character-image-display";
 import { CharacterStyleInfo } from "./character-style-info";
-import { SaveStatus } from "./hooks/use-auto-save";
+import { SaveStatus } from "@/components/ui/inline-editable-field";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trash2 } from "lucide-react";

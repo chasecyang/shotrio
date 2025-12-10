@@ -19,7 +19,8 @@ import { CharacterCardHeader } from "./character-card-header";
 import { CharacterBasicInfoTab } from "./character-basic-info-tab";
 import { CharacterStyleTab } from "./character-style-tab";
 import { ImagePreviewDialog } from "./image-preview-dialog";
-import { useAutoSave, SaveStatus } from "./hooks/use-auto-save";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { SaveStatus } from "@/components/ui/inline-editable-field";
 import { ChipNav, ChipNavItem } from "./chip-nav";
 
 interface CharacterCardProps {
@@ -180,8 +181,8 @@ export function CharacterCard({
     <>
       <Card 
         className={cn(
-          "group relative overflow-hidden transition-all duration-300 bg-card hover:shadow-sm",
-          isHighlighted && "animate-in fade-in zoom-in duration-500 border-primary shadow-lg shadow-primary/20"
+          "group relative overflow-hidden transition-all duration-300 bg-card hover:ring-2 hover:ring-primary/30",
+          isHighlighted && "animate-in fade-in zoom-in duration-500 border-primary ring-2 ring-primary/40"
         )}
       >
         <CharacterCardHeader

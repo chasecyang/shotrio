@@ -11,6 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job/user-operations";
@@ -160,27 +166,35 @@ export function BackgroundTasks() {
   };
 
   return (
-    <DropdownMenu onOpenChange={(open) => open && loadRecentJobs()}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            "relative h-9 w-9 p-0 transition-colors",
-            activeCount > 0 && "text-primary"
-          )}
-        >
-          <Activity className="h-4 w-4" />
-          {activeCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
-            >
-              {activeCount}
-            </Badge>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
+    <TooltipProvider>
+      <DropdownMenu onOpenChange={(open) => open && loadRecentJobs()}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "relative h-9 w-9 p-0 transition-colors",
+                  activeCount > 0 && "text-primary"
+                )}
+              >
+                <Activity className="h-4 w-4" />
+                {activeCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
+                  >
+                    {activeCount}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>后台任务{activeCount > 0 ? ` (${activeCount} 个进行中)` : ""}</p>
+          </TooltipContent>
+        </Tooltip>
 
       <DropdownMenuContent align="end" className="w-[380px]">
         <div className="px-3 py-2">
@@ -222,6 +236,7 @@ export function BackgroundTasks() {
         </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
+    </TooltipProvider>
   );
 }
 

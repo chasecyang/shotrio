@@ -19,7 +19,8 @@ export {
 } from "./image";
 
 // 角色提取
-export { extractCharactersFromScript, importExtractedCharacters } from "./extraction";
+export { importExtractedCharacters } from "./extraction";
+export { startCharacterExtraction } from "./async-extraction";
 
 // Prompt生成
 export { 

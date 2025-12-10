@@ -163,7 +163,7 @@ function SceneCard({
 
   return (
     <Card 
-      className="group relative overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 border-muted hover:border-primary/50"
+      className="group relative overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all duration-300"
       onClick={onClick}
     >
       <div className="aspect-[3/4] bg-muted relative overflow-hidden">

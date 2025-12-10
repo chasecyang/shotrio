@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles, Users, CheckCircle2, AlertCircle, ChevronRight, Pencil, Trash2, Plus } from "lucide-react";
-import { extractCharactersFromScript, importExtractedCharacters } from "@/lib/actions/character";
+import { Loader2, Users, CheckCircle2, AlertCircle, Pencil, Trash2, Plus } from "lucide-react";
+import { importExtractedCharacters } from "@/lib/actions/character";
+import { getJobStatus } from "@/lib/actions/job";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,26 +15,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import type { ExtractedCharacter, ExtractedCharacterStyle } from "@/types/project";
+import type { CharacterExtractionResult } from "@/types/job";
 import { useRouter } from "next/navigation";
 
 interface CharacterExtractionDialogProps {
   projectId: string;
+  jobId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existingCharacters?: Array<{ id: string; name: string }>;
 }
 
-type Step = "extracting" | "preview" | "importing" | "success";
+type Step = "loading" | "preview" | "importing" | "success";
 
 export function CharacterExtractionDialog({
   projectId,
+  jobId,
   open,
   onOpenChange,
   existingCharacters = [],
 }: CharacterExtractionDialogProps) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("extracting");
+  const [step, setStep] = useState<Step>("loading");
   const [extractedCharacters, setExtractedCharacters] = useState<ExtractedCharacter[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<Set<number>>(new Set());
   const [selectedCharIndex, setSelectedCharIndex] = useState<number>(0);
@@ -44,20 +49,42 @@ export function CharacterExtractionDialog({
     updatedCharacters: number;
   } | null>(null);
 
-  // 开始提取
+  // 加载任务结果
   useEffect(() => {
-    if (open && step === "extracting") {
-      handleExtraction();
+    if (open && jobId && step === "loading") {
+      loadExtractionResult();
     }
-  }, [open, step]);
+  }, [open, jobId, step]);
 
-  const handleExtraction = async () => {
+  const loadExtractionResult = async () => {
     try {
       setError("");
-      const result = await extractCharactersFromScript(projectId);
+      
+      // 获取任务状态和结果
+      const result = await getJobStatus(jobId);
 
-      if (!result.success || !result.data) {
-        setError(result.error || "提取失败");
+      if (!result.success || !result.job) {
+        setError(result.error || "获取任务结果失败");
+        return;
+      }
+
+      const job = result.job;
+
+      if (job.status !== "completed") {
+        setError("任务尚未完成");
+        return;
+      }
+
+      if (!job.resultData) {
+        setError("任务结果为空");
+        return;
+      }
+
+      // 解析提取结果
+      const extractionResult: CharacterExtractionResult = JSON.parse(job.resultData);
+
+      if (!extractionResult.characters || extractionResult.characters.length === 0) {
+        setError("未提取到角色信息");
         return;
       }
 
@@ -66,7 +93,7 @@ export function CharacterExtractionDialog({
         existingCharacters.map(c => c.name.toLowerCase().trim())
       );
 
-      const charactersWithStatus = result.data.characters.map(char => {
+      const charactersWithStatus = extractionResult.characters.map(char => {
         const isExisting = existingNames.has(char.name.toLowerCase().trim());
         return {
           ...char,
@@ -83,7 +110,8 @@ export function CharacterExtractionDialog({
       setSelectedCharacters(new Set(charactersWithStatus.map((_, idx) => idx)));
       setStep("preview");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "提取失败");
+      console.error("加载提取结果失败:", err);
+      setError(err instanceof Error ? err.message : "加载失败");
     }
   };
 
@@ -177,15 +205,15 @@ export function CharacterExtractionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0">
-        {step === "extracting" && (
+      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 flex flex-col">
+        {step === "loading" && (
           <div className="p-12">
             <DialogHeader className="mb-8">
               <DialogTitle className="text-2xl flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+                  <Users className="w-6 h-6 text-primary" />
                 </div>
-                正在提取角色信息
+                加载提取结果
               </DialogTitle>
             </DialogHeader>
 
@@ -194,17 +222,13 @@ export function CharacterExtractionDialog({
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
                   <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-destructive mb-1">提取失败</p>
+                    <p className="font-medium text-destructive mb-1">加载失败</p>
                     <p className="text-sm text-muted-foreground">{error}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Button onClick={() => setStep("extracting")} className="flex-1">
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    重试
-                  </Button>
                   <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-                    取消
+                    关闭
                   </Button>
                 </div>
               </div>
@@ -214,9 +238,9 @@ export function CharacterExtractionDialog({
                   <Loader2 className="w-16 h-16 text-primary animate-spin" />
                 </div>
                 <div className="text-center space-y-2">
-                  <p className="text-lg font-medium">AI 正在分析剧本内容...</p>
+                  <p className="text-lg font-medium">正在加载提取结果...</p>
                   <p className="text-sm text-muted-foreground">
-                    正在识别角色、提取外貌特征和造型描述
+                    请稍候
                   </p>
                 </div>
               </div>
@@ -226,7 +250,7 @@ export function CharacterExtractionDialog({
 
         {step === "preview" && (
           <>
-            <DialogHeader className="p-6 pb-4 border-b">
+            <DialogHeader className="p-6 pb-4 border-b flex-shrink-0">
               <DialogTitle className="text-xl flex items-center gap-2">
                 <Users className="w-5 h-5" />
                 预览并编辑角色信息
@@ -236,182 +260,189 @@ export function CharacterExtractionDialog({
               </DialogTitle>
             </DialogHeader>
 
-            <div className="flex flex-1 min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
               {/* 左侧角色列表 */}
-              <div className="w-80 border-r flex flex-col">
-                <div className="p-4 border-b">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleAll}
-                    className="w-full"
-                  >
-                    {selectedCharacters.size === extractedCharacters.length ? "取消全选" : "全选"}
-                  </Button>
-                </div>
-
-                <ScrollArea className="flex-1">
-                  <div className="p-2 space-y-2">
-                    {extractedCharacters.map((char, index) => (
-                      <Card
-                        key={index}
-                        className={`p-3 cursor-pointer transition-all ${
-                          selectedCharIndex === index
-                            ? "border-primary bg-primary/5"
-                            : "hover:border-primary/50"
-                        }`}
-                        onClick={() => setSelectedCharIndex(index)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={selectedCharacters.has(index)}
-                            onCheckedChange={() => toggleCharacter(index)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-medium truncate">{char.name}</h4>
-                              {char.isExisting ? (
-                                <Badge variant="secondary" className="text-xs">
-                                  已存在
-                                </Badge>
-                              ) : (
-                                <Badge className="text-xs bg-green-500">
-                                  新角色
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {char.description}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {char.styles.length} 个造型
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+              <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
+                <div className="flex flex-col h-full">
+                  <div className="px-3 py-2.5 border-b flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleAll}
+                      className="w-full h-8 text-xs"
+                    >
+                      {selectedCharacters.size === extractedCharacters.length ? "取消全选" : "全选"}
+                    </Button>
                   </div>
-                </ScrollArea>
-              </div>
+
+                  <ScrollArea className="flex-1 min-h-0">
+                    <div className="p-2 space-y-1.5">
+                      {extractedCharacters.map((char, index) => (
+                        <Card
+                          key={index}
+                          className={`p-2.5 cursor-pointer transition-all ${
+                            selectedCharIndex === index
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-primary/50"
+                          }`}
+                          onClick={() => setSelectedCharIndex(index)}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <Checkbox
+                              checked={selectedCharacters.has(index)}
+                              onCheckedChange={() => toggleCharacter(index)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <h4 className="font-medium text-sm truncate">{char.name}</h4>
+                                {char.isExisting ? (
+                                  <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                                    已存在
+                                  </Badge>
+                                ) : (
+                                  <Badge className="text-[10px] h-4 px-1 bg-green-500">
+                                    新
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground line-clamp-1">
+                                {char.description}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {char.styles.length} 个造型
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle className="hover:bg-primary/10 transition-colors" />
 
               {/* 右侧详情编辑 */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <ScrollArea className="flex-1">
-                  <div className="p-6 space-y-6">
-                    {extractedCharacters[selectedCharIndex] && (
-                      <>
-                        {/* 基本信息 */}
-                        <div className="space-y-4">
-                          <h3 className="font-semibold text-lg flex items-center gap-2">
-                            基本信息
-                            {extractedCharacters[selectedCharIndex].isExisting && (
-                              <Badge variant="outline" className="text-xs">
-                                将添加 {extractedCharacters[selectedCharIndex].newStylesCount} 个新造型
-                              </Badge>
-                            )}
-                          </h3>
+              <ResizablePanel defaultSize={75} minSize={60}>
+                <div className="flex flex-col h-full">
+                  <ScrollArea className="flex-1 min-h-0">
+                    <div className="p-6 space-y-6">
+                      {extractedCharacters[selectedCharIndex] && (
+                        <>
+                          {/* 基本信息 */}
+                          <div className="space-y-4">
+                            <h3 className="font-semibold text-lg flex items-center gap-2">
+                              基本信息
+                              {extractedCharacters[selectedCharIndex].isExisting && (
+                                <Badge variant="outline" className="text-xs">
+                                  将添加 {extractedCharacters[selectedCharIndex].newStylesCount} 个新造型
+                                </Badge>
+                              )}
+                            </h3>
 
-                          <div className="space-y-3">
-                            <div>
-                              <Label>角色名称</Label>
-                              <Input
-                                value={extractedCharacters[selectedCharIndex].name}
-                                onChange={(e) =>
-                                  updateCharacter(selectedCharIndex, { name: e.target.value })
-                                }
-                              />
-                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <Label>角色名称</Label>
+                                <Input
+                                  value={extractedCharacters[selectedCharIndex].name}
+                                  onChange={(e) =>
+                                    updateCharacter(selectedCharIndex, { name: e.target.value })
+                                  }
+                                />
+                              </div>
 
-                            <div>
-                              <Label>性格描述</Label>
-                              <Textarea
-                                value={extractedCharacters[selectedCharIndex].description}
-                                onChange={(e) =>
-                                  updateCharacter(selectedCharIndex, { description: e.target.value })
-                                }
-                                rows={3}
-                              />
-                            </div>
+                              <div>
+                                <Label>性格描述</Label>
+                                <Textarea
+                                  value={extractedCharacters[selectedCharIndex].description}
+                                  onChange={(e) =>
+                                    updateCharacter(selectedCharIndex, { description: e.target.value })
+                                  }
+                                  rows={3}
+                                />
+                              </div>
 
-                            <div>
-                              <Label>基础外貌（固定特征）</Label>
-                              <Textarea
-                                value={extractedCharacters[selectedCharIndex].appearance}
-                                onChange={(e) =>
-                                  updateCharacter(selectedCharIndex, { appearance: e.target.value })
-                                }
-                                rows={3}
-                                placeholder="如：黑色长发、蓝色瞳孔、身高170cm..."
-                              />
+                              <div>
+                                <Label>基础外貌（固定特征）</Label>
+                                <Textarea
+                                  value={extractedCharacters[selectedCharIndex].appearance}
+                                  onChange={(e) =>
+                                    updateCharacter(selectedCharIndex, { appearance: e.target.value })
+                                  }
+                                  rows={3}
+                                  placeholder="如：黑色长发、蓝色瞳孔、身高170cm..."
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <Separator />
+                          <Separator />
 
-                        {/* 造型列表 */}
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-lg">造型设定</h3>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addStyle(selectedCharIndex)}
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              添加造型
-                            </Button>
-                          </div>
+                          {/* 造型列表 */}
+                          <div className="space-y-4 pb-6">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold text-lg">造型设定</h3>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addStyle(selectedCharIndex)}
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                添加造型
+                              </Button>
+                            </div>
 
-                          <div className="space-y-3">
-                            {extractedCharacters[selectedCharIndex].styles.map((style, styleIdx) => (
-                              <Card key={styleIdx} className="p-4">
-                                <div className="space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <Label>造型名称</Label>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => deleteStyle(selectedCharIndex, styleIdx)}
-                                    >
-                                      <Trash2 className="w-4 h-4 text-destructive" />
-                                    </Button>
-                                  </div>
-                                  <Input
-                                    value={style.label}
-                                    onChange={(e) =>
-                                      updateStyle(selectedCharIndex, styleIdx, { label: e.target.value })
-                                    }
-                                    placeholder="如：日常装、工作装、晚礼服..."
-                                  />
-
-                                  <div>
-                                    <Label>图像生成 Prompt（英文）</Label>
-                                    <Textarea
-                                      value={style.prompt}
+                            <div className="space-y-3">
+                              {extractedCharacters[selectedCharIndex].styles.map((style, styleIdx) => (
+                                <Card key={styleIdx} className="p-4">
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <Label>造型名称</Label>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => deleteStyle(selectedCharIndex, styleIdx)}
+                                      >
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                    <Input
+                                      value={style.label}
                                       onChange={(e) =>
-                                        updateStyle(selectedCharIndex, styleIdx, { prompt: e.target.value })
+                                        updateStyle(selectedCharIndex, styleIdx, { label: e.target.value })
                                       }
-                                      rows={4}
-                                      placeholder="详细的英文图像生成描述..."
-                                      className="font-mono text-sm"
+                                      placeholder="如：日常装、工作装、晚礼服..."
                                     />
+
+                                    <div>
+                                      <Label>图像生成 Prompt（英文）</Label>
+                                      <Textarea
+                                        value={style.prompt}
+                                        onChange={(e) =>
+                                          updateStyle(selectedCharIndex, styleIdx, { prompt: e.target.value })
+                                        }
+                                        rows={4}
+                                        placeholder="详细的英文图像生成描述..."
+                                        className="font-mono text-sm"
+                                      />
+                                    </div>
                                   </div>
-                                </div>
-                              </Card>
-                            ))}
+                                </Card>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            </div>
+                        </>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
 
             {/* 底部操作栏 */}
-            <div className="p-4 border-t bg-muted/30">
+            <div className="p-4 border-t bg-muted/30 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
                   已选择 <span className="font-semibold text-foreground">{selectedCount}</span> 个角色，

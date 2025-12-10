@@ -83,7 +83,15 @@ export interface NovelSplitResult {
 }
 
 export interface CharacterExtractionResult {
-  characterIds: string[];
+  characters: Array<{
+    name: string;
+    description: string;
+    appearance: string;
+    styles: Array<{
+      label: string;
+      prompt: string;
+    }>;
+  }>;
   characterCount: number;
 }
 

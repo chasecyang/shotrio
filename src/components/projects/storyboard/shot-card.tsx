@@ -3,7 +3,6 @@
 import { ShotDetail, ShotSize, CameraMovement } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,10 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, Clock, MessageSquare, Trash2, GripVertical, Loader2, Check, AlertCircle, Video } from "lucide-react";
+import { Image as ImageIcon, Clock, MessageSquare, Trash2, GripVertical } from "lucide-react";
 import { 
-  getShotSizeLabel, 
-  formatDuration, 
   getShotSizeOptions, 
   getCameraMovementOptions,
   millisecondsToSeconds, 
@@ -37,13 +34,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { EditableField, EditableTextarea, SaveStatus } from "@/components/ui/inline-editable-field";
 
 interface ShotCardProps {
   shot: ShotDetail;
   onUpdate: () => void;
 }
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function ShotCard({ shot, onUpdate }: ShotCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -181,8 +177,7 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          "border rounded-lg bg-card overflow-hidden transition-all hover:shadow-md flex flex-col h-full",
-          isHovered && "ring-1 ring-primary/20",
+          "border rounded-lg bg-card overflow-hidden transition-all hover:ring-2 hover:ring-primary/30 flex flex-col h-full",
           isDragging && "opacity-50 z-50"
         )}
         onMouseEnter={() => setIsHovered(true)}
@@ -238,7 +233,6 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
           </div>
 
           <div className="flex items-center gap-1">
-             <SaveStatusIndicator status={saveStatus} />
              {isHovered && (
                 <Button
                   variant="ghost"
@@ -272,31 +266,43 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
         {/* 底部：编辑区域 */}
         <div className="p-3 space-y-3 flex-1 flex flex-col">
           {/* 视觉描述 */}
-          <div className="space-y-1.5 flex-1">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ImageIcon className="w-3 h-3" />
-                <span>画面</span>
-            </div>
-            <Textarea 
+          <div className="flex-1">
+            <EditableField
+              label="画面"
+              icon={ImageIcon}
+              tooltip="描述分镜的视觉内容、构图、光线、色调等元素"
+              saveStatus={saveStatus}
+            >
+              <EditableTextarea
                 value={formData.visualDescription}
-                onChange={(e) => setFormData({ ...formData, visualDescription: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, visualDescription: value })}
                 placeholder="描述画面内容..."
-                className="min-h-[60px] text-xs resize-none bg-transparent border-transparent hover:bg-muted/30 hover:border-input focus:bg-background focus:border-input p-2 transition-colors -ml-2 w-[calc(100%+16px)]"
-            />
+                emptyText="点击添加画面描述"
+                rows={2}
+                minHeight="min-h-[60px]"
+                textareaClassName="text-xs"
+              />
+            </EditableField>
           </div>
 
           {/* 台词 */}
-          <div className="space-y-1.5 flex-1">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <MessageSquare className="w-3 h-3" />
-                <span>台词</span>
-            </div>
-            <Textarea 
+          <div className="flex-1">
+            <EditableField
+              label="台词"
+              icon={MessageSquare}
+              tooltip="角色在此镜头中的对话或旁白"
+              saveStatus={saveStatus}
+            >
+              <EditableTextarea
                 value={formData.dialogue}
-                onChange={(e) => setFormData({ ...formData, dialogue: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, dialogue: value })}
                 placeholder="输入台词..."
-                className="min-h-[40px] text-xs resize-none bg-transparent border-transparent hover:bg-muted/30 hover:border-input focus:bg-background focus:border-input p-2 transition-colors -ml-2 w-[calc(100%+16px)]"
-            />
+                emptyText="点击添加台词"
+                rows={2}
+                minHeight="min-h-[40px]"
+                textareaClassName="text-xs"
+              />
+            </EditableField>
           </div>
 
           {/* 时长 */}
@@ -342,15 +348,4 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
   );
 }
 
-function SaveStatusIndicator({ status }: { status: SaveStatus }) {
-  if (status === "idle") return null;
-
-  return (
-    <div className="flex items-center">
-      {status === "saving" && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
-      {status === "saved" && <Check className="w-3 h-3 text-green-600" />}
-      {status === "error" && <AlertCircle className="w-3 h-3 text-destructive" />}
-    </div>
-  );
-}
 
