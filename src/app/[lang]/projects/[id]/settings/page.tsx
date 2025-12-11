@@ -33,15 +33,16 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
 }
 
 async function SettingsWrapper({ projectId }: { projectId: string }) {
+  const user = await getCurrentUser();
   const project = await getProjectDetail(projectId);
 
-  if (!project) {
+  if (!project || !user) {
     notFound();
   }
 
   return (
     <div className="max-w-3xl">
-      <ProjectSettingsForm project={project} />
+      <ProjectSettingsForm project={project} userId={user.id} />
     </div>
   );
 }

@@ -52,8 +52,16 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "角色提取",
     icon: <Users className="w-3.5 h-3.5" />,
   },
+  scene_extraction: {
+    label: "场景提取",
+    icon: <Film className="w-3.5 h-3.5" />,
+  },
   character_image_generation: {
     label: "角色造型生成",
+    icon: <Sparkles className="w-3.5 h-3.5" />,
+  },
+  scene_image_generation: {
+    label: "场景图生成",
     icon: <Sparkles className="w-3.5 h-3.5" />,
   },
   storyboard_generation: {

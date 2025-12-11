@@ -239,13 +239,28 @@ export function EditableTextarea({
     setLocalValue(value);
   }, [value]);
 
+  // 自动调整 textarea 高度
+  const autoResizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  };
+
   useEffect(() => {
     if (isEditing && textareaRef.current && autoFocus) {
       textareaRef.current.focus();
       const len = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(len, len);
+      autoResizeTextarea();
     }
   }, [isEditing, autoFocus]);
+
+  useEffect(() => {
+    if (isEditing) {
+      autoResizeTextarea();
+    }
+  }, [localValue, isEditing]);
 
   const handleClick = () => {
     setIsEditing(true);
@@ -273,7 +288,7 @@ export function EditableTextarea({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={rows}
-        className={cn("text-sm resize-none", textareaClassName)}
+        className={cn("text-sm resize-y min-h-[100px] max-h-[500px] overflow-y-auto", textareaClassName)}
       />
     );
   }
@@ -289,7 +304,7 @@ export function EditableTextarea({
       )}
     >
       {value ? (
-        <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors whitespace-pre-wrap">
+        <div className="text-sm text-muted-foreground group-hover:text-foreground transition-colors whitespace-pre-wrap break-words overflow-y-auto max-h-[400px]">
           {value}
         </div>
       ) : (
@@ -328,7 +343,7 @@ export function EditableField({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           {Icon && <Icon className="w-3.5 h-3.5 text-muted-foreground" />}
-          <label className="text-xs font-medium text-foreground">
+          <label className="text-xs font-medium text-muted-foreground">
             {label}
           </label>
           {tooltip && (

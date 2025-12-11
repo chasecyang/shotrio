@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/db";
-import { episode, character, characterImage, project } from "@/lib/db/schemas/project";
+import { episode, character, characterImage, project, scene, sceneImage } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { getChatCompletion } from "@/lib/services/openai.service";
@@ -22,6 +22,8 @@ import type {
   NovelSplitResult,
   CharacterExtractionInput,
   CharacterExtractionResult,
+  SceneExtractionInput,
+  SceneExtractionResult,
   CharacterImageGenerationInput,
   CharacterImageGenerationResult,
 } from "@/types/job";
@@ -108,6 +110,9 @@ export async function processJob(jobData: Job): Promise<void> {
         break;
       case "character_extraction":
         await processCharacterExtraction(jobData, workerToken);
+        break;
+      case "scene_extraction":
+        await processSceneExtraction(jobData, workerToken);
         break;
       case "character_image_generation":
         await processCharacterImageGeneration(jobData, workerToken);
@@ -501,6 +506,184 @@ ${scriptContents}
   );
 }
 
+/**
+ * 处理场景提取任务
+ * 仅提取场景信息，不自动导入到数据库
+ * 结果存储在 job.resultData 中，供用户预览和确认导入
+ */
+async function processSceneExtraction(jobData: Job, workerToken: string): Promise<void> {
+  const input: SceneExtractionInput = JSON.parse(jobData.inputData || "{}");
+  const { episodeIds } = input;
+
+  // 验证项目所有权
+  if (jobData.projectId) {
+    const hasAccess = await verifyProjectOwnership(
+      jobData.projectId,
+      jobData.userId
+    );
+    if (!hasAccess) {
+      throw new Error("无权访问该项目");
+    }
+  }
+
+  // 验证 episodeIds
+  if (!episodeIds || episodeIds.length === 0) {
+    throw new Error("未指定剧集");
+  }
+
+  if (episodeIds.length > INPUT_LIMITS.MAX_EPISODE_IDS) {
+    throw new Error(`剧集数量超过限制（最多 ${INPUT_LIMITS.MAX_EPISODE_IDS} 个）`);
+  }
+
+  // 验证剧集所有权
+  if (jobData.projectId) {
+    const episodesValid = await verifyEpisodeOwnership(
+      episodeIds,
+      jobData.projectId
+    );
+    if (!episodesValid) {
+      throw new Error("部分剧集不属于该项目");
+    }
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 10,
+      progressMessage: "正在读取剧本内容...",
+    },
+    workerToken
+  );
+
+  // 获取剧集内容
+  const episodes = await db.query.episode.findMany({
+    where: (episodes, { inArray }) => inArray(episodes.id, episodeIds),
+  });
+
+  const scriptContents = episodes
+    .filter(ep => ep.scriptContent)
+    .map(ep => `【第${ep.order}集：${ep.title}】\n${ep.scriptContent}`)
+    .join("\n\n---\n\n");
+
+  if (!scriptContents.trim()) {
+    throw new Error("剧集中没有剧本内容");
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 30,
+      progressMessage: "AI 正在分析并提取场景...",
+    },
+    workerToken
+  );
+
+  // 构建AI提示词
+  const systemPrompt = `你是一位专业的场景设计专家，擅长从剧本中提取拍摄场景信息。
+
+# 任务目标
+分析提供的微短剧剧本，提取所有不同的拍摄场景/地点。
+
+# 提取要求
+
+1. **场景识别**
+   - 识别剧本中所有出现的不同拍摄场景/地点
+   - 场景应该是具体的地点，如"咖啡厅"、"办公室"、"主角的家-客厅"等
+   - 相同地点算作一个场景
+
+2. **场景信息**
+   - 场景名称：简洁明了的地点名称（15字以内）
+   - 场景描述：详细描述场景的环境特征、氛围、关键道具、光线等（100-200字）
+
+3. **描述要点**
+   - 包含场景的空间布局特征
+   - 包含环境氛围（如：温馨、紧张、浪漫等）
+   - 包含关键道具和装饰元素
+   - 包含光线和色调特征
+   - 适合用于AI生成场景参考图
+
+# 输出格式
+严格按照以下JSON格式返回：
+
+{
+  "scenes": [
+    {
+      "name": "场景名称",
+      "description": "详细的场景描述，包含环境特征、氛围、道具、光线等"
+    }
+  ]
+}
+
+# 注意事项
+- 只提取明确出现的场景，不要臆测
+- 场景名称要简洁，便于识别和管理
+- 场景描述要详细具体，便于后续生成场景图片
+- 相同地点的不同时间/天气算作同一场景
+- 确保JSON格式正确，可以被解析`;
+
+  const userPrompt = `请分析以下微短剧剧本，提取所有拍摄场景信息：
+
+${scriptContents}
+
+请严格按照JSON格式返回提取结果。`;
+
+  // 调用OpenAI API
+  const response = await getChatCompletion(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    {
+      temperature: 0.7,
+      maxTokens: 4000,
+      jsonMode: true,
+    }
+  );
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 80,
+      progressMessage: "正在处理提取结果...",
+    },
+    workerToken
+  );
+
+  // 解析JSON响应
+  const result = JSON.parse(response);
+
+  // 验证结果格式
+  if (!result.scenes || !Array.isArray(result.scenes)) {
+    throw new Error("AI返回的数据格式不正确");
+  }
+
+  // 验证并清理数据
+  const validatedScenes = result.scenes
+    .filter(scene => scene.name && scene.name.trim())
+    .map(scene => ({
+      name: scene.name.trim(),
+      description: scene.description || "",
+    }))
+    .filter(scene => scene.description); // 只保留有描述的场景
+
+  if (validatedScenes.length === 0) {
+    throw new Error("未能从剧本中提取到有效的场景信息，请确保剧本内容中包含场景描述");
+  }
+
+  const resultData: SceneExtractionResult = {
+    scenes: validatedScenes,
+    sceneCount: validatedScenes.length,
+  };
+
+  await completeJob(
+    {
+      jobId: jobData.id,
+      resultData,
+    },
+    workerToken
+  );
+}
+
 
 /**
  * 处理角色造型生成任务
@@ -536,7 +719,15 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
   const imageRecord = await db.query.characterImage.findFirst({
     where: eq(characterImage.id, imageId),
     with: {
-      character: true,
+      character: {
+        with: {
+          project: {
+            with: {
+              artStyle: true, // 关联查询项目的美术风格
+            },
+          },
+        },
+      },
     },
   });
 
@@ -610,9 +801,19 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
     styleDescription: stylePrompt,
   });
 
+  // 获取全局美术风格prompt（优先使用styleId关联的风格，fallback到stylePrompt）
+  const globalStylePrompt = imageRecord.character.project?.artStyle?.prompt 
+    || imageRecord.character.project?.stylePrompt 
+    || "";
+  
+  // 将全局风格追加到完整prompt
+  const finalPromptWithStyle = globalStylePrompt 
+    ? `${fullPrompt}, ${globalStylePrompt}` 
+    : fullPrompt;
+
   // 调用 fal.ai 生成图像 - 使用横版比例适配设定图布局
   const result = await generateImagePro({
-    prompt: fullPrompt,
+    prompt: finalPromptWithStyle,
     num_images: 1,
     aspect_ratio: "16:9", // 横版设定图，适合展示三视图和多元素
     resolution: "2K",
@@ -682,40 +883,6 @@ async function processCharacterImageGeneration(jobData: Job, workerToken: string
 }
 
 /**
- * 构建场景图 Prompt
- * 生成专业的场景概念图
- */
-function buildScenePrompt(params: {
-  sceneName: string;
-  sceneDescription: string;
-  location: string;
-  timeOfDay: string;
-  viewLabel: string;
-  viewDescription: string;
-}): string {
-  const { sceneName, sceneDescription, location, timeOfDay, viewLabel, viewDescription } = params;
-
-  const prompt = `Create a cinematic location concept art for ${sceneName}.
-
-Scene Description: ${sceneDescription}.
-View: ${viewLabel}. ${viewDescription}.
-Setting: ${location}, ${timeOfDay} lighting.
-
-This is an establishing shot of the location for film production. The image should show:
-- Professional film production design aesthetic
-- Highly detailed environment with clear spatial layout
-- Atmospheric lighting that matches the ${timeOfDay} setting
-- ${location} environment characteristics
-- Cinematic composition suitable for ${viewLabel}
-- Rich textures and realistic materials
-- Depth and dimension appropriate for the viewing angle
-
-Style Requirements: Cinematic concept art, photorealistic rendering, professional matte painting quality, 8k resolution, masterpiece quality with attention to architectural and environmental details.`;
-
-  return prompt;
-}
-
-/**
  * 处理场景视角生成任务
  * 为已有的场景视角（sceneImage）生成图片
  */
@@ -749,7 +916,15 @@ async function processSceneImageGeneration(jobData: Job, workerToken: string): P
   const imageRecord = await db.query.sceneImage.findFirst({
     where: eq(sceneImage.id, imageId),
     with: {
-      scene: true,
+      scene: {
+        with: {
+          project: {
+            with: {
+              artStyle: true, // 关联查询项目的美术风格
+            },
+          },
+        },
+      },
     },
   });
 
@@ -779,20 +954,18 @@ async function processSceneImageGeneration(jobData: Job, workerToken: string): P
     workerToken
   );
 
-  // 构建完整 Prompt
-  const sceneDescription = imageRecord.scene.description || "";
-  const location = imageRecord.scene.location || "interior";
-  const timeOfDay = imageRecord.scene.timeOfDay || "day";
-  const viewPrompt = imageRecord.imagePrompt;
+  // 使用已保存的 imagePrompt（在创建任务时已经构建好）
+  const basePrompt = imageRecord.imagePrompt;
+
+  // 获取全局美术风格prompt（优先使用styleId关联的风格，fallback到stylePrompt）
+  const globalStylePrompt = imageRecord.scene.project?.artStyle?.prompt 
+    || imageRecord.scene.project?.stylePrompt 
+    || "";
   
-  const fullPrompt = buildScenePrompt({
-    sceneName: imageRecord.scene.name,
-    sceneDescription: sceneDescription,
-    location: location,
-    timeOfDay: timeOfDay,
-    viewLabel: imageRecord.label,
-    viewDescription: viewPrompt,
-  });
+  // 将全局风格追加到基础prompt
+  const fullPrompt = globalStylePrompt 
+    ? `${basePrompt}, ${globalStylePrompt}` 
+    : basePrompt;
 
   // 调用 fal.ai 生成图像 - 使用横版比例适配场景图
   const result = await generateImagePro({

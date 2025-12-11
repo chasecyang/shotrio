@@ -204,7 +204,7 @@
       oklch(0.16 0.03 60 / 0.8) 100%);
   }
 
-  /* Master Layout Card Border - Cool Blue Tone */
+  /* 全景布局图卡片边框 - 冷色调蓝色 */
   .master-layout-border {
     border-color: oklch(0.60 0.15 240 / 0.3);
   }
@@ -213,7 +213,7 @@
     border-color: oklch(0.65 0.18 240 / 0.4);
   }
 
-  /* Quarter View Card Border - Warm Orange Tone */
+  /* 叙事视角图卡片边框 - 暖色调橙色 */
   .quarter-view-border {
     border-color: oklch(0.65 0.18 50 / 0.3);
   }

@@ -27,4 +27,13 @@ export {
   updateShot,
   deleteShot,
   reorderShots,
+  // 角色管理
+  addCharacterToShot,
+  removeCharacterFromShot,
+  updateShotCharacter,
+  // 对话管理
+  addDialogueToShot,
+  updateShotDialogue,
+  deleteShotDialogue,
+  reorderShotDialogues,
 } from "./shot";

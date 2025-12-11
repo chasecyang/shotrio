@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProjectDetail } from "@/types/project";
+import { ArtStyle } from "@/types/art-style";
 import { updateProject, deleteProject } from "@/lib/actions/project";
+import { getSystemArtStyles, getUserArtStyles } from "@/lib/actions/art-style/queries";
+import { StyleSelector } from "./style-selector";
 import { toast } from "sonner";
 import { Loader2, Save, Trash2 } from "lucide-react";
 import {
@@ -25,18 +29,44 @@ import {
 
 interface ProjectSettingsFormProps {
   project: ProjectDetail;
+  userId: string;
 }
 
-export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
+export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [systemStyles, setSystemStyles] = useState<ArtStyle[]>([]);
+  const [userStyles, setUserStyles] = useState<ArtStyle[]>([]);
+  const [loadingStyles, setLoadingStyles] = useState(true);
   
   const [formData, setFormData] = useState({
     title: project.title,
     description: project.description || "",
+    styleId: project.styleId || null,
     stylePrompt: project.stylePrompt || "",
   });
+
+  // 加载风格列表
+  useEffect(() => {
+    async function loadStyles() {
+      setLoadingStyles(true);
+      try {
+        const [system, user] = await Promise.all([
+          getSystemArtStyles(),
+          getUserArtStyles(userId),
+        ]);
+        setSystemStyles(system);
+        setUserStyles(user);
+      } catch (error) {
+        console.error("加载风格列表失败:", error);
+        toast.error("加载风格列表失败");
+      } finally {
+        setLoadingStyles(false);
+      }
+    }
+    loadStyles();
+  }, [userId]);
 
   async function handleSave() {
     if (!formData.title.trim()) {
@@ -49,6 +79,7 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
       const result = await updateProject(project.id, {
         title: formData.title,
         description: formData.description || null,
+        styleId: formData.styleId,
         stylePrompt: formData.stylePrompt || null,
       });
 
@@ -124,21 +155,50 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="stylePrompt">全局画风设定</Label>
-            <Textarea
-              id="stylePrompt"
-              value={formData.stylePrompt}
-              onChange={(e) =>
-                setFormData({ ...formData, stylePrompt: e.target.value })
-              }
-              disabled={loading}
-              placeholder="例如：Cyberpunk style, 8k resolution, cinematic lighting"
-              rows={3}
-            />
+          {/* 美术风格选择 */}
+          <div className="space-y-3" id="style">
+            <Label>美术风格</Label>
             <p className="text-xs text-muted-foreground">
-              用于 AI 生成图像时的全局风格提示词（英文）
+              选择一个预设风格或自定义风格，应用于项目中所有角色和场景的图片生成
             </p>
+            
+            {loadingStyles ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Tabs defaultValue="preset" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="preset">预设风格</TabsTrigger>
+                  <TabsTrigger value="custom">自定义风格</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="preset" className="mt-4">
+                  <StyleSelector
+                    styles={systemStyles}
+                    selectedStyleId={formData.styleId}
+                    onSelect={(styleId) => setFormData({ ...formData, styleId, stylePrompt: "" })}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="custom" className="mt-4">
+                  <div className="space-y-2">
+                    <Textarea
+                      value={formData.stylePrompt}
+                      onChange={(e) =>
+                        setFormData({ ...formData, stylePrompt: e.target.value, styleId: null })
+                      }
+                      disabled={loading}
+                      placeholder="例如：Cyberpunk style, neon lights, 8k resolution, cinematic lighting"
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      输入自定义的英文风格描述词，用于 AI 生成图像时的全局风格提示
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
 
           <div className="flex justify-end">

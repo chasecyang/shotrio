@@ -1,14 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CharacterImage } from "@/types/project";
-import { ImageIcon, MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
+import { ImageIcon, Sparkles, Trash2 } from "lucide-react";
 import { EditableInput, SaveStatusBadge, SaveStatus } from "@/components/ui/inline-editable-field";
 import { cn } from "@/lib/utils";
 
@@ -93,21 +87,21 @@ export function CharacterCardHeader({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <SaveStatusBadge status={saveStatus} />
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                 onClick={onDelete}
-                className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" /> 删除角色
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              删除角色
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

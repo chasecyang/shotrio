@@ -1,36 +1,39 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { AlertCircle, CheckCircle2, Loader2, MapPin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import { startSceneExtraction } from "@/lib/actions/scene";
 import { getUserJobs } from "@/lib/actions/job/user-operations";
-import { CheckCircle2, Loader2, Sparkles, Users, X, AlertCircle } from "lucide-react";
+import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Job, CharacterExtractionResult } from "@/types/job";
+import type { Job, SceneExtractionResult } from "@/types/job";
 
-interface CharacterExtractionBannerProps {
+interface SceneExtractionBannerProps {
   projectId: string;
   onOpenPreview: (jobId: string) => void;
   recentlyImportedJobId?: string | null;
 }
 
-export function CharacterExtractionBanner({
+export function SceneExtractionBanner({
   projectId,
   onOpenPreview,
   recentlyImportedJobId,
-}: CharacterExtractionBannerProps) {
+}: SceneExtractionBannerProps) {
   const { jobs: activeJobs } = useTaskSubscription();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
-  // 查找当前项目的角色提取任务
+  // 查找当前项目的场景提取任务
   const extractionJob = useMemo(() => {
     // 优先使用活动任务
     const activeJob = activeJobs.find(
       (job) =>
-        job.type === "character_extraction" &&
+        job.type === "scene_extraction" &&
         job.projectId === projectId &&
         (job.status === "pending" || job.status === "processing")
     );
@@ -55,10 +58,10 @@ export function CharacterExtractionBanner({
         });
 
         if (result.success && result.jobs) {
-          // 查找最近的已完成角色提取任务
+          // 查找最近的已完成场景提取任务
           const job = (result.jobs as Job[]).find(
             (job) =>
-              job.type === "character_extraction" &&
+              job.type === "scene_extraction" &&
               job.projectId === projectId &&
               job.status === "completed"
           );
@@ -75,7 +78,7 @@ export function CharacterExtractionBanner({
     // 只在没有活动任务时加载
     const hasActiveJob = activeJobs.some(
       (job) =>
-        job.type === "character_extraction" &&
+        job.type === "scene_extraction" &&
         job.projectId === projectId &&
         (job.status === "pending" || job.status === "processing")
     );
@@ -98,7 +101,7 @@ export function CharacterExtractionBanner({
   const isFailed = extractionJob.status === "failed";
 
   // 解析提取结果
-  let extractionResult: CharacterExtractionResult | null = null;
+  let extractionResult: SceneExtractionResult | null = null;
   if (isCompleted && extractionJob.resultData) {
     try {
       extractionResult = JSON.parse(extractionJob.resultData);
@@ -107,11 +110,26 @@ export function CharacterExtractionBanner({
     }
   }
 
-  const characterCount = extractionResult?.characterCount || 0;
-  const totalStylesCount = extractionResult?.characters.reduce(
-    (sum, char) => sum + char.styles.length,
-    0
-  ) || 0;
+  const sceneCount = extractionResult?.sceneCount || 0;
+
+  const handleStartExtraction = async () => {
+    setIsStarting(true);
+    
+    try {
+      const result = await startSceneExtraction(projectId);
+
+      if (!result.success) {
+        toast.error(result.error || "启动场景提取失败");
+        return;
+      }
+
+      toast.success("场景提取任务已启动");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "启动失败");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   const handleDismiss = () => {
     setIsDismissed(true);
@@ -128,7 +146,7 @@ export function CharacterExtractionBanner({
     <div
       className={cn(
         "relative mb-6 rounded-lg border p-4 transition-all duration-300",
-        isProcessing && "border-blue-500/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20",
+        isProcessing && "border-blue-500/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20",
         isCompleted && "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
         isFailed && "border-red-500/50 bg-red-50/50 dark:bg-red-950/20"
       )}
@@ -160,11 +178,11 @@ export function CharacterExtractionBanner({
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                   <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    正在从剧本提取角色
+                    正在从剧本提取场景
                   </h4>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {extractionJob.progressMessage || "AI 正在分析剧本内容，识别主要角色..."}
+                  {extractionJob.progressMessage || "AI 正在分析剧本内容，识别拍摄场景..."}
                 </p>
                 <div className="max-w-md">
                   <TaskProgressBar
@@ -179,21 +197,18 @@ export function CharacterExtractionBanner({
             {isCompleted && extractionResult && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Users className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <MapPin className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                   <h4 className="text-sm font-semibold text-green-900 dark:text-green-100">
-                    角色提取完成
+                    场景提取完成
                   </h4>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                      {characterCount} 个角色
-                    </Badge>
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                      {totalStylesCount} 个造型
+                      {sceneCount} 个场景
                     </Badge>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  AI 已成功提取角色信息，请查看并选择要导入的角色
+                  AI 已成功提取场景信息，请查看并选择要导入的场景
                 </p>
               </div>
             )}
@@ -203,7 +218,7 @@ export function CharacterExtractionBanner({
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
                   <h4 className="text-sm font-semibold text-red-900 dark:text-red-100">
-                    角色提取失败
+                    场景提取失败
                   </h4>
                 </div>
                 <p className="text-xs text-red-600 dark:text-red-400">

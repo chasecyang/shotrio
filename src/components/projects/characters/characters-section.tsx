@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { CharacterCard } from "./character-card";
 import { startCharacterExtraction } from "@/lib/actions/character";
 import { toast } from "sonner";
+import { StyleBadge } from "../shared/style-badge";
 
 interface CharactersSectionProps {
   project: ProjectDetail;
@@ -22,6 +23,7 @@ export function CharactersSection({ project }: CharactersSectionProps) {
   const [previewJobId, setPreviewJobId] = useState<string>("");
   const [isStartingExtraction, setIsStartingExtraction] = useState(false);
   const [highlightedCharacters, setHighlightedCharacters] = useState<Set<string>>(new Set());
+  const [recentlyImportedJobId, setRecentlyImportedJobId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   // 检查是否有新导入的角色需要高亮
@@ -75,23 +77,30 @@ export function CharactersSection({ project }: CharactersSectionProps) {
     setPreviewDialogOpen(true);
   };
 
+  const handleImportSuccess = () => {
+    setRecentlyImportedJobId(previewJobId);
+  };
+
   return (
     <div className="space-y-6">
       {/* 提取任务进度横幅 */}
       <CharacterExtractionBanner
         projectId={project.id}
         onOpenPreview={handleOpenPreview}
+        recentlyImportedJobId={recentlyImportedJobId}
       />
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">角色管理</h2>
-          <p className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold tracking-tight">角色管理</h2>
+            <StyleBadge project={project} />
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
             创建角色并设定外貌，生成多种造型，确保分镜画面中角色形象的一致性。
           </p>
         </div>
-        <div className="flex gap-2">
-          {project.episodes.length > 0 && (
+        <div className="flex gap-2">{project.episodes.length > 0 && (
             <Button 
               onClick={handleStartExtraction}
               disabled={isStartingExtraction}
@@ -144,6 +153,7 @@ export function CharactersSection({ project }: CharactersSectionProps) {
           projectId={project.id}
           jobId={previewJobId}
           existingCharacters={project.characters.map(c => ({ id: c.id, name: c.name }))}
+          onImportSuccess={handleImportSuccess}
         />
       )}
     </div>

@@ -3,8 +3,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { project } from "@/lib/db/schemas/project";
-import { eq, and, desc } from "drizzle-orm";
+import { project, artStyle } from "@/lib/db/schemas/project";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import {
@@ -20,6 +20,7 @@ export async function createProject(data: {
   title: string;
   description?: string;
   stylePrompt?: string;
+  styleId?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -35,10 +36,19 @@ export async function createProject(data: {
       title: data.title,
       description: data.description,
       stylePrompt: data.stylePrompt,
+      styleId: data.styleId,
       status: "draft",
     };
 
     const [created] = await db.insert(project).values(newProject).returning();
+
+    // 如果设置了styleId，增加风格的使用计数
+    if (data.styleId) {
+      await db
+        .update(artStyle)
+        .set({ usageCount: sql`${artStyle.usageCount} + 1` })
+        .where(eq(artStyle.id, data.styleId));
+    }
 
     revalidatePath("/projects");
     return { success: true, data: created };
@@ -120,6 +130,7 @@ export async function getProjectDetail(
             },
           },
         },
+        artStyle: true, // 关联查询美术风格
       },
     });
 
@@ -145,6 +156,14 @@ export async function updateProject(
   }
 
   try {
+    // 如果更新了styleId，增加新风格的使用计数
+    if (data.styleId) {
+      await db
+        .update(artStyle)
+        .set({ usageCount: sql`${artStyle.usageCount} + 1` })
+        .where(eq(artStyle.id, data.styleId));
+    }
+
     const [updated] = await db
       .update(project)
       .set(data)

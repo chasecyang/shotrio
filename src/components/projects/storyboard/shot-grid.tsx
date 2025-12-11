@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Episode, Character, ShotDetail } from "@/types/project";
+import { Episode, Character, CharacterImage, ShotDetail } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import { Plus, Clapperboard, Loader2 } from "lucide-react";
 import { getEpisodeShots, reorderShots, createShot } from "@/lib/actions/project";
@@ -26,7 +26,7 @@ import { toast } from "sonner";
 
 interface ShotGridProps {
   episode: Episode;
-  characters: Character[];
+  characters: (Character & { images: CharacterImage[] })[];
 }
 
 export function ShotGrid({ episode, characters }: ShotGridProps) {
@@ -183,6 +183,7 @@ export function ShotGrid({ episode, characters }: ShotGridProps) {
               <ShotCard
                 key={shot.id}
                 shot={shot}
+                characters={characters}
                 onUpdate={loadShots}
               />
             ))}

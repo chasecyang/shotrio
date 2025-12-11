@@ -13,10 +13,8 @@ import {
   Maximize2,
   Film
 } from "lucide-react";
-import { SceneImageCandidatesDialog } from "./scene-image-candidates-dialog";
 import { 
-  generateMasterLayout, 
-  saveMasterLayout,
+  startMasterLayoutGeneration,
 } from "@/lib/actions/scene";
 import { toast } from "sonner";
 import { ImagePreviewDialog } from "../characters/image-preview-dialog";
@@ -33,50 +31,23 @@ export function SceneMasterLayoutTab({
   scene, 
   masterLayout,
 }: SceneMasterLayoutTabProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [candidates, setCandidates] = useState<string[]>([]);
-  const [showDialog, setShowDialog] = useState(false);
   const [previewImage, setPreviewImage] = useState<SceneImage | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const hasDescription = !!scene.description;
 
-  // 生成 Master Layout
+  // 开始生成全景布局图（后台任务）
   const handleGenerate = async () => {
     if (!hasDescription) {
       toast.error("请先在「基础信息」中添加场景描述");
       return;
     }
 
-    setIsGenerating(true);
-    setShowDialog(true);
-    setCandidates([]);
-
-    try {
-      const result = await generateMasterLayout(projectId, scene.id);
-      if (result.success && result.images) {
-        setCandidates(result.images);
-        toast.success("图片生成成功，请选择一张");
-      } else {
-        toast.error(result.error || "生成失败");
-        setShowDialog(false);
-      }
-    } catch (error) {
-      toast.error("生成失败");
-      setShowDialog(false);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // 保存 Master Layout
-  const handleSave = async (imageUrl: string) => {
-    const result = await saveMasterLayout(projectId, scene.id, imageUrl);
+    const result = await startMasterLayoutGeneration(projectId, scene.id);
     if (result.success) {
-      toast.success("Master Layout 已保存");
+      toast.success("已开始生成全景布局图，请稍后在任务中心查看进度");
     } else {
-      toast.error(result.error || "保存失败");
-      throw new Error(result.error);
+      toast.error(result.error || "创建任务失败");
     }
   };
 
@@ -116,7 +87,7 @@ export function SceneMasterLayoutTab({
               <div className="aspect-video bg-muted">
                 <img 
                   src={masterLayout.imageUrl} 
-                  alt="Master Layout"
+                  alt="全景布局图"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -149,7 +120,7 @@ export function SceneMasterLayoutTab({
               <Maximize2 className="w-16 h-16 text-blue-500/40 mb-4" />
               <h4 className="font-medium text-lg mb-2">生成全景布局图</h4>
               <p className="text-sm text-muted-foreground mb-6 max-w-md">
-                建立空间认知，展示场景的完整布局和深度层次
+                Master Layout - 建立空间认知，展示场景的完整布局和深度层次
               </p>
               <Button 
                 onClick={handleGenerate}
@@ -157,23 +128,12 @@ export function SceneMasterLayoutTab({
                 size="lg"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                生成 Master Layout
+                生成全景布局图
               </Button>
             </div>
           )}
         </Card>
       </div>
-
-      {/* 候选图片对话框 */}
-      <SceneImageCandidatesDialog
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        title="选择 Master Layout"
-        description="请选择最能展现场景完整布局的一张图片"
-        images={candidates}
-        isGenerating={isGenerating}
-        onSelect={handleSave}
-      />
 
       {/* 图片预览对话框 */}
       <ImagePreviewDialog 

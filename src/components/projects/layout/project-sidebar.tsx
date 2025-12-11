@@ -67,12 +67,6 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
           badge: currentProject.episodes.length,
         },
         {
-          name: t('storyboard'),
-          href: `/projects/${currentProject.id}/storyboard`,
-          icon: Clapperboard,
-          badge: currentProject.shotCount,
-        },
-        {
           name: t('characters'),
           href: `/projects/${currentProject.id}/characters`,
           icon: Users,
@@ -83,6 +77,12 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
           href: `/projects/${currentProject.id}/scenes`,
           icon: Map,
           badge: currentProject.scenes?.length || 0,
+        },
+        {
+          name: t('storyboard'),
+          href: `/projects/${currentProject.id}/storyboard`,
+          icon: Clapperboard,
+          badge: currentProject.shotCount,
         },
         {
           name: t('settings'),

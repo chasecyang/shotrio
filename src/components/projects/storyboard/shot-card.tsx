@@ -1,6 +1,6 @@
 "use client";
 
-import { ShotDetail, ShotSize, CameraMovement } from "@/types/project";
+import { ShotDetail, ShotSize, CameraMovement, Character, CharacterImage } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, Clock, MessageSquare, Trash2, GripVertical } from "lucide-react";
+import { Image as ImageIcon, Clock, Users, MessageSquare, Trash2, GripVertical, Plus, X, Maximize2, Video } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 import { 
   getShotSizeOptions, 
   getCameraMovementOptions,
@@ -20,7 +22,7 @@ import {
 } from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
-import { deleteShot, updateShot } from "@/lib/actions/project";
+import { deleteShot, updateShot, removeCharacterFromShot, addDialogueToShot, addCharacterToShot } from "@/lib/actions/project";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -35,23 +37,26 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { EditableField, EditableTextarea, SaveStatus } from "@/components/ui/inline-editable-field";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DialogueEditor } from "./dialogue-editor";
 
 interface ShotCardProps {
   shot: ShotDetail;
+  characters: (Character & { images: CharacterImage[] })[];
   onUpdate: () => void;
 }
 
-export function ShotCard({ shot, onUpdate }: ShotCardProps) {
+export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [addingCharacter, setAddingCharacter] = useState(false);
   
   // 编辑状态
   const [formData, setFormData] = useState({
     shotSize: shot.shotSize,
     cameraMovement: shot.cameraMovement || "static",
     visualDescription: shot.visualDescription || "",
-    dialogue: shot.dialogue || "",
     duration: millisecondsToSeconds(shot.duration || 3000),
   });
   
@@ -75,23 +80,19 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
 
   // 自动保存逻辑
   useEffect(() => {
-    // 清除之前的定时器
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // 检查是否有更改
     const hasChanges =
       formData.shotSize !== shot.shotSize ||
       formData.cameraMovement !== (shot.cameraMovement || "static") ||
       formData.visualDescription !== (shot.visualDescription || "") ||
-      formData.dialogue !== (shot.dialogue || "") ||
       formData.duration !== millisecondsToSeconds(shot.duration || 3000);
 
     if (hasChanges) {
       setSaveStatus("idle");
       
-      // 1秒后自动保存
       saveTimeoutRef.current = setTimeout(async () => {
         setSaveStatus("saving");
         try {
@@ -99,14 +100,12 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
             shotSize: formData.shotSize,
             cameraMovement: formData.cameraMovement,
             visualDescription: formData.visualDescription || null,
-            dialogue: formData.dialogue || null,
             duration: secondsToMilliseconds(formData.duration),
           });
 
           if (result.success) {
             setSaveStatus("saved");
             
-            // 3秒后隐藏"已保存"状态
             if (savedTimeoutRef.current) {
               clearTimeout(savedTimeoutRef.current);
             }
@@ -131,7 +130,6 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
     };
   }, [formData, shot]);
 
-  // 清理定时器
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -167,6 +165,73 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
     e.stopPropagation();
     setDeleteDialogOpen(true);
   };
+
+  const handleRemoveCharacter = async (shotCharacterId: string) => {
+    try {
+      const result = await removeCharacterFromShot(shotCharacterId);
+      if (result.success) {
+        toast.success("角色已移除");
+        onUpdate();
+      } else {
+        toast.error(result.error || "移除失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("移除失败");
+    }
+  };
+
+  const handleAddCharacter = async (characterKey: string) => {
+    if (!characterKey) return;
+    
+    setAddingCharacter(true);
+    try {
+      // characterKey 格式: "characterId" 或 "characterId:imageId"
+      const [characterId, imageId] = characterKey.split(":");
+      
+      const result = await addCharacterToShot({
+        shotId: shot.id,
+        characterId,
+        characterImageId: imageId || undefined,
+      });
+
+      if (result.success) {
+        toast.success("角色已添加");
+        onUpdate();
+      } else {
+        toast.error(result.error || "添加失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("添加失败");
+    } finally {
+      setAddingCharacter(false);
+    }
+  };
+
+  const handleAddDialogue = async () => {
+    try {
+      const result = await addDialogueToShot({
+        shotId: shot.id,
+        dialogueText: "",
+      });
+
+      if (result.success) {
+        toast.success("对话已添加");
+        onUpdate();
+      } else {
+        toast.error(result.error || "添加失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("添加失败");
+    }
+  };
+  
+  // 获取可添加的角色列表（排除已添加的）
+  const availableCharacters = characters.filter(
+    (char) => !shot.shotCharacters.some((sc) => sc.characterId === char.id)
+  );
   
   const shotSizeOptions = getShotSizeOptions();
   const cameraMovementOptions = getCameraMovementOptions();
@@ -177,15 +242,15 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          "border rounded-lg bg-card overflow-hidden transition-all hover:border-primary/40 flex flex-col h-full",
+          "border border-border rounded-lg bg-card overflow-hidden transition-colors hover:border-primary/40 flex flex-col h-full",
           isDragging && "opacity-50 z-50"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* 顶部：镜号 + 景别 + 运镜 + 删除 */}
+        {/* 顶部：镜号 + 删除 */}
         <div className="p-2 border-b bg-muted/30 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               {...attributes}
               {...listeners}
@@ -196,53 +261,20 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
             <Badge variant="outline" className="font-mono text-xs flex-shrink-0">
               #{shot.order}
             </Badge>
-            
-            {/* 景别选择 */}
-            <Select
-                value={formData.shotSize}
-                onValueChange={(value) => setFormData({ ...formData, shotSize: value as ShotSize })}
-            >
-                <SelectTrigger className="h-6 text-xs border-transparent bg-transparent hover:bg-background hover:border-input px-2 w-auto min-w-[60px] p-0 gap-1 focus:ring-0">
-                    <SelectValue placeholder="景别" />
-                </SelectTrigger>
-                <SelectContent>
-                    {shotSizeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="text-xs">
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-
-            {/* 运镜选择 */}
-            <Select
-                value={formData.cameraMovement}
-                onValueChange={(value) => setFormData({ ...formData, cameraMovement: value as CameraMovement })}
-            >
-                <SelectTrigger className="h-6 text-xs border-transparent bg-transparent hover:bg-background hover:border-input px-2 w-auto min-w-[70px] p-0 gap-1 focus:ring-0">
-                    <SelectValue placeholder="运镜" />
-                </SelectTrigger>
-                <SelectContent>
-                    {cameraMovementOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="text-xs">
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
           </div>
 
-          <div className="flex items-center gap-1">
-             {isHovered && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDeleteClick}
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-             )}
+          <div className="flex items-center gap-1 min-w-[24px]">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteClick}
+              className={cn(
+                "h-6 w-6 p-0 text-muted-foreground hover:text-destructive transition-opacity",
+                !isHovered && "opacity-0 pointer-events-none"
+              )}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
 
@@ -285,24 +317,196 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
             </EditableField>
           </div>
 
-          {/* 台词 */}
-          <div className="flex-1">
-            <EditableField
-              label="台词"
-              icon={MessageSquare}
-              tooltip="角色在此镜头中的对话或旁白"
-              saveStatus={saveStatus}
-            >
-              <EditableTextarea
-                value={formData.dialogue}
-                onChange={(value) => setFormData({ ...formData, dialogue: value })}
-                placeholder="输入台词..."
-                emptyText="点击添加台词"
-                rows={2}
-                minHeight="min-h-[40px]"
-                textareaClassName="text-xs"
-              />
-            </EditableField>
+          {/* 景别和运镜 */}
+          <div className="space-y-2">
+            {/* 景别选择 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <label className="text-xs font-medium text-muted-foreground">景别</label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[280px]">
+                      选择镜头的景别，如特写、近景、中景、全景等
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Select
+                  value={formData.shotSize}
+                  onValueChange={(value) => setFormData({ ...formData, shotSize: value as ShotSize })}
+                >
+                  <SelectTrigger className="h-7 w-auto text-xs font-medium border-0 bg-transparent hover:bg-muted px-2">
+                    <SelectValue placeholder="选择景别" />
+                  </SelectTrigger>
+                  <SelectContent className="shadow-none">
+                    {shotSizeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="text-xs font-medium">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 运镜选择 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-muted-foreground" />
+                  <label className="text-xs font-medium text-muted-foreground">运镜</label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[280px]">
+                      选择镜头的运动方式，如固定、推拉、摇移、跟随等
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Select
+                  value={formData.cameraMovement}
+                  onValueChange={(value) => setFormData({ ...formData, cameraMovement: value as CameraMovement })}
+                >
+                  <SelectTrigger className="h-7 w-auto text-xs font-medium border-0 bg-transparent hover:bg-muted px-2">
+                    <SelectValue placeholder="选择运镜" />
+                  </SelectTrigger>
+                  <SelectContent className="shadow-none">
+                    {cameraMovementOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="text-xs font-medium">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* 角色列表 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <label className="text-xs font-medium text-muted-foreground">角色</label>
+                <Badge variant="secondary" className="h-4 text-xs">
+                  {shot.shotCharacters.length}
+                </Badge>
+              </div>
+              {availableCharacters.length > 0 && (
+                <Select onValueChange={handleAddCharacter} disabled={addingCharacter}>
+                  <SelectTrigger className="h-6 w-auto text-xs border-0 bg-transparent hover:bg-muted px-2">
+                    <Plus className="w-3 h-3 mr-1" />
+                    <span>添加</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCharacters.map((character) => {
+                      // 如果角色有多个造型，显示子选项
+                      if (character.images.length > 0) {
+                        return (
+                          <div key={character.id}>
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              {character.name}
+                            </div>
+                            {character.images.map((image) => (
+                              <SelectItem
+                                key={`${character.id}:${image.id}`}
+                                value={`${character.id}:${image.id}`}
+                                className="text-xs pl-6"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-4 h-4">
+                                    <AvatarImage src={image.imageUrl || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {character.name[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{image.label}</span>
+                                  {image.isPrimary && (
+                                    <Badge variant="secondary" className="h-3 text-xs">
+                                      主
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </div>
+                        );
+                      }
+                      // 如果角色没有造型，直接显示角色
+                      return (
+                        <SelectItem key={character.id} value={character.id} className="text-xs">
+                          {character.name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {shot.shotCharacters.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {shot.shotCharacters.map((sc) => (
+                  <div
+                    key={sc.id}
+                    className="group/char relative flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={sc.characterImage?.imageUrl || undefined} />
+                      <AvatarFallback className="text-xs">
+                        {sc.character.name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs">{sc.character.name}</span>
+                    <button
+                      onClick={() => handleRemoveCharacter(sc.id)}
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover/char:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 对话列表 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                <label className="text-xs font-medium text-muted-foreground">对话</label>
+                <Badge variant="secondary" className="h-4 text-xs">
+                  {shot.dialogues.length}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAddDialogue}
+                className="h-6 px-2 text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                添加
+              </Button>
+            </div>
+
+            {shot.dialogues.length > 0 && (
+              <div className="space-y-2">
+                {shot.dialogues.map((dialogue) => (
+                  <DialogueEditor
+                    key={dialogue.id}
+                    dialogue={dialogue}
+                    characters={characters}
+                    onUpdate={onUpdate}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 时长 */}
@@ -347,5 +551,3 @@ export function ShotCard({ shot, onUpdate }: ShotCardProps) {
     </>
   );
 }
-
-

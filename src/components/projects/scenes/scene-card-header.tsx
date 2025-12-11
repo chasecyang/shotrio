@@ -1,13 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SceneImage } from "@/types/project";
-import { MapPin, MoreHorizontal, Trash2 } from "lucide-react";
+import { MapPin, Trash2, Sparkles } from "lucide-react";
 import { EditableInput, SaveStatusBadge, SaveStatus } from "@/components/ui/inline-editable-field";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +15,7 @@ interface SceneCardHeaderProps {
   completionPercentage: number;
   saveStatus: SaveStatus;
   onDelete: () => void;
+  isHighlighted?: boolean;
 }
 
 export function SceneCardHeader({
@@ -31,90 +27,101 @@ export function SceneCardHeader({
   completionPercentage,
   saveStatus,
   onDelete,
+  isHighlighted = false,
 }: SceneCardHeaderProps) {
-  // 优先显示 quarter_view，如果没有则显示 master_layout
-  const displayImage = quarterView || masterLayout;
+  const hasGeneratedImages = !!(masterLayout?.imageUrl || quarterView?.imageUrl);
+  const totalImages = [masterLayout, quarterView].filter(Boolean).length;
+  const generatedImages = [masterLayout, quarterView].filter(img => img?.imageUrl).length;
 
   return (
-    <div className="relative overflow-hidden">
-      {/* 背景图片 */}
-      <div className="aspect-video bg-gradient-to-br from-muted/80 to-muted relative">
-        {displayImage?.imageUrl ? (
-          <img 
-            src={displayImage.imageUrl} 
-            alt={name} 
-            className="w-full h-full object-cover"
+    <div className="relative border-b px-3 py-3 bg-muted/50">
+      <div className="flex items-center justify-between gap-2">
+        {/* 左侧：场景名称和标签 */}
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <EditableInput
+            value={name}
+            onChange={onNameChange}
+            placeholder="场景名称"
+            emptyText="点击输入场景名称"
+            className="text-sm font-semibold"
+            inputClassName="text-sm font-semibold h-7"
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <MapPin className="w-16 h-16 text-muted-foreground/30" />
-          </div>
-        )}
-        
-        {/* 渐变遮罩 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-        
-        {/* 完成度徽章 */}
-        <div className="absolute top-3 right-3">
-          <Badge 
-            variant="secondary" 
-            className={cn(
-              "font-mono text-xs backdrop-blur-sm border-0",
-              completionPercentage === 100 
-                ? "bg-green-500/90 text-white" 
-                : completionPercentage === 50 
-                ? "bg-amber-500/90 text-white" 
-                : "bg-muted/90"
+          
+          {/* 状态标签 */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isHighlighted && (
+              <Badge className="text-[10px] h-5 bg-gradient-to-r from-primary to-purple-500 text-white border-0 animate-pulse">
+                <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                新
+              </Badge>
             )}
-          >
-            {completionPercentage}%
-          </Badge>
-        </div>
-        
-        {/* 场景名称和操作 */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <EditableInput
-                value={name}
-                onChange={onNameChange}
-                placeholder="场景名称"
-                emptyText="点击输入场景名称"
-                className="text-lg font-bold text-white drop-shadow-lg"
-                inputClassName="text-lg font-bold text-white bg-black/30 backdrop-blur-sm border-white/30 placeholder:text-white/60"
-              />
-              {!hasDescription && (
-                <p className="text-xs text-white/80 mt-1 drop-shadow">
-                  点击「基础信息」添加场景描述
-                </p>
-              )}
-            </div>
-            
-            {/* 右侧操作 */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <SaveStatusBadge status={saveStatus} className="backdrop-blur-sm" />
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
+            {!hasDescription && (
+              <Badge variant="secondary" className="text-[10px] h-5 bg-orange-500/90 text-white border-0">
+                待设定
+              </Badge>
+            )}
+            {totalImages > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
                     variant="secondary" 
-                    size="icon" 
-                    className="h-8 w-8 bg-white/90 hover:bg-white backdrop-blur-sm"
+                    className={cn(
+                      "text-[10px] h-5 font-mono border-0 cursor-help",
+                      hasGeneratedImages && generatedImages === totalImages
+                        ? "bg-primary/90 text-white"
+                        : "bg-muted text-muted-foreground"
+                    )}
                   >
-                    <MoreHorizontal className="h-4 w-4 text-black" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
-                    onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> 删除场景
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    <MapPin className="w-2.5 h-2.5 mr-0.5" />
+                    {generatedImages}/{totalImages}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <div className="space-y-0.5">
+                    <div>已生成：{generatedImages} 个场景图</div>
+                    <div>待生成：{totalImages - generatedImages} 个场景图</div>
+                    <div className="text-muted-foreground">总计：{totalImages} 个场景图</div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {completionPercentage > 0 && (
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "font-mono text-[10px] h-5 border-0",
+                  completionPercentage === 100 
+                    ? "bg-green-500/90 text-white" 
+                    : completionPercentage === 50 
+                    ? "bg-amber-500/90 text-white" 
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {completionPercentage}%
+              </Badge>
+            )}
           </div>
+        </div>
+
+        {/* 右侧：操作区 */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <SaveStatusBadge status={saveStatus} />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              删除场景
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

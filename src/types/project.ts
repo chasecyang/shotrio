@@ -1,4 +1,5 @@
-import { project, episode, character, shot, characterImage, scene, sceneImage } from "@/lib/db/schemas/project";
+import { project, episode, character, shot, characterImage, scene, sceneImage, artStyle, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
+import type { ArtStyle } from "./art-style";
 
 // 类型推导
 export type Project = typeof project.$inferSelect;
@@ -25,6 +26,12 @@ export type SceneImageType = "master_layout" | "quarter_view";
 export type Shot = typeof shot.$inferSelect;
 export type NewShot = typeof shot.$inferInsert;
 
+export type ShotCharacter = typeof shotCharacter.$inferSelect;
+export type NewShotCharacter = typeof shotCharacter.$inferInsert;
+
+export type ShotDialogue = typeof shotDialogue.$inferSelect;
+export type NewShotDialogue = typeof shotDialogue.$inferInsert;
+
 // 业务类型
 
 export interface ProjectWithStats extends Project {
@@ -40,6 +47,7 @@ export interface ProjectDetail extends Project {
   episodes: Episode[];
   characters: (Character & { images: CharacterImage[] })[];
   scenes?: (Scene & { images: SceneImage[] })[];
+  artStyle?: ArtStyle | null;
 }
 
 // 剧本详情类型
@@ -51,12 +59,23 @@ export interface ScriptDetail extends Episode {
 
 // 分镜相关类型
 export interface ShotDetail extends Shot {
-  mainCharacter?: Character | null;
+  shotCharacters: (ShotCharacter & {
+    character: Character;
+    characterImage?: CharacterImage | null;
+  })[];
+  dialogues: ShotDialogue[];
+  scene?: Scene | null;
 }
 
 export interface ShotWithCharacter extends Shot {
   character?: Character | null;
 }
+
+// 情绪标签类型
+export type EmotionTag = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'fearful' | 'disgusted';
+
+// 角色位置类型
+export type CharacterPosition = 'left' | 'center' | 'right' | 'foreground' | 'background';
 
 // 景别类型
 export type ShotSize =
@@ -142,4 +161,21 @@ export interface SceneDetail extends Scene {
   images: SceneImage[];
   masterLayout?: SceneImage;
   quarterView?: SceneImage;
+}
+
+// 场景提取相关类型
+export interface ExtractedScene {
+  name: string; // 场景名称
+  description: string; // 场景描述
+  isExisting?: boolean; // 是否已存在（前端状态）
+  existingId?: string; // 已存在场景的ID（前端状态）
+}
+
+export interface SceneExtractionResult {
+  scenes: ExtractedScene[];
+}
+
+// 导入场景时的数据结构
+export interface SceneToImport extends ExtractedScene {
+  selected: boolean; // 是否选中要导入
 }

@@ -50,6 +50,7 @@ export const sceneImageTypeEnum = pgEnum("scene_image_type", [
 export const jobTypeEnum = pgEnum("job_type", [
   "novel_split", // 小说拆分
   "character_extraction", // 角色提取
+  "scene_extraction", // 场景提取
   "character_image_generation", // 角色造型生成
   "scene_image_generation", // 场景视角生成
   "storyboard_generation", // 剧本自动分镜
@@ -68,6 +69,35 @@ export const jobStatusEnum = pgEnum("job_status", [
 
 // --- 表定义 ---
 
+// 0. 美术风格表 (ArtStyle) - 系统预设和用户自定义风格
+export const artStyle = pgTable("art_style", {
+  id: text("id").primaryKey(),
+  
+  // 风格基本信息
+  name: text("name").notNull(), // 风格名称（中文）
+  nameEn: text("name_en"), // 英文名称
+  description: text("description"), // 风格描述
+  prompt: text("prompt").notNull(), // AI生成用的prompt
+  
+  // 预览和分类
+  previewImage: text("preview_image"), // 预览图URL
+  tags: text("tags").array(), // 标签数组
+  
+  // 区分系统预设 vs 用户自定义
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+  // userId为null表示系统预设风格，不为null表示用户自定义风格
+  
+  // 元数据
+  isPublic: boolean("is_public").default(false), // 用户风格是否公开分享
+  usageCount: integer("usage_count").default(0).notNull(), // 使用次数统计
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
 // 1. 项目表 (Project) - 对应一个微短剧项目
 export const project = pgTable("project", {
   id: text("id").primaryKey(), // 建议使用 nanoid 或 uuid
@@ -79,7 +109,11 @@ export const project = pgTable("project", {
   description: text("description"), // 项目简介
 
   // 全局画风设定 (e.g. "Cyberpunk style, 8k resolution, cinematic lighting")
+  // @deprecated 使用 styleId 代替
   stylePrompt: text("style_prompt"),
+  
+  // 新增：关联美术风格
+  styleId: text("style_id").references(() => artStyle.id, { onDelete: "set null" }),
 
   status: projectStatusEnum("status").default("draft").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -202,20 +236,67 @@ export const shot = pgTable("shot", {
   visualPrompt: text("visual_prompt"), // 英文 Prompt (给 AI 看)
 
   // 听觉内容 (Audio)
-  dialogue: text("dialogue"), // 台词
   audioPrompt: text("audio_prompt"), // 音效/BGM 提示
 
   // 生成结果 (Media)
   imageUrl: text("image_url"), // 生成的分镜图
   videoUrl: text("video_url"), // 生成的视频片段
-  audioUrl: text("audio_url"), // TTS 语音
+  finalAudioUrl: text("final_audio_url"), // 混音后的完整音频
 
   // 关联 (用于辅助生成)
-  // 关联这个镜头里出现的主要角色，方便提取角色的 Prompt
-  mainCharacterId: text("main_character_id").references(() => character.id),
   // 关联场景，用于提取场景的视觉风格
   sceneId: text("scene_id").references(() => scene.id),
 
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+// 4.1 镜头角色关联表 (Shot Character) - 记录镜头中出现的角色
+export const shotCharacter = pgTable("shot_character", {
+  id: text("id").primaryKey(),
+  shotId: text("shot_id")
+    .notNull()
+    .references(() => shot.id, { onDelete: "cascade" }),
+  characterId: text("character_id")
+    .notNull()
+    .references(() => character.id, { onDelete: "cascade" }),
+  
+  // 角色在这个镜头中的特定设定
+  characterImageId: text("character_image_id")
+    .references(() => characterImage.id, { onDelete: "set null" }),
+  
+  position: text("position"), // 'left' | 'center' | 'right' | 'foreground' | 'background'
+  order: integer("order").default(0).notNull(), // 显示顺序
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 4.2 镜头对话表 (Shot Dialogue) - 记录镜头中的对话序列
+export const shotDialogue = pgTable("shot_dialogue", {
+  id: text("id").primaryKey(),
+  shotId: text("shot_id")
+    .notNull()
+    .references(() => shot.id, { onDelete: "cascade" }),
+  
+  // 说话人（可以为null表示旁白/画外音）
+  characterId: text("character_id")
+    .references(() => character.id, { onDelete: "set null" }),
+  
+  // 对话内容
+  dialogueText: text("dialogue_text").notNull(),
+  order: integer("order").notNull(), // 说话顺序
+  
+  // 时间轴（可选，用于精确控制）
+  startTime: integer("start_time"), // 相对于镜头开始的时间(ms)
+  duration: integer("duration"), // 这句话的持续时间(ms)
+  
+  // AI生成
+  emotionTag: text("emotion_tag"), // 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'fearful' | 'disgusted'
+  audioUrl: text("audio_url"), // TTS生成的单句音频
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -258,10 +339,22 @@ export const job = pgTable("job", {
 
 // --- 关系定义 (Relations) ---
 
+export const artStyleRelations = relations(artStyle, ({ one, many }) => ({
+  user: one(user, {
+    fields: [artStyle.userId],
+    references: [user.id],
+  }),
+  projects: many(project),
+}));
+
 export const projectRelations = relations(project, ({ one, many }) => ({
   user: one(user, {
     fields: [project.userId],
     references: [user.id],
+  }),
+  artStyle: one(artStyle, {
+    fields: [project.styleId],
+    references: [artStyle.id],
   }),
   characters: many(character),
   scenes: many(scene),
@@ -307,21 +400,20 @@ export const episodeRelations = relations(episode, ({ one, many }) => ({
   shots: many(shot),
 }));
 
-export const shotRelations = relations(shot, ({ one }) => ({
+export const shotRelations = relations(shot, ({ one, many }) => ({
   episode: one(episode, {
     fields: [shot.episodeId],
     references: [episode.id],
-  }),
-  // 方便在查询 shot 时直接获取角色的外观设定
-  mainCharacter: one(character, {
-    fields: [shot.mainCharacterId],
-    references: [character.id],
   }),
   // 关联场景，用于提取场景视觉参考
   scene: one(scene, {
     fields: [shot.sceneId],
     references: [scene.id],
   }),
+  // 新增：镜头中的角色列表
+  shotCharacters: many(shotCharacter),
+  // 新增：镜头中的对话列表
+  dialogues: many(shotDialogue),
 }));
 
 export const jobRelations = relations(job, ({ one }) => ({
@@ -332,6 +424,32 @@ export const jobRelations = relations(job, ({ one }) => ({
   project: one(project, {
     fields: [job.projectId],
     references: [project.id],
+  }),
+}));
+
+export const shotCharacterRelations = relations(shotCharacter, ({ one }) => ({
+  shot: one(shot, {
+    fields: [shotCharacter.shotId],
+    references: [shot.id],
+  }),
+  character: one(character, {
+    fields: [shotCharacter.characterId],
+    references: [character.id],
+  }),
+  characterImage: one(characterImage, {
+    fields: [shotCharacter.characterImageId],
+    references: [characterImage.id],
+  }),
+}));
+
+export const shotDialogueRelations = relations(shotDialogue, ({ one }) => ({
+  shot: one(shot, {
+    fields: [shotDialogue.shotId],
+    references: [shot.id],
+  }),
+  character: one(character, {
+    fields: [shotDialogue.characterId],
+    references: [character.id],
   }),
 }));
 

@@ -3,8 +3,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { episode, shot } from "@/lib/db/schemas/project";
-import { eq, asc } from "drizzle-orm";
+import { episode, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
+import { eq, asc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import {
@@ -12,6 +12,10 @@ import {
   type ShotDetail,
   type ShotSize,
   type CameraMovement,
+  type NewShotCharacter,
+  type NewShotDialogue,
+  type CharacterPosition,
+  type EmotionTag,
 } from "@/types/project";
 
 /**
@@ -32,11 +36,24 @@ export async function getEpisodeShots(
       where: eq(shot.episodeId, episodeId),
       orderBy: [asc(shot.order)],
       with: {
-        mainCharacter: true,
+        scene: true,
+        shotCharacters: {
+          orderBy: (shotCharacter, { asc }) => [asc(shotCharacter.order)],
+          with: {
+            character: true,
+            characterImage: true,
+          },
+        },
+        dialogues: {
+          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
+          with: {
+            character: true,
+          },
+        },
       },
     });
 
-    return shots;
+    return shots as ShotDetail[];
   } catch (error) {
     console.error("获取分镜列表失败:", error);
     return [];
@@ -54,9 +71,8 @@ export async function createShot(data: {
   duration?: number;
   visualDescription?: string;
   visualPrompt?: string;
-  dialogue?: string;
   audioPrompt?: string;
-  mainCharacterId?: string;
+  sceneId?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -84,12 +100,11 @@ export async function createShot(data: {
       duration: data.duration || 3000,
       visualDescription: data.visualDescription || null,
       visualPrompt: data.visualPrompt || null,
-      dialogue: data.dialogue || null,
       audioPrompt: data.audioPrompt || null,
-      mainCharacterId: data.mainCharacterId || null,
+      sceneId: data.sceneId || null,
       imageUrl: null,
       videoUrl: null,
-      audioUrl: null,
+      finalAudioUrl: null,
     };
 
     const [created] = await db.insert(shot).values(newShot).returning();
@@ -246,6 +261,373 @@ export async function reorderShots(
     return { success: true };
   } catch (error) {
     console.error("重新排序分镜失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "重新排序失败",
+    };
+  }
+}
+
+// ==================== 角色管理 Actions ====================
+
+/**
+ * 添加角色到镜头
+ */
+export async function addCharacterToShot(data: {
+  shotId: string;
+  characterId: string;
+  characterImageId?: string;
+  position?: CharacterPosition;
+  order?: number;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    // 获取当前镜头的最大order
+    const existingCharacters = await db.query.shotCharacter.findMany({
+      where: eq(shotCharacter.shotId, data.shotId),
+    });
+
+    const maxOrder = existingCharacters.length > 0 
+      ? Math.max(...existingCharacters.map(sc => sc.order)) 
+      : 0;
+
+    const newShotCharacter: NewShotCharacter = {
+      id: randomUUID(),
+      shotId: data.shotId,
+      characterId: data.characterId,
+      characterImageId: data.characterImageId || null,
+      position: data.position || null,
+      order: data.order !== undefined ? data.order : maxOrder + 1,
+    };
+
+    const [created] = await db.insert(shotCharacter).values(newShotCharacter).returning();
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, data.shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true, data: created };
+  } catch (error) {
+    console.error("添加角色失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "添加角色失败",
+    };
+  }
+}
+
+/**
+ * 从镜头移除角色
+ */
+export async function removeCharacterFromShot(shotCharacterId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    const shotCharacterData = await db.query.shotCharacter.findFirst({
+      where: eq(shotCharacter.id, shotCharacterId),
+    });
+
+    if (!shotCharacterData) {
+      throw new Error("角色关联不存在");
+    }
+
+    await db.delete(shotCharacter).where(eq(shotCharacter.id, shotCharacterId));
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, shotCharacterData.shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("移除角色失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "移除角色失败",
+    };
+  }
+}
+
+/**
+ * 更新镜头中的角色信息
+ */
+export async function updateShotCharacter(
+  shotCharacterId: string,
+  data: Partial<NewShotCharacter>
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    const [updated] = await db
+      .update(shotCharacter)
+      .set(data)
+      .where(eq(shotCharacter.id, shotCharacterId))
+      .returning();
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, updated.shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("更新角色信息失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "更新失败",
+    };
+  }
+}
+
+// ==================== 对话管理 Actions ====================
+
+/**
+ * 添加对话到镜头
+ */
+export async function addDialogueToShot(data: {
+  shotId: string;
+  characterId?: string;
+  dialogueText: string;
+  order?: number;
+  emotionTag?: EmotionTag;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    // 获取当前镜头的最大order
+    const existingDialogues = await db.query.shotDialogue.findMany({
+      where: eq(shotDialogue.shotId, data.shotId),
+    });
+
+    const maxOrder = existingDialogues.length > 0
+      ? Math.max(...existingDialogues.map(sd => sd.order))
+      : 0;
+
+    const newDialogue: NewShotDialogue = {
+      id: randomUUID(),
+      shotId: data.shotId,
+      characterId: data.characterId || null,
+      dialogueText: data.dialogueText,
+      order: data.order !== undefined ? data.order : maxOrder + 1,
+      emotionTag: data.emotionTag || null,
+      startTime: null,
+      duration: null,
+      audioUrl: null,
+    };
+
+    const [created] = await db.insert(shotDialogue).values(newDialogue).returning();
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, data.shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true, data: created };
+  } catch (error) {
+    console.error("添加对话失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "添加对话失败",
+    };
+  }
+}
+
+/**
+ * 更新对话
+ */
+export async function updateShotDialogue(
+  dialogueId: string,
+  data: Partial<NewShotDialogue>
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    const [updated] = await db
+      .update(shotDialogue)
+      .set(data)
+      .where(eq(shotDialogue.id, dialogueId))
+      .returning();
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, updated.shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("更新对话失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "更新对话失败",
+    };
+  }
+}
+
+/**
+ * 删除对话
+ */
+export async function deleteShotDialogue(dialogueId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    const dialogueData = await db.query.shotDialogue.findFirst({
+      where: eq(shotDialogue.id, dialogueId),
+    });
+
+    if (!dialogueData) {
+      throw new Error("对话不存在");
+    }
+
+    await db.delete(shotDialogue).where(eq(shotDialogue.id, dialogueId));
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, dialogueData.shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("删除对话失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "删除对话失败",
+    };
+  }
+}
+
+/**
+ * 重排对话顺序
+ */
+export async function reorderShotDialogues(
+  shotId: string,
+  dialogueOrders: { id: string; order: number }[]
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    // 批量更新每个对话的order
+    for (const dialogueOrder of dialogueOrders) {
+      await db
+        .update(shotDialogue)
+        .set({ order: dialogueOrder.order })
+        .where(eq(shotDialogue.id, dialogueOrder.id));
+    }
+
+    // 获取shot信息以便刷新路径
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, shotId),
+      with: { episode: true },
+    });
+
+    if (shotData?.episode) {
+      const episodeData = await db.query.episode.findFirst({
+        where: eq(episode.id, shotData.episodeId),
+      });
+      if (episodeData) {
+        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("重新排序对话失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "重新排序失败",

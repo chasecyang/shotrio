@@ -14,10 +14,8 @@ import {
   Camera
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SceneImageCandidatesDialog } from "./scene-image-candidates-dialog";
 import { 
-  generateQuarterView,
-  saveQuarterView,
+  startQuarterViewGeneration,
 } from "@/lib/actions/scene";
 import { toast } from "sonner";
 import { ImagePreviewDialog } from "../characters/image-preview-dialog";
@@ -36,16 +34,13 @@ export function SceneQuarterViewTab({
   masterLayout,
   quarterView,
 }: SceneQuarterViewTabProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [candidates, setCandidates] = useState<string[]>([]);
-  const [showDialog, setShowDialog] = useState(false);
   const [previewImage, setPreviewImage] = useState<SceneImage | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const hasDescription = !!scene.description;
   const isLocked = !masterLayout;
 
-  // 生成 Quarter View
+  // 开始生成叙事视角图（后台任务）
   const handleGenerate = async () => {
     if (!hasDescription) {
       toast.error("请先在「基础信息」中添加场景描述");
@@ -53,39 +48,15 @@ export function SceneQuarterViewTab({
     }
 
     if (!masterLayout) {
-      toast.error("请先完成 Master Layout");
+      toast.error("请先完成全景布局图");
       return;
     }
 
-    setIsGenerating(true);
-    setShowDialog(true);
-    setCandidates([]);
-
-    try {
-      const result = await generateQuarterView(projectId, scene.id);
-      if (result.success && result.images) {
-        setCandidates(result.images);
-        toast.success("图片生成成功，请选择一张");
-      } else {
-        toast.error(result.error || "生成失败");
-        setShowDialog(false);
-      }
-    } catch (error) {
-      toast.error("生成失败");
-      setShowDialog(false);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // 保存 Quarter View
-  const handleSave = async (imageUrl: string) => {
-    const result = await saveQuarterView(projectId, scene.id, imageUrl);
+    const result = await startQuarterViewGeneration(projectId, scene.id);
     if (result.success) {
-      toast.success("45° View 已保存");
+      toast.success("已开始生成叙事视角图，请稍后在任务中心查看进度");
     } else {
-      toast.error(result.error || "保存失败");
-      throw new Error(result.error);
+      toast.error(result.error || "创建任务失败");
     }
   };
 
@@ -102,7 +73,7 @@ export function SceneQuarterViewTab({
       {isLocked && hasDescription && (
         <Alert className="border-blue-500/50 bg-blue-500/10">
           <AlertDescription className="text-blue-900 dark:text-blue-100">
-            请先在「Master Layout」标签页完成全景布局图的生成。
+            请先在「全景布局」标签页完成全景布局图的生成。
           </AlertDescription>
         </Alert>
       )}
@@ -144,7 +115,7 @@ export function SceneQuarterViewTab({
               <div className="aspect-video bg-muted">
                 <img 
                   src={quarterView.imageUrl} 
-                  alt="45° View"
+                  alt="叙事视角图"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -177,7 +148,7 @@ export function SceneQuarterViewTab({
               <Camera className="w-16 h-16 text-orange-500/40 mb-4" />
               <h4 className="font-medium text-lg mb-2">生成叙事主力视角</h4>
               <p className="text-sm text-muted-foreground mb-6 max-w-md">
-                90% 的对话和动作镜头都将使用这个角度
+                45° Three-Quarter View - 90% 的对话和动作镜头都将使用这个角度
               </p>
               <Button 
                 onClick={handleGenerate}
@@ -185,7 +156,7 @@ export function SceneQuarterViewTab({
                 size="lg"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                生成 45° View
+                生成叙事视角图
               </Button>
             </div>
           ) : (
@@ -195,23 +166,12 @@ export function SceneQuarterViewTab({
                 待解锁
               </h4>
               <p className="text-sm text-muted-foreground max-w-md">
-                请先完成 Master Layout 的生成
+                请先完成全景布局图的生成
               </p>
             </div>
           )}
         </Card>
       </div>
-
-      {/* 候选图片对话框 */}
-      <SceneImageCandidatesDialog
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        title="选择 45° View"
-        description="请选择最适合作为叙事主力视角的一张图片"
-        images={candidates}
-        isGenerating={isGenerating}
-        onSelect={handleSave}
-      />
 
       {/* 图片预览对话框 */}
       <ImagePreviewDialog 

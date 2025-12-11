@@ -3,6 +3,7 @@
 export type JobType =
   | "novel_split" // 小说拆分
   | "character_extraction" // 角色提取
+  | "scene_extraction" // 场景提取
   | "character_image_generation" // 角色造型生成
   | "scene_image_generation" // 场景视角生成
   | "storyboard_generation" // 剧本自动分镜
@@ -42,6 +43,10 @@ export interface NovelSplitInput {
 }
 
 export interface CharacterExtractionInput {
+  episodeIds: string[];
+}
+
+export interface SceneExtractionInput {
   episodeIds: string[];
 }
 
@@ -93,6 +98,14 @@ export interface CharacterExtractionResult {
     }>;
   }>;
   characterCount: number;
+}
+
+export interface SceneExtractionResult {
+  scenes: Array<{
+    name: string;
+    description: string;
+  }>;
+  sceneCount: number;
 }
 
 export interface CharacterImageGenerationResult {

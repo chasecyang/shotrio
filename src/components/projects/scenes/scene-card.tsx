@@ -89,6 +89,7 @@ export function SceneCard({
         completionPercentage={completionPercentage}
         saveStatus={saveStatus}
         onDelete={handleDelete}
+        isHighlighted={isHighlighted}
       />
 
       <div className="px-3 py-1.5 sm:px-4 sm:py-2">
@@ -106,7 +107,7 @@ export function SceneCard({
             onClick={() => setActiveTab("master-layout")}
           >
             <Film className="w-3 h-3" />
-            Master Layout
+            全景布局
             {masterLayout && (
               <span className="ml-1 w-1.5 h-1.5 bg-green-500 rounded-full" />
             )}
@@ -117,7 +118,7 @@ export function SceneCard({
             onClick={() => setActiveTab("quarter-view")}
           >
             <Camera className="w-3 h-3" />
-            45° View
+            叙事视角
             {quarterView && (
               <span className="ml-1 w-1.5 h-1.5 bg-green-500 rounded-full" />
             )}
