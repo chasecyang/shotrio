@@ -339,6 +339,134 @@ export async function getQueueResult(
   return result.data as GenerateImageOutput;
 }
 
+// ============= Kling Video 类型定义 =============
+
+export type VideoDuration = "5" | "10";
+export type VideoAspectRatio = "16:9" | "9:16" | "1:1";
+
+export interface VideoFile {
+  url: string;
+  content_type?: string;
+  file_name?: string;
+  file_size?: number;
+}
+
+export interface ImageToVideoInput {
+  prompt: string;
+  image_url: string;
+  duration?: VideoDuration;
+  negative_prompt?: string;
+  generate_audio?: boolean;
+}
+
+export interface ImageToVideoOutput {
+  video: VideoFile;
+}
+
+// ============= Kling Image to Video 接口 =============
+
+/**
+ * 使用 Kling V2.6 Pro 将图像转换为视频
+ * 特性：
+ * - 电影级视觉质量和流畅运动
+ * - 支持原生音频生成（中英文）
+ * - 视频时长：5 或 10 秒
+ * 
+ * 参考: https://fal.ai/models/fal-ai/kling-video/v2.6/pro/image-to-video/api
+ */
+export async function generateImageToVideo(
+  input: ImageToVideoInput
+): Promise<ImageToVideoOutput> {
+  configureFal();
+
+  // 处理图片 URL：如果是 R2 key，转换为公开 URL
+  let imageUrl = input.image_url;
+  if (!imageUrl.startsWith("http")) {
+    const publicUrl = getImageUrl(imageUrl);
+    imageUrl = publicUrl || imageUrl;
+  }
+
+  const result = await fal.subscribe("fal-ai/kling-video/v2.6/pro/image-to-video", {
+    input: {
+      prompt: input.prompt,
+      image_url: imageUrl,
+      duration: input.duration ?? "5",
+      negative_prompt: input.negative_prompt ?? "blur, distort, and low quality",
+      generate_audio: input.generate_audio ?? true,
+    },
+    logs: true,
+    onQueueUpdate: (update) => {
+      if (update.status === "IN_PROGRESS") {
+        update.logs.map((log) => log.message).forEach(console.log);
+      }
+    },
+  });
+
+  return result.data as ImageToVideoOutput;
+}
+
+/**
+ * 使用队列方式提交图像转视频请求（适用于长时间生成）
+ */
+export async function queueImageToVideo(
+  input: ImageToVideoInput,
+  webhookUrl?: string
+): Promise<{ request_id: string }> {
+  configureFal();
+
+  // 处理图片 URL
+  let imageUrl = input.image_url;
+  if (!imageUrl.startsWith("http")) {
+    const publicUrl = getImageUrl(imageUrl);
+    imageUrl = publicUrl || imageUrl;
+  }
+
+  const { request_id } = await fal.queue.submit(
+    "fal-ai/kling-video/v2.6/pro/image-to-video",
+    {
+      input: {
+        prompt: input.prompt,
+        image_url: imageUrl,
+        duration: input.duration ?? "5",
+        negative_prompt: input.negative_prompt ?? "blur, distort, and low quality",
+        generate_audio: input.generate_audio ?? true,
+      },
+      webhookUrl,
+    }
+  );
+
+  return { request_id };
+}
+
+/**
+ * 获取图像转视频队列请求状态
+ */
+export async function getImageToVideoStatus(requestId: string) {
+  configureFal();
+
+  return await fal.queue.status("fal-ai/kling-video/v2.6/pro/image-to-video", {
+    requestId,
+    logs: true,
+  });
+}
+
+/**
+ * 获取图像转视频队列请求结果
+ */
+export async function getImageToVideoResult(
+  requestId: string
+): Promise<ImageToVideoOutput> {
+  configureFal();
+
+  const result = await fal.queue.result("fal-ai/kling-video/v2.6/pro/image-to-video", {
+    requestId,
+  });
+
+  return result.data as ImageToVideoOutput;
+}
+
+// ============= Vision 接口 =============
+
 export interface VisionInput {
   imageUrl: string;
   prompt?: string;

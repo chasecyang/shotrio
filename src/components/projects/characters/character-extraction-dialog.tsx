@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, CheckCircle2, AlertCircle, Pencil, Trash2, Plus } from "lucide-react";
+import { Loader2, Users, CheckCircle2, AlertCircle, Trash2, Plus } from "lucide-react";
 import { importExtractedCharacters } from "@/lib/actions/character";
 import { getJobStatus } from "@/lib/actions/job";
 import { toast } from "sonner";
@@ -56,6 +56,7 @@ export function CharacterExtractionDialog({
     if (open && jobId && step === "loading") {
       loadExtractionResult();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, jobId, step]);
 
   const loadExtractionResult = async () => {

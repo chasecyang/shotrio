@@ -5,7 +5,7 @@
  * 用于配置 WORKER_API_SECRET 环境变量
  */
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 console.log('\n=================================');
 console.log('🔐 Worker API Token 生成器');

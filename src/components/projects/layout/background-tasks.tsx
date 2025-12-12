@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -65,8 +64,16 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     icon: <Sparkles className="w-3.5 h-3.5" />,
   },
   storyboard_generation: {
-    label: "剧本自动分镜",
+    label: "分镜提取",
     icon: <Film className="w-3.5 h-3.5" />,
+  },
+  storyboard_basic_extraction: {
+    label: "基础分镜提取",
+    icon: <Film className="w-3.5 h-3.5" />,
+  },
+  storyboard_matching: {
+    label: "角色场景匹配",
+    icon: <Users className="w-3.5 h-3.5" />,
   },
   batch_image_generation: {
     label: "批量图像生成",

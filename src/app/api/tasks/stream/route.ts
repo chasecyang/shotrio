@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
           cleanup();
           try {
             controller.close();
-          } catch (e) {
+          } catch {
             // 可能已经关闭
           }
         });
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
           cleanup();
           try {
             controller.close();
-          } catch (e) {
+          } catch {
             // 可能已经关闭
           }
         }, 10 * 60 * 1000);

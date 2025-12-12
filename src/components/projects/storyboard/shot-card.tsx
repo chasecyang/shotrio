@@ -1,6 +1,6 @@
 "use client";
 
-import { ShotDetail, ShotSize, CameraMovement, Character, CharacterImage } from "@/types/project";
+import { ShotDetail, ShotSize, CameraMovement, Character, CharacterImage, Scene } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, Clock, Users, MessageSquare, Trash2, GripVertical, Plus, X, Maximize2, Video } from "lucide-react";
+import { Image as ImageIcon, Clock, Users, MessageSquare, Trash2, GripVertical, Plus, X, Maximize2, Video, MapPin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
 import { 
@@ -43,14 +43,16 @@ import { DialogueEditor } from "./dialogue-editor";
 interface ShotCardProps {
   shot: ShotDetail;
   characters: (Character & { images: CharacterImage[] })[];
+  scenes: Scene[];
   onUpdate: () => void;
 }
 
-export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
+export function ShotCard({ shot, characters, scenes, onUpdate }: ShotCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addingCharacter, setAddingCharacter] = useState(false);
+  const [updatingScene, setUpdatingScene] = useState(false);
   
   // 编辑状态
   const [formData, setFormData] = useState({
@@ -227,6 +229,44 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
       toast.error("添加失败");
     }
   };
+
+  const handleSceneChange = async (sceneId: string) => {
+    if (sceneId === "none") {
+      // 清除场景
+      setUpdatingScene(true);
+      try {
+        const result = await updateShot(shot.id, { sceneId: null });
+        if (result.success) {
+          toast.success("场景已清除");
+          onUpdate();
+        } else {
+          toast.error(result.error || "更新失败");
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("更新失败");
+      } finally {
+        setUpdatingScene(false);
+      }
+      return;
+    }
+
+    setUpdatingScene(true);
+    try {
+      const result = await updateShot(shot.id, { sceneId });
+      if (result.success) {
+        toast.success("场景已更新");
+        onUpdate();
+      } else {
+        toast.error(result.error || "更新失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("更新失败");
+    } finally {
+      setUpdatingScene(false);
+    }
+  };
   
   // 获取可添加的角色列表（排除已添加的）
   const availableCharacters = characters.filter(
@@ -242,7 +282,7 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          "border border-border rounded-lg bg-card overflow-hidden transition-colors hover:border-primary/40 flex flex-col h-full",
+          "border border-border rounded-lg bg-card overflow-hidden transition-colors hover:border-primary/40 flex flex-col max-h-[800px]",
           isDragging && "opacity-50 z-50"
         )}
         onMouseEnter={() => setIsHovered(true)}
@@ -296,9 +336,47 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
         </div>
 
         {/* 底部：编辑区域 */}
-        <div className="p-3 space-y-3 flex-1 flex flex-col">
+        <div className="p-3 space-y-3 flex-1 flex flex-col overflow-y-auto">
+          {/* 场景选择 */}
+          <div className="space-y-2 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                <label className="text-xs font-medium text-muted-foreground">场景</label>
+              </div>
+              {scenes.length > 0 ? (
+                <Select
+                  value={shot.sceneId || "none"}
+                  onValueChange={handleSceneChange}
+                  disabled={updatingScene}
+                >
+                  <SelectTrigger className="h-7 w-auto text-xs font-medium border-0 bg-transparent hover:bg-muted px-2 max-w-[200px]">
+                    <SelectValue placeholder="选择场景" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">
+                      无场景
+                    </SelectItem>
+                    {scenes.map((scene) => (
+                      <SelectItem key={scene.id} value={scene.id} className="text-xs">
+                        {scene.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-xs text-muted-foreground">无可用场景</span>
+              )}
+            </div>
+            {shot.scene && shot.scene.description && (
+              <p className="text-xs text-muted-foreground pl-5">
+                {shot.scene.description}
+              </p>
+            )}
+          </div>
+
           {/* 视觉描述 */}
-          <div className="flex-1">
+          <div className="flex-shrink-0">
             <EditableField
               label="画面"
               icon={ImageIcon}
@@ -318,7 +396,7 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
           </div>
 
           {/* 景别和运镜 */}
-          <div className="space-y-2">
+          <div className="space-y-2 flex-shrink-0">
             {/* 景别选择 */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -387,7 +465,7 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
           </div>
 
           {/* 角色列表 */}
-          <div className="space-y-2">
+          <div className="space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-muted-foreground" />
@@ -475,7 +553,7 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
           </div>
 
           {/* 对话列表 */}
-          <div className="space-y-2">
+          <div className="space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
@@ -510,7 +588,7 @@ export function ShotCard({ shot, characters, onUpdate }: ShotCardProps) {
           </div>
 
           {/* 时长 */}
-          <div className="flex items-center gap-2 pt-2 border-t">
+          <div className="flex items-center gap-2 pt-2 border-t flex-shrink-0">
             <Clock className="w-3.5 h-3.5 text-muted-foreground" />
             <div className="flex items-center gap-1">
                 <Input 

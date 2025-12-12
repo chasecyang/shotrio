@@ -1,7 +1,5 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import db from "@/lib/db";
 import { artStyle } from "@/lib/db/schemas/project";
 import { eq, isNull, desc, asc } from "drizzle-orm";

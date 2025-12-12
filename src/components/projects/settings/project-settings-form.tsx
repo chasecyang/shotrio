@@ -37,7 +37,6 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [systemStyles, setSystemStyles] = useState<ArtStyle[]>([]);
-  const [userStyles, setUserStyles] = useState<ArtStyle[]>([]);
   const [loadingStyles, setLoadingStyles] = useState(true);
   
   const [formData, setFormData] = useState({
@@ -52,12 +51,11 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
     async function loadStyles() {
       setLoadingStyles(true);
       try {
-        const [system, user] = await Promise.all([
+        const [system] = await Promise.all([
           getSystemArtStyles(),
           getUserArtStyles(userId),
         ]);
         setSystemStyles(system);
-        setUserStyles(user);
       } catch (error) {
         console.error("加载风格列表失败:", error);
         toast.error("加载风格列表失败");

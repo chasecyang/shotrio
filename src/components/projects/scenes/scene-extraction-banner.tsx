@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
-import { startSceneExtraction } from "@/lib/actions/scene";
 import { getUserJobs } from "@/lib/actions/job/user-operations";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Job, SceneExtractionResult } from "@/types/job";
 
@@ -26,7 +24,6 @@ export function SceneExtractionBanner({
   const { jobs: activeJobs } = useTaskSubscription();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
 
   // 查找当前项目的场景提取任务
   const extractionJob = useMemo(() => {
@@ -48,8 +45,34 @@ export function SceneExtractionBanner({
     return null;
   }, [activeJobs, completedJob, projectId, isDismissed]);
 
-  // 加载已完成但未处理的任务
+  // 加载已完成但未处理的任务 - 使用 ref 避免频繁触发
+  const hasLoadedCompletedJob = useRef(false);
+  const lastActiveJobCheck = useRef<string>("");
+  
   useEffect(() => {
+    // 如果已被关闭或已有完成的任务，不再检查
+    if (isDismissed || completedJob) {
+      return;
+    }
+
+    // 检查是否有活动任务
+    const hasActiveJob = activeJobs.some(
+      (job) =>
+        job.type === "scene_extraction" &&
+        job.projectId === projectId &&
+        (job.status === "pending" || job.status === "processing")
+    );
+
+    // 创建一个字符串来表示当前状态，避免数组引用变化导致的重复触发
+    const currentCheck = `${hasActiveJob}-${hasLoadedCompletedJob.current}`;
+    
+    // 如果状态没变化，不重复执行
+    if (currentCheck === lastActiveJobCheck.current) {
+      return;
+    }
+    
+    lastActiveJobCheck.current = currentCheck;
+
     const loadCompletedJob = async () => {
       try {
         const result = await getUserJobs({
@@ -68,6 +91,7 @@ export function SceneExtractionBanner({
 
           if (job) {
             setCompletedJob(job);
+            hasLoadedCompletedJob.current = true;
           }
         }
       } catch (error) {
@@ -75,15 +99,8 @@ export function SceneExtractionBanner({
       }
     };
 
-    // 只在没有活动任务时加载
-    const hasActiveJob = activeJobs.some(
-      (job) =>
-        job.type === "scene_extraction" &&
-        job.projectId === projectId &&
-        (job.status === "pending" || job.status === "processing")
-    );
-
-    if (!hasActiveJob && !completedJob && !isDismissed) {
+    // 只有在没有活动任务且还未加载过时才加载
+    if (!hasActiveJob && !hasLoadedCompletedJob.current) {
       loadCompletedJob();
     }
   }, [activeJobs, projectId, completedJob, isDismissed]);
@@ -111,25 +128,6 @@ export function SceneExtractionBanner({
   }
 
   const sceneCount = extractionResult?.sceneCount || 0;
-
-  const handleStartExtraction = async () => {
-    setIsStarting(true);
-    
-    try {
-      const result = await startSceneExtraction(projectId);
-
-      if (!result.success) {
-        toast.error(result.error || "启动场景提取失败");
-        return;
-      }
-
-      toast.success("场景提取任务已启动");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "启动失败");
-    } finally {
-      setIsStarting(false);
-    }
-  };
 
   const handleDismiss = () => {
     setIsDismissed(true);

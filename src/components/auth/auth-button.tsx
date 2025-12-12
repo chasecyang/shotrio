@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, Link } from "@/i18n/routing";
+import { useRouter } from "@/i18n/routing";
 import { authClient } from "@/lib/auth/auth-client";
 import { Button } from "@/components/ui/button";
 import { UserNav } from "@/components/auth/user-nav";

@@ -55,6 +55,7 @@ export function SceneExtractionDialog({
     if (open && jobId && step === "loading") {
       loadExtractionResult();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, jobId, step]);
 
   const loadExtractionResult = async () => {
@@ -351,8 +352,8 @@ export function SceneExtractionDialog({
                           <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                             <h4 className="font-medium text-sm">💡 提示</h4>
                             <ul className="text-xs text-muted-foreground space-y-1">
-                              <li>• 导入后，您可以为场景生成"全景布局图"和"叙事主力视角"</li>
-                              <li>• 场景名称建议使用具体的地点描述，如"咖啡厅-靠窗位置"</li>
+                              <li>• 导入后，您可以为场景生成&ldquo;全景布局图&rdquo;和&ldquo;叙事主力视角&rdquo;</li>
+                              <li>• 场景名称建议使用具体的地点描述，如&ldquo;咖啡厅-靠窗位置&rdquo;</li>
                               <li>• 场景描述越详细，AI生成的场景图片效果越好</li>
                             </ul>
                           </div>

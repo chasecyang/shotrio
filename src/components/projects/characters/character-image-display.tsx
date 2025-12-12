@@ -19,8 +19,6 @@ interface CharacterImageDisplayProps {
 export function CharacterImageDisplay({
   image,
   styleLabel,
-  projectId,
-  characterId,
   isPending,
   isGenerating = false,
   onPreview,

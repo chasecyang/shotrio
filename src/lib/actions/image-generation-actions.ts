@@ -3,13 +3,10 @@
 import {
   generateImagePro,
   editImagePro,
-  queueTextToImagePro,
-  queueImageToImagePro,
   getQueueStatusPro,
   getQueueResultPro,
   type TextToImageInput,
   type ImageToImageInput,
-  type GenerateImageOutput,
   type AspectRatio,
   type Resolution,
 } from "@/lib/services/fal.service";

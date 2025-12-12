@@ -53,7 +53,9 @@ export const jobTypeEnum = pgEnum("job_type", [
   "scene_extraction", // 场景提取
   "character_image_generation", // 角色造型生成
   "scene_image_generation", // 场景视角生成
-  "storyboard_generation", // 剧本自动分镜
+  "storyboard_generation", // 剧本自动分镜（触发入口）
+  "storyboard_basic_extraction", // 基础分镜提取（第一步）
+  "storyboard_matching", // 角色场景匹配（第二步）
   "batch_image_generation", // 批量图像生成
   "video_generation", // 视频生成
 ]);
@@ -316,6 +318,9 @@ export const job = pgTable("job", {
   type: jobTypeEnum("type").notNull(),
   status: jobStatusEnum("status").default("pending").notNull(),
 
+  // 任务依赖关系
+  parentJobId: text("parent_job_id").references(() => job.id, { onDelete: "cascade" }),
+
   // 进度信息
   progress: integer("progress").default(0).notNull(), // 0-100
   totalSteps: integer("total_steps"), // 总步骤数
@@ -416,7 +421,7 @@ export const shotRelations = relations(shot, ({ one, many }) => ({
   dialogues: many(shotDialogue),
 }));
 
-export const jobRelations = relations(job, ({ one }) => ({
+export const jobRelations = relations(job, ({ one, many }) => ({
   user: one(user, {
     fields: [job.userId],
     references: [user.id],
@@ -424,6 +429,14 @@ export const jobRelations = relations(job, ({ one }) => ({
   project: one(project, {
     fields: [job.projectId],
     references: [project.id],
+  }),
+  parentJob: one(job, {
+    fields: [job.parentJobId],
+    references: [job.id],
+    relationName: "jobHierarchy",
+  }),
+  childJobs: many(job, {
+    relationName: "jobHierarchy",
   }),
 }));
 

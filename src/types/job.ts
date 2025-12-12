@@ -6,7 +6,9 @@ export type JobType =
   | "scene_extraction" // 场景提取
   | "character_image_generation" // 角色造型生成
   | "scene_image_generation" // 场景视角生成
-  | "storyboard_generation" // 剧本自动分镜
+  | "storyboard_generation" // 剧本自动分镜（触发入口）
+  | "storyboard_basic_extraction" // 基础分镜提取（第一步）
+  | "storyboard_matching" // 角色场景匹配（第二步）
   | "batch_image_generation" // 批量图像生成
   | "video_generation"; // 视频生成
 
@@ -23,6 +25,7 @@ export interface Job {
   projectId: string | null;
   type: JobType;
   status: JobStatus;
+  parentJobId?: string | null; // 父任务ID
   progress: number; // 0-100
   totalSteps: number | null;
   currentStep: number;
@@ -65,6 +68,19 @@ export interface SceneImageGenerationInput {
 export interface StoryboardGenerationInput {
   episodeId: string;
   autoGenerateImages?: boolean;
+}
+
+// 基础分镜提取输入（第一步）
+export interface StoryboardBasicExtractionInput {
+  episodeId: string;
+  parentJobId?: string; // 父任务ID，用于追溯
+}
+
+// 角色场景匹配输入（第二步）
+export interface StoryboardMatchingInput {
+  episodeId: string;
+  basicExtractionJobId: string; // 第一步任务的ID，用于读取基础提取结果
+  parentJobId?: string; // 父任务ID，用于追溯
 }
 
 export interface BatchImageGenerationInput {
@@ -119,8 +135,71 @@ export interface SceneImageGenerationResult {
 }
 
 export interface StoryboardGenerationResult {
-  shotIds: string[];
+  childJobIds?: string[]; // 子任务ID列表
+  basicExtractionJobId?: string; // 第一步任务ID
+  matchingJobId?: string; // 第二步任务ID
+  message?: string;
+}
+
+// 基础分镜提取结果（第一步）
+export interface StoryboardBasicExtractionResult {
+  shots: Array<{
+    order: number;
+    shotSize: string;
+    cameraMovement: string;
+    duration: number;
+    visualDescription: string;
+    visualPrompt: string;
+    audioPrompt?: string;
+    sceneName?: string; // 场景名称（未匹配ID）
+    characters: Array<{
+      name: string; // 角色名称（未匹配ID）
+      position?: string;
+      action?: string;
+    }>;
+    dialogues: Array<{
+      characterName?: string; // 说话人名称（未匹配ID）
+      dialogueText: string;
+      emotionTag?: string;
+      order: number;
+    }>;
+  }>;
   shotCount: number;
+}
+
+// 角色场景匹配结果（第二步）
+export interface StoryboardMatchingResult {
+  shots: Array<{
+    order: number;
+    shotSize: string;
+    cameraMovement: string;
+    duration: number;
+    visualDescription: string;
+    visualPrompt: string;
+    audioPrompt?: string;
+    sceneName?: string;
+    sceneId?: string; // 匹配后的场景ID
+    sceneMatchConfidence?: number;
+    characters: Array<{
+      name: string;
+      characterId?: string; // 匹配后的角色ID
+      characterImageId?: string; // 匹配后的角色造型ID
+      position?: string;
+      action?: string;
+      matchConfidence?: number;
+    }>;
+    dialogues: Array<{
+      characterName?: string;
+      characterId?: string; // 匹配后的角色ID
+      dialogueText: string;
+      emotionTag?: string;
+      order: number;
+      matchConfidence?: number;
+    }>;
+  }>;
+  shotCount: number;
+  matchedSceneCount: number;
+  matchedCharacterCount: number;
 }
 
 export interface BatchImageGenerationResult {
@@ -144,6 +223,7 @@ export interface CreateJobParams {
   type: JobType;
   inputData: unknown;
   totalSteps?: number;
+  parentJobId?: string; // 父任务ID
 }
 
 // 更新任务进度的参数

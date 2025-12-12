@@ -19,7 +19,6 @@ import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, ListTodo, AlertCircle, RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
 import type { Job } from "@/types/job";
 
 interface TaskCenterProps {
@@ -33,7 +32,6 @@ export function TaskCenter({ trigger }: TaskCenterProps) {
   const [activeTab, setActiveTab] = useState<"active" | "completed" | "failed">("active");
 
   const { jobs: activeJobs, isConnected, error, reconnect } = useTaskSubscription();
-  const router = useRouter();
 
   // 加载历史任务
   const loadHistoricalJobs = async () => {
@@ -59,6 +57,7 @@ export function TaskCenter({ trigger }: TaskCenterProps) {
     if (open && (activeTab === "completed" || activeTab === "failed")) {
       loadHistoricalJobs();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, open]);
 
   // 取消任务
@@ -83,10 +82,10 @@ export function TaskCenter({ trigger }: TaskCenterProps) {
   };
 
   // 查看结果（根据任务类型跳转）
-  const handleView = (jobId: string) => {
-    // 可以根据任务类型和 projectId 跳转到相应页面
-    toast.info("查看功能开发中");
-  };
+  // const handleView = (jobId: string) => {
+  //   // 可以根据任务类型和 projectId 跳转到相应页面
+  //   toast.info("查看功能开发中");
+  // };
 
   const activeCount = activeJobs.length;
   const hasActiveJobs = activeCount > 0;

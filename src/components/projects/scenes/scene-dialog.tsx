@@ -46,7 +46,7 @@ export function SceneDialog({ projectId, trigger }: SceneDialogProps) {
       } else {
         toast.error(result.error || "创建失败");
       }
-    } catch (error) {
+    } catch {
       toast.error("创建失败");
     } finally {
       setLoading(false);

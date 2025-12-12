@@ -7,21 +7,39 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
 import { EpisodeSelector } from "./episode-selector";
 import { ShotGrid } from "./shot-grid";
+import { ShotExtractionBanner } from "./shot-extraction-banner";
+import { ShotExtractionDialog } from "./shot-extraction-dialog";
 import { useTranslations } from "next-intl";
 
 interface StoryboardSectionProps {
   project: ProjectDetail;
+  userId: string;
 }
 
-export function StoryboardSection({ project }: StoryboardSectionProps) {
+export function StoryboardSection({ project, userId }: StoryboardSectionProps) {
   const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(
     project.episodes.length > 0 ? project.episodes[0].id : null
   );
+  const [recentlyImportedJobId, setRecentlyImportedJobId] = useState<string | null>(null);
+  const [previewJobId, setPreviewJobId] = useState<string | null>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const t = useTranslations("projects.storyboard");
 
   const selectedEpisode = project.episodes.find(
     (ep) => ep.id === selectedEpisodeId
   );
+
+  const handleOpenPreview = (jobId: string) => {
+    setPreviewJobId(jobId);
+    setShowPreviewDialog(true);
+  };
+
+  const handleImportSuccess = () => {
+    // 记录最近导入的任务ID，用于隐藏横幅
+    if (previewJobId) {
+      setRecentlyImportedJobId(previewJobId);
+    }
+  };
 
   // 空状态：没有剧集
   if (project.episodes.length === 0) {
@@ -65,6 +83,15 @@ export function StoryboardSection({ project }: StoryboardSectionProps) {
 
       {/* 分镜内容区域 */}
       <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {/* 分镜提取横幅 */}
+        {selectedEpisode && (
+          <ShotExtractionBanner
+            episodeId={selectedEpisode.id}
+            onOpenPreview={handleOpenPreview}
+            recentlyImportedJobId={recentlyImportedJobId}
+          />
+        )}
+
         {isIncomplete && (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 flex items-start gap-3 text-sm">
             <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
@@ -92,9 +119,25 @@ export function StoryboardSection({ project }: StoryboardSectionProps) {
           <ShotGrid
             episode={selectedEpisode}
             characters={project.characters}
+            projectScenes={project.scenes || []}
+            projectId={project.id}
+            userId={userId}
           />
         )}
       </div>
+
+      {/* 分镜预览对话框 */}
+      {selectedEpisode && previewJobId && (
+        <ShotExtractionDialog
+          episodeId={selectedEpisode.id}
+          jobId={previewJobId}
+          open={showPreviewDialog}
+          onOpenChange={setShowPreviewDialog}
+          projectScenes={project.scenes || []}
+          projectCharacters={project.characters}
+          onImportSuccess={handleImportSuccess}
+        />
+      )}
     </div>
   );
 }

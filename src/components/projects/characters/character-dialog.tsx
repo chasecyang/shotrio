@@ -76,7 +76,7 @@ export function CharacterDialog({
       } else {
         toast.error(result.error || "创建失败");
       }
-    } catch (error) {
+    } catch {
       toast.error("发生意外错误");
     } finally {
       setIsSubmitting(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
@@ -45,8 +45,34 @@ export function CharacterExtractionBanner({
     return null;
   }, [activeJobs, completedJob, projectId, isDismissed]);
 
-  // 加载已完成但未处理的任务
+  // 加载已完成但未处理的任务 - 使用 ref 避免频繁触发
+  const hasLoadedCompletedJob = useRef(false);
+  const lastActiveJobCheck = useRef<string>("");
+  
   useEffect(() => {
+    // 如果已被关闭或已有完成的任务，不再检查
+    if (isDismissed || completedJob) {
+      return;
+    }
+
+    // 检查是否有活动任务
+    const hasActiveJob = activeJobs.some(
+      (job) =>
+        job.type === "character_extraction" &&
+        job.projectId === projectId &&
+        (job.status === "pending" || job.status === "processing")
+    );
+
+    // 创建一个字符串来表示当前状态，避免数组引用变化导致的重复触发
+    const currentCheck = `${hasActiveJob}-${hasLoadedCompletedJob.current}`;
+    
+    // 如果状态没变化，不重复执行
+    if (currentCheck === lastActiveJobCheck.current) {
+      return;
+    }
+    
+    lastActiveJobCheck.current = currentCheck;
+
     const loadCompletedJob = async () => {
       try {
         const result = await getUserJobs({
@@ -65,6 +91,7 @@ export function CharacterExtractionBanner({
 
           if (job) {
             setCompletedJob(job);
+            hasLoadedCompletedJob.current = true;
           }
         }
       } catch (error) {
@@ -72,15 +99,8 @@ export function CharacterExtractionBanner({
       }
     };
 
-    // 只在没有活动任务时加载
-    const hasActiveJob = activeJobs.some(
-      (job) =>
-        job.type === "character_extraction" &&
-        job.projectId === projectId &&
-        (job.status === "pending" || job.status === "processing")
-    );
-
-    if (!hasActiveJob && !completedJob && !isDismissed) {
+    // 只有在没有活动任务且还未加载过时才加载
+    if (!hasActiveJob && !hasLoadedCompletedJob.current) {
       loadCompletedJob();
     }
   }, [activeJobs, projectId, completedJob, isDismissed]);

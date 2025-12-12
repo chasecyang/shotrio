@@ -24,7 +24,7 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
           <Suspense fallback={<StoryboardSkeleton />}>
-            <StoryboardWrapper projectId={projectId} />
+            <StoryboardWrapper projectId={projectId} userId={user.id} />
           </Suspense>
         </div>
       </div>
@@ -32,14 +32,14 @@ export default async function StoryboardPage({ params }: StoryboardPageProps) {
   );
 }
 
-async function StoryboardWrapper({ projectId }: { projectId: string }) {
+async function StoryboardWrapper({ projectId, userId }: { projectId: string; userId: string }) {
   const project = await getProjectDetail(projectId);
 
   if (!project) {
     notFound();
   }
 
-  return <StoryboardSection project={project} />;
+  return <StoryboardSection project={project} userId={userId} />;
 }
 
 function StoryboardSkeleton() {

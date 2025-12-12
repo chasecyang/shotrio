@@ -40,13 +40,29 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "角色提取",
     icon: <Users className="w-4 h-4" />,
   },
+  scene_extraction: {
+    label: "场景提取",
+    icon: <Film className="w-4 h-4" />,
+  },
   character_image_generation: {
     label: "角色造型生成",
     icon: <Sparkles className="w-4 h-4" />,
   },
+  scene_image_generation: {
+    label: "场景图生成",
+    icon: <Sparkles className="w-4 h-4" />,
+  },
   storyboard_generation: {
-    label: "剧本自动分镜",
+    label: "分镜提取",
     icon: <Film className="w-4 h-4" />,
+  },
+  storyboard_basic_extraction: {
+    label: "基础分镜提取",
+    icon: <Film className="w-4 h-4" />,
+  },
+  storyboard_matching: {
+    label: "角色场景匹配",
+    icon: <Users className="w-4 h-4" />,
   },
   batch_image_generation: {
     label: "批量图像生成",

@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/db";
-import { character, characterImage, scene, sceneImage, episode } from "@/lib/db/schemas/project";
+import { characterImage, sceneImage, episode } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import type { 
   Job,
@@ -9,6 +9,8 @@ import type {
   SceneImageGenerationInput,
   CharacterExtractionInput,
   StoryboardGenerationInput,
+  StoryboardBasicExtractionInput,
+  StoryboardMatchingInput,
   NovelSplitInput,
 } from "@/types/job";
 
@@ -79,12 +81,8 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
           try {
             const resultData = JSON.parse(job.resultData);
             const characterCount = resultData.characterCount || resultData.characters?.length || 0;
-            const totalStylesCount = resultData.characters?.reduce(
-              (sum: number, char: any) => sum + (char.styles?.length || 0),
-              0
-            ) || 0;
             baseDetails.displayTitle = "角色提取";
-            baseDetails.displaySubtitle = `已提取 ${characterCount} 个角色，${totalStylesCount} 个造型`;
+            baseDetails.displaySubtitle = `已提取 ${characterCount} 个角色`;
           } catch {
             const input = inputData as CharacterExtractionInput;
             const episodeCount = input.episodeIds.length;
@@ -100,6 +98,34 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
 
       case "storyboard_generation": {
         const input = inputData as StoryboardGenerationInput;
+        
+        // 查询剧集信息
+        const episodeRecord = await db.query.episode.findFirst({
+          where: eq(episode.id, input.episodeId),
+        });
+
+        if (episodeRecord) {
+          baseDetails.displaySubtitle = `剧集: ${episodeRecord.title}`;
+        }
+        break;
+      }
+
+      case "storyboard_basic_extraction": {
+        const input = inputData as StoryboardBasicExtractionInput;
+        
+        // 查询剧集信息
+        const episodeRecord = await db.query.episode.findFirst({
+          where: eq(episode.id, input.episodeId),
+        });
+
+        if (episodeRecord) {
+          baseDetails.displaySubtitle = `剧集: ${episodeRecord.title}`;
+        }
+        break;
+      }
+
+      case "storyboard_matching": {
+        const input = inputData as StoryboardMatchingInput;
         
         // 查询剧集信息
         const episodeRecord = await db.query.episode.findFirst({
@@ -148,9 +174,12 @@ function getTaskTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     novel_split: "小说拆分",
     character_extraction: "角色提取",
+    scene_extraction: "场景提取",
     character_image_generation: "角色造型生成",
     scene_image_generation: "场景视角生成",
-    storyboard_generation: "剧本自动分镜",
+    storyboard_generation: "分镜提取",
+    storyboard_basic_extraction: "基础分镜提取",
+    storyboard_matching: "角色场景匹配",
     batch_image_generation: "批量图像生成",
     video_generation: "视频生成",
   };

@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
 import { episode, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import {
@@ -16,6 +16,7 @@ import {
   type NewShotDialogue,
   type CharacterPosition,
   type EmotionTag,
+  type ExtractedShot,
 } from "@/types/project";
 
 /**
@@ -631,6 +632,131 @@ export async function reorderShotDialogues(
     return {
       success: false,
       error: error instanceof Error ? error.message : "重新排序失败",
+    };
+  }
+}
+
+// ==================== 分镜提取导入 Actions ====================
+
+/**
+ * 批量导入AI提取的分镜数据
+ * 包括分镜基础信息、角色关联和对话
+ */
+export async function importExtractedShots(
+  episodeId: string,
+  extractedShots: ExtractedShot[]
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    // 验证剧集存在
+    const episodeData = await db.query.episode.findFirst({
+      where: eq(episode.id, episodeId),
+    });
+
+    if (!episodeData) {
+      throw new Error("剧集不存在");
+    }
+
+    // 使用事务批量插入
+    const result = await db.transaction(async (tx) => {
+      const insertedShots: string[] = [];
+      let totalCharacters = 0;
+      let totalDialogues = 0;
+
+      for (const extractedShot of extractedShots) {
+        // 1. 创建分镜记录
+        const shotId = randomUUID();
+        const newShot: NewShot = {
+          id: shotId,
+          episodeId,
+          order: extractedShot.order,
+          shotSize: extractedShot.shotSize,
+          cameraMovement: extractedShot.cameraMovement,
+          duration: extractedShot.duration,
+          visualDescription: extractedShot.visualDescription || null,
+          visualPrompt: extractedShot.visualPrompt || null,
+          audioPrompt: extractedShot.audioPrompt || null,
+          sceneId: extractedShot.sceneId || null,
+          imageUrl: null,
+          videoUrl: null,
+          finalAudioUrl: null,
+        };
+
+        await tx.insert(shot).values(newShot);
+        insertedShots.push(shotId);
+
+        // 2. 创建角色关联记录
+        if (extractedShot.characters && extractedShot.characters.length > 0) {
+          for (let i = 0; i < extractedShot.characters.length; i++) {
+            const char = extractedShot.characters[i];
+            
+            // 只有当角色匹配成功时才创建关联
+            if (char.characterId) {
+              const newShotChar: NewShotCharacter = {
+                id: randomUUID(),
+                shotId,
+                characterId: char.characterId,
+                characterImageId: char.characterImageId || null,
+                position: (char.position as CharacterPosition) || null,
+                order: i + 1,
+              };
+
+              await tx.insert(shotCharacter).values(newShotChar);
+              totalCharacters++;
+            }
+          }
+        }
+
+        // 3. 创建对话记录
+        if (extractedShot.dialogues && extractedShot.dialogues.length > 0) {
+          for (const dialogue of extractedShot.dialogues) {
+            const newDialogue: NewShotDialogue = {
+              id: randomUUID(),
+              shotId,
+              characterId: dialogue.characterId || null,
+              dialogueText: dialogue.dialogueText,
+              order: dialogue.order,
+              emotionTag: (dialogue.emotionTag as EmotionTag) || null,
+              startTime: null,
+              duration: null,
+              audioUrl: null,
+            };
+
+            await tx.insert(shotDialogue).values(newDialogue);
+            totalDialogues++;
+          }
+        }
+      }
+
+      return {
+        insertedShots,
+        totalCharacters,
+        totalDialogues,
+      };
+    });
+
+    // 刷新路径
+    revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+
+    return {
+      success: true,
+      imported: {
+        newShots: result.insertedShots.length,
+        newCharacterLinks: result.totalCharacters,
+        newDialogues: result.totalDialogues,
+      },
+    };
+  } catch (error) {
+    console.error("导入分镜失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "导入失败",
     };
   }
 }

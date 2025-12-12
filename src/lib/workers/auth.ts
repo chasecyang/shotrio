@@ -60,7 +60,15 @@ function timingSafeEqual(a: string, b: string): boolean {
  * 用于初始化配置
  */
 export function generateWorkerToken(): string {
-  const crypto = require("crypto");
+  // 使用 Web Crypto API 或 Node.js crypto 模块
+  if (typeof window !== 'undefined' && window.crypto) {
+    const array = new Uint8Array(32);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  
+  // Node.js 环境使用动态导入
+  const crypto = eval('require("crypto")') as typeof import('crypto');
   return crypto.randomBytes(32).toString("hex"); // 64 个十六进制字符
 }
 

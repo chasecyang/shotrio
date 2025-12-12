@@ -95,6 +95,7 @@ export async function createJob(params: CreateJobParams): Promise<{
       progress: 0,
       currentStep: 0,
       totalSteps: params.totalSteps || null,
+      parentJobId: params.parentJobId || null,
       inputData: JSON.stringify(params.inputData),
       progressMessage: null,
       resultData: null,
@@ -112,6 +113,49 @@ export async function createJob(params: CreateJobParams): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : "创建任务失败",
+    };
+  }
+}
+
+/**
+ * 创建子任务（跳过速率限制检查）
+ * 用于由其他任务自动创建的子任务
+ */
+export async function createChildJob(params: CreateJobParams): Promise<{
+  success: boolean;
+  jobId?: string;
+  error?: string;
+}> {
+  try {
+    const jobId = randomUUID();
+
+    await db.insert(job).values({
+      id: jobId,
+      userId: params.userId,
+      projectId: params.projectId || null,
+      type: params.type,
+      status: "pending",
+      progress: 0,
+      currentStep: 0,
+      totalSteps: params.totalSteps || null,
+      parentJobId: params.parentJobId || null,
+      inputData: JSON.stringify(params.inputData),
+      progressMessage: null,
+      resultData: null,
+      errorMessage: null,
+      startedAt: null,
+      completedAt: null,
+    });
+
+    return {
+      success: true,
+      jobId,
+    };
+  } catch (error) {
+    console.error("创建子任务失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "创建子任务失败",
     };
   }
 }

@@ -1,4 +1,4 @@
-import { project, episode, character, shot, characterImage, scene, sceneImage, artStyle, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
+import { project, episode, character, shot, characterImage, scene, sceneImage, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
 import type { ArtStyle } from "./art-style";
 
 // 类型推导
@@ -177,5 +177,51 @@ export interface SceneExtractionResult {
 
 // 导入场景时的数据结构
 export interface SceneToImport extends ExtractedScene {
+  selected: boolean; // 是否选中要导入
+}
+
+// 分镜提取相关类型
+export interface ExtractedShotCharacter {
+  name: string; // 角色名称
+  characterId?: string; // 匹配到的角色ID（智能匹配后）
+  characterImageId?: string; // 匹配到的角色造型ID（智能匹配后）
+  position?: CharacterPosition; // 位置
+  action?: string; // 动作描述
+  matchConfidence?: number; // 匹配置信度 0-1
+}
+
+export interface ExtractedShotDialogue {
+  characterName?: string; // 说话人名称
+  characterId?: string; // 匹配到的角色ID（智能匹配后）
+  dialogueText: string; // 对话内容
+  emotionTag?: EmotionTag; // 情绪标签
+  order: number; // 对话顺序
+  matchConfidence?: number; // 匹配置信度 0-1
+}
+
+export interface ExtractedShot {
+  order: number; // 分镜序号
+  shotSize: ShotSize; // 景别
+  cameraMovement: CameraMovement; // 运镜方式
+  duration: number; // 预估时长（毫秒）
+  visualDescription: string; // 中文画面描述
+  visualPrompt: string; // 英文AI绘图prompt
+  audioPrompt?: string; // 音效/BGM描述
+  sceneName?: string; // 场景名称
+  sceneId?: string; // 匹配到的场景ID（智能匹配后）
+  sceneMatchConfidence?: number; // 场景匹配置信度 0-1
+  characters: ExtractedShotCharacter[]; // 角色列表
+  dialogues: ExtractedShotDialogue[]; // 对话列表
+}
+
+export interface ShotExtractionResult {
+  shots: ExtractedShot[];
+  shotCount: number;
+  matchedSceneCount: number;
+  matchedCharacterCount: number;
+}
+
+// 导入分镜时的数据结构
+export interface ShotToImport extends ExtractedShot {
   selected: boolean; // 是否选中要导入
 }
