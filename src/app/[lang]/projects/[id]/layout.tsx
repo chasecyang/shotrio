@@ -1,7 +1,7 @@
 import { ReactNode, Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
-import { getUserProjects, getProjectDetail, getEpisodeShots } from "@/lib/actions/project";
+import { getUserProjects, getProjectDetail } from "@/lib/actions/project";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { ProjectSidebar } from "@/components/projects/layout/project-sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,15 +45,6 @@ async function ProjectSidebarWrapper({ projectId }: { projectId: string }) {
   // 获取当前项目详情
   const currentProject = await getProjectDetail(projectId);
 
-  // 计算分镜总数
-  let shotCount = 0;
-  if (currentProject) {
-    for (const episode of currentProject.episodes) {
-      const shots = await getEpisodeShots(episode.id);
-      shotCount += shots.length;
-    }
-  }
-
   return (
     <ProjectSidebar
       projects={projects.map((p) => ({
@@ -61,7 +52,7 @@ async function ProjectSidebarWrapper({ projectId }: { projectId: string }) {
         title: p.title,
         description: p.description,
       }))}
-      currentProject={currentProject ? { ...currentProject, shotCount } : undefined}
+      currentProject={currentProject}
       user={{
         id: user.id,
         name: user.name,

@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   Play,
   Pause,
-  Download,
   Settings,
   MoreVertical,
 } from "lucide-react";
@@ -42,7 +41,7 @@ export function EditorHeader({
       <header className="h-12 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-3 gap-2 shrink-0">
         {/* 返回按钮 */}
         <Button variant="ghost" size="icon" asChild className="shrink-0 h-8 w-8">
-          <Link href={`/projects/${projectId}/scripts`}>
+          <Link href={`/projects/${projectId}`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -64,12 +63,6 @@ export function EditorHeader({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/projects/${projectId}/production`}>
-                <Download className="h-4 w-4 mr-2" />
-                导出
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link href={`/projects/${projectId}/settings`}>
                 <Settings className="h-4 w-4 mr-2" />
                 设置
@@ -87,7 +80,7 @@ export function EditorHeader({
       {/* 左侧：返回 + 项目名 */}
       <div className="flex items-center gap-3 min-w-0">
         <Button variant="ghost" size="icon" asChild className="shrink-0">
-          <Link href={`/projects/${projectId}/scripts`}>
+          <Link href={`/projects/${projectId}`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -116,14 +109,6 @@ export function EditorHeader({
         </Button>
 
         <Separator orientation="vertical" className="h-6" />
-
-        {/* 导出 */}
-        <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-          <Link href={`/projects/${projectId}/production`}>
-            <Download className="h-3.5 w-3.5 mr-1" />
-            导出
-          </Link>
-        </Button>
 
         {/* 后台任务 */}
         <BackgroundTasks />

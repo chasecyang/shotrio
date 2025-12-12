@@ -110,7 +110,7 @@ export async function createShot(data: {
 
     const [created] = await db.insert(shot).values(newShot).returning();
 
-    revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+    revalidatePath(`/projects/${episodeData.projectId}/editor`);
     return { success: true, data: created };
   } catch (error) {
     console.error("创建分镜失败:", error);
@@ -145,7 +145,7 @@ export async function updateShot(shotId: string, data: Partial<NewShot>) {
     });
 
     if (episodeData) {
-      revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      revalidatePath(`/projects/${episodeData.projectId}/editor`);
     }
 
     return { success: true, data: updated };
@@ -214,7 +214,7 @@ export async function deleteShot(shotId: string) {
     });
 
     if (episodeData) {
-      revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      revalidatePath(`/projects/${episodeData.projectId}/editor`);
     }
 
     return { success: true };
@@ -256,7 +256,7 @@ export async function reorderShots(
     });
 
     if (episodeData) {
-      revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+      revalidatePath(`/projects/${episodeData.projectId}/editor`);
     }
 
     return { success: true };
@@ -320,7 +320,7 @@ export async function addCharacterToShot(data: {
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -367,7 +367,7 @@ export async function removeCharacterFromShot(shotCharacterId: string) {
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -413,7 +413,7 @@ export async function updateShotCharacter(
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -481,7 +481,7 @@ export async function addDialogueToShot(data: {
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -527,7 +527,7 @@ export async function updateShotDialogue(
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -574,7 +574,7 @@ export async function deleteShotDialogue(dialogueId: string) {
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -622,7 +622,7 @@ export async function reorderShotDialogues(
         where: eq(episode.id, shotData.episodeId),
       });
       if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+        revalidatePath(`/projects/${episodeData.projectId}/editor`);
       }
     }
 
@@ -742,7 +742,7 @@ export async function importExtractedShots(
     });
 
     // 刷新路径
-    revalidatePath(`/projects/${episodeData.projectId}/storyboard`);
+    revalidatePath(`/projects/${episodeData.projectId}/editor`);
 
     return {
       success: true,

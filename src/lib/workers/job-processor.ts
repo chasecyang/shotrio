@@ -20,8 +20,6 @@ import { generateStylePromptFromDescription } from "@/lib/actions/character/prom
 import { buildVideoPrompt, getKlingDuration } from "@/lib/utils/motion-prompt";
 import type {
   Job,
-  NovelSplitInput,
-  NovelSplitResult,
   CharacterExtractionInput,
   CharacterExtractionResult,
   SceneExtractionInput,
@@ -168,9 +166,6 @@ export async function processJob(jobData: Job): Promise<void> {
 
     // 根据任务类型调用对应的处理函数
     switch (jobData.type) {
-      case "novel_split":
-        await processNovelSplit(jobData, workerToken);
-        break;
       case "character_extraction":
         await processCharacterExtraction(jobData, workerToken);
         break;
@@ -220,167 +215,6 @@ export async function processJob(jobData: Job): Promise<void> {
       workerToken
     );
   }
-}
-
-/**
- * 处理小说拆分任务
- */
-async function processNovelSplit(jobData: Job, workerToken: string): Promise<void> {
-  const input: NovelSplitInput = JSON.parse(jobData.inputData || "{}");
-  let { content, maxEpisodes = 20 } = input;
-
-  // 验证项目所有权
-  if (jobData.projectId) {
-    const hasAccess = await verifyProjectOwnership(
-      jobData.projectId,
-      jobData.userId
-    );
-    if (!hasAccess) {
-      throw new Error("无权访问该项目");
-    }
-  }
-
-  // 输入验证和清理
-  content = sanitizeTextInput(content, INPUT_LIMITS.MAX_CONTENT_LENGTH);
-  if (!content) {
-    throw new Error("小说内容为空或无效");
-  }
-
-  // 验证 maxEpisodes 范围
-  maxEpisodes = Math.min(
-    Math.max(INPUT_LIMITS.MIN_EPISODES, maxEpisodes),
-    INPUT_LIMITS.MAX_EPISODES
-  );
-
-  await updateJobProgress(
-    {
-      jobId: jobData.id,
-      progress: 10,
-      progressMessage: "正在分析小说内容...",
-    },
-    workerToken
-  );
-
-  // 构建 Prompt
-  const systemPrompt = `你是一位金牌短剧编剧，深谙当下爆款微短剧（Short Drama）的创作逻辑。
-
-# 你的目标
-将提供的小说内容改编成高质量微短剧剧本。
-
-# 核心创作原则
-1. **高信息密度（High Information Density）**：严禁注水！每一集必须有实质性的剧情大幅推进，不要把一场对话拉长成一集。每集至少包含3-4个明确的情节拍或反转。
-2. **黄金3秒法则**：每集前3秒必须有强烈的视觉奇观、状态反差或悬念，瞬间抓住用户注意力。
-3. **情绪过山车**：每集都要有情绪的高低起伏，结尾必须是"钩子"（Hook），让人欲罢不能。
-
-# 内容细则
-- **标题**：10-15字，极具吸引力，强反差/强悬念。
-- **梗概**：50字以内，概括核心事件。
-- **钩子/亮点**：本集最抓人的点（反转/高潮/悬念）。
-- **情节密度**：如果原小说情节较慢，请大刀阔斧地合并章节，确保每集微短剧都有足够的内容量。
-
-# 输出格式
-必须返回JSON格式：
-{
-  "episodes": [
-    {
-      "order": 1,
-      "title": "高概念标题",
-      "summary": "剧集梗概",
-      "hook": "钩子/亮点",
-      "scriptContent": "完整剧本内容"
-    }
-  ]
-}
-
-# 注意事项
-- 剧集数量不超过${maxEpisodes}集。
-- 确保每一集结尾都是一个强悬念（Cliffhanger）。`;
-
-  const userPrompt = `请将以下小说内容拆分并改编为微短剧：
-
-${content}
-
-请严格按照JSON格式返回拆分结果。`;
-
-  await updateJobProgress(
-    {
-      jobId: jobData.id,
-      progress: 30,
-      progressMessage: "AI 正在拆分剧集...",
-    },
-    workerToken
-  );
-
-  // 调用 OpenAI
-  const response = await getChatCompletion(
-    [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    {
-      temperature: 0.7,
-      maxTokens: 8000,
-      jsonMode: true,
-    }
-  );
-
-  await updateJobProgress(
-    {
-      jobId: jobData.id,
-      progress: 70,
-      progressMessage: "正在保存剧集...",
-    },
-    workerToken
-  );
-
-  // 解析结果
-  const result = safeJsonParse(response);
-  const episodes = result.episodes || [];
-
-  // 批量创建剧集
-  const episodeIds: string[] = [];
-  for (let i = 0; i < episodes.length; i++) {
-    const ep = episodes[i];
-    const episodeId = randomUUID();
-
-    await db.insert(episode).values({
-      id: episodeId,
-      projectId: jobData.projectId!,
-      title: ep.title || `第${i + 1}集`,
-      summary: ep.summary || null,
-      hook: ep.hook || null,
-      scriptContent: ep.scriptContent || null,
-      order: i + 1,
-    });
-
-    episodeIds.push(episodeId);
-
-    // 更新进度
-    const progress = 70 + Math.floor((i / episodes.length) * 25);
-    await updateJobProgress(
-      {
-        jobId: jobData.id,
-        progress,
-        currentStep: i + 1,
-        progressMessage: `已保存 ${i + 1}/${episodes.length} 集`,
-      },
-      workerToken
-    );
-  }
-
-  // 完成任务
-  const resultData: NovelSplitResult = {
-    episodeIds,
-    episodeCount: episodes.length,
-  };
-
-  await completeJob(
-    {
-      jobId: jobData.id,
-      resultData,
-    },
-    workerToken
-  );
 }
 
 /**

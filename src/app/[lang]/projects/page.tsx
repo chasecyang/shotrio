@@ -5,9 +5,9 @@ import { Film } from "lucide-react";
 export default async function ProjectsPage() {
   const projects = await getUserProjects();
 
-  // 如果有项目，自动跳转到第一个项目的剧本页
+  // 如果有项目，自动跳转到第一个项目的编辑器页面
   if (projects.length > 0) {
-    redirect(`/projects/${projects[0].id}/scripts`);
+    redirect(`/projects/${projects[0].id}/editor`);
   }
 
   // 如果没有项目，显示欢迎页面

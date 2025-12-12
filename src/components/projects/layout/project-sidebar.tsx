@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Users, Settings, Clapperboard, Map, Film, PenTool } from "lucide-react";
+import { Settings, PenTool } from "lucide-react";
 import { Link, usePathname } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import {
@@ -36,8 +36,6 @@ interface ProjectDetail {
   title: string;
   episodes: Episode[];
   characters: Array<{ id: string }>;
-  scenes?: Array<{ id: string }>;
-  shotCount?: number;
 }
 
 interface ProjectSidebarProps {
@@ -61,38 +59,9 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
   const navigation = currentProject
     ? [
         {
-          name: t('scripts'),
-          href: `/projects/${currentProject.id}/scripts`,
-          icon: FileText,
-          badge: currentProject.episodes.length,
-        },
-        {
-          name: t('characters'),
-          href: `/projects/${currentProject.id}/characters`,
-          icon: Users,
-          badge: currentProject.characters.length,
-        },
-        {
-          name: t('scenes'),
-          href: `/projects/${currentProject.id}/scenes`,
-          icon: Map,
-          badge: currentProject.scenes?.length || 0,
-        },
-        {
-          name: t('storyboard'),
-          href: `/projects/${currentProject.id}/storyboard`,
-          icon: Clapperboard,
-          badge: currentProject.shotCount,
-        },
-        {
           name: "编辑器",
           href: `/projects/${currentProject.id}/editor`,
           icon: PenTool,
-        },
-        {
-          name: t('production'),
-          href: `/projects/${currentProject.id}/production`,
-          icon: Film,
         },
         {
           name: t('settings'),

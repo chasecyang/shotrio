@@ -51,8 +51,8 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
   const currentProject = projects.find((p) => p.id === activeProjectId);
 
   const handleSelectProject = (projectId: string) => {
-    // 导航到该项目的剧本页
-    router.push(`/projects/${projectId}/scripts`);
+    // 导航到该项目的编辑器页面
+    router.push(`/projects/${projectId}/editor`);
   };
 
   const handleCreateProject = async () => {
@@ -73,7 +73,7 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
         setDialogOpen(false);
         setNewProject({ title: "", description: "" });
         // 导航到新项目
-        router.push(`/projects/${result.data.id}/scripts`);
+        router.push(`/projects/${result.data.id}/editor`);
       } else {
         toast.error(result.error || "创建失败");
       }

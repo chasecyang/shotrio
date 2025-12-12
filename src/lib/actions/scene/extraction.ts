@@ -74,7 +74,7 @@ export async function importExtractedScenes(
       }
     });
 
-    revalidatePath(`/projects/${projectId}/scenes`);
+    revalidatePath(`/projects/${projectId}/editor`);
 
     return {
       success: true,

@@ -109,3 +109,4 @@ export function SceneDialog({ projectId, trigger, onSuccess }: SceneDialogProps)
     </Dialog>
   );
 }
+

@@ -271,7 +271,7 @@ export async function deleteSceneImage(projectId: string, imageId: string) {
 
     await db.delete(sceneImage).where(eq(sceneImage.id, imageId));
 
-    revalidatePath(`/projects/${projectId}/scenes`);
+    revalidatePath(`/projects/${projectId}/editor`);
     return { success: true };
   } catch (error) {
     console.error("删除场景图片失败:", error);

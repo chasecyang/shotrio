@@ -39,7 +39,7 @@ export async function createEpisode(data: {
 
     const [created] = await db.insert(episode).values(newEpisode).returning();
 
-    revalidatePath(`/projects/${data.projectId}/scripts`);
+    revalidatePath(`/projects/${data.projectId}/editor`);
     return { success: true, data: created };
   } catch (error) {
     console.error("创建剧集失败:", error);
@@ -71,8 +71,7 @@ export async function updateEpisode(
       .where(eq(episode.id, episodeId))
       .returning();
 
-    revalidatePath(`/projects/${updated.projectId}/scripts`);
-    revalidatePath(`/projects/${updated.projectId}/scripts/${episodeId}`);
+    revalidatePath(`/projects/${updated.projectId}/editor`);
     return { success: true, data: updated };
   } catch (error) {
     console.error("更新剧集失败:", error);
@@ -133,7 +132,7 @@ export async function deleteEpisode(episodeId: string) {
       }
     });
 
-    revalidatePath(`/projects/${episodeData.projectId}/scripts`);
+    revalidatePath(`/projects/${episodeData.projectId}/editor`);
     return { success: true };
   } catch (error) {
     console.error("删除剧集失败:", error);

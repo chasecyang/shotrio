@@ -1,7 +1,6 @@
 // 任务类型定义
 
 export type JobType =
-  | "novel_split" // 小说拆分
   | "character_extraction" // 角色提取
   | "scene_extraction" // 场景提取
   | "character_image_generation" // 角色造型生成
@@ -44,11 +43,6 @@ export interface Job {
 }
 
 // 各种任务的输入数据类型
-export interface NovelSplitInput {
-  content: string;
-  maxEpisodes?: number;
-}
-
 export interface CharacterExtractionInput {
   episodeIds: string[];
 }
@@ -102,11 +96,6 @@ export interface VideoGenerationInput {
 }
 
 // 任务结果数据类型
-export interface NovelSplitResult {
-  episodeIds: string[];
-  episodeCount: number;
-}
-
 export interface CharacterExtractionResult {
   characters: Array<{
     name: string;

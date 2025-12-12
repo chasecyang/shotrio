@@ -55,12 +55,12 @@ export async function upsertScene(
         id: randomUUID(),
         projectId,
         name: data.name,
-        description: data.description,
-      });
-    }
+      description: data.description,
+    });
+  }
 
-    revalidatePath(`/projects/${projectId}/scenes`);
-    return { success: true };
+  revalidatePath(`/projects/${projectId}/editor`);
+  return { success: true };
   } catch (error) {
     console.error("保存场景失败:", error);
     return {
@@ -96,7 +96,7 @@ export async function deleteScene(projectId: string, sceneId: string) {
 
     await db.delete(scene).where(eq(scene.id, sceneId));
 
-    revalidatePath(`/projects/${projectId}/scenes`);
+    revalidatePath(`/projects/${projectId}/editor`);
     return { success: true };
   } catch (error) {
     console.error("删除场景失败:", error);

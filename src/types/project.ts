@@ -109,24 +109,6 @@ export function isEpisodeComplete(episode: Episode): boolean {
   return !!(episode.summary && episode.hook && episode.scriptContent);
 }
 
-// 小说拆分相关类型
-export interface NovelEpisodeData {
-  order: number;
-  title: string;
-  summary: string;
-  hook: string;
-  scriptContent: string;
-}
-
-export interface NovelSplitResult {
-  episodes: NovelEpisodeData[];
-}
-
-export interface NovelImportOptions {
-  targetEpisodeLength?: number; // 目标每集时长（秒）
-  maxEpisodes?: number; // 最大剧集数
-}
-
 // 角色提取相关类型
 export interface ExtractedCharacterStyle {
   label: string; // 造型名称（如"日常装"、"工作装"）

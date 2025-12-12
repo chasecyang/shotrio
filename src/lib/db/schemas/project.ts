@@ -48,7 +48,7 @@ export const sceneImageTypeEnum = pgEnum("scene_image_type", [
 
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
-  "novel_split", // 小说拆分
+  // "novel_split", // 小说拆分 - 已弃用，如需从数据库移除需要执行迁移
   "character_extraction", // 角色提取
   "scene_extraction", // 场景提取
   "character_image_generation", // 角色造型生成
