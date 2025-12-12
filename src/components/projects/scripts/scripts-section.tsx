@@ -28,7 +28,9 @@ import {
   SaveStatus 
 } from "@/components/ui/inline-editable-field";
 import { NovelImportDialog } from "./novel-import-dialog";
+import { CharacterExtractionBanner } from "../characters/character-extraction-banner";
 import { CharacterExtractionDialog } from "../characters/character-extraction-dialog";
+import { startCharacterExtraction } from "@/lib/actions/character";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,9 +48,44 @@ interface ScriptsSectionProps {
 
 export function ScriptsSection({ project }: ScriptsSectionProps) {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [extractionDialogOpen, setExtractionDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewJobId, setPreviewJobId] = useState<string>("");
+  const [isStartingExtraction, setIsStartingExtraction] = useState(false);
+  const [recentlyImportedJobId, setRecentlyImportedJobId] = useState<string | null>(null);
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
+
+  // 处理点击"从剧本提取"按钮
+  const handleStartExtraction = async () => {
+    setIsStartingExtraction(true);
+    try {
+      const result = await startCharacterExtraction(project.id);
+      
+      if (result.success) {
+        toast.success("已提交角色提取任务");
+      } else {
+        toast.error(result.error || "提交任务失败");
+      }
+    } catch (error) {
+      toast.error("提交任务失败");
+      console.error("启动角色提取失败:", error);
+    } finally {
+      setIsStartingExtraction(false);
+    }
+  };
+
+  // 处理打开预览对话框
+  const handleOpenPreview = (jobId: string) => {
+    setPreviewJobId(jobId);
+    setPreviewDialogOpen(true);
+  };
+
+  const handleImportSuccess = () => {
+    if (previewJobId) {
+      setRecentlyImportedJobId(previewJobId);
+    }
+    router.refresh();
+  };
 
   const handleCreateEpisode = async () => {
     setIsCreating(true);
@@ -105,12 +142,19 @@ export function ScriptsSection({ project }: ScriptsSectionProps) {
         <div className="space-y-4">
           <div className="flex justify-end gap-2">
             <Button 
-              onClick={() => setExtractionDialogOpen(true)} 
+              onClick={handleStartExtraction} 
               variant="outline"
+              disabled={isStartingExtraction}
               className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20 hover:border-primary/40"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
-              <Users className="w-4 h-4 mr-1" />
+              {isStartingExtraction ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  <Users className="w-4 h-4 mr-1" />
+                </>
+              )}
               提取角色
             </Button>
             <Button onClick={() => setImportDialogOpen(true)} variant="outline">
@@ -126,6 +170,13 @@ export function ScriptsSection({ project }: ScriptsSectionProps) {
               新建剧集
             </Button>
           </div>
+          
+          {/* 角色提取横幅 */}
+          <CharacterExtractionBanner
+            projectId={project.id}
+            onOpenPreview={handleOpenPreview}
+            recentlyImportedJobId={recentlyImportedJobId}
+          />
           <div className="space-y-3">
             {project.episodes.map((episode) => (
               <EpisodeRow key={episode.id} episode={episode} />
@@ -140,12 +191,17 @@ export function ScriptsSection({ project }: ScriptsSectionProps) {
         projectId={project.id}
       />
 
-      <CharacterExtractionDialog
-        open={extractionDialogOpen}
-        onOpenChange={setExtractionDialogOpen}
-        projectId={project.id}
-        existingCharacters={project.characters.map(c => ({ id: c.id, name: c.name }))}
-      />
+      {/* 预览和导入对话框 */}
+      {previewJobId && (
+        <CharacterExtractionDialog
+          open={previewDialogOpen}
+          onOpenChange={setPreviewDialogOpen}
+          projectId={project.id}
+          jobId={previewJobId}
+          existingCharacters={project.characters.map(c => ({ id: c.id, name: c.name }))}
+          onImportSuccess={handleImportSuccess}
+        />
+      )}
     </div>
   );
 }

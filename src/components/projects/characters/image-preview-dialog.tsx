@@ -21,10 +21,13 @@ export function ImagePreviewDialog({
   const handleDownload = () => {
     if (!image.imageUrl) return;
     
+    // 获取文件名
+    const fileName = "label" in image ? image.label : image.imageType;
+    
     // 创建一个隐藏的 a 标签来触发下载
     const link = document.createElement("a");
     link.href = image.imageUrl;
-    link.download = `${image.label}.png`;
+    link.download = `${fileName}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -36,7 +39,7 @@ export function ImagePreviewDialog({
         <div className="relative">
           <img
             src={image.imageUrl || ""}
-            alt={image.label}
+            alt={"label" in image ? image.label : image.imageType}
             className="w-full h-auto max-h-[85vh] object-contain"
           />
           <div className="absolute top-4 right-4 flex gap-2">
@@ -58,7 +61,9 @@ export function ImagePreviewDialog({
             </Button>
           </div>
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-            <h3 className="text-white text-xl font-semibold mb-1">{image.label}</h3>
+            <h3 className="text-white text-xl font-semibold mb-1">
+              {"label" in image ? image.label : image.imageType}
+            </h3>
             {image.imagePrompt && (
               <p className="text-white/80 text-sm">{image.imagePrompt}</p>
             )}

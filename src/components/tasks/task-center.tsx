@@ -181,7 +181,6 @@ export function TaskCenter({ trigger }: TaskCenterProps) {
                       key={job.id}
                       job={job}
                       onCancel={handleCancel}
-                      onView={handleView}
                     />
                   ))}
                 </div>
@@ -207,7 +206,6 @@ export function TaskCenter({ trigger }: TaskCenterProps) {
                     <TaskItem
                       key={job.id}
                       job={job}
-                      onView={handleView}
                     />
                   ))}
                 </div>

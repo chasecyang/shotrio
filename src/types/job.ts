@@ -10,7 +10,11 @@ export type JobType =
   | "storyboard_basic_extraction" // 基础分镜提取（第一步）
   | "storyboard_matching" // 角色场景匹配（第二步）
   | "batch_image_generation" // 批量图像生成
-  | "video_generation"; // 视频生成
+  | "video_generation" // 视频生成
+  | "shot_video_generation" // 单镜视频生成
+  | "batch_video_generation" // 批量视频生成
+  | "shot_tts_generation" // 单镜TTS生成
+  | "final_video_export"; // 最终成片导出
 
 export type JobStatus = 
   | "pending" // 等待处理
@@ -214,6 +218,94 @@ export interface BatchImageGenerationResult {
 export interface VideoGenerationResult {
   videoUrl: string;
   duration: number;
+}
+
+// 单镜视频生成输入
+export interface ShotVideoGenerationInput {
+  shotId: string;
+  imageUrl: string; // 分镜图URL
+  prompt: string; // 运动提示词
+  duration: "5" | "10"; // 视频时长
+  regenerate?: boolean; // 是否重新生成
+}
+
+// 单镜视频生成结果
+export interface ShotVideoGenerationResult {
+  shotId: string;
+  videoUrl: string;
+  duration: number;
+}
+
+// 批量视频生成输入
+export interface BatchVideoGenerationInput {
+  shotIds: string[];
+  concurrency?: number; // 并发数，默认3
+}
+
+// 批量视频生成结果
+export interface BatchVideoGenerationResult {
+  results: Array<{
+    shotId: string;
+    success: boolean;
+    videoUrl?: string;
+    error?: string;
+  }>;
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+}
+
+// 单镜TTS生成输入
+export interface ShotTTSGenerationInput {
+  shotId: string;
+  dialogues: Array<{
+    dialogueId: string;
+    text: string;
+    characterName?: string;
+    emotionTag?: string;
+  }>;
+}
+
+// 单镜TTS生成结果
+export interface ShotTTSGenerationResult {
+  shotId: string;
+  audioFiles: Array<{
+    dialogueId: string;
+    audioUrl: string;
+  }>;
+  finalAudioUrl?: string; // 合并后的音频
+}
+
+// 最终成片导出输入
+export interface FinalVideoExportInput {
+  episodeId: string;
+  includeAudio?: boolean; // 是否包含音频
+  includeSubtitles?: boolean; // 是否包含字幕
+  exportQuality?: "draft" | "high"; // 草稿/高清
+  transitions?: Array<{
+    fromShotId?: string;
+    toShotId: string;
+    type: string;
+    duration: number;
+  }>;
+}
+
+// 最终成片导出结果
+export interface FinalVideoExportResult {
+  episodeId: string;
+  videoUrl: string;
+  duration: number; // 总时长（秒）
+  fileSize: number; // 文件大小（字节）
+  videoList?: Array<{
+    order: number;
+    videoUrl: string;
+    duration: number;
+    dialogues: Array<{
+      text: string;
+      startTime: number | null;
+      duration: number | null;
+    }>;
+  }>;
 }
 
 // 创建任务的参数

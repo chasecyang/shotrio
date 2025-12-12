@@ -100,7 +100,7 @@ export async function importExtractedCharacters(
         // 添加造型（去重）
         const existingStyles = existingChar?.images || [];
         const existingLabels = new Set(
-          existingStyles.map(img => img.label.toLowerCase().trim())
+          existingStyles.map((img: { label: string }) => img.label.toLowerCase().trim())
         );
 
         for (const style of extractedChar.styles) {

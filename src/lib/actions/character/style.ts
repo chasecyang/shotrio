@@ -203,7 +203,9 @@ export async function updateCharacterStyleInfo(
       },
     });
 
-    if (!imageData || imageData.character.projectId !== projectId) {
+    // 类型断言：character 是一个对象而不是数组
+    const characterData = imageData?.character as { projectId: string } | undefined;
+    if (!imageData || !characterData || characterData.projectId !== projectId) {
       return { success: false, error: "造型不存在或不属于该项目" };
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Users, Settings, Clapperboard, Map } from "lucide-react";
+import { FileText, Users, Settings, Clapperboard, Map, Film, PenTool } from "lucide-react";
 import { Link, usePathname } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import {
@@ -83,6 +83,16 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
           href: `/projects/${currentProject.id}/storyboard`,
           icon: Clapperboard,
           badge: currentProject.shotCount,
+        },
+        {
+          name: "编辑器",
+          href: `/projects/${currentProject.id}/editor`,
+          icon: PenTool,
+        },
+        {
+          name: t('production'),
+          href: `/projects/${currentProject.id}/production`,
+          icon: Film,
         },
         {
           name: t('settings'),

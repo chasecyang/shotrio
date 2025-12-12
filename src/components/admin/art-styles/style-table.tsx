@@ -161,7 +161,7 @@ export function StyleTable({ styles }: StyleTableProps) {
         setSelectedIds(new Set());
         router.refresh();
       } else {
-        toast.error(result.error || "批量生成失败");
+        toast.error(result.errors?.[0] || "批量生成失败");
       }
     } catch (error) {
       toast.error("批量生成失败");
@@ -189,7 +189,7 @@ export function StyleTable({ styles }: StyleTableProps) {
         setSelectedIds(new Set());
         router.refresh();
       } else {
-        toast.error(result.error || "批量删除失败");
+        toast.error(result.errors?.[0] || "批量删除失败");
       }
     } catch (error) {
       toast.error("批量删除失败");

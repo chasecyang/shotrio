@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ExtractedShot, Character, CharacterImage, Scene } from "@/types/project";
-import type { StoryboardGenerationResult } from "@/types/job";
+import type { StoryboardGenerationResult, StoryboardBasicExtractionResult, StoryboardMatchingResult } from "@/types/job";
 import { useRouter } from "next/navigation";
 
 interface ShotExtractionDialogProps {
@@ -114,26 +114,33 @@ export function ShotExtractionDialog({
       }
 
       // 解析提取结果
-      // 支持两种格式：
-      // 1. 新的两步式：StoryboardMatchingResult（推荐）
-      // 2. 旧的单步式：StoryboardGenerationResult（向后兼容）
-      const extractionResult: StoryboardGenerationResult = JSON.parse(job.resultData);
+      // 支持三种格式：
+      // 1. StoryboardGenerationResult（父任务，包含子任务ID）
+      // 2. StoryboardMatchingResult（匹配任务，包含完整的shots数据）
+      // 3. StoryboardBasicExtractionResult（基础提取任务，包含基础的shots数据）
+      const resultData = JSON.parse(job.resultData);
 
       // 如果是父任务，尝试获取匹配任务的结果
-      if (job.type === "storyboard_generation" && extractionResult.matchingJobId) {
-        const matchingResult = await getJobStatus(extractionResult.matchingJobId);
-        if (matchingResult.success && matchingResult.job?.status === "completed" && matchingResult.job.resultData) {
-          const matchingData = JSON.parse(matchingResult.job.resultData);
-          if (matchingData.shots && matchingData.shots.length > 0) {
-            setExtractedShots(matchingData.shots as ExtractedShot[]);
-            setSelectedShots(new Set(matchingData.shots.map((_: any, idx: number) => idx)));
-            setStep("preview");
-            return;
+      if (job.type === "storyboard_generation") {
+        const generationResult = resultData as StoryboardGenerationResult;
+        if (generationResult.matchingJobId) {
+          const matchingResult = await getJobStatus(generationResult.matchingJobId);
+          if (matchingResult.success && matchingResult.job?.status === "completed" && matchingResult.job.resultData) {
+            const matchingData = JSON.parse(matchingResult.job.resultData) as StoryboardMatchingResult;
+            if (matchingData.shots && matchingData.shots.length > 0) {
+              setExtractedShots(matchingData.shots as ExtractedShot[]);
+              setSelectedShots(new Set(matchingData.shots.map((_: any, idx: number) => idx)));
+              setStep("preview");
+              return;
+            }
           }
         }
+        setError("无法获取分镜数据");
+        return;
       }
 
       // 如果是匹配任务或基础提取任务，直接使用其结果
+      const extractionResult = resultData as StoryboardMatchingResult | StoryboardBasicExtractionResult;
       if (!extractionResult.shots || extractionResult.shots.length === 0) {
         setError("未提取到分镜信息");
         return;

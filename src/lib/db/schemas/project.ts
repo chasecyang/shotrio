@@ -58,6 +58,10 @@ export const jobTypeEnum = pgEnum("job_type", [
   "storyboard_matching", // 角色场景匹配（第二步）
   "batch_image_generation", // 批量图像生成
   "video_generation", // 视频生成
+  "shot_video_generation", // 单镜视频生成
+  "batch_video_generation", // 批量视频生成
+  "shot_tts_generation", // 单镜TTS生成
+  "final_video_export", // 最终成片导出
 ]);
 
 // 任务状态
@@ -463,6 +467,62 @@ export const shotDialogueRelations = relations(shotDialogue, ({ one }) => ({
   character: one(character, {
     fields: [shotDialogue.characterId],
     references: [character.id],
+  }),
+}));
+
+// 转场效果枚举
+export const transitionTypeEnum = pgEnum("transition_type", [
+  "none", // 无转场
+  "fade", // 淡入淡出
+  "dissolve", // 溶解
+  "wipe_left", // 左擦除
+  "wipe_right", // 右擦除
+  "wipe_up", // 上擦除
+  "wipe_down", // 下擦除
+  "slide_left", // 左滑动
+  "slide_right", // 右滑动
+  "zoom_in", // 放大
+  "zoom_out", // 缩小
+]);
+
+// 6. 转场效果表 (Shot Transition) - 分镜间的转场配置
+export const shotTransition = pgTable("shot_transition", {
+  id: text("id").primaryKey(),
+  episodeId: text("episode_id")
+    .notNull()
+    .references(() => episode.id, { onDelete: "cascade" }),
+  
+  // 从哪个镜头到哪个镜头（fromShotId可为null表示片头）
+  fromShotId: text("from_shot_id").references(() => shot.id, { onDelete: "cascade" }),
+  toShotId: text("to_shot_id")
+    .notNull()
+    .references(() => shot.id, { onDelete: "cascade" }),
+  
+  // 转场类型和时长
+  transitionType: transitionTypeEnum("transition_type").default("fade").notNull(),
+  duration: integer("duration").default(500), // 转场时长（毫秒）
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const shotTransitionRelations = relations(shotTransition, ({ one }) => ({
+  episode: one(episode, {
+    fields: [shotTransition.episodeId],
+    references: [episode.id],
+  }),
+  fromShot: one(shot, {
+    fields: [shotTransition.fromShotId],
+    references: [shot.id],
+    relationName: "transitionFrom",
+  }),
+  toShot: one(shot, {
+    fields: [shotTransition.toShotId],
+    references: [shot.id],
+    relationName: "transitionTo",
   }),
 }));
 

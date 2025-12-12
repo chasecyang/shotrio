@@ -54,7 +54,9 @@ export async function generateImageForCharacterStyle(
       return { success: false, error: "造型不存在" };
     }
 
-    if (imageRecord.character.id !== characterId) {
+    // 类型断言：character 是一个对象而不是数组
+    const characterData = imageRecord.character as { id: string };
+    if (characterData.id !== characterId) {
       return { success: false, error: "造型与角色不匹配" };
     }
 

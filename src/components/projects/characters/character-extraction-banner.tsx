@@ -14,12 +14,14 @@ interface CharacterExtractionBannerProps {
   projectId: string;
   onOpenPreview: (jobId: string) => void;
   recentlyImportedJobId?: string | null;
+  compact?: boolean;
 }
 
 export function CharacterExtractionBanner({
   projectId,
   onOpenPreview,
   recentlyImportedJobId,
+  compact = false,
 }: CharacterExtractionBannerProps) {
   const { jobs: activeJobs } = useTaskSubscription();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
@@ -147,7 +149,8 @@ export function CharacterExtractionBanner({
   return (
     <div
       className={cn(
-        "relative mb-6 rounded-lg border p-4 transition-all duration-300",
+        "relative rounded-lg border transition-all duration-300",
+        compact ? "mb-0 p-3" : "mb-6 p-4",
         isProcessing && "border-blue-500/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20",
         isCompleted && "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
         isFailed && "border-red-500/50 bg-red-50/50 dark:bg-red-950/20"
@@ -158,77 +161,132 @@ export function CharacterExtractionBanner({
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Icon */}
           {isProcessing && (
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+            <div className={cn(
+              "flex-shrink-0 rounded-full bg-blue-500/10 flex items-center justify-center",
+              compact ? "w-8 h-8" : "w-10 h-10"
+            )}>
+              <Loader2 className={cn(
+                "text-blue-600 dark:text-blue-400 animate-spin",
+                compact ? "w-4 h-4" : "w-5 h-5"
+              )} />
             </div>
           )}
           {isCompleted && (
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className={cn(
+              "flex-shrink-0 rounded-full bg-green-500/10 flex items-center justify-center",
+              compact ? "w-8 h-8" : "w-10 h-10"
+            )}>
+              <CheckCircle2 className={cn(
+                "text-green-600 dark:text-green-400",
+                compact ? "w-4 h-4" : "w-5 h-5"
+              )} />
             </div>
           )}
           {isFailed && (
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <div className={cn(
+              "flex-shrink-0 rounded-full bg-red-500/10 flex items-center justify-center",
+              compact ? "w-8 h-8" : "w-10 h-10"
+            )}>
+              <AlertCircle className={cn(
+                "text-red-600 dark:text-red-400",
+                compact ? "w-4 h-4" : "w-5 h-5"
+              )} />
             </div>
           )}
 
           {/* Content */}
           <div className="flex-1 min-w-0">
             {isProcessing && (
-              <div className="space-y-2">
+              <div className={cn("space-y-2", compact && "space-y-1")}>
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    正在从剧本提取角色
+                  <Sparkles className={cn(
+                    "text-blue-600 dark:text-blue-400 flex-shrink-0",
+                    compact ? "w-3 h-3" : "w-4 h-4"
+                  )} />
+                  <h4 className={cn(
+                    "font-semibold text-blue-900 dark:text-blue-100",
+                    compact ? "text-xs" : "text-sm"
+                  )}>
+                    {compact ? "提取中..." : "正在从剧本提取角色"}
                   </h4>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {extractionJob.progressMessage || "AI 正在分析剧本内容，识别主要角色..."}
-                </p>
-                <div className="max-w-md">
-                  <TaskProgressBar
-                    progress={extractionJob.progress || 0}
-                    status={extractionJob.status}
-                    showPercentage
-                  />
-                </div>
+                {!compact && (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      {extractionJob.progressMessage || "AI 正在分析剧本内容，识别主要角色..."}
+                    </p>
+                    <div className="max-w-md">
+                      <TaskProgressBar
+                        progress={extractionJob.progress || 0}
+                        status={extractionJob.status || "pending"}
+                        showPercentage
+                      />
+                    </div>
+                  </>
+                )}
+                {compact && (
+                  <div className="max-w-full">
+                    <TaskProgressBar
+                      progress={extractionJob.progress || 0}
+                      status={extractionJob.status || "pending"}
+                      showPercentage={false}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
             {isCompleted && extractionResult && (
-              <div className="space-y-2">
+              <div className={cn("space-y-2", compact && "space-y-1")}>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Users className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  <h4 className="text-sm font-semibold text-green-900 dark:text-green-100">
-                    角色提取完成
+                  <Users className={cn(
+                    "text-green-600 dark:text-green-400 flex-shrink-0",
+                    compact ? "w-3 h-3" : "w-4 h-4"
+                  )} />
+                  <h4 className={cn(
+                    "font-semibold text-green-900 dark:text-green-100",
+                    compact ? "text-xs" : "text-sm"
+                  )}>
+                    {compact ? "提取完成" : "角色提取完成"}
                   </h4>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                      {characterCount} 个角色
+                      {characterCount}
                     </Badge>
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                      {totalStylesCount} 个造型
-                    </Badge>
+                    {!compact && (
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                        {totalStylesCount} 造型
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  AI 已成功提取角色信息，请查看并选择要导入的角色
-                </p>
+                {!compact && (
+                  <p className="text-xs text-muted-foreground">
+                    AI 已成功提取角色信息，请查看并选择要导入的角色
+                  </p>
+                )}
               </div>
             )}
 
             {isFailed && (
-              <div className="space-y-2">
+              <div className={cn("space-y-2", compact && "space-y-1")}>
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                  <h4 className="text-sm font-semibold text-red-900 dark:text-red-100">
-                    角色提取失败
+                  <AlertCircle className={cn(
+                    "text-red-600 dark:text-red-400 flex-shrink-0",
+                    compact ? "w-3 h-3" : "w-4 h-4"
+                  )} />
+                  <h4 className={cn(
+                    "font-semibold text-red-900 dark:text-red-100",
+                    compact ? "text-xs" : "text-sm"
+                  )}>
+                    提取失败
                   </h4>
                 </div>
-                <p className="text-xs text-red-600 dark:text-red-400">
-                  {extractionJob.errorMessage || "提取过程中发生错误，请重试"}
-                </p>
+                {!compact && (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {extractionJob.errorMessage || "提取过程中发生错误，请重试"}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -239,10 +297,11 @@ export function CharacterExtractionBanner({
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               onClick={handleOpenPreview}
+              size={compact ? "sm" : "default"}
               className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
-              查看并导入
+              <Sparkles className={cn("mr-2", compact ? "w-3 h-3" : "w-4 h-4")} />
+              {compact ? "查看" : "查看并导入"}
             </Button>
           </div>
         )}

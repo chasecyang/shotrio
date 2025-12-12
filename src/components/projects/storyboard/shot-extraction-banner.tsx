@@ -26,16 +26,29 @@ export function ShotExtractionBanner({
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
   const [matchingJobId, setMatchingJobId] = useState<string | null>(null);
-  const [matchingStatus, setMatchingStatus] = useState<"pending" | "processing" | "completed" | "failed" | null>(null);
+  const [matchingStatus, setMatchingStatus] = useState<"pending" | "processing" | "completed" | "failed" | "cancelled" | null>(null);
 
   // 查找当前剧集的分镜提取任务
   const extractionJob = useMemo(() => {
+    // 辅助函数：检查任务是否属于当前剧集
+    const matchesEpisode = (job: Partial<Job>) => {
+      if (!job.inputData) return false;
+      try {
+        const inputData = typeof job.inputData === 'string' 
+          ? JSON.parse(job.inputData) 
+          : job.inputData;
+        return inputData.episodeId === episodeId;
+      } catch {
+        return false;
+      }
+    };
+
     // 优先查找匹配任务（第二步）
     const activeMatchingJob = activeJobs.find(
       (job) =>
         job.type === "storyboard_matching" &&
         (job.status === "pending" || job.status === "processing") &&
-        job.inputData?.includes(episodeId)
+        matchesEpisode(job)
     );
 
     if (activeMatchingJob) return activeMatchingJob;
@@ -45,7 +58,7 @@ export function ShotExtractionBanner({
       (job) =>
         job.type === "storyboard_basic_extraction" &&
         (job.status === "pending" || job.status === "processing") &&
-        job.inputData?.includes(episodeId)
+        matchesEpisode(job)
     );
 
     if (activeBasicJob) return activeBasicJob;
@@ -55,7 +68,7 @@ export function ShotExtractionBanner({
       (job) =>
         job.type === "storyboard_generation" &&
         (job.status === "pending" || job.status === "processing") &&
-        job.inputData?.includes(episodeId)
+        matchesEpisode(job)
     );
 
     if (activeParentJob) return activeParentJob;
@@ -78,6 +91,19 @@ export function ShotExtractionBanner({
       return;
     }
 
+    // 辅助函数：检查任务是否属于当前剧集
+    const matchesEpisode = (job: Partial<Job>) => {
+      if (!job.inputData) return false;
+      try {
+        const inputData = typeof job.inputData === 'string' 
+          ? JSON.parse(job.inputData) 
+          : job.inputData;
+        return inputData.episodeId === episodeId;
+      } catch {
+        return false;
+      }
+    };
+
     // 检查是否有活动任务
     const hasActiveJob = activeJobs.some(
       (job) =>
@@ -85,7 +111,7 @@ export function ShotExtractionBanner({
          job.type === "storyboard_basic_extraction" ||
          job.type === "storyboard_generation") &&
         (job.status === "pending" || job.status === "processing") &&
-        job.inputData?.includes(episodeId)
+        matchesEpisode(job)
     );
 
     // 创建一个字符串来表示当前状态，避免数组引用变化导致的重复触发
@@ -111,7 +137,7 @@ export function ShotExtractionBanner({
             (job) =>
               job.type === "storyboard_matching" &&
               job.status === "completed" &&
-              job.inputData?.includes(episodeId)
+              matchesEpisode(job)
           );
 
           if (job) {
@@ -202,8 +228,8 @@ export function ShotExtractionBanner({
         }
       } else if (extractionJob.type === "storyboard_matching") {
         if (isMounted) {
-          setMatchingJobId(extractionJob.id);
-          setMatchingStatus(extractionJob.status);
+          setMatchingJobId(extractionJob.id || null);
+          setMatchingStatus(extractionJob.status || null);
         }
         
         // 如果已经完成，停止轮询
@@ -224,7 +250,7 @@ export function ShotExtractionBanner({
             clearInterval(interval);
             interval = null;
           }
-        } else {
+        } else if (extractionJob.status) {
           if (isMounted) setMatchingStatus(extractionJob.status);
         }
       }
@@ -371,7 +397,7 @@ export function ShotExtractionBanner({
                 <div className="max-w-md">
                   <TaskProgressBar
                     progress={progressInfo.progress}
-                    status={extractionJob.status}
+                    status={extractionJob.status || "pending"}
                     showPercentage
                   />
                 </div>

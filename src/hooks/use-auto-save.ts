@@ -18,8 +18,8 @@ export function useAutoSave<T>({
   savedDisplayTime = 3000,
 }: UseAutoSaveOptions<T>) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const savedTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     if (saveTimeoutRef.current) {

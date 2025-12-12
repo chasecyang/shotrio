@@ -46,10 +46,31 @@ export async function GET(request: NextRequest) {
               limit: 20,
             });
 
+            // 同时查询最近完成的任务（最近5分钟内完成的）
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            const recentCompletedJobs = await db.query.job.findMany({
+              where: and(
+                eq(job.userId, userId),
+                or(
+                  eq(job.status, "completed"),
+                  eq(job.status, "failed"),
+                  eq(job.status, "cancelled")
+                ),
+                // 只推送最近完成的任务
+              ),
+              orderBy: (jobs, { desc }) => [desc(jobs.updatedAt)],
+              limit: 10,
+            }).then(jobs => 
+              jobs.filter(j => j.updatedAt && new Date(j.updatedAt) > fiveMinutesAgo)
+            );
+
+            // 合并活跃任务和最近完成的任务
+            const allJobs = [...activeJobs, ...recentCompletedJobs];
+
             // 发送任务更新
             const data = JSON.stringify({
               type: "jobs_update",
-              jobs: activeJobs.map((j) => ({
+              jobs: allJobs.map((j) => ({
                 id: j.id,
                 projectId: j.projectId,
                 type: j.type,
@@ -59,6 +80,8 @@ export async function GET(request: NextRequest) {
                 totalSteps: j.totalSteps,
                 progressMessage: j.progressMessage,
                 errorMessage: j.errorMessage,
+                resultData: j.resultData,
+                inputData: j.inputData, // 添加 inputData 字段
                 createdAt: j.createdAt,
                 startedAt: j.startedAt,
                 updatedAt: j.updatedAt,

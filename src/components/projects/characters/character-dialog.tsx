@@ -40,6 +40,7 @@ interface CharacterDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void; // 成功创建后的回调
 }
 
 export function CharacterDialog({
@@ -47,6 +48,7 @@ export function CharacterDialog({
   trigger,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
+  onSuccess,
 }: CharacterDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +75,7 @@ export function CharacterDialog({
         toast.success("角色已创建");
         setOpen?.(false);
         form.reset();
+        onSuccess?.(); // 调用成功回调
       } else {
         toast.error(result.error || "创建失败");
       }

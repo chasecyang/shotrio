@@ -50,7 +50,7 @@ export function DialogueEditor({ dialogue, characters, onUpdate, isDragging }: D
   const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // 自动保存逻辑
   useEffect(() => {

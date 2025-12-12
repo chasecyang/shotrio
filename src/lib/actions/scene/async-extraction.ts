@@ -68,13 +68,13 @@ export async function startSceneExtraction(
       inputData: input,
     });
 
-    if (!result.success || !result.job) {
+    if (!result.success || !result.jobId) {
       return { success: false, error: result.error || "创建任务失败" };
     }
 
     return {
       success: true,
-      jobId: result.job.id,
+      jobId: result.jobId,
     };
   } catch (error) {
     console.error("启动场景提取任务失败:", error);

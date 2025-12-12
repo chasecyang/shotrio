@@ -19,9 +19,10 @@ import { toast } from "sonner";
 interface SceneDialogProps {
   projectId: string;
   trigger?: React.ReactNode;
+  onSuccess?: () => void; // 成功创建后的回调
 }
 
-export function SceneDialog({ projectId, trigger }: SceneDialogProps) {
+export function SceneDialog({ projectId, trigger, onSuccess }: SceneDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,6 +44,7 @@ export function SceneDialog({ projectId, trigger }: SceneDialogProps) {
         toast.success("场景创建成功");
         setOpen(false);
         setFormData({ name: "", description: "" });
+        onSuccess?.(); // 调用成功回调
       } else {
         toast.error(result.error || "创建失败");
       }

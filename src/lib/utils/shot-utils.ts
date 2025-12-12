@@ -13,15 +13,19 @@ export const shotSizeLabels: Record<ShotSize, string> = {
 // 运镜方式枚举映射为中文
 export const cameraMovementLabels: Record<CameraMovement, string> = {
   static: "固定镜头",
-  pan: "摇镜",
-  tilt: "俯仰",
-  zoom_in: "推镜",
-  zoom_out: "拉镜",
-  dolly: "移动镜头",
-  tracking: "跟镜",
-  crane: "升降镜头",
-  handheld: "手持晃动",
+  push_in: "推镜头",
+  pull_out: "拉镜头",
+  pan_left: "左摇",
+  pan_right: "右摇",
+  tilt_up: "上摇",
+  tilt_down: "下摇",
+  tracking: "移动跟拍",
+  crane_up: "升镜头",
+  crane_down: "降镜头",
   orbit: "环绕",
+  zoom_in: "变焦推进",
+  zoom_out: "变焦拉远",
+  handheld: "手持",
 };
 
 // 获取景别的中文标签
@@ -50,10 +54,18 @@ export function getCameraMovementOptions(): { value: CameraMovement; label: stri
   }));
 }
 
-// 格式化时长（毫秒转为秒）
+// 格式化时长（毫秒转为秒，简单格式）
 export function formatDuration(milliseconds: number): string {
   const seconds = milliseconds / 1000;
-  return `${seconds}s`;
+  return `${seconds.toFixed(1)}s`;
+}
+
+// 格式化时长为 MM:SS 格式
+export function formatDurationMMSS(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 // 秒转为毫秒
