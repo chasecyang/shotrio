@@ -1,37 +1,40 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { AlertCircle, CheckCircle2, Loader2, Film, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs } from "@/lib/actions/job/user-operations";
-import { CheckCircle2, Loader2, Sparkles, Users, X, AlertCircle } from "lucide-react";
+import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { cn } from "@/lib/utils";
-import type { Job, CharacterExtractionResult } from "@/types/job";
+import type { Job, StoryboardMatchingResult } from "@/types/job";
 
-interface CharacterExtractionBannerProps {
-  projectId: string;
+interface StoryboardExtractionBannerProps {
+  episodeId: string;
   onOpenPreview: (jobId: string) => void;
   compact?: boolean;
 }
 
-export function CharacterExtractionBanner({
-  projectId,
+export function StoryboardExtractionBanner({
+  episodeId,
   onOpenPreview,
   compact = false,
-}: CharacterExtractionBannerProps) {
+}: StoryboardExtractionBannerProps) {
   const { jobs: activeJobs } = useTaskSubscription();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // 查找当前项目的角色提取任务
+  // 查找当前剧集的分镜提取任务（父任务或匹配任务）
   const extractionJob = useMemo(() => {
     // 优先使用活动任务
     const activeJob = activeJobs.find(
       (job) =>
-        job.type === "character_extraction" &&
-        job.projectId === projectId &&
+        (job.type === "storyboard_generation" ||
+          job.type === "storyboard_basic_extraction" ||
+          job.type === "storyboard_matching") &&
+        job.inputData &&
+        JSON.parse(job.inputData).episodeId === episodeId &&
         (job.status === "pending" || job.status === "processing")
     );
 
@@ -43,35 +46,65 @@ export function CharacterExtractionBanner({
     }
 
     return null;
-  }, [activeJobs, completedJob, projectId, isDismissed]);
+  }, [activeJobs, completedJob, episodeId, isDismissed]);
+
+  // 查找匹配任务结果
+  const matchingResult = useMemo(() => {
+    if (!extractionJob || extractionJob.type !== "storyboard_generation") return null;
+
+    try {
+      const parentResult = JSON.parse(extractionJob.resultData || "{}");
+      const matchingJobId = parentResult.matchingJobId;
+
+      if (matchingJobId) {
+        const matchingJob = activeJobs.find((j) => j.id === matchingJobId);
+        if (matchingJob?.status === "completed" && matchingJob.resultData) {
+          return JSON.parse(matchingJob.resultData) as StoryboardMatchingResult;
+        }
+      }
+    } catch (error) {
+      console.error("解析匹配结果失败:", error);
+    }
+
+    return null;
+  }, [extractionJob, activeJobs]);
 
   // 加载已完成但未处理的任务 - 使用 ref 避免频繁触发
   const hasLoadedCompletedJob = useRef(false);
-  const lastActiveJobCheck = useRef<string>("");
-  
+  const lastEpisodeIdCheck = useRef<string>("");
+
   useEffect(() => {
     // 如果已被关闭或已有完成的任务，不再检查
     if (isDismissed || completedJob) {
       return;
     }
 
+    // 如果剧集ID改变了，重置加载状态
+    if (lastEpisodeIdCheck.current !== episodeId) {
+      hasLoadedCompletedJob.current = false;
+      lastEpisodeIdCheck.current = episodeId;
+    }
+
+    // 如果已经加载过，不再重复加载
+    if (hasLoadedCompletedJob.current) {
+      return;
+    }
+
     // 检查是否有活动任务
     const hasActiveJob = activeJobs.some(
       (job) =>
-        job.type === "character_extraction" &&
-        job.projectId === projectId &&
+        (job.type === "storyboard_generation" ||
+          job.type === "storyboard_basic_extraction" ||
+          job.type === "storyboard_matching") &&
+        job.inputData &&
+        JSON.parse(job.inputData).episodeId === episodeId &&
         (job.status === "pending" || job.status === "processing")
     );
 
-    // 创建一个字符串来表示当前状态，避免数组引用变化导致的重复触发
-    const currentCheck = `${hasActiveJob}-${hasLoadedCompletedJob.current}`;
-    
-    // 如果状态没变化，不重复执行
-    if (currentCheck === lastActiveJobCheck.current) {
+    // 只有在没有活动任务时才加载已完成的任务
+    if (hasActiveJob) {
       return;
     }
-    
-    lastActiveJobCheck.current = currentCheck;
 
     const loadCompletedJob = async () => {
       try {
@@ -81,11 +114,12 @@ export function CharacterExtractionBanner({
         });
 
         if (result.success && result.jobs) {
-          // 查找最近的已完成角色提取任务（且未导入）
+          // 查找最近的已完成分镜提取任务（且未导入）
           const job = (result.jobs as Job[]).find(
             (job) =>
-              job.type === "character_extraction" &&
-              job.projectId === projectId &&
+              job.type === "storyboard_generation" &&
+              job.inputData &&
+              JSON.parse(job.inputData).episodeId === episodeId &&
               job.status === "completed" &&
               !job.isImported
           );
@@ -100,34 +134,19 @@ export function CharacterExtractionBanner({
       }
     };
 
-    // 只有在没有活动任务且还未加载过时才加载
-    if (!hasActiveJob && !hasLoadedCompletedJob.current) {
-      loadCompletedJob();
-    }
-  }, [activeJobs, projectId, completedJob, isDismissed]);
+    loadCompletedJob();
+  }, [activeJobs, episodeId, completedJob, isDismissed]);
 
   if (!extractionJob) return null;
 
   const isProcessing =
     extractionJob.status === "pending" || extractionJob.status === "processing";
-  const isCompleted = extractionJob.status === "completed";
+  const isCompleted = extractionJob.status === "completed" && matchingResult;
   const isFailed = extractionJob.status === "failed";
 
-  // 解析提取结果
-  let extractionResult: CharacterExtractionResult | null = null;
-  if (isCompleted && extractionJob.resultData) {
-    try {
-      extractionResult = JSON.parse(extractionJob.resultData);
-    } catch (error) {
-      console.error("解析提取结果失败:", error);
-    }
-  }
-
-  const characterCount = extractionResult?.characterCount || 0;
-  const totalStylesCount = extractionResult?.characters.reduce(
-    (sum, char) => sum + char.styles.length,
-    0
-  ) || 0;
+  const shotCount = matchingResult?.shotCount || 0;
+  const matchedCharacterCount = matchingResult?.matchedCharacterCount || 0;
+  const matchedSceneCount = matchingResult?.matchedSceneCount || 0;
 
   const handleDismiss = () => {
     setIsDismissed(true);
@@ -145,7 +164,7 @@ export function CharacterExtractionBanner({
       className={cn(
         "relative rounded-lg border transition-all duration-300",
         compact ? "mb-0 p-3" : "mb-6 p-4",
-        isProcessing && "border-blue-500/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20",
+        isProcessing && "border-blue-500/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20",
         isCompleted && "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
         isFailed && "border-red-500/50 bg-red-50/50 dark:bg-red-950/20"
       )}
@@ -201,13 +220,13 @@ export function CharacterExtractionBanner({
                     "font-semibold text-blue-900 dark:text-blue-100",
                     compact ? "text-xs" : "text-sm"
                   )}>
-                    {compact ? "提取中..." : "正在从剧本提取角色"}
+                    {compact ? "拆分中..." : "正在自动拆分分镜"}
                   </h4>
                 </div>
                 {!compact && (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      {extractionJob.progressMessage || "AI 正在分析剧本内容，识别主要角色..."}
+                      {extractionJob.progressMessage || "AI 正在分析剧本内容，生成分镜脚本..."}
                     </p>
                     <div className="max-w-md">
                       <TaskProgressBar
@@ -230,10 +249,10 @@ export function CharacterExtractionBanner({
               </div>
             )}
 
-            {isCompleted && extractionResult && (
+            {isCompleted && matchingResult && (
               <div className={cn("space-y-2", compact && "space-y-1")}>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Users className={cn(
+                  <Film className={cn(
                     "text-green-600 dark:text-green-400 flex-shrink-0",
                     compact ? "w-3 h-3" : "w-4 h-4"
                   )} />
@@ -241,22 +260,25 @@ export function CharacterExtractionBanner({
                     "font-semibold text-green-900 dark:text-green-100",
                     compact ? "text-xs" : "text-sm"
                   )}>
-                    {compact ? "提取完成" : "角色提取完成"}
+                    {compact ? "拆分完成" : "分镜拆分完成"}
                   </h4>
-                  <div className="flex items-center gap-1.5">
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                      {characterCount}
+                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                    {shotCount} 个分镜
+                  </Badge>
+                  {matchedCharacterCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                      {matchedCharacterCount} 个角色
                     </Badge>
-                    {!compact && (
-                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                        {totalStylesCount} 造型
-                      </Badge>
-                    )}
-                  </div>
+                  )}
+                  {matchedSceneCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                      {matchedSceneCount} 个场景
+                    </Badge>
+                  )}
                 </div>
                 {!compact && (
                   <p className="text-xs text-muted-foreground">
-                    AI 已成功提取角色信息，请查看并选择要导入的角色
+                    AI 已成功生成分镜脚本，请查看并选择要导入的分镜
                   </p>
                 )}
               </div>
@@ -273,12 +295,12 @@ export function CharacterExtractionBanner({
                     "font-semibold text-red-900 dark:text-red-100",
                     compact ? "text-xs" : "text-sm"
                   )}>
-                    提取失败
+                    拆分失败
                   </h4>
                 </div>
                 {!compact && (
                   <p className="text-xs text-red-600 dark:text-red-400">
-                    {extractionJob.errorMessage || "提取过程中发生错误，请重试"}
+                    {extractionJob.errorMessage || "拆分过程中发生错误，请重试"}
                   </p>
                 )}
               </div>
@@ -287,7 +309,7 @@ export function CharacterExtractionBanner({
         </div>
 
         {/* Right: Action Button */}
-        {isCompleted && extractionResult && (
+        {isCompleted && matchingResult && (
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               onClick={handleOpenPreview}

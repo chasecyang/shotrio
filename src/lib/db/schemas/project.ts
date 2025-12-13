@@ -336,6 +336,9 @@ export const job = pgTable("job", {
   resultData: text("result_data"), // JSON string
   errorMessage: text("error_message"),
 
+  // 导入状态（用于提取类任务）
+  isImported: boolean("is_imported").default(false).notNull(), // 是否已导入
+
   // 时间戳
   createdAt: timestamp("created_at").defaultNow().notNull(),
   startedAt: timestamp("started_at"),

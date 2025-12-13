@@ -194,3 +194,55 @@ export async function retryJob(jobId: string): Promise<{
     };
   }
 }
+
+/**
+ * 标记任务为已导入
+ */
+export async function markJobAsImported(jobId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    // 验证任务属于当前用户
+    const jobData = await db.query.job.findFirst({
+      where: and(eq(job.id, jobId), eq(job.userId, session.user.id)),
+    });
+
+    if (!jobData) {
+      return {
+        success: false,
+        error: "任务不存在或无权限",
+      };
+    }
+
+    // 更新为已导入
+    await db
+      .update(job)
+      .set({
+        isImported: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(job.id, jobId));
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("标记任务为已导入失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "标记任务失败",
+    };
+  }
+}

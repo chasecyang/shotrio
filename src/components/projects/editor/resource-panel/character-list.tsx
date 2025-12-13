@@ -27,7 +27,6 @@ export function CharacterList({ characters, projectId }: CharacterListProps) {
   const [isStartingExtraction, setIsStartingExtraction] = useState(false);
   const [extractionDialogOpen, setExtractionDialogOpen] = useState(false);
   const [extractionJobId, setExtractionJobId] = useState<string>("");
-  const [recentlyImportedJobId, setRecentlyImportedJobId] = useState<string | null>(null);
 
   const handleCharacterClick = (character: Character) => {
     selectResource({ type: "character", id: character.id });
@@ -65,7 +64,6 @@ export function CharacterList({ characters, projectId }: CharacterListProps) {
   };
 
   const handleImportSuccess = async () => {
-    setRecentlyImportedJobId(extractionJobId);
     await handleSuccess();
   };
 
@@ -79,7 +77,6 @@ export function CharacterList({ characters, projectId }: CharacterListProps) {
           <CharacterExtractionBanner
             projectId={projectId}
             onOpenPreview={handleOpenPreview}
-            recentlyImportedJobId={recentlyImportedJobId}
             compact
           />
         )}
@@ -169,7 +166,6 @@ export function CharacterList({ characters, projectId }: CharacterListProps) {
         <CharacterExtractionBanner
           projectId={projectId}
           onOpenPreview={handleOpenPreview}
-          recentlyImportedJobId={recentlyImportedJobId}
           compact
         />
       )}

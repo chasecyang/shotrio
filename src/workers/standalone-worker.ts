@@ -12,64 +12,79 @@ import { getPendingJobs } from "../lib/actions/job";
 import { processJob } from "../lib/workers/job-processor";
 import { getWorkerToken } from "../lib/workers/auth";
 
-const POLL_INTERVAL = 10000; // 10 秒轮询一次
-const MAX_CONCURRENT_JOBS = 5; // 最多同时处理 5 个任务
-const ERROR_RETRY_DELAY = 30000; // 错误后等待 30 秒再重试
+const POLL_INTERVAL = parseInt(process.env.WORKER_POLL_INTERVAL || '2000'); // 2 秒轮询一次（更短的轮询间隔以充分利用并发能力）
+const MAX_CONCURRENT_JOBS = parseInt(process.env.MAX_CONCURRENT_JOBS || '5'); // 最多同时处理 5 个任务
+const ERROR_RETRY_DELAY = 5000; // 错误后等待 5 秒再重试
+const IDLE_POLL_INTERVAL = parseInt(process.env.WORKER_IDLE_POLL_INTERVAL || '5000'); // 空闲时 5 秒轮询一次
 
-let isProcessing = false;
-let processingCount = 0;
+let processingJobs = new Map<string, Promise<void>>(); // 当前正在处理的任务
 let workerToken: string;
+let isFetching = false; // 是否正在获取任务（防止重复获取）
+let consecutiveEmptyPolls = 0; // 连续空轮询次数
 
 /**
- * 主处理循环
+ * 获取并启动新任务（不等待任务完成）
  */
-async function processQueue() {
-  // 防止重复处理
-  if (isProcessing) {
+async function fetchAndStartJobs() {
+  // 防止重复获取
+  if (isFetching) {
     return;
   }
 
-  isProcessing = true;
+  isFetching = true;
 
   try {
-    // 获取待处理任务
-    const availableSlots = MAX_CONCURRENT_JOBS - processingCount;
+    // 计算可用槽位
+    const availableSlots = MAX_CONCURRENT_JOBS - processingJobs.size;
+    
     if (availableSlots <= 0) {
-      console.log(`[Worker] 已达到并发上限 (${processingCount}/${MAX_CONCURRENT_JOBS})，跳过本轮`);
+      // 已达到并发上限，无需获取新任务
       return;
     }
 
+    // 获取待处理任务
     const result = await getPendingJobs(availableSlots, workerToken);
 
     if (!result.success || !result.jobs || result.jobs.length === 0) {
-      // 没有任务，静默等待
+      consecutiveEmptyPolls++;
       return;
     }
 
-    console.log(`[Worker] 发现 ${result.jobs.length} 个待处理任务`);
+    consecutiveEmptyPolls = 0;
+    console.log(`\n[Worker] 发现 ${result.jobs.length} 个待处理任务，当前并发: ${processingJobs.size}/${MAX_CONCURRENT_JOBS}`);
 
-    // 并发处理任务
-    const processingPromises = result.jobs.map(async (job) => {
-      processingCount++;
-      console.log(`[Worker] 开始处理任务 ${job.id} (${job.type})`);
-
-      try {
-        await processJob(job);
-        console.log(`[Worker] ✅ 任务 ${job.id} 处理完成`);
-      } catch (error) {
-        console.error(`[Worker] ❌ 任务 ${job.id} 处理失败:`, error);
-      } finally {
-        processingCount--;
-      }
-    });
-
-    await Promise.allSettled(processingPromises);
+    // 立即启动所有任务（不等待完成）
+    for (const job of result.jobs) {
+      const jobPromise = processJobAsync(job);
+      processingJobs.set(job.id, jobPromise);
+      
+      // 任务完成后自动清理
+      jobPromise.finally(() => {
+        processingJobs.delete(job.id);
+      });
+    }
   } catch (error) {
-    console.error("[Worker] 队列处理错误:", error);
-    // 发生错误时等待更长时间再重试
+    console.error("[Worker] 获取任务失败:", error);
     await new Promise((resolve) => setTimeout(resolve, ERROR_RETRY_DELAY));
   } finally {
-    isProcessing = false;
+    isFetching = false;
+  }
+}
+
+/**
+ * 异步处理单个任务
+ */
+async function processJobAsync(job: any): Promise<void> {
+  console.log(`[Worker] ▶️  开始处理任务 ${job.id} (${job.type})`);
+  const startTime = Date.now();
+
+  try {
+    await processJob(job);
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`[Worker] ✅ 任务 ${job.id} 处理完成 (耗时 ${duration}s)`);
+  } catch (error) {
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.error(`[Worker] ❌ 任务 ${job.id} 处理失败 (耗时 ${duration}s):`, error);
   }
 }
 
@@ -80,8 +95,9 @@ async function startWorker() {
   console.log("=================================");
   console.log("🚀 Cineqo Task Worker 启动中...");
   console.log("=================================");
-  console.log(`轮询间隔: ${POLL_INTERVAL / 1000} 秒`);
-  console.log(`最大并发: ${MAX_CONCURRENT_JOBS}`);
+  console.log(`活跃轮询间隔: ${POLL_INTERVAL / 1000} 秒`);
+  console.log(`空闲轮询间隔: ${IDLE_POLL_INTERVAL / 1000} 秒`);
+  console.log(`最大并发数: ${MAX_CONCURRENT_JOBS}`);
   console.log(`环境: ${process.env.NODE_ENV || "development"}`);
   console.log("=================================\n");
 
@@ -95,26 +111,40 @@ async function startWorker() {
     process.exit(1);
   }
 
-  console.log("\n开始处理任务队列...\n");
+  console.log("\n⏳ 开始监听任务队列...\n");
 
   // 立即执行一次
-  await processQueue();
+  await fetchAndStartJobs();
 
-  // 定时轮询
+  // 智能轮询：根据是否有任务调整轮询频率
   setInterval(async () => {
-    await processQueue();
+    // 如果连续多次空轮询，使用较长的间隔
+    const shouldPoll = consecutiveEmptyPolls < 3 || Date.now() % IDLE_POLL_INTERVAL < POLL_INTERVAL;
+    
+    if (shouldPoll) {
+      await fetchAndStartJobs();
+    }
   }, POLL_INTERVAL);
+
+  // 状态监控
+  setInterval(() => {
+    if (processingJobs.size > 0) {
+      const jobIds = Array.from(processingJobs.keys()).join(", ");
+      console.log(`[Worker] 📊 当前并发: ${processingJobs.size}/${MAX_CONCURRENT_JOBS} | 处理中: ${jobIds}`);
+    }
+  }, 30000); // 每 30 秒输出一次状态
 
   // 优雅关闭
   process.on("SIGTERM", () => {
     console.log("\n[Worker] 收到 SIGTERM 信号，等待任务完成后退出...");
     const checkInterval = setInterval(() => {
-      if (processingCount === 0) {
+      if (processingJobs.size === 0) {
         console.log("[Worker] 所有任务已完成，退出进程");
         clearInterval(checkInterval);
         process.exit(0);
       } else {
-        console.log(`[Worker] 等待 ${processingCount} 个任务完成...`);
+        const jobIds = Array.from(processingJobs.keys()).join(", ");
+        console.log(`[Worker] 等待 ${processingJobs.size} 个任务完成: ${jobIds}`);
       }
     }, 1000);
   });

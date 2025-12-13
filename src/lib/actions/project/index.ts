@@ -27,6 +27,7 @@ export {
   updateShot,
   deleteShot,
   reorderShots,
+  importExtractedShots,
   // 角色管理
   addCharacterToShot,
   removeCharacterFromShot,

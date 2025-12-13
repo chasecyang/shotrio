@@ -13,14 +13,12 @@ import type { Job, SceneExtractionResult } from "@/types/job";
 interface SceneExtractionBannerProps {
   projectId: string;
   onOpenPreview: (jobId: string) => void;
-  recentlyImportedJobId?: string | null;
   compact?: boolean;
 }
 
 export function SceneExtractionBanner({
   projectId,
   onOpenPreview,
-  recentlyImportedJobId,
   compact = false,
 }: SceneExtractionBannerProps) {
   const { jobs: activeJobs } = useTaskSubscription();
@@ -39,8 +37,8 @@ export function SceneExtractionBanner({
 
     if (activeJob) return activeJob;
 
-    // 使用已完成的任务（如果还未被处理）
-    if (completedJob && !isDismissed) {
+    // 使用已完成的任务（如果还未被处理且未被导入）
+    if (completedJob && !isDismissed && !completedJob.isImported) {
       return completedJob;
     }
 
@@ -49,11 +47,22 @@ export function SceneExtractionBanner({
 
   // 加载已完成但未处理的任务 - 使用 ref 避免频繁触发
   const hasLoadedCompletedJob = useRef(false);
-  const lastActiveJobCheck = useRef<string>("");
+  const lastProjectIdCheck = useRef<string>("");
   
   useEffect(() => {
     // 如果已被关闭或已有完成的任务，不再检查
     if (isDismissed || completedJob) {
+      return;
+    }
+
+    // 如果项目ID改变了，重置加载状态
+    if (lastProjectIdCheck.current !== projectId) {
+      hasLoadedCompletedJob.current = false;
+      lastProjectIdCheck.current = projectId;
+    }
+
+    // 如果已经加载过，不再重复加载
+    if (hasLoadedCompletedJob.current) {
       return;
     }
 
@@ -65,15 +74,10 @@ export function SceneExtractionBanner({
         (job.status === "pending" || job.status === "processing")
     );
 
-    // 创建一个字符串来表示当前状态，避免数组引用变化导致的重复触发
-    const currentCheck = `${hasActiveJob}-${hasLoadedCompletedJob.current}`;
-    
-    // 如果状态没变化，不重复执行
-    if (currentCheck === lastActiveJobCheck.current) {
+    // 只有在没有活动任务时才加载已完成的任务
+    if (hasActiveJob) {
       return;
     }
-    
-    lastActiveJobCheck.current = currentCheck;
 
     const loadCompletedJob = async () => {
       try {
@@ -83,12 +87,13 @@ export function SceneExtractionBanner({
         });
 
         if (result.success && result.jobs) {
-          // 查找最近的已完成场景提取任务
+          // 查找最近的已完成场景提取任务（且未导入）
           const job = (result.jobs as Job[]).find(
             (job) =>
               job.type === "scene_extraction" &&
               job.projectId === projectId &&
-              job.status === "completed"
+              job.status === "completed" &&
+              !job.isImported
           );
 
           if (job) {
@@ -101,16 +106,8 @@ export function SceneExtractionBanner({
       }
     };
 
-    // 只有在没有活动任务且还未加载过时才加载
-    if (!hasActiveJob && !hasLoadedCompletedJob.current) {
-      loadCompletedJob();
-    }
+    loadCompletedJob();
   }, [activeJobs, projectId, completedJob, isDismissed]);
-
-  // 如果当前任务是最近导入的，自动隐藏
-  if (extractionJob && recentlyImportedJobId === extractionJob.id) {
-    return null;
-  }
 
   if (!extractionJob) return null;
 

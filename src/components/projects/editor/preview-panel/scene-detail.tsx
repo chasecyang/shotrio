@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Map, Image as ImageIcon, Eye, Grid3X3, FileText, Sparkles, RotateCw, AlertCircle, Trash2 } from "lucide-react";
+import { Map, Image as ImageIcon, Eye, Grid3X3, FileText, Sparkles, RotateCw, AlertCircle, Trash2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   EditableField, 
@@ -29,6 +30,8 @@ import { startMasterLayoutGeneration, startQuarterViewGeneration } from "@/lib/a
 import { useEditor } from "../editor-context";
 import { getProjectDetail } from "@/lib/actions/project";
 import { toast } from "sonner";
+import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import type { Job, SceneImageGenerationInput } from "@/types/job";
 
 interface SceneDetailProps {
   scene: Scene & { images?: SceneImage[] };
@@ -62,6 +65,56 @@ export function SceneDetail({ scene }: SceneDetailProps) {
   const [generatingQuarter, setGeneratingQuarter] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 订阅任务更新
+  const { jobs } = useTaskSubscription();
+
+  // 查找场景图片生成任务
+  const getImageGenerationJob = (imageId: string | undefined) => {
+    if (!imageId) return null;
+    
+    return jobs.find((job) => {
+      if (job.type !== "scene_image_generation") return false;
+      if (job.status === "completed" || job.status === "failed" || job.status === "cancelled") return false;
+      
+      try {
+        const input: SceneImageGenerationInput = JSON.parse(job.inputData || "{}");
+        return input.imageId === imageId;
+      } catch {
+        return false;
+      }
+    }) as Partial<Job> | undefined;
+  };
+
+  const masterLayoutJob = getImageGenerationJob(masterLayout?.id);
+  const quarterViewJob = getImageGenerationJob(quarterView?.id);
+
+  // 监听任务完成，自动刷新项目数据
+  useEffect(() => {
+    const checkCompletedJobs = async () => {
+      const relevantJobs = jobs.filter((job) => {
+        if (job.type !== "scene_image_generation") return false;
+        if (job.status !== "completed") return false;
+        
+        try {
+          const input: SceneImageGenerationInput = JSON.parse(job.inputData || "{}");
+          return input.sceneId === scene.id;
+        } catch {
+          return false;
+        }
+      });
+
+      if (relevantJobs.length > 0) {
+        // 有任务完成，刷新项目数据
+        const updatedProject = await getProjectDetail(scene.projectId);
+        if (updatedProject) {
+          updateProject(updatedProject);
+        }
+      }
+    };
+
+    checkCompletedJobs();
+  }, [jobs, scene.id, scene.projectId, updateProject]);
 
   // 自动保存
   const { saveStatus } = useAutoSave({
@@ -241,14 +294,15 @@ export function SceneDetail({ scene }: SceneDetailProps) {
 
         {/* 场景视角 */}
         <div className="space-y-6">
-          {/* 全景布局图 */}
+          {/* 全景布局图 - 第一步生成 */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Grid3X3 className="w-4 h-4 text-muted-foreground" />
                 全景布局图
+                <Badge variant="outline" className="text-xs">第一步</Badge>
               </div>
-              {masterLayout?.imageUrl && (
+              {masterLayout?.imageUrl && !masterLayoutJob && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -260,6 +314,21 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                 </Button>
               )}
             </div>
+
+            {/* 任务进度显示 */}
+            {masterLayoutJob && masterLayoutJob.status === "processing" && (
+              <div className="space-y-2 p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="font-medium">生成中...</span>
+                </div>
+                <Progress value={masterLayoutJob.progress || 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {masterLayoutJob.progressMessage || `进度: ${masterLayoutJob.progress || 0}%`}
+                </p>
+              </div>
+            )}
+
             <div className="relative aspect-video bg-muted rounded-lg overflow-hidden border group">
               {masterLayout?.imageUrl ? (
                 <>
@@ -276,13 +345,20 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                   <p className="text-sm text-muted-foreground text-center">
                     建立空间认知，展示场景的完整布局和深度层次
                   </p>
-                  <Button
-                    onClick={handleGenerateMasterLayout}
-                    disabled={generatingMaster || !formData.description}
-                  >
-                    <Sparkles className={`w-4 h-4 mr-2 ${generatingMaster ? 'animate-spin' : ''}`} />
-                    {generatingMaster ? "生成中..." : "生成全景布局图"}
-                  </Button>
+                  {!masterLayoutJob ? (
+                    <Button
+                      onClick={handleGenerateMasterLayout}
+                      disabled={generatingMaster || !formData.description}
+                    >
+                      <Sparkles className={`w-4 h-4 mr-2 ${generatingMaster ? 'animate-spin' : ''}`} />
+                      {generatingMaster ? "生成中..." : "生成全景布局图"}
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-primary">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>生成中，请稍候...</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -293,14 +369,15 @@ export function SceneDetail({ scene }: SceneDetailProps) {
             )}
           </div>
 
-          {/* 叙事视角图 */}
+          {/* 叙事视角图 - 第二步生成 */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Eye className="w-4 h-4 text-muted-foreground" />
                 叙事视角图
+                <Badge variant="outline" className="text-xs">第二步</Badge>
               </div>
-              {quarterView?.imageUrl && (
+              {quarterView?.imageUrl && !quarterViewJob && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -312,6 +389,21 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                 </Button>
               )}
             </div>
+
+            {/* 任务进度显示 */}
+            {quarterViewJob && quarterViewJob.status === "processing" && (
+              <div className="space-y-2 p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="font-medium">生成中...</span>
+                </div>
+                <Progress value={quarterViewJob.progress || 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {quarterViewJob.progressMessage || `进度: ${quarterViewJob.progress || 0}%`}
+                </p>
+              </div>
+            )}
+
             <div className="relative aspect-video bg-muted rounded-lg overflow-hidden border group">
               {quarterView?.imageUrl ? (
                 <>
@@ -326,19 +418,28 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                 <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
                   <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground text-center">
-                    叙事主力视角，展示场景的氛围和情感表达
+                    叙事主力视角，从全景聚焦到表演空间
                   </p>
-                  <Button
-                    onClick={handleGenerateQuarterView}
-                    disabled={generatingQuarter || !formData.description || !masterLayout?.imageUrl}
-                  >
-                    <Sparkles className={`w-4 h-4 mr-2 ${generatingQuarter ? 'animate-spin' : ''}`} />
-                    {generatingQuarter ? "生成中..." : "生成叙事视角图"}
-                  </Button>
-                  {!masterLayout?.imageUrl && formData.description && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                      请先完成全景布局图的生成
-                    </p>
+                  {!quarterViewJob ? (
+                    <>
+                      <Button
+                        onClick={handleGenerateQuarterView}
+                        disabled={generatingQuarter || !formData.description || !masterLayout?.imageUrl}
+                      >
+                        <Sparkles className={`w-4 h-4 mr-2 ${generatingQuarter ? 'animate-spin' : ''}`} />
+                        {generatingQuarter ? "生成中..." : "生成叙事视角图"}
+                      </Button>
+                      {!masterLayout?.imageUrl && formData.description && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                          请先完成全景布局图的生成
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-primary">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>生成中，请稍候...</span>
+                    </div>
                   )}
                 </div>
               )}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Users, CheckCircle2, AlertCircle, Trash2, Plus } from "lucide-react";
 import { importExtractedCharacters } from "@/lib/actions/character";
 import { getJobStatus } from "@/lib/actions/job";
+import { markJobAsImported } from "@/lib/actions/job/user-operations";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import type { ExtractedCharacter, ExtractedCharacterStyle } from "@/types/project";
 import type { CharacterExtractionResult } from "@/types/job";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 
 interface CharacterExtractionDialogProps {
   projectId: string;
@@ -40,6 +42,7 @@ export function CharacterExtractionDialog({
   onImportSuccess,
 }: CharacterExtractionDialogProps) {
   const router = useRouter();
+  const locale = useLocale();
   const [step, setStep] = useState<Step>("loading");
   const [extractedCharacters, setExtractedCharacters] = useState<ExtractedCharacter[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<Set<number>>(new Set());
@@ -142,13 +145,16 @@ export function CharacterExtractionDialog({
       setImportResult(result.imported || null);
       setStep("success");
 
+      // 标记任务为已导入
+      await markJobAsImported(jobId);
+
       // 立即调用回调通知父组件
       onImportSuccess?.();
 
-      // 3秒后自动关闭并跳转
+      // 3秒后自动关闭并跳转到编辑器页面
       setTimeout(() => {
         onOpenChange(false);
-        router.push(`/${projectId}/characters?fromExtraction=true`);
+        router.push(`/${locale}/projects/${projectId}/editor?tab=characters&fromExtraction=true`);
         router.refresh();
       }, 3000);
     } catch (err) {

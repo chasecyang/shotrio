@@ -22,10 +22,13 @@ import {
   ImageIcon,
   Video,
   Sparkles,
+  Film,
 } from "lucide-react";
 import { useEditor } from "../editor-context";
 import { formatDurationMMSS } from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
+import { startStoryboardGeneration } from "@/lib/actions/storyboard";
+import { toast } from "sonner";
 
 interface TimelineToolbarProps {
   episodeTitle?: string;
@@ -46,6 +49,29 @@ export function TimelineToolbar({
   const { timeline, selectedShotIds, shots, project, selectedEpisodeId } = state;
 
   const hasSelectedShots = selectedShotIds.length > 0;
+
+  // 获取当前选中的剧集
+  const selectedEpisode = project?.episodes.find((ep) => ep.id === selectedEpisodeId);
+  const hasScriptContent = selectedEpisode?.scriptContent && selectedEpisode.scriptContent.trim();
+
+  // 启动分镜提取
+  const handleStartExtraction = async () => {
+    if (!selectedEpisodeId) {
+      toast.error("请先选择剧集");
+      return;
+    }
+    if (!hasScriptContent) {
+      toast.error("请先编写剧本内容");
+      return;
+    }
+
+    const result = await startStoryboardGeneration(selectedEpisodeId);
+    if (result.success) {
+      toast.success("已启动分镜提取任务");
+    } else {
+      toast.error(result.error || "启动失败");
+    }
+  };
 
   const handleZoomIn = () => {
     setTimelineZoom(timeline.zoom + 0.25);
@@ -103,6 +129,21 @@ export function TimelineToolbar({
 
       {/* 分镜操作按钮组 */}
       <div className="flex items-center gap-2">
+        {/* 自动拆分分镜 */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleStartExtraction}
+          className="h-7 text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-300 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-600"
+          disabled={!selectedEpisodeId || !hasScriptContent}
+        >
+          <Film className="h-3.5 w-3.5 mr-1" />
+          <Sparkles className="h-3 w-3 mr-1" />
+          自动拆分
+        </Button>
+
+        <Separator orientation="vertical" className="h-5 bg-border" />
+
         {/* 添加分镜 */}
         <Button
           variant="outline"

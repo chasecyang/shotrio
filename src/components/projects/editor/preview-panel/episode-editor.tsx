@@ -12,7 +12,7 @@ import {
   Zap,
   ScrollText,
   Sparkles,
-  Loader2,
+  Film,
 } from "lucide-react";
 import {
   EditableField,
@@ -22,12 +22,16 @@ import {
   SaveStatus,
 } from "@/components/ui/inline-editable-field";
 import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
+import { StoryboardExtractionBanner } from "./storyboard-extraction-banner";
+import { StoryboardExtractionDialog } from "./storyboard-extraction-dialog";
+import { useEditor } from "../editor-context";
 
 interface EpisodeEditorProps {
   episode: Episode;
 }
 
 export function EpisodeEditor({ episode }: EpisodeEditorProps) {
+  const { state } = useEditor();
   const [formData, setFormData] = useState({
     title: episode.title,
     summary: episode.summary || "",
@@ -44,8 +48,40 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
 
+  // 分镜提取对话框状态
+  const [extractionDialogOpen, setExtractionDialogOpen] = useState(false);
+  const [extractionJobId, setExtractionJobId] = useState<string | null>(null);
+
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // 启动分镜提取
+  const handleStartExtraction = async () => {
+    if (!formData.scriptContent || !formData.scriptContent.trim()) {
+      toast.error("请先编写剧本内容");
+      return;
+    }
+
+    const { startStoryboardGeneration } = await import("@/lib/actions/storyboard");
+    const result = await startStoryboardGeneration(episode.id);
+
+    if (result.success && result.jobId) {
+      toast.success("已启动分镜提取任务");
+    } else {
+      toast.error(result.error || "启动失败");
+    }
+  };
+
+  // 打开预览对话框
+  const handleOpenPreview = (jobId: string) => {
+    setExtractionJobId(jobId);
+    setExtractionDialogOpen(true);
+  };
+
+  // 导入成功回调
+  const handleImportSuccess = () => {
+    // 任务已在数据库中标记为已导入，无需额外操作
+  };
 
   // 同步 episode 更新
   useEffect(() => {
@@ -187,9 +223,32 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   };
 
   return (
-    <ScrollArea className="h-full">
-      <div className="p-6 max-w-3xl mx-auto space-y-6">
-        {/* 标题栏 */}
+    <>
+      <ScrollArea className="h-full">
+        <div className="p-6 max-w-3xl mx-auto space-y-6">
+          {/* 分镜提取横幅 */}
+          <StoryboardExtractionBanner
+            episodeId={episode.id}
+            onOpenPreview={handleOpenPreview}
+          />
+
+          {/* 快速操作按钮 */}
+          {formData.scriptContent && formData.scriptContent.trim() && (
+            <div className="flex gap-2">
+              <Button
+                onClick={handleStartExtraction}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Film className="w-4 h-4" />
+                <Sparkles className="w-3 h-3" />
+                自动拆分分镜
+              </Button>
+            </div>
+          )}
+
+          {/* 标题栏 */}
         <div className="flex items-center gap-3 pb-4 border-b">
           <Badge variant="outline" className="font-mono text-sm">
             第 {episode.order} 集
@@ -306,8 +365,22 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
             />
           )}
         </div>
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+
+      {/* 分镜提取对话框 */}
+      {extractionJobId && (
+        <StoryboardExtractionDialog
+          episodeId={episode.id}
+          jobId={extractionJobId}
+          open={extractionDialogOpen}
+          onOpenChange={setExtractionDialogOpen}
+          scenes={state.project?.scenes || []}
+          characters={state.project?.characters || []}
+          onImportSuccess={handleImportSuccess}
+        />
+      )}
+    </>
   );
 }
 

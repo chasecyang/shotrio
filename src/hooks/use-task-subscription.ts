@@ -103,7 +103,9 @@ export function useTaskSubscription() {
     return () => {
       disconnect();
     };
-  }, [connect, disconnect]);
+    // 只在组件挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     jobs,

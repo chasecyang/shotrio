@@ -56,7 +56,9 @@ function EditorLayoutInner({
     }
 
     loadShots();
-  }, [state.selectedEpisodeId, dispatch]);
+    // dispatch 是稳定的引用，不需要添加到依赖数组
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.selectedEpisodeId]);
 
   // 添加分镜
   const handleAddShot = async () => {

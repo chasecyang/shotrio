@@ -7,16 +7,21 @@ import { useEditor } from "../editor-context";
 import { EpisodeList } from "./episode-list";
 import { CharacterList } from "./character-list";
 import { SceneList } from "./scene-list";
+import { useSearchParams } from "next/navigation";
 
 export function ResourcePanel() {
   const { state } = useEditor();
   const { project } = state;
+  const searchParams = useSearchParams();
+  
+  // 从 URL 参数读取默认标签页
+  const defaultTab = searchParams.get("tab") || "episodes";
 
   if (!project) return null;
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue="episodes" className="h-full flex flex-col">
+      <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
         <div className="px-3 pt-3 shrink-0">
           <TabsList className="w-full grid grid-cols-3">
             <TabsTrigger value="episodes" className="text-xs gap-1">

@@ -36,6 +36,7 @@ export interface Job {
   inputData: string | null; // JSON string
   resultData: string | null; // JSON string
   errorMessage: string | null;
+  isImported: boolean; // 是否已导入（用于提取类任务）
   createdAt: Date;
   startedAt: Date | null;
   completedAt: Date | null;

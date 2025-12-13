@@ -26,7 +26,6 @@ export function SceneList({ scenes, projectId }: SceneListProps) {
   const [isStartingExtraction, setIsStartingExtraction] = useState(false);
   const [extractionDialogOpen, setExtractionDialogOpen] = useState(false);
   const [extractionJobId, setExtractionJobId] = useState<string>("");
-  const [recentlyImportedJobId, setRecentlyImportedJobId] = useState<string | null>(null);
 
   const handleSceneClick = (scene: Scene) => {
     selectResource({ type: "scene", id: scene.id });
@@ -63,7 +62,6 @@ export function SceneList({ scenes, projectId }: SceneListProps) {
   };
 
   const handleImportSuccess = async () => {
-    setRecentlyImportedJobId(extractionJobId);
     await handleSuccess();
   };
 
@@ -77,7 +75,6 @@ export function SceneList({ scenes, projectId }: SceneListProps) {
           <SceneExtractionBanner
             projectId={projectId}
             onOpenPreview={handleOpenPreview}
-            recentlyImportedJobId={recentlyImportedJobId}
             compact
           />
         )}
@@ -167,7 +164,6 @@ export function SceneList({ scenes, projectId }: SceneListProps) {
         <SceneExtractionBanner
           projectId={projectId}
           onOpenPreview={handleOpenPreview}
-          recentlyImportedJobId={recentlyImportedJobId}
           compact
         />
       )}

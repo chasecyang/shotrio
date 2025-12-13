@@ -178,7 +178,7 @@ export async function startQuarterViewGeneration(
     // 如果不存在，创建一条记录
     if (!imageRecord) {
       const imageId = randomUUID();
-      const imagePrompt = buildQuarterViewPrompt(sceneData);
+      const imagePrompt = buildQuarterViewPrompt();
 
       await db.insert(sceneImage).values({
         id: imageId,
@@ -192,7 +192,7 @@ export async function startQuarterViewGeneration(
       imageRecord = { id: imageId, sceneId, imageType: "quarter_view" as SceneImageType, imagePrompt, imageUrl: null, seed: null, createdAt: new Date(), updatedAt: new Date() };
     } else {
       // 更新 prompt（以防场景描述有更新）
-      const imagePrompt = buildQuarterViewPrompt(sceneData);
+      const imagePrompt = buildQuarterViewPrompt();
       await db
         .update(sceneImage)
         .set({ imagePrompt })

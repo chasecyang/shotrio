@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
 import { importExtractedScenes } from "@/lib/actions/scene";
 import { getJobStatus } from "@/lib/actions/job";
+import { markJobAsImported } from "@/lib/actions/job/user-operations";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -142,6 +143,9 @@ export function SceneExtractionDialog({
 
       setImportResult(result.imported || null);
       setStep("success");
+
+      // 标记任务为已导入
+      await markJobAsImported(jobId);
 
       // 立即调用回调通知父组件
       onImportSuccess?.();
