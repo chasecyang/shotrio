@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Scene, SceneImage } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Map, Image as ImageIcon, Eye, Grid3X3, FileText, Sparkles, RotateCw, AlertCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Map, Image as ImageIcon, Eye, Grid3X3, FileText, Sparkles, RotateCw, AlertCircle, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   EditableField, 
@@ -14,7 +24,7 @@ import {
   EditableTextarea,
 } from "@/components/ui/inline-editable-field";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import { upsertScene } from "@/lib/actions/scene";
+import { upsertScene, deleteScene } from "@/lib/actions/scene";
 import { startMasterLayoutGeneration, startQuarterViewGeneration } from "@/lib/actions/scene/image";
 import { useEditor } from "../editor-context";
 import { getProjectDetail } from "@/lib/actions/project";
@@ -30,7 +40,7 @@ interface FormData {
 }
 
 export function SceneDetail({ scene }: SceneDetailProps) {
-  const { updateProject } = useEditor();
+  const { updateProject, selectResource } = useEditor();
   const images = scene.images || [];
   const masterLayout = images.find((img) => img.imageType === "master_layout");
   const quarterView = images.find((img) => img.imageType === "quarter_view");
@@ -40,8 +50,18 @@ export function SceneDetail({ scene }: SceneDetailProps) {
     description: scene.description || "",
   });
 
+  // 当场景切换时，重置表单数据
+  useEffect(() => {
+    setFormData({
+      name: scene.name,
+      description: scene.description || "",
+    });
+  }, [scene.id, scene.name, scene.description]);
+
   const [generatingMaster, setGeneratingMaster] = useState(false);
   const [generatingQuarter, setGeneratingQuarter] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 自动保存
   const { saveStatus } = useAutoSave({
@@ -120,17 +140,56 @@ export function SceneDetail({ scene }: SceneDetailProps) {
     }
   };
 
+  // 删除场景
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteScene(scene.projectId, scene.id);
+      
+      if (result.success) {
+        toast.success("场景已删除");
+        
+        // 清除选中状态
+        selectResource(null);
+        
+        // 刷新项目数据
+        const updatedProject = await getProjectDetail(scene.projectId);
+        if (updatedProject) {
+          updateProject(updatedProject);
+        }
+      } else {
+        toast.error(result.error || "删除失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("删除场景失败");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
 
   return (
     <ScrollArea className="h-full">
       <div className="p-6 max-w-2xl mx-auto space-y-6">
         {/* 头部 */}
         <div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Map className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Map className="w-5 h-5 text-primary" />
+              </div>
+              <Badge variant="secondary">{images.length} 视角</Badge>
             </div>
-            <Badge variant="secondary">{images.length} 视角</Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
 
           {/* 场景名称 - 内联编辑 */}
@@ -208,7 +267,7 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                   <img
                     src={masterLayout.imageUrl}
                     alt="全景布局"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </>
               ) : (
@@ -260,7 +319,7 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                   <img
                     src={quarterView.imageUrl}
                     alt="叙事视角"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </>
               ) : (
@@ -300,6 +359,28 @@ export function SceneDetail({ scene }: SceneDetailProps) {
           </div>
         )}
       </div>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除场景</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除场景 &ldquo;{scene.name}&rdquo; 吗？此操作无法撤销，所有关联的视角图片都将被删除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "删除中..." : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ScrollArea>
   );
 }

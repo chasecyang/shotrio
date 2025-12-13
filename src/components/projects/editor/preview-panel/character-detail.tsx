@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Character, CharacterImage } from "@/types/project";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { User, Palette, Image as ImageIcon, FileText, Eye, Sparkles, RotateCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { User, Palette, Image as ImageIcon, FileText, Eye, Sparkles, RotateCw, Trash2 } from "lucide-react";
 import { 
   EditableField, 
   EditableInput, 
   EditableTextarea,
 } from "@/components/ui/inline-editable-field";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import { updateCharacterInfo, updateCharacterStyleInfo } from "@/lib/actions/character";
+import { updateCharacterInfo, updateCharacterStyleInfo, deleteCharacter } from "@/lib/actions/character";
 import { generateImageForCharacterStyle, regenerateCharacterStyleImage } from "@/lib/actions/character/image";
 import { useEditor } from "../editor-context";
 import { getProjectDetail } from "@/lib/actions/project";
@@ -31,7 +41,7 @@ interface FormData {
 }
 
 export function CharacterDetail({ character }: CharacterDetailProps) {
-  const { updateProject } = useEditor();
+  const { updateProject, selectResource } = useEditor();
   const primaryImage = character.images.find((img) => img.isPrimary) || character.images[0];
   
   const [formData, setFormData] = useState<FormData>({
@@ -56,9 +66,34 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
     return initialMap;
   });
 
+  // 当角色切换时，重置所有表单数据
+  useEffect(() => {
+    setFormData({
+      name: character.name,
+      description: character.description || "",
+      appearance: character.appearance || "",
+    });
+
+    // 重置造型标签映射
+    const newStyleLabelMap: Record<string, string> = {};
+    character.images.forEach(image => {
+      newStyleLabelMap[image.id] = image.label;
+    });
+    setStyleLabelMap(newStyleLabelMap);
+
+    // 重置造型提示词映射
+    const newStylePromptMap: Record<string, string> = {};
+    character.images.forEach(image => {
+      newStylePromptMap[image.id] = image.imagePrompt || "";
+    });
+    setStylePromptMap(newStylePromptMap);
+  }, [character.id, character.name, character.description, character.appearance, character.images]);
+
   const [styleSaveStatus, setStyleSaveStatus] = useState<Record<string, "idle" | "saving" | "saved" | "error">>({});
   const [styleTimers, setStyleTimers] = useState<Record<string, NodeJS.Timeout>>({});
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 基础信息自动保存
   const { saveStatus } = useAutoSave({
@@ -219,6 +254,35 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
     }
   };
 
+  // 删除角色
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteCharacter(character.projectId, character.id);
+      
+      if (result.success) {
+        toast.success("角色已删除");
+        
+        // 清除选中状态
+        selectResource(null);
+        
+        // 刷新项目数据
+        const updatedProject = await getProjectDetail(character.projectId);
+        if (updatedProject) {
+          updateProject(updatedProject);
+        }
+      } else {
+        toast.error(result.error || "删除失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("删除角色失败");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   return (
     <ScrollArea className="h-full">
       <div className="p-6 max-w-2xl mx-auto space-y-6">
@@ -232,8 +296,18 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
           </Avatar>
 
           <div className="flex-1 min-w-0 space-y-3">
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary">{character.images.length} 造型</Badge>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary">{character.images.length} 造型</Badge>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
             
             {/* 角色名称 - 内联编辑 */}
@@ -398,6 +472,28 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
           </div>
         )}
       </div>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除角色</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除角色 &ldquo;{character.name}&rdquo; 吗？此操作无法撤销，所有关联的造型和图片都将被删除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "删除中..." : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ScrollArea>
   );
 }
