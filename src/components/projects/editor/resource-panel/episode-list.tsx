@@ -70,6 +70,19 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
 
   return (
     <div className="space-y-2">
+      {/* 新建剧集按钮 */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={handleCreateEpisode}
+        disabled={isCreating}
+      >
+        <Plus className="w-3.5 h-3.5 mr-1.5" />
+        新建剧集
+      </Button>
+
+      {/* 剧集列表 */}
       {episodes.map((episode) => {
         const isSelected = selectedEpisodeId === episode.id;
         const isEditing = selectedResource?.type === "episode" && selectedResource.id === episode.id;
@@ -104,17 +117,6 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
           </button>
         );
       })}
-
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full mt-2"
-        onClick={handleCreateEpisode}
-        disabled={isCreating}
-      >
-        <Plus className="w-3.5 h-3.5 mr-1" />
-        新建剧集
-      </Button>
     </div>
   );
 }

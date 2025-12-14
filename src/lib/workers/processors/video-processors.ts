@@ -5,7 +5,7 @@ import { shot, episode } from "@/lib/db/schemas/project";
 import { eq, inArray } from "drizzle-orm";
 import { generateImageToVideo } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
-import { startJob, updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
+import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
 import { buildVideoPrompt, getKlingDuration } from "@/lib/utils/motion-prompt";
 import type {
   Job,
@@ -35,8 +35,6 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
   const { shotId, imageUrl, prompt, duration } = input;
 
   console.log(`[Worker] 开始生成视频: Shot ${shotId}`);
-
-  await startJob(jobData.id, workerToken);
 
   try {
     // 验证项目所有权
@@ -147,8 +145,6 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
   const { shotIds } = input;
 
   console.log(`[Worker] 开始批量生成视频: ${shotIds.length} 个分镜`);
-
-  await startJob(jobData.id, workerToken);
 
   try {
     // 验证项目所有权
@@ -276,8 +272,6 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
   const { episodeId } = input;
 
   console.log(`[Worker] 开始导出成片: Episode ${episodeId}`);
-
-  await startJob(jobData.id, workerToken);
 
   try {
     // 验证项目所有权

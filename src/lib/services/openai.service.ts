@@ -28,6 +28,7 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   stream?: boolean;
   jsonMode?: boolean;
+  useReasoning?: boolean; // 是否使用 DeepSeek reasoning 模式
 }
 
 /**
@@ -45,17 +46,34 @@ export async function getChatCompletion(
     temperature = 0.7,
     maxTokens = 4096,
     jsonMode = false,
+    useReasoning = false,
   } = options;
 
   try {
     const openai = getOpenAIClient();
-    const response = await openai.chat.completions.create({
+    
+    // 构建请求参数
+    const requestParams: any = {
       model,
       messages,
-      temperature,
       max_tokens: maxTokens,
       response_format: jsonMode ? { type: "json_object" } : undefined,
-    });
+    };
+
+    // 如果使用 reasoning 模式，添加 thinking 参数
+    // 注意：reasoning 模式不支持 temperature 等参数
+    if (useReasoning) {
+      requestParams.thinking = { type: "enabled" };
+      // reasoning 模式下，max_tokens 建议设置为 32K 或 64K
+      if (maxTokens < 32000) {
+        requestParams.max_tokens = 32000;
+      }
+    } else {
+      // 非 reasoning 模式才设置 temperature
+      requestParams.temperature = temperature;
+    }
+
+    const response = await openai.chat.completions.create(requestParams);
 
     return response.choices[0]?.message?.content || "";
   } catch (error: unknown) {

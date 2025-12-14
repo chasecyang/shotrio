@@ -9,15 +9,18 @@
  */
 
 import { getPendingJobs } from "../lib/actions/job";
-import { processJob } from "../lib/workers/job-processor";
+import { processJob, registerAllProcessors } from "../lib/workers/job-processor";
 import { getWorkerToken } from "../lib/workers/auth";
+import { recoverTimeoutJobs } from "../lib/workers/utils/timeout-handler";
+import type { Job } from "@/types/job";
 
 const POLL_INTERVAL = parseInt(process.env.WORKER_POLL_INTERVAL || '2000'); // 2 秒轮询一次（更短的轮询间隔以充分利用并发能力）
 const MAX_CONCURRENT_JOBS = parseInt(process.env.MAX_CONCURRENT_JOBS || '5'); // 最多同时处理 5 个任务
 const ERROR_RETRY_DELAY = 5000; // 错误后等待 5 秒再重试
 const IDLE_POLL_INTERVAL = parseInt(process.env.WORKER_IDLE_POLL_INTERVAL || '5000'); // 空闲时 5 秒轮询一次
+const TIMEOUT_CHECK_INTERVAL = 60000; // 每60秒检查一次超时任务
 
-let processingJobs = new Map<string, Promise<void>>(); // 当前正在处理的任务
+const processingJobs = new Map<string, Promise<void>>(); // 当前正在处理的任务
 let workerToken: string;
 let isFetching = false; // 是否正在获取任务（防止重复获取）
 let consecutiveEmptyPolls = 0; // 连续空轮询次数
@@ -74,7 +77,7 @@ async function fetchAndStartJobs() {
 /**
  * 异步处理单个任务
  */
-async function processJobAsync(job: any): Promise<void> {
+async function processJobAsync(job: Job): Promise<void> {
   console.log(`[Worker] ▶️  开始处理任务 ${job.id} (${job.type})`);
   const startTime = Date.now();
 
@@ -111,6 +114,9 @@ async function startWorker() {
     process.exit(1);
   }
 
+  console.log("\n📦 注册任务处理器...");
+  registerAllProcessors();
+  
   console.log("\n⏳ 开始监听任务队列...\n");
 
   // 立即执行一次
@@ -125,6 +131,21 @@ async function startWorker() {
       await fetchAndStartJobs();
     }
   }, POLL_INTERVAL);
+
+  // 超时任务恢复（每60秒检查一次）
+  setInterval(async () => {
+    try {
+      const result = await recoverTimeoutJobs(workerToken);
+      if (result.recovered > 0) {
+        console.log(`[Worker] 🔄 已恢复 ${result.recovered} 个超时任务`);
+      }
+      if (result.errors.length > 0) {
+        console.error(`[Worker] ⚠️  超时恢复出现 ${result.errors.length} 个错误`);
+      }
+    } catch (error) {
+      console.error("[Worker] 超时恢复失败:", error);
+    }
+  }, TIMEOUT_CHECK_INTERVAL);
 
   // 状态监控
   setInterval(() => {

@@ -23,6 +23,7 @@ export function StoryboardExtractionBanner({
 }: StoryboardExtractionBannerProps) {
   const { jobs: activeJobs } = useTaskSubscription();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
+  const [matchingJob, setMatchingJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
 
   // 查找当前剧集的分镜提取任务（父任务或匹配任务）
@@ -57,7 +58,13 @@ export function StoryboardExtractionBanner({
       const matchingJobId = parentResult.matchingJobId;
 
       if (matchingJobId) {
-        const matchingJob = activeJobs.find((j) => j.id === matchingJobId);
+        // 先在活动任务中查找
+        const activeMatchingJob = activeJobs.find((j) => j.id === matchingJobId);
+        if (activeMatchingJob?.status === "completed" && activeMatchingJob.resultData) {
+          return JSON.parse(activeMatchingJob.resultData) as StoryboardMatchingResult;
+        }
+        
+        // 如果活动任务中没有，使用已加载的匹配任务
         if (matchingJob?.status === "completed" && matchingJob.resultData) {
           return JSON.parse(matchingJob.resultData) as StoryboardMatchingResult;
         }
@@ -67,7 +74,7 @@ export function StoryboardExtractionBanner({
     }
 
     return null;
-  }, [extractionJob, activeJobs]);
+  }, [extractionJob, activeJobs, matchingJob]);
 
   // 加载已完成但未处理的任务 - 使用 ref 避免频繁触发
   const hasLoadedCompletedJob = useRef(false);
@@ -110,12 +117,14 @@ export function StoryboardExtractionBanner({
       try {
         const result = await getUserJobs({
           status: "completed",
-          limit: 10,
+          limit: 50, // 增加查询数量以包含匹配任务
         });
 
         if (result.success && result.jobs) {
+          const allJobs = result.jobs as Job[];
+          
           // 查找最近的已完成分镜提取任务（且未导入）
-          const job = (result.jobs as Job[]).find(
+          const job = allJobs.find(
             (job) =>
               job.type === "storyboard_generation" &&
               job.inputData &&
@@ -127,6 +136,21 @@ export function StoryboardExtractionBanner({
           if (job) {
             setCompletedJob(job);
             hasLoadedCompletedJob.current = true;
+            
+            // 尝试加载对应的匹配任务
+            try {
+              const parentResult = JSON.parse(job.resultData || "{}");
+              const matchingJobId = parentResult.matchingJobId;
+              
+              if (matchingJobId) {
+                const matching = allJobs.find((j) => j.id === matchingJobId);
+                if (matching) {
+                  setMatchingJob(matching);
+                }
+              }
+            } catch (error) {
+              console.error("解析父任务结果失败:", error);
+            }
           }
         }
       } catch (error) {
@@ -151,6 +175,7 @@ export function StoryboardExtractionBanner({
   const handleDismiss = () => {
     setIsDismissed(true);
     setCompletedJob(null);
+    setMatchingJob(null);
   };
 
   const handleOpenPreview = () => {

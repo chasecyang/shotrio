@@ -335,6 +335,8 @@ export function StoryboardExtractionDialog({
                         const hasScene = !!shot.sceneId;
                         const hasCharacters = shot.characters && shot.characters.length > 0;
                         const hasDialogues = shot.dialogues && shot.dialogues.length > 0;
+                        const matchedScene = scenes.find(s => s.id === shot.sceneId);
+                        const sceneMatchConfidence = shot.sceneMatchConfidence || 0;
 
                         return (
                           <Card
@@ -363,13 +365,21 @@ export function StoryboardExtractionDialog({
                                 <p className="text-[11px] text-muted-foreground line-clamp-2">
                                   {shot.visualDescription}
                                 </p>
+                                {/* 场景信息显示 */}
+                                {matchedScene && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <MapPin className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-[10px] text-muted-foreground truncate">
+                                      {matchedScene.name}
+                                    </span>
+                                    {sceneMatchConfidence === 1.0 && (
+                                      <Badge variant="outline" className="text-[8px] h-3.5 px-1">
+                                        ✓
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                  {hasScene && (
-                                    <Badge variant="secondary" className="text-[9px] h-4 px-1">
-                                      <MapPin className="w-2.5 h-2.5 mr-0.5" />
-                                      场景
-                                    </Badge>
-                                  )}
                                   {hasCharacters && (
                                     <Badge variant="secondary" className="text-[9px] h-4 px-1">
                                       <Users className="w-2.5 h-2.5 mr-0.5" />
@@ -607,7 +617,24 @@ export function StoryboardExtractionDialog({
                                                   .find(c => c.id === char.characterId)
                                                   ?.images.map((img) => (
                                                     <SelectItem key={img.id} value={img.id}>
-                                                      {img.label}
+                                                      <div className="flex items-center gap-2">
+                                                        <div className="w-5 h-5 rounded overflow-hidden bg-muted shrink-0">
+                                                          {img.imageUrl && (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img
+                                                              src={img.imageUrl}
+                                                              alt={img.label}
+                                                              className="w-full h-full object-cover"
+                                                            />
+                                                          )}
+                                                        </div>
+                                                        <span>{img.label}</span>
+                                                        {img.isPrimary && (
+                                                          <Badge variant="outline" className="text-[8px] h-3.5 px-1 ml-auto">
+                                                            主
+                                                          </Badge>
+                                                        )}
+                                                      </div>
                                                     </SelectItem>
                                                   ))}
                                               </SelectContent>

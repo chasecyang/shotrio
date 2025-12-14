@@ -178,8 +178,11 @@ export async function retryJob(jobId: string): Promise<{
       progressMessage: null,
       resultData: null,
       errorMessage: null,
+      isImported: false,
+      createdAt: new Date(),
       startedAt: null,
       completedAt: null,
+      updatedAt: new Date(),
     });
 
     return {

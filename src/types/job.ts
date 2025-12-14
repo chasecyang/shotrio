@@ -8,6 +8,8 @@ export type JobType =
   | "storyboard_generation" // 剧本自动分镜（触发入口）
   | "storyboard_basic_extraction" // 基础分镜提取（第一步）
   | "storyboard_matching" // 角色场景匹配（第二步）
+  | "shot_image_generation" // 单个分镜图片生成
+  | "batch_shot_image_generation" // 批量分镜图片生成
   | "batch_image_generation" // 批量图像生成
   | "video_generation" // 视频生成
   | "shot_video_generation" // 单镜视频生成
@@ -91,6 +93,15 @@ export interface BatchImageGenerationInput {
   resolution?: string;
 }
 
+export interface ShotImageGenerationInput {
+  shotId: string;
+  regenerate?: boolean;
+}
+
+export interface BatchShotImageGenerationInput {
+  shotIds: string[];
+}
+
 export interface VideoGenerationInput {
   shotId: string;
   imageUrl?: string;
@@ -126,6 +137,17 @@ export interface CharacterImageGenerationResult {
 export interface SceneImageGenerationResult {
   imageId: string; // 生成的 sceneImage ID
   imageUrl: string; // 生成的图片URL
+}
+
+export interface ShotImageGenerationResult {
+  shotId: string;
+  imageUrl: string;
+  dependencyJobIds?: string[]; // 依赖任务ID列表
+}
+
+export interface BatchShotImageGenerationResult {
+  childJobIds: string[];
+  totalShots: number;
 }
 
 export interface StoryboardGenerationResult {

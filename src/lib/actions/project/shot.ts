@@ -760,3 +760,185 @@ export async function importExtractedShots(
     };
   }
 }
+
+/**
+ * 生成单个分镜图片
+ */
+export async function generateShotImage(shotId: string): Promise<{
+  success: boolean;
+  jobId?: string;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 获取分镜信息以验证权限
+    const shotData = await db.query.shot.findFirst({
+      where: eq(shot.id, shotId),
+      with: {
+        episode: true,
+      },
+    });
+
+    if (!shotData) {
+      return { success: false, error: "分镜不存在" };
+    }
+
+    // 创建图片生成任务
+    const { createJob } = await import("@/lib/actions/job");
+    const result = await createJob({
+      userId: session.user.id,
+      projectId: shotData.episode.projectId,
+      type: "shot_image_generation",
+      inputData: {
+        shotId,
+        regenerate: false,
+      },
+    });
+
+    if (!result.success || !result.jobId) {
+      return {
+        success: false,
+        error: result.error || "创建任务失败",
+      };
+    }
+
+    return {
+      success: true,
+      jobId: result.jobId,
+    };
+  } catch (error) {
+    console.error("生成分镜图片失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "生成失败",
+    };
+  }
+}
+
+/**
+ * 批量生成分镜图片
+ */
+export async function batchGenerateShotImages(shotIds: string[]): Promise<{
+  success: boolean;
+  jobId?: string;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  if (!shotIds || shotIds.length === 0) {
+    return { success: false, error: "未选择分镜" };
+  }
+
+  try {
+    // 获取第一个分镜信息以获取项目ID
+    const firstShot = await db.query.shot.findFirst({
+      where: eq(shot.id, shotIds[0]),
+      with: {
+        episode: true,
+      },
+    });
+
+    if (!firstShot) {
+      return { success: false, error: "分镜不存在" };
+    }
+
+    // 创建批量生成任务
+    const { createJob } = await import("@/lib/actions/job");
+    const result = await createJob({
+      userId: session.user.id,
+      projectId: firstShot.episode.projectId,
+      type: "batch_shot_image_generation",
+      inputData: {
+        shotIds,
+      },
+    });
+
+    if (!result.success || !result.jobId) {
+      return {
+        success: false,
+        error: result.error || "创建任务失败",
+      };
+    }
+
+    return {
+      success: true,
+      jobId: result.jobId,
+    };
+  } catch (error) {
+    console.error("批量生成分镜图片失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "生成失败",
+    };
+  }
+}
+
+/**
+ * 更新分镜角色的造型
+ */
+export async function updateShotCharacterImage(
+  shotCharacterId: string,
+  characterImageId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 验证 shotCharacter 存在
+    const shotCharData = await db.query.shotCharacter.findFirst({
+      where: eq(shotCharacter.id, shotCharacterId),
+      with: {
+        shot: {
+          with: {
+            episode: true,
+          },
+        },
+      },
+    });
+
+    if (!shotCharData) {
+      return { success: false, error: "分镜角色不存在" };
+    }
+
+    // 更新造型关联
+    await db
+      .update(shotCharacter)
+      .set({
+        characterImageId,
+      })
+      .where(eq(shotCharacter.id, shotCharacterId));
+
+    // 刷新页面
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const episodeData = (shotCharData.shot as any).episode;
+    if (episodeData) {
+      revalidatePath(`/projects/${episodeData.projectId}/editor`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("更新分镜角色造型失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "更新失败",
+    };
+  }
+}

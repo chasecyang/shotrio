@@ -31,7 +31,7 @@ interface EpisodeEditorProps {
 }
 
 export function EpisodeEditor({ episode }: EpisodeEditorProps) {
-  const { state } = useEditor();
+  const { state, closeStoryboardExtractionDialog } = useEditor();
   const [formData, setFormData] = useState({
     title: episode.title,
     summary: episode.summary || "",
@@ -48,9 +48,14 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
 
-  // 分镜提取对话框状态
-  const [extractionDialogOpen, setExtractionDialogOpen] = useState(false);
-  const [extractionJobId, setExtractionJobId] = useState<string | null>(null);
+  // 本地对话框状态（用于手动打开）
+  const [localDialogOpen, setLocalDialogOpen] = useState(false);
+  const [localJobId, setLocalJobId] = useState<string | null>(null);
+
+  // 合并 context 和本地的对话框状态
+  const isDialogOpen = state.storyboardExtractionDialog.open || localDialogOpen;
+  const dialogJobId = state.storyboardExtractionDialog.jobId || localJobId;
+  const dialogEpisodeId = state.storyboardExtractionDialog.episodeId || episode.id;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -72,10 +77,21 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     }
   };
 
-  // 打开预览对话框
+  // 打开预览对话框（从横幅触发）
   const handleOpenPreview = (jobId: string) => {
-    setExtractionJobId(jobId);
-    setExtractionDialogOpen(true);
+    setLocalJobId(jobId);
+    setLocalDialogOpen(true);
+  };
+
+  // 关闭对话框
+  const handleCloseDialog = () => {
+    // 清除 context 状态
+    if (state.storyboardExtractionDialog.open) {
+      closeStoryboardExtractionDialog();
+    }
+    // 清除本地状态
+    setLocalDialogOpen(false);
+    setLocalJobId(null);
   };
 
   // 导入成功回调
@@ -369,12 +385,16 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
       </ScrollArea>
 
       {/* 分镜提取对话框 */}
-      {extractionJobId && (
+      {dialogJobId && (
         <StoryboardExtractionDialog
-          episodeId={episode.id}
-          jobId={extractionJobId}
-          open={extractionDialogOpen}
-          onOpenChange={setExtractionDialogOpen}
+          episodeId={dialogEpisodeId}
+          jobId={dialogJobId}
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              handleCloseDialog();
+            }
+          }}
           scenes={state.project?.scenes || []}
           characters={state.project?.characters || []}
           onImportSuccess={handleImportSuccess}

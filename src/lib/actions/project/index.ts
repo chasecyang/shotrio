@@ -37,4 +37,8 @@ export {
   updateShotDialogue,
   deleteShotDialogue,
   reorderShotDialogues,
+  // 图片生成
+  generateShotImage,
+  batchGenerateShotImages,
+  updateShotCharacterImage,
 } from "./shot";

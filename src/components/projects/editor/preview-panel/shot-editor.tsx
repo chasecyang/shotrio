@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateShot } from "@/lib/actions/project";
+import { updateShot, generateShotImage, updateShotCharacterImage } from "@/lib/actions/project";
 import { toast } from "sonner";
 import {
   Image as ImageIcon,
@@ -25,6 +25,8 @@ import {
   Video,
   MapPin,
   Sparkles,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import {
   EditableField,
@@ -38,6 +40,8 @@ import {
   secondsToMilliseconds,
 } from "@/lib/utils/shot-utils";
 import { useEditor } from "../editor-context";
+import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import { Progress } from "@/components/ui/progress";
 
 interface ShotEditorProps {
   shot: ShotDetail;
@@ -54,12 +58,22 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     duration: millisecondsToSeconds(shot.duration || 3000),
   });
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const shotSizeOptions = getShotSizeOptions();
   const cameraMovementOptions = getCameraMovementOptions();
+
+  // 监听图片生成任务
+  const { jobs } = useTaskSubscription();
+  
+  // 过滤出分镜图片生成任务
+  const generationTasks = jobs?.filter(
+    (job) => job.type === "shot_image_generation"
+  ) || [];
 
   // 同步 shot 更新
   useEffect(() => {
@@ -129,6 +143,54 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     };
   }, []);
 
+  // 检查是否有正在进行的生成任务
+  useEffect(() => {
+    const activeTask = generationTasks.find(
+      (task) => task.status === "processing" && task.inputData?.shotId === shot.id
+    );
+    setIsGenerating(!!activeTask);
+    if (activeTask) {
+      setGenerationJobId(activeTask.id);
+    }
+  }, [generationTasks, shot.id]);
+
+  // 处理生成图片
+  const handleGenerateImage = async () => {
+    setIsGenerating(true);
+    try {
+      const result = await generateShotImage(shot.id);
+      if (result.success && result.jobId) {
+        setGenerationJobId(result.jobId);
+        toast.success("已启动图片生成任务");
+      } else {
+        toast.error(result.error || "启动失败");
+        setIsGenerating(false);
+      }
+    } catch (error) {
+      toast.error("生成失败");
+      setIsGenerating(false);
+    }
+  };
+
+  // 处理造型切换
+  const handleChangeCharacterImage = async (shotCharacterId: string, characterImageId: string) => {
+    try {
+      const result = await updateShotCharacterImage(shotCharacterId, characterImageId);
+      if (result.success) {
+        toast.success("造型已更新");
+      } else {
+        toast.error(result.error || "更新失败");
+      }
+    } catch (error) {
+      toast.error("更新失败");
+    }
+  };
+
+  // 获取当前生成任务的进度
+  const currentTask = generationTasks.find((task) => task.id === generationJobId);
+  const generationProgress = currentTask?.progress || 0;
+  const generationMessage = currentTask?.progressMessage || "正在生成...";
+
   return (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
@@ -136,25 +198,49 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         <div className="flex gap-6">
           {/* 大图预览 */}
           <div className="w-80 shrink-0">
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center">
+            <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative">
               {shot.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={shot.imageUrl}
-                  alt={`分镜 ${shot.order}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">暂无图片</p>
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={shot.imageUrl}
+                    alt={`分镜 ${shot.order}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* 重新生成按钮 */}
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
-                    className="mt-3"
-                    onClick={() => toast.info("图片生成功能开发中...")}
+                    className="absolute bottom-2 right-2 gap-1.5"
+                    onClick={handleGenerateImage}
+                    disabled={isGenerating}
                   >
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
+                    {isGenerating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    重新生成
+                  </Button>
+                </>
+              ) : isGenerating ? (
+                <div className="text-center p-6">
+                  <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin text-primary" />
+                  <p className="text-sm font-medium mb-2">{generationMessage}</p>
+                  <Progress value={generationProgress} className="w-full max-w-[200px] mx-auto" />
+                  <p className="text-xs text-muted-foreground mt-2">{generationProgress}%</p>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground p-6">
+                  <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm mb-3">暂无图片</p>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleGenerateImage}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
                     生成图片
                   </Button>
                 </div>
@@ -185,9 +271,20 @@ export function ShotEditor({ shot }: ShotEditorProps) {
 
             {/* 场景信息 */}
             {shot.scene && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span>场景：{shot.scene.name}</span>
+              <div className="p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-sm">{shot.scene.name}</span>
+                    </div>
+                    {shot.scene.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {shot.scene.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -299,21 +396,66 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           </div>
 
           {shot.shotCharacters.length > 0 ? (
-            <div className="flex flex-wrap gap-3">
-              {shot.shotCharacters.map((sc) => (
-                <div
-                  key={sc.id}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border"
-                >
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={sc.characterImage?.imageUrl || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {sc.character.name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{sc.character.name}</span>
-                </div>
-              ))}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {shot.shotCharacters.map((sc) => {
+                // 获取该角色的所有造型
+                const allCharacterImages = project?.characters
+                  .find((c) => c.id === sc.characterId)
+                  ?.images || [];
+
+                return (
+                  <div
+                    key={sc.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
+                  >
+                    <Avatar className="w-10 h-10 shrink-0">
+                      <AvatarImage src={sc.characterImage?.imageUrl || undefined} />
+                      <AvatarFallback className="text-xs">
+                        {sc.character.name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{sc.character.name}</p>
+                      {allCharacterImages.length > 0 ? (
+                        <Select
+                          value={sc.characterImageId || ""}
+                          onValueChange={(value) => handleChangeCharacterImage(sc.id, value)}
+                        >
+                          <SelectTrigger className="h-7 text-xs mt-1">
+                            <SelectValue placeholder="选择造型" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allCharacterImages.map((img) => (
+                              <SelectItem key={img.id} value={img.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded overflow-hidden bg-muted shrink-0">
+                                    {img.imageUrl && (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={img.imageUrl}
+                                        alt={img.label}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    )}
+                                  </div>
+                                  <span>{img.label}</span>
+                                  {img.isPrimary && (
+                                    <Badge variant="outline" className="text-[10px] h-4 px-1">
+                                      主
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">无造型</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">暂无角色</p>

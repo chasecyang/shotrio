@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,8 @@ import {
   Film,
   Images,
   Video,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -26,9 +29,11 @@ import type { Job } from "@/types/job";
 
 interface TaskItemProps {
   job: Partial<Job>;
+  children?: Job[]; // 子任务列表
   onCancel?: (jobId: string) => void;
   onRetry?: (jobId: string) => void;
   onView?: (jobId: string) => void;
+  depth?: number; // 嵌套深度
 }
 
 const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -72,6 +77,22 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "视频生成",
     icon: <Video className="w-4 h-4" />,
   },
+  shot_video_generation: {
+    label: "单镜视频生成",
+    icon: <Video className="w-4 h-4" />,
+  },
+  batch_video_generation: {
+    label: "批量视频生成",
+    icon: <Video className="w-4 h-4" />,
+  },
+  shot_tts_generation: {
+    label: "语音合成",
+    icon: <Sparkles className="w-4 h-4" />,
+  },
+  final_video_export: {
+    label: "最终成片导出",
+    icon: <Film className="w-4 h-4" />,
+  },
 };
 
 const statusConfig: Record<
@@ -105,13 +126,33 @@ const statusConfig: Record<
   },
 };
 
-export function TaskItem({ job, onCancel, onRetry, onView }: TaskItemProps) {
+export function TaskItem({ 
+  job, 
+  children = [], 
+  onCancel, 
+  onRetry, 
+  onView,
+  depth = 0 
+}: TaskItemProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasChildren = children.length > 0;
+  
   const taskType = taskTypeLabels[job.type || ""];
   const status = statusConfig[job.status || "pending"];
 
   const canCancel = job.status === "pending" || job.status === "processing";
   const canRetry = job.status === "failed" || job.status === "cancelled";
-  const canView = job.status === "completed";
+  
+  // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
+  const viewableTaskTypes = [
+    "storyboard_generation",
+    "character_extraction",
+    "scene_extraction",
+  ];
+  const canView = job.status === "completed" && 
+                  job.type && 
+                  viewableTaskTypes.includes(job.type) &&
+                  !job.isImported; // 已导入的任务不再显示查看按钮
 
   const getTimeText = () => {
     if (!job.createdAt) return "";
@@ -126,15 +167,51 @@ export function TaskItem({ job, onCancel, onRetry, onView }: TaskItemProps) {
     }
   };
 
+  // 计算子任务统计
+  const childStats = hasChildren ? {
+    total: children.length,
+    active: children.filter(c => c.status === "pending" || c.status === "processing").length,
+    completed: children.filter(c => c.status === "completed").length,
+    failed: children.filter(c => c.status === "failed").length,
+  } : null;
+
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
+    <div className="space-y-2">
+      <Card className={cn(
+        "p-4 hover:shadow-md transition-shadow",
+        depth > 0 && "ml-8 border-l-2 border-l-primary/30"
+      )}>
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* 展开/折叠按钮 */}
+            {hasChildren ? (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="shrink-0 hover:bg-accent rounded p-1 transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+            ) : (
+              <div className="w-6" /> /* 占位符，保持对齐 */
+            )}
+            
             {taskType?.icon}
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm truncate">{taskType?.label || "未知任务"}</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium text-sm truncate">{taskType?.label || "未知任务"}</h4>
+                {/* 显示子任务统计 */}
+                {childStats && (
+                  <Badge variant="secondary" className="text-xs">
+                    {childStats.active}/{childStats.total}
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">{getTimeText()}</p>
             </div>
           </div>
@@ -215,6 +292,22 @@ export function TaskItem({ job, onCancel, onRetry, onView }: TaskItemProps) {
         )}
       </div>
     </Card>
+
+      {/* 递归渲染子任务 */}
+      {hasChildren && isExpanded && (
+        <div className="space-y-2">
+          {children.map((childJob) => (
+            <TaskItem
+              key={childJob.id}
+              job={childJob}
+              onCancel={onCancel}
+              onRetry={onRetry}
+              onView={onView}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
-

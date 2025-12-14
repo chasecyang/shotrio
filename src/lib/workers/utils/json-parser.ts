@@ -12,10 +12,14 @@ export function safeJsonParse(response: string): any {
     console.error("[Worker] 初次JSON解析失败，尝试清理数据:", parseError);
     
     // 清理可能的问题：
-    // 1. 移除注释（// 和 /* */）
-    // 2. 移除控制字符和零宽字符
-    // 3. 修复尾随逗号
+    // 1. 移除 markdown 代码块标记
+    // 2. 移除注释（// 和 /* */）
+    // 3. 移除控制字符和零宽字符
+    // 4. 修复尾随逗号
     let cleanedResponse = response
+      // 移除 markdown 代码块标记（```json 或 ```）
+      .replace(/^```(?:json)?\s*/gm, '')
+      .replace(/```\s*$/gm, '')
       // 移除单行注释
       .replace(/\/\/.*$/gm, '')
       // 移除多行注释

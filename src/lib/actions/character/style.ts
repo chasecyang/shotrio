@@ -1,12 +1,14 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import db from "@/lib/db";
-import { character, characterImage, project } from "@/lib/db/schemas/project";
-import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { character, characterImage } from "@/lib/db/schemas/project";
+import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { 
+  requireAuthAndProject, 
+  revalidateCharactersPage,
+  withErrorHandling 
+} from "@/lib/actions/utils";
 
 /**
  * 创建新的角色造型（不自动生成图片）
@@ -20,25 +22,9 @@ export async function createCharacterStyle(
     stylePrompt: string;
   }
 ): Promise<{ success: boolean; imageId?: string; error?: string }> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  try {
-    // 验证项目权限
-    const projectData = await db.query.project.findFirst({
-      where: and(
-        eq(project.id, projectId),
-        eq(project.userId, session.user.id)
-      ),
-    });
-
-    if (!projectData) {
-      return { success: false, error: "项目不存在或无权限" };
-    }
+  return withErrorHandling(async () => {
+    // 验证登录和项目权限
+    await requireAuthAndProject(projectId);
 
     // 验证角色存在且属于该项目
     const characterData = await db.query.character.findFirst({
@@ -49,7 +35,7 @@ export async function createCharacterStyle(
     });
 
     if (!characterData || characterData.projectId !== projectId) {
-      return { success: false, error: "角色不存在或不属于该项目" };
+      throw new Error("角色不存在或不属于该项目");
     }
 
     // 创建造型记录（imageUrl 为 null，待生成）
@@ -68,9 +54,8 @@ export async function createCharacterStyle(
 
     console.log("✅ 造型创建成功:", { imageId, characterId, label: data.label });
 
-    // 重新验证所有语言版本的页面
-    revalidatePath(`/zh/projects/${projectId}/characters`);
-    revalidatePath(`/en/projects/${projectId}/characters`);
+    // 重新验证页面
+    revalidateCharactersPage(projectId);
 
     console.log("✅ 缓存已清除");
 
@@ -78,13 +63,7 @@ export async function createCharacterStyle(
       success: true,
       imageId,
     };
-  } catch (error) {
-    console.error("创建角色造型失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "创建角色造型失败",
-    };
-  }
+  }, "创建角色造型失败");
 }
 
 /**
@@ -99,25 +78,9 @@ export async function updateCharacterInfo(
     appearance?: string;
   }
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  try {
-    // 验证项目权限
-    const projectData = await db.query.project.findFirst({
-      where: and(
-        eq(project.id, projectId),
-        eq(project.userId, session.user.id)
-      ),
-    });
-
-    if (!projectData) {
-      return { success: false, error: "项目不存在或无权限" };
-    }
+  return withErrorHandling(async () => {
+    // 验证登录和项目权限
+    await requireAuthAndProject(projectId);
 
     // 验证角色存在且属于该项目
     const characterData = await db.query.character.findFirst({
@@ -125,7 +88,7 @@ export async function updateCharacterInfo(
     });
 
     if (!characterData || characterData.projectId !== projectId) {
-      return { success: false, error: "角色不存在或不属于该项目" };
+      throw new Error("角色不存在或不属于该项目");
     }
 
     // 更新角色信息
@@ -150,18 +113,11 @@ export async function updateCharacterInfo(
       .set(updateData)
       .where(eq(character.id, characterId));
 
-    // 重新验证所有语言版本的页面
-    revalidatePath(`/zh/projects/${projectId}/characters`);
-    revalidatePath(`/en/projects/${projectId}/characters`);
+    // 重新验证页面
+    revalidateCharactersPage(projectId);
 
     return { success: true };
-  } catch (error) {
-    console.error("更新角色信息失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "更新角色信息失败",
-    };
-  }
+  }, "更新角色信息失败");
 }
 
 /**
@@ -175,25 +131,9 @@ export async function updateCharacterStyleInfo(
     imagePrompt?: string;
   }
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  try {
-    // 验证项目权限
-    const projectData = await db.query.project.findFirst({
-      where: and(
-        eq(project.id, projectId),
-        eq(project.userId, session.user.id)
-      ),
-    });
-
-    if (!projectData) {
-      return { success: false, error: "项目不存在或无权限" };
-    }
+  return withErrorHandling(async () => {
+    // 验证登录和项目权限
+    await requireAuthAndProject(projectId);
 
     // 验证造型存在且属于该项目的角色
     const imageData = await db.query.characterImage.findFirst({
@@ -206,7 +146,7 @@ export async function updateCharacterStyleInfo(
     // 类型断言：character 是一个对象而不是数组
     const characterData = imageData?.character as { projectId: string } | undefined;
     if (!imageData || !characterData || characterData.projectId !== projectId) {
-      return { success: false, error: "造型不存在或不属于该项目" };
+      throw new Error("造型不存在或不属于该项目");
     }
 
     // 更新造型信息
@@ -227,16 +167,9 @@ export async function updateCharacterStyleInfo(
       .set(updateData)
       .where(eq(characterImage.id, imageId));
 
-    // 重新验证所有语言版本的页面
-    revalidatePath(`/zh/projects/${projectId}/characters`);
-    revalidatePath(`/en/projects/${projectId}/characters`);
+    // 重新验证页面
+    revalidateCharactersPage(projectId);
 
     return { success: true };
-  } catch (error) {
-    console.error("更新造型信息失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "更新造型信息失败",
-    };
-  }
+  }, "更新造型信息失败");
 }

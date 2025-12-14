@@ -144,16 +144,17 @@ ${scriptContents}
 
 请严格按照JSON格式返回提取结果。`;
 
-  // 调用OpenAI API
+  // 调用OpenAI API，使用 reasoning 模式深度分析角色
   const response = await getChatCompletion(
     [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     {
-      temperature: 0.7,
-      maxTokens: 6000,
+      temperature: 0.7, // reasoning 模式会忽略此参数
+      maxTokens: 32000, // reasoning 模式建议使用更大的 token 限制
       jsonMode: true,
+      useReasoning: true, // 启用 DeepSeek reasoning 模式，用于深度理解角色性格和关系
     }
   );
 

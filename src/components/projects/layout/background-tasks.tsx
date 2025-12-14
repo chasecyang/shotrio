@@ -21,6 +21,7 @@ import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job/user-operations";
 import { getJobsDetails, type JobDetails } from "@/lib/actions/job/details";
 import { toast } from "sonner";
+import { useEditor } from "../editor/editor-context";
 import {
   Activity,
   Loader2,
@@ -36,11 +37,14 @@ import {
   Film,
   Images,
   Video,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { Job } from "@/types/job";
+import { buildTaskTree, getNodeOverallStatus, type TaskNode } from "@/lib/utils/task-tree";
 
 const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> = {
   novel_split: {
@@ -83,6 +87,22 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "视频生成",
     icon: <Video className="w-3.5 h-3.5" />,
   },
+  shot_video_generation: {
+    label: "单镜视频生成",
+    icon: <Video className="w-3.5 h-3.5" />,
+  },
+  batch_video_generation: {
+    label: "批量视频生成",
+    icon: <Video className="w-3.5 h-3.5" />,
+  },
+  shot_tts_generation: {
+    label: "语音合成",
+    icon: <Sparkles className="w-3.5 h-3.5" />,
+  },
+  final_video_export: {
+    label: "最终成片导出",
+    icon: <Film className="w-3.5 h-3.5" />,
+  },
 };
 
 const statusConfig: Record<
@@ -118,15 +138,17 @@ const statusConfig: Record<
 
 export function BackgroundTasks() {
   const { jobs: activeJobs } = useTaskSubscription();
+  const { openStoryboardExtractionDialog } = useEditor();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   // 加载最近的任务（包括已完成和失败的）
   const loadRecentJobs = async () => {
     setIsLoading(true);
     try {
-      const result = await getUserJobs({ limit: 10 });
+      const result = await getUserJobs({ limit: 20 }); // 增加限制以获取更多任务（包括子任务）
       if (result.success && result.jobs) {
         const jobs = result.jobs as Job[];
         setRecentJobs(jobs);
@@ -156,9 +178,28 @@ export function BackgroundTasks() {
     ...recentJobs.filter(
       (job) => !activeJobs.some((activeJob) => activeJob.id === job.id)
     ),
-  ].slice(0, 10);
+  ];
+
+  // 构建任务树
+  const taskTree = buildTaskTree(allJobs);
+  
+  // 只显示前10个根任务（包括它们的子任务）
+  const displayedTree = taskTree.slice(0, 10);
 
   const activeCount = activeJobs.length;
+
+  // 切换节点展开/折叠
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
 
   // 取消任务
   const handleCancel = async (jobId: string) => {
@@ -177,6 +218,51 @@ export function BackgroundTasks() {
       toast.success("任务已重新提交");
     } else {
       toast.error(result.error || "重试失败");
+    }
+  };
+
+  // 查看结果（根据任务类型）
+  const handleView = (jobId: string) => {
+    const job = allJobs.find((j) => j.id === jobId);
+    if (!job) {
+      toast.error("任务不存在");
+      return;
+    }
+
+    // 根据任务类型处理
+    try {
+      switch (job.type) {
+        case "storyboard_generation": {
+          // 分镜提取任务：直接打开预览对话框
+          if (!job.inputData) {
+            toast.error("无法获取任务数据");
+            return;
+          }
+          const inputData = JSON.parse(job.inputData);
+          const episodeId = inputData.episodeId;
+          
+          if (episodeId) {
+            openStoryboardExtractionDialog(episodeId, jobId);
+          } else {
+            toast.error("无法获取剧集信息");
+          }
+          break;
+        }
+        
+        case "character_extraction":
+        case "scene_extraction": {
+          // 角色/场景提取任务：TODO 可以添加类似的对话框
+          toast.info("请在角色/场景页面查看提取结果");
+          break;
+        }
+        
+        default:
+          toast.info("该任务暂不支持查看结果");
+          break;
+      }
+    } catch (error) {
+      console.error("解析任务数据失败:", error);
+      toast.error("无法解析任务数据");
     }
   };
 
@@ -230,20 +316,24 @@ export function BackgroundTasks() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-          ) : allJobs.length === 0 ? (
+          ) : displayedTree.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Activity className="w-8 h-8 mb-2 opacity-20" />
               <p className="text-sm">暂无任务</p>
             </div>
           ) : (
             <div className="p-2 space-y-2">
-              {allJobs.map((job) => (
-                <TaskItemCompact
-                  key={job.id}
-                  job={job}
-                  details={jobDetails.get(job.id || "")}
+              {displayedTree.map((node) => (
+                <TaskNodeItem
+                  key={node.job.id}
+                  node={node}
+                  details={jobDetails.get(node.job.id || "")}
+                  isExpanded={expandedNodes.has(node.job.id || "")}
+                  onToggle={toggleNode}
                   onCancel={handleCancel}
                   onRetry={handleRetry}
+                  onView={handleView}
+                  jobDetails={jobDetails}
                 />
               ))}
             </div>
@@ -255,19 +345,50 @@ export function BackgroundTasks() {
   );
 }
 
-interface TaskItemCompactProps {
-  job: Partial<Job>;
+interface TaskNodeItemProps {
+  node: TaskNode;
   details?: JobDetails;
+  isExpanded: boolean;
+  onToggle: (nodeId: string) => void;
   onCancel: (jobId: string) => void;
   onRetry: (jobId: string) => void;
+  onView: (jobId: string) => void;
+  jobDetails: Map<string, JobDetails>;
+  depth?: number;
 }
 
-function TaskItemCompact({ job, details, onCancel, onRetry }: TaskItemCompactProps) {
+function TaskNodeItem({ 
+  node, 
+  details, 
+  isExpanded, 
+  onToggle, 
+  onCancel, 
+  onRetry, 
+  onView, 
+  jobDetails,
+  depth = 0 
+}: TaskNodeItemProps) {
+  const job = node.job;
+  const hasChildren = node.children.length > 0;
   const taskType = taskTypeLabels[job.type || ""];
   const status = statusConfig[job.status || "pending"];
+  
+  // 获取节点整体状态（考虑子任务）
+  const overallStatus = hasChildren ? getNodeOverallStatus(node) : null;
 
   const canCancel = job.status === "pending" || job.status === "processing";
   const canRetry = job.status === "failed" || job.status === "cancelled";
+  
+  // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
+  const viewableTaskTypes = [
+    "storyboard_generation",
+    "character_extraction",
+    "scene_extraction",
+  ];
+  const canView = job.status === "completed" && 
+                  job.type && 
+                  viewableTaskTypes.includes(job.type) &&
+                  !job.isImported;
 
   const getTimeText = () => {
     if (!job.createdAt) return "";
@@ -293,94 +414,150 @@ function TaskItemCompact({ job, details, onCancel, onRetry }: TaskItemCompactPro
   const showTypeLabel = details && details.displayTitle !== taskTypeLabel;
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border bg-card p-3 space-y-2 transition-all hover:shadow-sm",
-        isCompleted && "opacity-60 hover:opacity-100"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {taskType?.icon}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h5 className="font-medium text-xs truncate">
-                {displayTitle}
-              </h5>
-              {showTypeLabel && (
-                <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
-                  {taskTypeLabel}
-                </span>
-              )}
-            </div>
-            {displaySubtitle && (
-              <p className="text-[10px] text-muted-foreground truncate">
-                {displaySubtitle}
-              </p>
+    <div className="space-y-1">
+      <div
+        className={cn(
+          "rounded-lg border bg-card p-3 space-y-2 transition-all hover:shadow-sm",
+          isCompleted && "opacity-60 hover:opacity-100",
+          depth > 0 && "ml-6 border-l-2 border-l-primary/20"
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* 展开/折叠按钮 */}
+            {hasChildren ? (
+              <button
+                onClick={() => onToggle(job.id!)}
+                className="shrink-0 hover:bg-accent rounded p-0.5 transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                )}
+              </button>
+            ) : (
+              <div className="w-4" /> /* 占位符，保持对齐 */
             )}
-            <p className="text-[10px] text-muted-foreground">{getTimeText()}</p>
+            
+            {taskType?.icon}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h5 className="font-medium text-xs truncate">
+                  {displayTitle}
+                </h5>
+                {showTypeLabel && (
+                  <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
+                    {taskTypeLabel}
+                  </span>
+                )}
+                {/* 显示子任务数量 */}
+                {hasChildren && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 h-4">
+                    {overallStatus?.activeCount || 0}/{overallStatus?.totalCount || 0}
+                  </Badge>
+                )}
+              </div>
+              {displaySubtitle && (
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {displaySubtitle}
+                </p>
+              )}
+              <p className="text-[10px] text-muted-foreground">{getTimeText()}</p>
+            </div>
+          </div>
+
+          <div className={cn("flex items-center gap-1", status.color)}>
+            {status.icon}
+            <span className="text-[10px] font-medium">{status.label}</span>
           </div>
         </div>
 
-        <div className={cn("flex items-center gap-1", status.color)}>
-          {status.icon}
-          <span className="text-[10px] font-medium">{status.label}</span>
-        </div>
+        {/* Progress */}
+        {(job.status === "pending" || job.status === "processing") && (
+          <div>
+            <TaskProgressBar
+              progress={job.progress || 0}
+              status={job.status}
+              currentStep={job.currentStep}
+              totalSteps={job.totalSteps}
+            />
+            {job.progressMessage && (
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {job.progressMessage}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {job.status === "failed" && job.errorMessage && (
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded px-2 py-1">
+            <p className="text-[10px] text-red-600 dark:text-red-400 line-clamp-2">
+              {job.errorMessage}
+            </p>
+          </div>
+        )}
+
+        {/* Actions */}
+        {(canCancel || canRetry || canView) && (
+          <div className="flex items-center gap-2">
+            {canView && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-[10px] px-2"
+                onClick={() => onView(job.id!)}
+              >
+                查看结果
+              </Button>
+            )}
+            
+            {canRetry && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-[10px] px-2"
+                onClick={() => onRetry(job.id!)}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                重试
+              </Button>
+            )}
+
+            {canCancel && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive ml-auto"
+                onClick={() => onCancel(job.id!)}
+              >
+                <XIcon className="w-3 h-3 mr-1" />
+                取消
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Progress */}
-      {(job.status === "pending" || job.status === "processing") && (
-        <div>
-          <TaskProgressBar
-            progress={job.progress || 0}
-            status={job.status}
-            currentStep={job.currentStep}
-            totalSteps={job.totalSteps}
-          />
-          {job.progressMessage && (
-            <p className="text-[10px] text-muted-foreground mt-1">
-              {job.progressMessage}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Error Message */}
-      {job.status === "failed" && job.errorMessage && (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded px-2 py-1">
-          <p className="text-[10px] text-red-600 dark:text-red-400 line-clamp-2">
-            {job.errorMessage}
-          </p>
-        </div>
-      )}
-
-      {/* Actions */}
-      {(canCancel || canRetry) && (
-        <div className="flex items-center gap-2">
-          {canRetry && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 text-[10px] px-2"
-              onClick={() => onRetry(job.id!)}
-            >
-              <RotateCcw className="w-3 h-3 mr-1" />
-              重试
-            </Button>
-          )}
-
-          {canCancel && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive ml-auto"
-              onClick={() => onCancel(job.id!)}
-            >
-              <XIcon className="w-3 h-3 mr-1" />
-              取消
-            </Button>
-          )}
+      {/* 递归渲染子任务 */}
+      {hasChildren && isExpanded && (
+        <div className="space-y-1">
+          {node.children.map((childNode) => (
+            <TaskNodeItem
+              key={childNode.job.id}
+              node={childNode}
+              details={jobDetails.get(childNode.job.id || "")}
+              isExpanded={false} // 子任务默认不展开，可以根据需求修改
+              onToggle={onToggle}
+              onCancel={onCancel}
+              onRetry={onRetry}
+              onView={onView}
+              jobDetails={jobDetails}
+              depth={depth + 1}
+            />
+          ))}
         </div>
       )}
     </div>

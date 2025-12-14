@@ -120,7 +120,17 @@ export function TimelineTrack({ shots, isLoading, onAddShot }: TimelineTrackProp
     return (
       <div className="flex-1 p-3 flex gap-2 overflow-x-auto">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-32 shrink-0 bg-muted rounded-lg" />
+          <div
+            key={i}
+            className="h-20 w-32 shrink-0 rounded-lg bg-card/50 border border-border/50 relative overflow-hidden"
+            style={{ animationDelay: `${i * 100}ms` }}
+          >
+            {/* Shimmer 动画效果 */}
+            <div className="absolute inset-0 shimmer" />
+            {/* 电影胶片孔效果 */}
+            <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-muted/30" />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-muted/30" />
+          </div>
         ))}
       </div>
     );

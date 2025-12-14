@@ -6,8 +6,8 @@ import { deleteShot, getEpisodeShots } from "@/lib/actions/project";
 import { toast } from "sonner";
 
 export function useEditorKeyboard() {
-  const { state, dispatch, selectShot, clearShotSelection, setPlaying, setPlayhead, totalDuration } = useEditor();
-  const { shots, selectedShotIds, timeline, selectedEpisodeId } = state;
+  const { state, dispatch, selectShot, clearShotSelection, setPlayhead, totalDuration } = useEditor();
+  const { shots, selectedShotIds, selectedEpisodeId } = state;
 
   // 删除选中的分镜
   const handleDeleteSelected = useCallback(async () => {
@@ -92,12 +92,6 @@ export function useEditorKeyboard() {
           selectAdjacentShot("next");
           break;
 
-        // 播放/暂停
-        case " ":
-          e.preventDefault();
-          setPlaying(!timeline.isPlaying);
-          break;
-
         // 跳到开头
         case "Home":
           e.preventDefault();
@@ -131,13 +125,11 @@ export function useEditorKeyboard() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     selectedShotIds,
-    timeline.isPlaying,
     totalDuration,
     handleDeleteSelected,
     selectAdjacentShot,
     selectAll,
     clearShotSelection,
-    setPlaying,
     setPlayhead,
   ]);
 }

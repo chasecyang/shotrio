@@ -107,6 +107,83 @@ export async function startJob(
 }
 
 /**
+ * 更新父任务状态（基于所有子任务的状态）
+ * @internal
+ */
+async function updateParentJobStatus(
+  parentJobId: string,
+  workerToken: string
+): Promise<void> {
+  try {
+    // 查询所有子任务
+    const childJobs = await db.query.job.findMany({
+      where: eq(job.parentJobId, parentJobId),
+      columns: {
+        id: true,
+        status: true,
+        progress: true,
+      },
+    });
+
+    if (childJobs.length === 0) {
+      // 没有子任务，不需要更新
+      return;
+    }
+
+    // 计算整体状态
+    const hasProcessing = childJobs.some(
+      (j) => j.status === "pending" || j.status === "processing"
+    );
+    const hasFailed = childJobs.some((j) => j.status === "failed");
+    const allCompleted = childJobs.every((j) => j.status === "completed");
+    const allCancelled = childJobs.every((j) => j.status === "cancelled");
+
+    // 计算平均进度
+    const avgProgress = Math.floor(
+      childJobs.reduce((sum, j) => sum + j.progress, 0) / childJobs.length
+    );
+
+    // 决定父任务的状态
+    let newStatus: "pending" | "processing" | "completed" | "failed" | "cancelled";
+    let progressMessage: string | null = null;
+
+    if (hasFailed) {
+      newStatus = "failed";
+      const failedCount = childJobs.filter((j) => j.status === "failed").length;
+      progressMessage = `${failedCount}/${childJobs.length} 个子任务失败`;
+    } else if (allCompleted) {
+      newStatus = "completed";
+      progressMessage = "所有子任务已完成";
+    } else if (allCancelled) {
+      newStatus = "cancelled";
+    } else if (hasProcessing) {
+      newStatus = "processing";
+      const completedCount = childJobs.filter((j) => j.status === "completed").length;
+      progressMessage = `进行中 (${completedCount}/${childJobs.length} 已完成)`;
+    } else {
+      newStatus = "pending";
+    }
+
+    // 更新父任务
+    await db
+      .update(job)
+      .set({
+        status: newStatus,
+        progress: newStatus === "completed" ? 100 : avgProgress,
+        progressMessage,
+        updatedAt: new Date(),
+        ...(newStatus === "completed" ? { completedAt: new Date() } : {}),
+      })
+      .where(eq(job.id, parentJobId));
+
+    console.log(`[父任务同步] 任务 ${parentJobId} 状态更新为 ${newStatus} (进度: ${avgProgress}%)`);
+  } catch (error) {
+    console.error(`[父任务同步] 更新父任务 ${parentJobId} 失败:`, error);
+    // 不抛出错误，避免影响子任务的完成
+  }
+}
+
+/**
  * 完成任务
  * @param params - 完成参数
  * @param workerToken - Worker 认证 token（仅供内部 Worker 使用）
@@ -128,6 +205,7 @@ export async function completeJob(
   }
 
   try {
+    // 1. 完成当前任务
     await db
       .update(job)
       .set({
@@ -138,6 +216,19 @@ export async function completeJob(
         updatedAt: new Date(),
       })
       .where(eq(job.id, params.jobId));
+
+    // 2. 查询当前任务的父任务ID
+    const currentJob = await db.query.job.findFirst({
+      where: eq(job.id, params.jobId),
+      columns: {
+        parentJobId: true,
+      },
+    });
+
+    // 3. 如果有父任务，更新父任务状态
+    if (currentJob?.parentJobId) {
+      await updateParentJobStatus(currentJob.parentJobId, workerToken);
+    }
 
     return {
       success: true,
@@ -173,6 +264,7 @@ export async function failJob(
   }
 
   try {
+    // 1. 标记当前任务为失败
     await db
       .update(job)
       .set({
@@ -182,6 +274,19 @@ export async function failJob(
         updatedAt: new Date(),
       })
       .where(eq(job.id, params.jobId));
+
+    // 2. 查询当前任务的父任务ID
+    const currentJob = await db.query.job.findFirst({
+      where: eq(job.id, params.jobId),
+      columns: {
+        parentJobId: true,
+      },
+    });
+
+    // 3. 如果有父任务，更新父任务状态
+    if (currentJob?.parentJobId) {
+      await updateParentJobStatus(currentJob.parentJobId, workerToken);
+    }
 
     return {
       success: true,
@@ -229,16 +334,16 @@ export async function getPendingJobs(
       };
     }
 
-    // 使用 sql 模板字符串防止 SQL 注入
+    // 使用参数化查询防止 SQL 注入
     const { sql: sqlOperator } = await import("drizzle-orm");
     const result = await db.execute(
-      sqlOperator.raw(`
+      sqlOperator`
         SELECT * FROM job
         WHERE status = 'pending'
         ORDER BY created_at ASC
         LIMIT ${safeLimit}
         FOR UPDATE SKIP LOCKED
-      `)
+      `
     );
 
     // 将数据库的蛇形命名转换为驼峰命名

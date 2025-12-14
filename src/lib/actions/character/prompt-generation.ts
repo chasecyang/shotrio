@@ -70,16 +70,17 @@ ${simpleDescription ? `- 用户描述：${simpleDescription}` : ""}
 请生成专业的英文图像生成prompt：`;
     }
 
-    // 3. 调用OpenAI API
+    // 3. 调用OpenAI API，使用 reasoning 模式深度理解和生成
     const response = await getChatCompletion(
       [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       {
-        temperature: 0.7,
-        maxTokens: 500,
+        temperature: 0.7, // reasoning 模式会忽略此参数
+        maxTokens: 2000,
         jsonMode: false,
+        useReasoning: true, // 启用 DeepSeek reasoning 模式，用于深度理解并生成专业prompt
       }
     );
 

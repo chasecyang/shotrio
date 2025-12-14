@@ -13,7 +13,7 @@ import { TimelineContainer } from "./timeline/timeline-container";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
-import { getEpisodeShots, createShot, deleteShot } from "@/lib/actions/project";
+import { getEpisodeShots, createShot, deleteShot, batchGenerateShotImages } from "@/lib/actions/project";
 import { toast } from "sonner";
 import { FileText, Eye, Film } from "lucide-react";
 
@@ -109,9 +109,24 @@ function EditorLayoutInner({
     }
   };
 
-  // 生成图片
+  // 批量生成图片
   const handleGenerateImages = async () => {
-    toast.info("图片生成功能开发中...");
+    if (state.selectedShotIds.length === 0) {
+      toast.error("请先选择要生成图片的分镜");
+      return;
+    }
+
+    try {
+      const result = await batchGenerateShotImages(state.selectedShotIds);
+      if (result.success) {
+        toast.success(`已启动 ${state.selectedShotIds.length} 个分镜的图片生成任务`);
+      } else {
+        toast.error(result.error || "启动失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("启动批量生成失败");
+    }
   };
 
   // 生成视频

@@ -41,6 +41,13 @@ export interface EditorState {
   
   // 加载状态
   isLoading: boolean;
+  
+  // 分镜提取对话框状态
+  storyboardExtractionDialog: {
+    open: boolean;
+    episodeId: string | null;
+    jobId: string | null;
+  };
 }
 
 // 编辑器动作类型
@@ -58,7 +65,9 @@ type EditorAction =
   | { type: "SET_PLAYHEAD"; payload: number }
   | { type: "SET_PLAYING"; payload: boolean }
   | { type: "SET_SCROLL_POSITION"; payload: number }
-  | { type: "SET_LOADING"; payload: boolean };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "OPEN_STORYBOARD_EXTRACTION_DIALOG"; payload: { episodeId: string; jobId: string } }
+  | { type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" };
 
 // 初始状态
 const initialState: EditorState = {
@@ -74,6 +83,11 @@ const initialState: EditorState = {
   shots: [],
   selectedShotIds: [],
   isLoading: true,
+  storyboardExtractionDialog: {
+    open: false,
+    episodeId: null,
+    jobId: null,
+  },
 };
 
 // Reducer
@@ -182,6 +196,29 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         isLoading: action.payload,
       };
 
+    case "OPEN_STORYBOARD_EXTRACTION_DIALOG":
+      return {
+        ...state,
+        storyboardExtractionDialog: {
+          open: true,
+          episodeId: action.payload.episodeId,
+          jobId: action.payload.jobId,
+        },
+        // 同时切换到对应的剧集
+        selectedEpisodeId: action.payload.episodeId,
+        selectedResource: { type: "episode", id: action.payload.episodeId },
+      };
+
+    case "CLOSE_STORYBOARD_EXTRACTION_DIALOG":
+      return {
+        ...state,
+        storyboardExtractionDialog: {
+          open: false,
+          episodeId: null,
+          jobId: null,
+        },
+      };
+
     default:
       return state;
   }
@@ -202,6 +239,8 @@ interface EditorContextType {
   setPlayhead: (position: number) => void;
   setPlaying: (playing: boolean) => void;
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
+  openStoryboardExtractionDialog: (episodeId: string, jobId: string) => void;
+  closeStoryboardExtractionDialog: () => void;
   // 计算属性
   selectedEpisode: Episode | null;
   selectedShot: ShotDetail | null;
@@ -272,6 +311,14 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "UPDATE_PROJECT", payload: project });
   }, []);
 
+  const openStoryboardExtractionDialog = useCallback((episodeId: string, jobId: string) => {
+    dispatch({ type: "OPEN_STORYBOARD_EXTRACTION_DIALOG", payload: { episodeId, jobId } });
+  }, []);
+
+  const closeStoryboardExtractionDialog = useCallback(() => {
+    dispatch({ type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" });
+  }, []);
+
   // 计算属性
   const selectedEpisode = useMemo(() => {
     if (!state.project || !state.selectedEpisodeId) return null;
@@ -311,6 +358,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setPlayhead,
       setPlaying,
       updateProject,
+      openStoryboardExtractionDialog,
+      closeStoryboardExtractionDialog,
       selectedEpisode,
       selectedShot,
       selectedCharacter,
@@ -329,6 +378,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setPlayhead,
       setPlaying,
       updateProject,
+      openStoryboardExtractionDialog,
+      closeStoryboardExtractionDialog,
       selectedEpisode,
       selectedShot,
       selectedCharacter,

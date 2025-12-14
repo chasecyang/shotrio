@@ -4,7 +4,7 @@ import db from "@/lib/db";
 import { episode, scene, character, job as jobSchema } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { getChatCompletion } from "@/lib/services/openai.service";
-import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
+import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import type {
   Job,
   StoryboardGenerationInput,
@@ -184,38 +184,41 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
   // 构建简化的AI提示词（不包含匹配逻辑）
   const systemPrompt = `你是一位专业的影视分镜设计师，擅长将剧本转换为详细的分镜脚本。
 
-# 任务目标
-将微短剧剧本转换为基础分镜序列，每个分镜包含拍摄参数、画面描述和对话。
+# 核心任务
+将微短剧剧本转换为结构化的分镜序列。每个分镜必须包含完整的拍摄参数、画面描述和对话信息。
 
-# 分镜设计原则
-1. **景别多样性**：合理运用远景、中景、特写等不同景别
-2. **情绪匹配**：根据情节选择合适的运镜方式
-3. **视听语言**：关注画面构图、光影、色调
-4. **节奏控制**：每个镜头3-8秒
-5. **连贯性**：注意镜头之间的衔接
+# 关键要求
+1. **必须返回有效的 JSON 格式**：输出必须是可解析的 JSON，不要添加任何解释文字
+2. **景别多样性**：合理运用远景、中景、特写等不同景别，避免单一视角
+3. **情绪匹配**：根据情节氛围选择合适的运镜方式和景别
+4. **连贯性**：注意镜头之间的逻辑衔接和视觉连贯性
 
-# 景别类型（shotSize）
-- extreme_long_shot: 大远景
-- long_shot: 远景
-- full_shot: 全景
-- medium_shot: 中景
-- close_up: 特写
-- extreme_close_up: 大特写
+# 景别类型（shotSize）- 必须使用以下值之一
+- extreme_long_shot: 大远景（建立环境，展示大场景）
+- long_shot: 远景（展示人物与环境关系）
+- full_shot: 全景（展示人物全身）
+- medium_shot: 中景（展示人物上半身，对话常用）
+- close_up: 特写（展示面部表情）
+- extreme_close_up: 大特写（展示局部细节，如眼睛、手）
 
-# 运镜方式（cameraMovement）
-- static: 固定镜头
-- push_in: 推镜头
-- pull_out: 拉镜头
-- pan_left/pan_right: 左右摇
-- tilt_up/tilt_down: 上下摇
-- tracking: 移动跟拍
-- crane_up/crane_down: 升降镜头
-- orbit: 环绕
-- zoom_in/zoom_out: 变焦
-- handheld: 手持
+# 运镜方式（cameraMovement）- 必须使用以下值之一
+- static: 固定镜头（稳定，常用）
+- push_in: 推镜头（靠近主体，增强情绪）
+- pull_out: 拉镜头（远离主体，展示环境）
+- pan_left: 左摇（水平向左移动）
+- pan_right: 右摇（水平向右移动）
+- tilt_up: 上摇（垂直向上）
+- tilt_down: 下摇（垂直向下）
+- tracking: 移动跟拍（跟随主体移动）
+- crane_up: 升镜头（向上升起）
+- crane_down: 降镜头（向下降落）
+- orbit: 环绕（围绕主体旋转）
+- zoom_in: 推焦（镜头拉近）
+- zoom_out: 拉焦（镜头拉远）
+- handheld: 手持（晃动感，纪实风格）
 
-# 输出格式
-严格按照以下JSON格式返回：
+# JSON 输出格式（严格遵循）
+你必须返回以下格式的 JSON，不要有任何其他文字：
 
 {
   "shots": [
@@ -224,67 +227,105 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
       "shotSize": "medium_shot",
       "cameraMovement": "static",
       "duration": 5000,
-      "visualDescription": "李明站在办公室门口，表情凝重",
-      "visualPrompt": "A Chinese man in business suit standing at modern office door, serious expression, cinematic lighting, high quality",
-      "audioPrompt": "轻微的脚步声，远处的车流声",
+      "visualDescription": "李明站在办公室门口，表情凝重，背景是现代化的玻璃门。",
+      "visualPrompt": "Li Ming in business suit standing at modern office glass door, serious and determined expression, cinematic lighting",
+      "audioPrompt": "轻微的脚步声，远处的车流声，办公室环境音",
       "sceneName": "公司办公室",
       "characters": [
         {
           "name": "李明",
           "position": "center",
-          "action": "站立，双手握拳"
+          "action": "站立，双手握拳，目光坚定"
         }
       ],
       "dialogues": [
         {
           "characterName": "李明",
-          "dialogueText": "我不会让你得逞的。",
-          "emotionTag": "angry",
+          "text": "我不会让你得逞的。",
+          "emotion": "angry",
           "order": 1
         }
       ]
+    },
+    {
+      "order": 2,
+      "shotSize": "close_up",
+      "cameraMovement": "push_in",
+      "duration": 4000,
+      "visualDescription": "李明的面部特写，眼神中透露出愤怒和决心",
+      "visualPrompt": "Close-up of Chinese man's face, angry and determined eyes, dramatic lighting, shallow depth of field, cinematic, high quality",
+      "audioPrompt": "紧张的背景音乐，呼吸声",
+      "sceneName": "公司办公室",
+      "characters": [
+        {
+          "name": "李明",
+          "position": "center",
+          "action": "怒视前方，咬紧牙关"
+        }
+      ],
+      "dialogues": []
     }
   ]
 }
 
-# 重要说明
-- visualDescription: 中文画面描述，详细、具体
-- visualPrompt: 英文AI绘图prompt，包含视觉细节
-- audioPrompt: 音效和BGM的描述
-- duration: 毫秒为单位，一般3000-8000
-- position: left/center/right/foreground/background
-- emotionTag: neutral/happy/sad/angry/surprised/fearful/disgusted
-- sceneName: 简洁的场景名称，如"咖啡厅"、"办公室"
-- characters[].name: 角色名称（只需名字，后续会匹配）
-- dialogues[].characterName: 说话人名称（只需名字，后续会匹配）
-- 如果某个镜头没有对话，dialogues数组为空
-- 如果某个镜头没有角色出现，characters数组为空`;
+# 字段说明（严格按此格式）
+- order: 镜头序号（数字，从1开始）
+- shotSize: 景别（必须是上面列出的英文值之一）
+- cameraMovement: 运镜方式（必须是上面列出的英文值之一）
+- duration: 时长（数字，毫秒为单位，建议 3000-8000）
+- visualDescription: 中文画面描述（详细、具体、生动）
+- visualPrompt: 英文 AI 绘图提示词（包含主体、动作、环境、光影、画质等细节）
+- audioPrompt: 音效和背景音乐描述（可选，没有则为 null）
+- sceneName: 场景名称（简洁，如"咖啡厅"、"办公室"、"街道"）
+- characters: 角色数组（没有角色则为空数组 []）
+  - name: 角色名称（从剧本中提取准确的名字）
+  - position: 位置（left/center/right/foreground/background）
+  - action: 动作描述（详细的动作和表情）
+- dialogues: 对话数组（没有对话则为空数组 []）
+  - characterName: 说话人名称（必须与 characters 中的名字一致）
+  - text: 对话内容（准确引用剧本原文）
+  - emotion: 情绪标签（neutral/happy/sad/angry/surprised/fearful/disgusted）
+  - order: 对话顺序（数字，从1开始）
 
-  const userPrompt = `请将以下微短剧剧本转换为基础分镜脚本：
+# 关键注意事项
+1. **JSON格式**：输出必须是有效的JSON，不要有markdown代码块标记，不要有任何解释文字
+2. **字段名精确匹配**：dialogues中用"text"不是"dialogueText"，用"emotion"不是"emotionTag"
+3. **枚举值准确**：shotSize和cameraMovement必须使用上面列出的精确值
+4. **数组可为空**：没有角色或对话时，使用空数组[]而不是null
+5. **visualPrompt质量**：英文提示词要详细，包含画面构图、光影、风格、画质等
+6. **sceneName简洁**：场景名称要简短且具有识别性，方便后续匹配`;
+
+  const userPrompt = `请将以下微短剧剧本转换为详细的分镜脚本。
 
 【剧集信息】
 标题：${episodeData.title}
-梗概：${episodeData.summary || ""}
+梗概：${episodeData.summary || "无"}
 
 【剧本内容】
 ${episodeData.scriptContent}
 
-请严格按照JSON格式返回分镜脚本。注意：
-1. 每个镜头都要包含完整的拍摄参数
-2. visualDescription和visualPrompt都要详细、专业
-3. 场景名称要简洁明了
-4. 只提取角色名称，无需ID`;
+【输出要求】
+1. 仔细分析剧本，将其拆分为合理的镜头序列
+2. 每个重要情节点、对话、动作都应该有对应的镜头
+3. 注意镜头景别的多样性和切换的合理性
+4. visualPrompt 必须用英文，包含足够的视觉细节
+5. 保持角色名称的一致性
+6. 严格按照 JSON 格式输出，确保可解析
+7. 对话内容要准确引用剧本原文
 
-  // 调用OpenAI API
+现在请开始生成分镜脚本，只输出 JSON 格式，不要有任何其他文字。`;
+
+  // 调用OpenAI API，使用 reasoning 模式进行深度分析
   const response = await getChatCompletion(
     [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     {
-      temperature: 0.7,
-      maxTokens: 8000,
+      temperature: 0.5,  // reasoning 模式会忽略此参数
+      maxTokens: 32000,  // reasoning 模式建议使用更大的 token 限制
       jsonMode: true,
+      useReasoning: true, // 启用 DeepSeek reasoning 模式，用于深度分析剧本结构
     }
   );
 
@@ -297,13 +338,37 @@ ${episodeData.scriptContent}
     workerToken
   );
 
-  // 解析JSON响应
-  const aiResult = safeJsonParse(response);
+  // 解析JSON响应，添加更详细的错误处理
+  let aiResult;
+  try {
+    aiResult = safeJsonParse(response);
+    
+    // 记录原始响应以便调试
+    console.log("[分镜提取] AI 返回数据预览:", JSON.stringify(aiResult).substring(0, 200));
+    
+  } catch (parseError) {
+    console.error("[分镜提取] JSON 解析失败，原始响应:", response.substring(0, 500));
+    throw new Error(`AI 返回的数据无法解析为 JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+  }
 
   // 验证结果格式
-  if (!aiResult.shots || !Array.isArray(aiResult.shots)) {
-    throw new Error("AI返回的数据格式不正确");
+  if (!aiResult || typeof aiResult !== 'object') {
+    throw new Error("AI 返回的数据格式不正确：不是有效的对象");
   }
+  
+  if (!aiResult.shots) {
+    throw new Error("AI 返回的数据格式不正确：缺少 shots 字段");
+  }
+  
+  if (!Array.isArray(aiResult.shots)) {
+    throw new Error("AI 返回的数据格式不正确：shots 不是数组");
+  }
+  
+  if (aiResult.shots.length === 0) {
+    throw new Error("AI 返回的分镜数量为0，请检查剧本内容是否完整");
+  }
+
+  console.log(`[分镜提取] 成功提取 ${aiResult.shots.length} 个分镜`);
 
   // 标准化基础分镜数据
   const basicShots = aiResult.shots.map((shot: AIShotResponse, index: number) => ({

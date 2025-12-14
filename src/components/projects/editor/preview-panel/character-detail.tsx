@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { User, Palette, Image as ImageIcon, FileText, Eye, Sparkles, RotateCw, Trash2 } from "lucide-react";
+import { User, Palette, Image as ImageIcon, FileText, Eye, Sparkles, RotateCw, Trash2, Loader2 } from "lucide-react";
 import { 
   EditableField, 
   EditableInput, 
@@ -29,6 +30,8 @@ import { generateImageForCharacterStyle, regenerateCharacterStyleImage } from "@
 import { useEditor } from "../editor-context";
 import { getProjectDetail } from "@/lib/actions/project";
 import { toast } from "sonner";
+import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import type { Job, CharacterImageGenerationInput } from "@/types/job";
 
 interface CharacterDetailProps {
   character: Character & { images: CharacterImage[] };
@@ -94,6 +97,51 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 订阅任务更新
+  const { jobs } = useTaskSubscription();
+
+  // 查找角色图片生成任务
+  const getImageGenerationJob = (imageId: string) => {
+    return jobs.find((job) => {
+      if (job.type !== "character_image_generation") return false;
+      if (job.status === "completed" || job.status === "failed" || job.status === "cancelled") return false;
+      
+      try {
+        const input: CharacterImageGenerationInput = JSON.parse(job.inputData || "{}");
+        return input.imageId === imageId;
+      } catch {
+        return false;
+      }
+    }) as Partial<Job> | undefined;
+  };
+
+  // 监听任务完成，自动刷新项目数据
+  useEffect(() => {
+    const checkCompletedJobs = async () => {
+      const relevantJobs = jobs.filter((job) => {
+        if (job.type !== "character_image_generation") return false;
+        if (job.status !== "completed") return false;
+        
+        try {
+          const input: CharacterImageGenerationInput = JSON.parse(job.inputData || "{}");
+          return input.characterId === character.id;
+        } catch {
+          return false;
+        }
+      });
+
+      if (relevantJobs.length > 0) {
+        // 有任务完成，刷新项目数据
+        const updatedProject = await getProjectDetail(character.projectId);
+        if (updatedProject) {
+          updateProject(updatedProject);
+        }
+      }
+    };
+
+    checkCompletedJobs();
+  }, [jobs, character.id, character.projectId, updateProject]);
 
   // 基础信息自动保存
   const { saveStatus } = useAutoSave({
@@ -377,12 +425,27 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                 const styleSaveState = styleSaveStatus[image.id] || "idle";
                 const isGenerating = generatingImages[image.id] || false;
                 const hasImage = !!image.imageUrl;
+                const imageJob = getImageGenerationJob(image.id);
 
                 return (
                   <div
                     key={image.id}
                     className="border rounded-lg overflow-hidden bg-card"
                   >
+                    {/* 任务进度显示 */}
+                    {imageJob && imageJob.status === "processing" && (
+                      <div className="p-3 border-b bg-muted/50 space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span className="font-medium">生成中...</span>
+                        </div>
+                        <Progress value={imageJob.progress || 0} className="h-2" />
+                        <p className="text-xs text-muted-foreground">
+                          {imageJob.progressMessage || `进度: ${imageJob.progress || 0}%`}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="relative aspect-square bg-muted flex items-center justify-center group">
                       {hasImage ? (
                         <>
@@ -393,33 +456,44 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                             className="w-full h-full object-cover"
                           />
                           {/* 悬停时显示重新生成按钮 */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => handleRegenerateImage(image.id)}
-                              disabled={isGenerating}
-                            >
-                              <RotateCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                              {isGenerating ? "生成中..." : "重新生成"}
-                            </Button>
-                          </div>
+                          {!imageJob && (
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleRegenerateImage(image.id)}
+                                disabled={isGenerating}
+                              >
+                                <RotateCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                                {isGenerating ? "生成中..." : "重新生成"}
+                              </Button>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="flex flex-col items-center gap-3 p-4">
                           <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
-                          <Button
-                            size="sm"
-                            onClick={() => handleGenerateImage(image.id)}
-                            disabled={isGenerating || !stylePrompt}
-                          >
-                            <Sparkles className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                            {isGenerating ? "生成中..." : "生成图片"}
-                          </Button>
-                          {!stylePrompt && (
-                            <p className="text-xs text-muted-foreground text-center">
-                              请先输入提示词
-                            </p>
+                          {!imageJob ? (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleGenerateImage(image.id)}
+                                disabled={isGenerating || !stylePrompt}
+                              >
+                                <Sparkles className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                                {isGenerating ? "生成中..." : "生成图片"}
+                              </Button>
+                              {!stylePrompt && (
+                                <p className="text-xs text-muted-foreground text-center">
+                                  请先输入提示词
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2 text-sm text-primary">
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>生成中...</span>
+                            </div>
                           )}
                         </div>
                       )}

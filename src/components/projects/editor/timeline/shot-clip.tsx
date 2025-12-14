@@ -5,7 +5,7 @@ import { ShotDetail } from "@/types/project";
 import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Image as ImageIcon, GripVertical } from "lucide-react";
+import { Image as ImageIcon, GripVertical, Video, FileText } from "lucide-react";
 import { updateShot, getEpisodeShots } from "@/lib/actions/project";
 import { useEditor } from "../editor-context";
 import { toast } from "sonner";
@@ -127,16 +127,31 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
           </button>
 
           {/* 缩略图 */}
-          <div className="w-12 h-full rounded bg-muted/50 flex items-center justify-center overflow-hidden">
+          <div className="w-12 h-full rounded bg-muted/50 flex items-center justify-center overflow-hidden relative">
             {shot.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={shot.imageUrl}
-                alt={`#${shot.order}`}
-                className="w-full h-full object-cover"
-              />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shot.imageUrl}
+                  alt={`#${shot.order}`}
+                  className="w-full h-full object-cover"
+                />
+                {/* 视频标识 */}
+                {shot.videoUrl && (
+                  <div className="absolute bottom-0.5 right-0.5 bg-primary rounded px-1 py-0.5">
+                    <Video className="w-2.5 h-2.5 text-primary-foreground" />
+                  </div>
+                )}
+              </>
             ) : (
-              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              <>
+                {/* 无图片，显示文字图标 */}
+                <FileText className="w-4 h-4 text-muted-foreground/50" />
+                {/* 状态提示 */}
+                <div className="absolute bottom-0 left-0 right-0 bg-muted/80 text-[8px] text-muted-foreground text-center py-0.5">
+                  无图
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -148,6 +163,18 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
             <span className="text-xs text-muted-foreground">
               {formatDuration(duration)}
             </span>
+            {/* 内容状态图标 */}
+            <div className="flex items-center gap-0.5 ml-auto">
+              {shot.videoUrl && (
+                <Video className="w-3 h-3 text-primary" title="已生成视频" />
+              )}
+              {!shot.videoUrl && shot.imageUrl && (
+                <ImageIcon className="w-3 h-3 text-blue-500" title="已生成图片" />
+              )}
+              {!shot.videoUrl && !shot.imageUrl && (
+                <FileText className="w-3 h-3 text-muted-foreground/50" title="仅文字描述" />
+              )}
+            </div>
           </div>
           {shot.visualDescription && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">

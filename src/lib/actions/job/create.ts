@@ -100,8 +100,11 @@ export async function createJob(params: CreateJobParams): Promise<{
       progressMessage: null,
       resultData: null,
       errorMessage: null,
+      isImported: false,
+      createdAt: new Date(),
       startedAt: null,
       completedAt: null,
+      updatedAt: new Date(),
     });
 
     return {
@@ -118,7 +121,57 @@ export async function createJob(params: CreateJobParams): Promise<{
 }
 
 /**
- * 创建子任务（跳过速率限制检查）
+ * 检查任务嵌套深度
+ * 防止无限嵌套的子任务
+ */
+async function checkTaskDepth(parentJobId: string | undefined): Promise<{
+  valid: boolean;
+  depth: number;
+  error?: string;
+}> {
+  const MAX_DEPTH = 5; // 最大嵌套深度
+  
+  if (!parentJobId) {
+    return { valid: true, depth: 0 };
+  }
+
+  let depth = 0;
+  let currentParentId: string | null = parentJobId;
+
+  while (currentParentId && depth < MAX_DEPTH + 1) {
+    const parentJob = await db.query.job.findFirst({
+      where: eq(job.id, currentParentId),
+      columns: {
+        parentJobId: true,
+      },
+    });
+
+    if (!parentJob) {
+      // 父任务不存在
+      return {
+        valid: false,
+        depth,
+        error: "父任务不存在",
+      };
+    }
+
+    depth++;
+    currentParentId = parentJob.parentJobId;
+  }
+
+  if (depth > MAX_DEPTH) {
+    return {
+      valid: false,
+      depth,
+      error: `任务嵌套深度超过限制（最大${MAX_DEPTH}层）`,
+    };
+  }
+
+  return { valid: true, depth };
+}
+
+/**
+ * 创建子任务（跳过速率限制检查，但检查嵌套深度）
  * 用于由其他任务自动创建的子任务
  */
 export async function createChildJob(params: CreateJobParams): Promise<{
@@ -127,6 +180,15 @@ export async function createChildJob(params: CreateJobParams): Promise<{
   error?: string;
 }> {
   try {
+    // 检查任务嵌套深度，防止无限嵌套
+    const depthCheck = await checkTaskDepth(params.parentJobId);
+    if (!depthCheck.valid) {
+      return {
+        success: false,
+        error: depthCheck.error,
+      };
+    }
+
     const jobId = randomUUID();
 
     await db.insert(job).values({
@@ -143,8 +205,11 @@ export async function createChildJob(params: CreateJobParams): Promise<{
       progressMessage: null,
       resultData: null,
       errorMessage: null,
+      isImported: false,
+      createdAt: new Date(),
       startedAt: null,
       completedAt: null,
+      updatedAt: new Date(),
     });
 
     return {
