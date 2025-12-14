@@ -19,8 +19,18 @@ export const ALLOWED_IMAGE_TYPES = [
   "image/gif",
 ] as const;
 
+// 允许的视频格式
+export const ALLOWED_VIDEO_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+] as const;
+
 // 最大文件大小 (10MB)
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// 最大视频文件大小 (100MB)
+export const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
 
 // 图片分类枚举
 export enum ImageCategory {
@@ -70,6 +80,27 @@ function validateFile(file: File): { valid: boolean; error?: string } {
     return {
       valid: false,
       error: `文件大小超过限制。最大允许: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * 验证视频文件类型和大小
+ */
+function validateVideoFile(file: File): { valid: boolean; error?: string } {
+  if (!ALLOWED_VIDEO_TYPES.includes(file.type as typeof ALLOWED_VIDEO_TYPES[number])) {
+    return {
+      valid: false,
+      error: `不支持的视频格式。仅支持: ${ALLOWED_VIDEO_TYPES.join(", ")}`,
+    };
+  }
+
+  if (file.size > MAX_VIDEO_SIZE) {
+    return {
+      valid: false,
+      error: `视频文件大小超过限制。最大允许: ${MAX_VIDEO_SIZE / 1024 / 1024}MB`,
     };
   }
 
@@ -145,6 +176,78 @@ export async function uploadImageToR2(
     };
   } catch (error) {
     console.error("上传图片到 R2 失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "上传失败",
+    };
+  }
+}
+
+/**
+ * 上传视频到 R2
+ * 
+ * @param file - 要上传的视频文件
+ * @param options - 上传选项（必须包含 userId）
+ */
+export async function uploadVideoToR2(
+  file: File,
+  options: UploadOptions
+): Promise<{
+  success: boolean;
+  url?: string;
+  key?: string;
+  error?: string;
+}> {
+  try {
+    if (!options.userId) {
+      return { success: false, error: "缺少用户ID" };
+    }
+
+    const validation = validateVideoFile(file);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+
+    const category = options.category || ImageCategory.OTHER;
+    const metadata = options.metadata || {};
+
+    // 生成 Key (包含 userId 和 category)
+    const key = generateStorageKey(file.name, options.userId, category);
+
+    // 转换为 Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const command = new PutObjectCommand({
+      Bucket: R2_CONFIG.bucketName,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+      ContentLength: file.size,
+      Metadata: {
+        originalName: file.name,
+        userId: options.userId,
+        category,
+        uploadedAt: new Date().toISOString(),
+        ...metadata
+      },
+    });
+
+    await r2Client.send(command);
+
+    const url = getPublicUrl(key);
+    
+    if (!url) {
+      throw new Error("未配置 R2_PUBLIC_DOMAIN，无法生成访问链接");
+    }
+
+    return {
+      success: true,
+      url,
+      key,
+    };
+  } catch (error) {
+    console.error("上传视频到 R2 失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "上传失败",

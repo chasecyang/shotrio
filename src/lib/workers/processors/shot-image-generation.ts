@@ -229,11 +229,13 @@ export async function processShotImageGeneration(
   });
 
   // 添加全局美术风格
+  // 优先使用项目关联的美术风格，fallback到自定义风格提示词
   const globalStylePrompt =
     shotScene?.project?.artStyle?.prompt || shotScene?.project?.stylePrompt || "";
 
+  // 将画风提示词放在prompt的前面，确保画风能够主导整体风格
   const fullPrompt = globalStylePrompt
-    ? `${basePrompt} ${globalStylePrompt}`
+    ? `${globalStylePrompt}. ${basePrompt}`
     : basePrompt;
 
   await updateJobProgress(

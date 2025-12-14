@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import db from "@/lib/db";
 import { job } from "@/lib/db/schemas/project";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, inArray, isNull } from "drizzle-orm";
 
 /**
  * SSE (Server-Sent Events) 端点
@@ -36,36 +36,72 @@ export async function GET(request: NextRequest) {
         // 定期查询任务更新
         const intervalId = setInterval(async () => {
           try {
-            // 查询活跃任务（pending 或 processing）
-            const activeJobs = await db.query.job.findMany({
+            // 1. 查询活跃的根任务（没有父任务的）
+            const activeRootJobs = await db.query.job.findMany({
               where: and(
                 eq(job.userId, userId),
                 or(eq(job.status, "pending"), eq(job.status, "processing"))
               ),
               orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
-              limit: 20,
+              limit: 50, // 增加限制以包含子任务
             });
 
-            // 同时查询最近完成的任务（最近5分钟内完成的）
+            // 2. 构建任务ID集合（包括父任务ID）
+            const rootJobIds = new Set<string>();
+            const childJobIds = new Set<string>();
+            
+            activeRootJobs.forEach((j) => {
+              if (!j.parentJobId) {
+                rootJobIds.add(j.id);
+              } else {
+                childJobIds.add(j.id);
+                // 记录父任务ID，稍后需要查询
+                if (j.parentJobId) {
+                  rootJobIds.add(j.parentJobId);
+                }
+              }
+            });
+
+            // 3. 如果有子任务但缺少父任务，补充查询父任务
+            const missingParentIds = Array.from(rootJobIds).filter(
+              id => !activeRootJobs.some(j => j.id === id)
+            );
+
+            let parentJobs: typeof activeRootJobs = [];
+            if (missingParentIds.length > 0) {
+              parentJobs = await db.query.job.findMany({
+                where: and(
+                  eq(job.userId, userId),
+                  inArray(job.id, missingParentIds)
+                ),
+              });
+            }
+
+            // 4. 查询最近完成的根任务（最近5分钟内）
             const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-            const recentCompletedJobs = await db.query.job.findMany({
+            const recentCompletedRootJobs = await db.query.job.findMany({
               where: and(
                 eq(job.userId, userId),
                 or(
                   eq(job.status, "completed"),
                   eq(job.status, "failed"),
                   eq(job.status, "cancelled")
-                ),
-                // 只推送最近完成的任务
+                )
               ),
               orderBy: (jobs, { desc }) => [desc(jobs.updatedAt)],
-              limit: 10,
+              limit: 15,
             }).then(jobs => 
               jobs.filter(j => j.updatedAt && new Date(j.updatedAt) > fiveMinutesAgo)
             );
 
-            // 合并活跃任务和最近完成的任务
-            const allJobs = [...activeJobs, ...recentCompletedJobs];
+            // 5. 合并所有任务（去重）
+            const jobMap = new Map();
+            [...activeRootJobs, ...parentJobs, ...recentCompletedRootJobs].forEach(j => {
+              if (!jobMap.has(j.id)) {
+                jobMap.set(j.id, j);
+              }
+            });
+            const allJobs = Array.from(jobMap.values());
 
             // 发送任务更新
             const data = JSON.stringify({

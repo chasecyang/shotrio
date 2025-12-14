@@ -14,6 +14,7 @@ import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
 import { getEpisodeShots, createShot, deleteShot, batchGenerateShotImages } from "@/lib/actions/project";
+import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { toast } from "sonner";
 import { FileText, Eye, Film } from "lucide-react";
 
@@ -129,9 +130,34 @@ function EditorLayoutInner({
     }
   };
 
-  // 生成视频
+  // 批量生成视频
   const handleGenerateVideos = async () => {
-    toast.info("视频生成功能开发中...");
+    if (state.selectedShotIds.length === 0) {
+      toast.error("请先选择要生成视频的分镜");
+      return;
+    }
+
+    // 检查选中的分镜是否都有图片
+    const shotsWithoutImages = state.shots.filter(
+      s => state.selectedShotIds.includes(s.id) && !s.imageUrl
+    );
+
+    if (shotsWithoutImages.length > 0) {
+      toast.error(`有 ${shotsWithoutImages.length} 个分镜没有图片，请先生成图片`);
+      return;
+    }
+
+    try {
+      const result = await batchGenerateShotVideos(state.selectedShotIds);
+      if (result.success) {
+        toast.success(`已启动 ${state.selectedShotIds.length} 个分镜的视频生成任务`);
+      } else {
+        toast.error(result.error || "启动失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("启动批量生成失败");
+    }
   };
 
   const isMobile = useIsMobile();

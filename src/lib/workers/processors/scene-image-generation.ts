@@ -93,9 +93,9 @@ class SceneImageGenerationProcessor extends BaseProcessor<
     const globalStylePrompt =
       scene.project?.artStyle?.prompt || scene.project?.stylePrompt || "";
 
-    // 将全局风格追加到基础prompt
+    // 将画风提示词放在prompt的前面，确保画风能够主导整体风格
     const fullPrompt = globalStylePrompt
-      ? `${basePrompt}, ${globalStylePrompt}`
+      ? `${globalStylePrompt}. ${basePrompt}`
       : basePrompt;
 
     // 根据图片类型决定使用文生图还是图生图

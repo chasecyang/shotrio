@@ -1,10 +1,10 @@
 "use server";
 
 import db from "@/lib/db";
-import { shot, episode } from "@/lib/db/schemas/project";
-import { eq, inArray } from "drizzle-orm";
+import { shot, episode, shotDialogue } from "@/lib/db/schemas/project";
+import { eq, inArray, asc } from "drizzle-orm";
 import { generateImageToVideo } from "@/lib/services/fal.service";
-import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
+import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
 import { buildVideoPrompt, getKlingDuration } from "@/lib/utils/motion-prompt";
 import type {
@@ -72,6 +72,7 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
 
     // 调用Kling Video API
     console.log(`[Worker] 调用Kling API: ${imageUrl}`);
+    console.log(`[Worker] Prompt: ${prompt || "camera movement, cinematic"}`);
     const videoResult = await generateImageToVideo({
       prompt: prompt || "camera movement, cinematic",
       image_url: imageUrl,
@@ -95,14 +96,14 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
     );
 
     // 上传视频到R2
-    const uploadResult = await uploadImageFromUrl(
+    const uploadResult = await uploadVideoFromUrl(
       videoResult.video.url,
-      `videos/shot-${shotId}-${Date.now()}.mp4`,
+      `shot-${shotId}-${Date.now()}.mp4`,
       jobData.userId
     );
 
     if (!uploadResult.success || !uploadResult.url) {
-      throw new Error("上传视频失败");
+      throw new Error(`上传视频失败: ${uploadResult.error || '未知错误'}`);
     }
 
     console.log(`[Worker] 视频已上传: ${uploadResult.url}`);
@@ -158,9 +159,17 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
       }
     }
 
-    // 获取所有分镜信息
+    // 获取所有分镜信息（包含对话）
     const shots = await db.query.shot.findMany({
       where: inArray(shot.id, shotIds),
+      with: {
+        dialogues: {
+          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
+          with: {
+            character: true,
+          },
+        },
+      },
     });
 
     if (shots.length === 0) {
@@ -196,10 +205,15 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
           continue;
         }
 
-        // 创建子任务
+        // 创建子任务（包含画面描述和对话）
         const videoPrompt = buildVideoPrompt({
+          visualDescription: shotData.visualDescription || undefined,
           visualPrompt: shotData.visualPrompt || undefined,
           cameraMovement: shotData.cameraMovement,
+          dialogues: shotData.dialogues?.map(d => ({
+            characterName: d.character?.name,
+            dialogueText: d.dialogueText,
+          })),
         });
 
         const childJobResult = await createJob({

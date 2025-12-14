@@ -1,24 +1,38 @@
 "use server";
 
-import { db } from "@/lib/db";
+import db from "@/lib/db";
 import { shot } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth/auth-utils";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { buildVideoPrompt, getKlingDuration } from "@/lib/utils/motion-prompt";
+import type { ShotVideoGenerationInput } from "@/types/job";
 
-export async function generateShotVideo(shotId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
+/**
+ * 生成单个分镜的视频
+ */
+export async function generateShotVideo(shotId: string): Promise<{
+  success: boolean;
+  jobId?: string;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
     return { success: false, error: "未登录" };
   }
 
   try {
-    // 获取分镜信息
+    // 获取分镜信息以验证权限和数据（包含对话）
     const shotData = await db.query.shot.findFirst({
       where: eq(shot.id, shotId),
       with: {
-        episode: {
+        episode: true,
+        dialogues: {
+          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
           with: {
-            project: true,
+            character: true,
           },
         },
       },
@@ -28,34 +42,130 @@ export async function generateShotVideo(shotId: string) {
       return { success: false, error: "分镜不存在" };
     }
 
+    // 检查是否有图片
     if (!shotData.imageUrl) {
-      return { success: false, error: "该分镜没有图片，无法生成视频" };
+      return { success: false, error: "该分镜没有图片，请先生成图片" };
     }
 
-    // 检查权限
-    if (shotData.episode.project.userId !== user.id) {
-      return { success: false, error: "无权限操作" };
+    // 自动生成视频参数（包含画面描述和对话）
+    const videoPrompt = buildVideoPrompt({
+      visualDescription: shotData.visualDescription || undefined,
+      visualPrompt: shotData.visualPrompt || undefined,
+      cameraMovement: shotData.cameraMovement,
+      dialogues: shotData.dialogues?.map(d => ({
+        characterName: d.character?.name,
+        dialogueText: d.dialogueText,
+      })),
+    });
+
+    const duration = getKlingDuration(shotData.duration || 3000);
+
+    // 创建视频生成任务
+    const { createJob } = await import("@/lib/actions/job");
+    const result = await createJob({
+      userId: session.user.id,
+      projectId: shotData.episode.projectId,
+      type: "shot_video_generation",
+      inputData: {
+        shotId,
+        imageUrl: shotData.imageUrl,
+        prompt: videoPrompt,
+        duration,
+        regenerate: false,
+      } as ShotVideoGenerationInput,
+    });
+
+    if (!result.success || !result.jobId) {
+      return {
+        success: false,
+        error: result.error || "创建任务失败",
+      };
     }
 
     return {
       success: true,
-      shot: {
-        id: shotData.id,
-        imageUrl: shotData.imageUrl,
-        duration: shotData.duration,
-        cameraMovement: shotData.cameraMovement,
-        visualPrompt: shotData.visualPrompt,
-      },
+      jobId: result.jobId,
     };
   } catch (error) {
-    console.error("生成视频失败:", error);
-    return { success: false, error: "服务器错误" };
+    console.error("生成分镜视频失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "生成失败",
+    };
   }
 }
 
+/**
+ * 批量生成分镜视频
+ */
+export async function batchGenerateShotVideos(shotIds: string[]): Promise<{
+  success: boolean;
+  jobId?: string;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  if (!shotIds || shotIds.length === 0) {
+    return { success: false, error: "未选择分镜" };
+  }
+
+  try {
+    // 获取第一个分镜信息以获取项目ID
+    const firstShot = await db.query.shot.findFirst({
+      where: eq(shot.id, shotIds[0]),
+      with: {
+        episode: true,
+      },
+    });
+
+    if (!firstShot) {
+      return { success: false, error: "分镜不存在" };
+    }
+
+    // 创建批量视频生成任务
+    const { createJob } = await import("@/lib/actions/job");
+    const result = await createJob({
+      userId: session.user.id,
+      projectId: firstShot.episode.projectId,
+      type: "batch_video_generation",
+      inputData: {
+        shotIds,
+      },
+    });
+
+    if (!result.success || !result.jobId) {
+      return {
+        success: false,
+        error: result.error || "创建任务失败",
+      };
+    }
+
+    return {
+      success: true,
+      jobId: result.jobId,
+    };
+  } catch (error) {
+    console.error("批量生成视频失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "生成失败",
+    };
+  }
+}
+
+/**
+ * 更新分镜视频 URL (手动调用，通常由 worker 自动更新)
+ */
 export async function updateShotVideo(shotId: string, videoUrl: string) {
-  const user = await getCurrentUser();
-  if (!user) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
     return { success: false, error: "未登录" };
   }
 
@@ -76,7 +186,7 @@ export async function updateShotVideo(shotId: string, videoUrl: string) {
       return { success: false, error: "分镜不存在" };
     }
 
-    if (shotData.episode.project.userId !== user.id) {
+    if (shotData.episode.project.userId !== session.user.id) {
       return { success: false, error: "无权限操作" };
     }
 

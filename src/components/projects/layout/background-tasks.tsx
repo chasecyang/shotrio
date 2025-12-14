@@ -21,7 +21,7 @@ import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job/user-operations";
 import { getJobsDetails, type JobDetails } from "@/lib/actions/job/details";
 import { toast } from "sonner";
-import { useEditor } from "../editor/editor-context";
+import { useEditorOptional } from "../editor/editor-context";
 import {
   Activity,
   Loader2,
@@ -83,6 +83,14 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "批量图像生成",
     icon: <Images className="w-3.5 h-3.5" />,
   },
+  shot_image_generation: {
+    label: "分镜图生成",
+    icon: <Images className="w-3.5 h-3.5" />,
+  },
+  batch_shot_image_generation: {
+    label: "批量分镜图生成",
+    icon: <Images className="w-3.5 h-3.5" />,
+  },
   video_generation: {
     label: "视频生成",
     icon: <Video className="w-3.5 h-3.5" />,
@@ -138,7 +146,8 @@ const statusConfig: Record<
 
 export function BackgroundTasks() {
   const { jobs: activeJobs } = useTaskSubscription();
-  const { openStoryboardExtractionDialog } = useEditor();
+  const editorContext = useEditorOptional();
+  const openStoryboardExtractionDialog = editorContext?.openStoryboardExtractionDialog;
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -186,7 +195,23 @@ export function BackgroundTasks() {
   // 只显示前10个根任务（包括它们的子任务）
   const displayedTree = taskTree.slice(0, 10);
 
-  const activeCount = activeJobs.length;
+  // 优化后的统计逻辑：
+  // 1. 统计根任务中有活动任务的数量
+  // 2. 统计所有活动的子任务总数
+  const { rootTaskCount, totalActiveCount } = taskTree.reduce(
+    (acc, node) => {
+      const overallStatus = getNodeOverallStatus(node);
+      if (overallStatus.activeCount > 0) {
+        acc.rootTaskCount += 1;
+        acc.totalActiveCount += overallStatus.activeCount;
+      }
+      return acc;
+    },
+    { rootTaskCount: 0, totalActiveCount: 0 }
+  );
+
+  // 显示活跃的根任务数量
+  const activeCount = rootTaskCount;
 
   // 切换节点展开/折叠
   const toggleNode = (nodeId: string) => {
@@ -234,6 +259,10 @@ export function BackgroundTasks() {
       switch (job.type) {
         case "storyboard_generation": {
           // 分镜提取任务：直接打开预览对话框
+          if (!openStoryboardExtractionDialog) {
+            toast.info("请在编辑器页面查看分镜提取结果");
+            return;
+          }
           if (!job.inputData) {
             toast.error("无法获取任务数据");
             return;
@@ -293,7 +322,16 @@ export function BackgroundTasks() {
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>后台任务{activeCount > 0 ? ` (${activeCount} 个进行中)` : ""}</p>
+            <p>
+              后台任务
+              {activeCount > 0 && (
+                <>
+                  {" "}({activeCount} 个任务
+                  {totalActiveCount > activeCount && `, ${totalActiveCount} 个子任务`}
+                  )
+                </>
+              )}
+            </p>
           </TooltipContent>
         </Tooltip>
 
@@ -302,9 +340,16 @@ export function BackgroundTasks() {
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">后台任务</h4>
             {activeCount > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
-                {activeCount} 个进行中
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
+                  {activeCount} 个任务
+                </Badge>
+                {totalActiveCount > activeCount && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 h-5 text-muted-foreground">
+                    {totalActiveCount} 个子任务
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -452,11 +497,25 @@ function TaskNodeItem({
                     {taskTypeLabel}
                   </span>
                 )}
-                {/* 显示子任务数量 */}
-                {hasChildren && (
-                  <Badge variant="secondary" className="text-[9px] px-1.5 h-4">
-                    {overallStatus?.activeCount || 0}/{overallStatus?.totalCount || 0}
-                  </Badge>
+                {/* 显示子任务数量和进度 */}
+                {hasChildren && overallStatus && (
+                  <div className="flex items-center gap-1">
+                    {overallStatus.activeCount > 0 && (
+                      <Badge variant="secondary" className="text-[9px] px-1.5 h-4">
+                        {overallStatus.activeCount} 进行中
+                      </Badge>
+                    )}
+                    {overallStatus.completedCount > 0 && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-green-600 dark:text-green-400">
+                        {overallStatus.completedCount} 完成
+                      </Badge>
+                    )}
+                    {overallStatus.failedCount > 0 && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 h-4 text-red-600 dark:text-red-400">
+                        {overallStatus.failedCount} 失败
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
               {displaySubtitle && (

@@ -1,24 +1,24 @@
 import { CameraMovement } from "@/types/project";
 
 /**
- * 根据运镜类型生成Kling Video API的运动提示词
+ * 根据运镜类型生成Kling Video API的运动提示词（简化版）
  */
 export function generateMotionPrompt(cameraMovement: CameraMovement | null): string {
   const movementMap: Record<CameraMovement, string> = {
-    static: "camera stays completely still, subtle character movements only",
-    push_in: "smooth camera push in, moving closer to the subject, cinematic dolly shot",
-    pull_out: "smooth camera pull back, revealing more of the scene, dolly out movement",
-    pan_left: "camera pans left horizontally, smooth tracking motion",
-    pan_right: "camera pans right horizontally, smooth tracking motion",
-    tilt_up: "camera tilts up vertically, revealing upper part of scene",
-    tilt_down: "camera tilts down vertically, looking down at scene",
-    tracking: "camera tracks subject movement, following motion smoothly",
-    crane_up: "camera cranes up, rising vertically for elevated perspective",
-    crane_down: "camera cranes down, descending for lower angle view",
-    orbit: "camera orbits around subject in circular motion",
-    zoom_in: "camera zooms in, magnifying the subject",
-    zoom_out: "camera zooms out, revealing wider view",
-    handheld: "dynamic handheld camera movement, slight shake and natural motion",
+    static: "static camera",
+    push_in: "push in",
+    pull_out: "pull out",
+    pan_left: "pan left",
+    pan_right: "pan right",
+    tilt_up: "tilt up",
+    tilt_down: "tilt down",
+    tracking: "tracking shot",
+    crane_up: "crane up",
+    crane_down: "crane down",
+    orbit: "orbit",
+    zoom_in: "zoom in",
+    zoom_out: "zoom out",
+    handheld: "handheld",
   };
 
   return movementMap[cameraMovement || "static"];
@@ -36,30 +36,41 @@ export function getKlingDuration(durationMs: number): "5" | "10" {
  * 生成完整的视频生成prompt
  */
 export function buildVideoPrompt(params: {
-  visualPrompt?: string;
+  visualDescription?: string;  // 画面描述（中文）
+  visualPrompt?: string;       // 视觉提示词（英文）
   cameraMovement: CameraMovement | null;
-  additionalMotion?: string;
+  dialogues?: Array<{          // 对话内容
+    characterName?: string;
+    dialogueText: string;
+  }>;
 }): string {
-  const { visualPrompt, cameraMovement, additionalMotion } = params;
+  const { visualDescription, visualPrompt, cameraMovement, dialogues } = params;
   
   const parts: string[] = [];
   
-  // 运镜描述
+  // 1. 运镜描述（简化）
   const motionPrompt = generateMotionPrompt(cameraMovement);
   parts.push(motionPrompt);
   
-  // 视觉描述（如果有）
-  if (visualPrompt) {
+  // 2. 画面描述（优先使用中文描述，其次是英文prompt）
+  if (visualDescription) {
+    parts.push(visualDescription);
+  } else if (visualPrompt) {
     parts.push(visualPrompt);
   }
   
-  // 额外运动描述
-  if (additionalMotion) {
-    parts.push(additionalMotion);
+  // 3. 对话内容
+  if (dialogues && dialogues.length > 0) {
+    const dialogueText = dialogues
+      .map(d => {
+        if (d.characterName) {
+          return `${d.characterName}: "${d.dialogueText}"`;
+        }
+        return `"${d.dialogueText}"`;
+      })
+      .join(", ");
+    parts.push(dialogueText);
   }
-  
-  // 添加通用的高质量设置
-  parts.push("high quality, cinematic lighting, professional cinematography");
   
   return parts.join(", ");
 }

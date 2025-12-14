@@ -73,6 +73,14 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "批量图像生成",
     icon: <Images className="w-4 h-4" />,
   },
+  shot_image_generation: {
+    label: "分镜图生成",
+    icon: <Images className="w-4 h-4" />,
+  },
+  batch_shot_image_generation: {
+    label: "批量分镜图生成",
+    icon: <Images className="w-4 h-4" />,
+  },
   video_generation: {
     label: "视频生成",
     icon: <Video className="w-4 h-4" />,
@@ -168,12 +176,17 @@ export function TaskItem({
   };
 
   // 计算子任务统计
-  const childStats = hasChildren ? {
-    total: children.length,
-    active: children.filter(c => c.status === "pending" || c.status === "processing").length,
-    completed: children.filter(c => c.status === "completed").length,
-    failed: children.filter(c => c.status === "failed").length,
-  } : null;
+  const childStats = hasChildren
+    ? {
+        total: children.length,
+        active: children.filter(
+          (c) => c.status === "pending" || c.status === "processing"
+        ).length,
+        completed: children.filter((c) => c.status === "completed").length,
+        failed: children.filter((c) => c.status === "failed").length,
+        cancelled: children.filter((c) => c.status === "cancelled").length,
+      }
+    : null;
 
   return (
     <div className="space-y-2">
@@ -203,13 +216,27 @@ export function TaskItem({
             
             {taskType?.icon}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-medium text-sm truncate">{taskType?.label || "未知任务"}</h4>
                 {/* 显示子任务统计 */}
                 {childStats && (
-                  <Badge variant="secondary" className="text-xs">
-                    {childStats.active}/{childStats.total}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    {childStats.active > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {childStats.active} 进行中
+                      </Badge>
+                    )}
+                    {childStats.completed > 0 && (
+                      <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400">
+                        {childStats.completed} 完成
+                      </Badge>
+                    )}
+                    {childStats.failed > 0 && (
+                      <Badge variant="outline" className="text-xs text-red-600 dark:text-red-400">
+                        {childStats.failed} 失败
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{getTimeText()}</p>

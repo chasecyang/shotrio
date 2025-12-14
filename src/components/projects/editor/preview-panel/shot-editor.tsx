@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateShot, generateShotImage, updateShotCharacterImage } from "@/lib/actions/project";
+import { generateShotVideo } from "@/lib/actions/video/generate";
 import { toast } from "sonner";
 import {
   Image as ImageIcon,
@@ -27,6 +28,7 @@ import {
   Sparkles,
   Loader2,
   RefreshCw,
+  PlayIcon,
 } from "lucide-react";
 import {
   EditableField,
@@ -60,6 +62,8 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationJobId, setGenerationJobId] = useState<string | null>(null);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoGenerationJobId, setVideoGenerationJobId] = useState<string | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -73,6 +77,11 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   // 过滤出分镜图片生成任务
   const generationTasks = jobs?.filter(
     (job) => job.type === "shot_image_generation"
+  ) || [];
+
+  // 过滤出分镜视频生成任务
+  const videoGenerationTasks = jobs?.filter(
+    (job) => job.type === "shot_video_generation"
   ) || [];
 
   // 同步 shot 更新
@@ -154,6 +163,17 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   }, [generationTasks, shot.id]);
 
+  // 检查是否有正在进行的视频生成任务
+  useEffect(() => {
+    const activeTask = videoGenerationTasks.find(
+      (task) => task.status === "processing" && task.inputData?.shotId === shot.id
+    );
+    setIsGeneratingVideo(!!activeTask);
+    if (activeTask) {
+      setVideoGenerationJobId(activeTask.id);
+    }
+  }, [videoGenerationTasks, shot.id]);
+
   // 处理生成图片
   const handleGenerateImage = async () => {
     setIsGenerating(true);
@@ -186,10 +206,38 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   };
 
+  // 处理生成视频
+  const handleGenerateVideo = async () => {
+    if (!shot.imageUrl) {
+      toast.error("请先生成分镜图片");
+      return;
+    }
+
+    setIsGeneratingVideo(true);
+    try {
+      const result = await generateShotVideo(shot.id);
+      if (result.success && result.jobId) {
+        setVideoGenerationJobId(result.jobId);
+        toast.success("已启动视频生成任务");
+      } else {
+        toast.error(result.error || "启动失败");
+        setIsGeneratingVideo(false);
+      }
+    } catch (error) {
+      toast.error("生成失败");
+      setIsGeneratingVideo(false);
+    }
+  };
+
   // 获取当前生成任务的进度
   const currentTask = generationTasks.find((task) => task.id === generationJobId);
   const generationProgress = currentTask?.progress || 0;
   const generationMessage = currentTask?.progressMessage || "正在生成...";
+
+  // 获取当前视频生成任务的进度
+  const currentVideoTask = videoGenerationTasks.find((task) => task.id === videoGenerationJobId);
+  const videoGenerationProgress = currentVideoTask?.progress || 0;
+  const videoGenerationMessage = currentVideoTask?.progressMessage || "正在生成视频...";
 
   return (
     <ScrollArea className="h-full">
@@ -247,16 +295,52 @@ export function ShotEditor({ shot }: ShotEditorProps) {
               )}
             </div>
 
-            {/* 视频预览（如果有） */}
-            {shot.videoUrl && (
-              <div className="mt-3">
-                <video
-                  src={shot.videoUrl}
-                  controls
-                  className="w-full rounded-lg"
-                />
-              </div>
-            )}
+            {/* 视频预览区域 */}
+            <div className="mt-3 space-y-2">
+              {shot.videoUrl ? (
+                <>
+                  <video
+                    src={shot.videoUrl}
+                    controls
+                    className="w-full rounded-lg border"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5"
+                      onClick={handleGenerateVideo}
+                      disabled={isGeneratingVideo}
+                    >
+                      {isGeneratingVideo ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      )}
+                      重新生成视频
+                    </Button>
+                  </div>
+                </>
+              ) : isGeneratingVideo ? (
+                <div className="text-center p-6 border rounded-lg bg-muted/30">
+                  <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin text-primary" />
+                  <p className="text-sm font-medium mb-2">{videoGenerationMessage}</p>
+                  <Progress value={videoGenerationProgress} className="w-full max-w-[200px] mx-auto" />
+                  <p className="text-xs text-muted-foreground mt-2">{videoGenerationProgress}%</p>
+                </div>
+              ) : shot.imageUrl ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5"
+                  onClick={handleGenerateVideo}
+                >
+                  <PlayIcon className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5" />
+                  生成视频
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {/* 右侧：基本信息 */}

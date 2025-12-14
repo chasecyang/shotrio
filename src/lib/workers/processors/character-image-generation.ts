@@ -143,9 +143,9 @@ export async function processCharacterImageGeneration(jobData: Job, workerToken:
     || character.project?.stylePrompt 
     || "";
   
-  // 将全局风格追加到完整prompt
+  // 将画风提示词放在prompt的前面，确保画风能够主导整体风格
   const finalPromptWithStyle = globalStylePrompt 
-    ? `${fullPrompt}, ${globalStylePrompt}` 
+    ? `${globalStylePrompt}. ${fullPrompt}` 
     : fullPrompt;
 
   // 调用 fal.ai 生成图像 - 使用横版比例适配设定图布局

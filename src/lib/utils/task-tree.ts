@@ -124,11 +124,15 @@ export function getNodeOverallStatus(node: TaskNode): {
   hasFailures: boolean;
   activeCount: number;
   totalCount: number;
+  completedCount: number;
+  failedCount: number;
 } {
   let allCompleted = true;
   let hasFailures = false;
   let activeCount = 0;
   let totalCount = 0;
+  let completedCount = 0;
+  let failedCount = 0;
 
   const analyze = (n: TaskNode) => {
     totalCount++;
@@ -136,9 +140,12 @@ export function getNodeOverallStatus(node: TaskNode): {
     if (n.job.status === "pending" || n.job.status === "processing") {
       allCompleted = false;
       activeCount++;
+    } else if (n.job.status === "completed") {
+      completedCount++;
     } else if (n.job.status === "failed") {
       hasFailures = true;
       allCompleted = false;
+      failedCount++;
     } else if (n.job.status === "cancelled") {
       allCompleted = false;
     }
@@ -156,7 +163,7 @@ export function getNodeOverallStatus(node: TaskNode): {
       status = "processing";
     } else if (hasFailures) {
       status = "failed";
-    } else if (allCompleted) {
+    } else if (allCompleted && totalCount > 0) {
       status = "completed";
     }
   }
@@ -167,6 +174,8 @@ export function getNodeOverallStatus(node: TaskNode): {
     hasFailures,
     activeCount,
     totalCount,
+    completedCount,
+    failedCount,
   };
 }
 

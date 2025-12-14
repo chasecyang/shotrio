@@ -115,9 +115,9 @@ export function buildShotImagePrompt(params: {
     parts.push(visualDescription);
   }
 
-  // 5. 通用画质要求
+  // 5. 通用画质要求（简化，避免过度约束风格）
   parts.push(
-    "Cinematic lighting, professional color grading, high quality, 16:9 aspect ratio, detailed composition."
+    "High quality, 16:9 aspect ratio."
   );
 
   return parts.join(" ");
@@ -137,7 +137,7 @@ export function buildSimpleShotPrompt(params: {
   const cameraMovementDesc =
     CAMERA_MOVEMENT_DESCRIPTIONS[cameraMovement] || "static camera";
 
-  return `${shotSizeDesc}, ${cameraMovementDesc}. ${visualDescription} Cinematic lighting, high quality, 16:9 aspect ratio.`;
+  return `${shotSizeDesc}, ${cameraMovementDesc}. ${visualDescription} High quality, 16:9 aspect ratio.`;
 }
 
 /**

@@ -400,3 +400,9 @@ export function useEditor() {
   return context;
 }
 
+// 可选的 Hook，在 EditorProvider 外部返回 null 而不是抛出错误
+export function useEditorOptional() {
+  const context = useContext(EditorContext);
+  return context;
+}
+
