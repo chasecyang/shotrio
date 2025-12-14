@@ -3,7 +3,7 @@
 import db from "@/lib/db";
 import { sceneImage } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { generateImagePro, editImagePro } from "@/lib/services/fal.service";
+import { generateImage, editImage } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import type {
   SceneImageGenerationInput,
@@ -116,21 +116,19 @@ class SceneImageGenerationProcessor extends BaseProcessor<
       }
 
       // 使用 image-to-image 模式，从全景布局图聚焦到表演区域
-      result = await editImagePro({
+      result = await editImage({
         prompt: fullPrompt,
         image_urls: [masterLayoutRecord.imageUrl],
         num_images: 1,
         aspect_ratio: "16:9", // 横版场景图
-        resolution: "2K",
         output_format: "png",
       });
     } else {
       // 全景布局图：直接文生图
-      result = await generateImagePro({
+      result = await generateImage({
         prompt: fullPrompt,
         num_images: 1,
         aspect_ratio: "16:9", // 横版场景图
-        resolution: "2K",
         output_format: "png",
       });
     }

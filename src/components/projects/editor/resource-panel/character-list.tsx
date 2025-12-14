@@ -15,6 +15,7 @@ import { getProjectDetail } from "@/lib/actions/project";
 import { startCharacterExtraction } from "@/lib/actions/character";
 import { toast } from "sonner";
 import { useState } from "react";
+import { CharacterImageViewer } from "@/components/projects/characters/character-image-viewer";
 
 interface CharacterListProps {
   characters: (Character & { images: CharacterImage[] })[];

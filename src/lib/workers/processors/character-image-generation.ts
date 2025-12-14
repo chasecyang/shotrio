@@ -3,7 +3,7 @@
 import db from "@/lib/db";
 import { characterImage } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
-import { generateImagePro } from "@/lib/services/fal.service";
+import { generateImage } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import { buildCharacterSheetPrompt } from "@/lib/prompts/character";
@@ -149,11 +149,10 @@ export async function processCharacterImageGeneration(jobData: Job, workerToken:
     : fullPrompt;
 
   // 调用 fal.ai 生成图像 - 使用横版比例适配设定图布局
-  const result = await generateImagePro({
+  const result = await generateImage({
     prompt: finalPromptWithStyle,
     num_images: 1,
     aspect_ratio: "16:9", // 横版设定图，适合展示三视图和多元素
-    resolution: "2K",
     output_format: "png",
   });
 

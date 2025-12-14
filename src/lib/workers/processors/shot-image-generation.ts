@@ -3,7 +3,7 @@
 import db from "@/lib/db";
 import { shot, sceneImage, characterImage, shotCharacter } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { editImagePro } from "@/lib/services/fal.service";
+import { editImage } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
 import { buildShotImagePrompt } from "@/lib/prompts/shot";
@@ -263,22 +263,20 @@ export async function processShotImageGeneration(
   
   if (referenceImages.length > 0) {
     // 有参考图，使用 image-to-image 模式
-    result = await editImagePro({
+    result = await editImage({
       prompt: fullPrompt,
       image_urls: referenceImages,
       num_images: 1,
       aspect_ratio: "16:9",
-      resolution: "2K",
       output_format: "png",
     });
   } else {
     // 没有参考图，使用纯文生图（fallback）
-    const { generateImagePro } = await import("@/lib/services/fal.service");
-    result = await generateImagePro({
+    const { generateImage } = await import("@/lib/services/fal.service");
+    result = await generateImage({
       prompt: fullPrompt,
       num_images: 1,
       aspect_ratio: "16:9",
-      resolution: "2K",
       output_format: "png",
     });
   }

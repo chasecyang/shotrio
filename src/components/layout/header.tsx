@@ -30,7 +30,7 @@ export async function Header() {
             </Button>
           )}
           <LanguageSwitcher />
-          <AuthButton />
+          <AuthButton initialUser={user} />
         </div>
       </div>
     </header>

@@ -32,6 +32,7 @@ import { getProjectDetail } from "@/lib/actions/project";
 import { toast } from "sonner";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import type { Job, CharacterImageGenerationInput } from "@/types/job";
+import { CharacterImageViewer } from "@/components/projects/characters/character-image-viewer";
 
 interface CharacterDetailProps {
   character: Character & { images: CharacterImage[] };
@@ -97,6 +98,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
   const [generatingImages, setGeneratingImages] = useState<Record<string, boolean>>({});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [viewingImage, setViewingImage] = useState<CharacterImage | null>(null);
 
   // 订阅任务更新
   const { jobs } = useTaskSubscription();
@@ -453,19 +455,34 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                           <img
                             src={image.imageUrl}
                             alt={styleLabel}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => setViewingImage(image)}
                           />
-                          {/* 悬停时显示重新生成按钮 */}
+                          {/* 悬停时显示操作按钮 */}
                           {!imageJob && (
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                               <Button
                                 size="sm"
                                 variant="secondary"
-                                onClick={() => handleRegenerateImage(image.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewingImage(image);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                查看大图
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRegenerateImage(image.id);
+                                }}
                                 disabled={isGenerating}
                               >
                                 <RotateCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                                {isGenerating ? "生成中..." : "重新生成"}
+                                重新生成
                               </Button>
                             </div>
                           )}
@@ -568,6 +585,19 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 图片查看器 */}
+      {viewingImage && (
+        <CharacterImageViewer
+          imageUrl={viewingImage.imageUrl || ""}
+          imageLabel={viewingImage.label}
+          characterName={character.name}
+          open={!!viewingImage}
+          onOpenChange={(open) => {
+            if (!open) setViewingImage(null);
+          }}
+        />
+      )}
     </ScrollArea>
   );
 }

@@ -5,7 +5,7 @@ import { artStyle } from "@/lib/db/schemas/project";
 import { eq, isNull, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { generateImagePro } from "@/lib/services/fal.service";
+import { generateImage } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import { ImageCategory } from "@/lib/storage";
 import { requireAdmin } from "@/lib/auth/auth-utils";
@@ -239,11 +239,10 @@ export async function generateStylePreview(
     // 使用统一的主体以便用户更清楚地看到不同风格之间的区别
     const samplePrompt = `${UNIFIED_PREVIEW_SUBJECT}, ${style.prompt}, masterpiece, high quality, professional artwork`;
     
-    const result = await generateImagePro({
+    const result = await generateImage({
       prompt: samplePrompt,
       num_images: 1,
       aspect_ratio: "4:3",
-      resolution: "2K",
       output_format: "png",
     });
 
