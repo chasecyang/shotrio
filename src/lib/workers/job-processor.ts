@@ -14,6 +14,7 @@ import {
   processStoryboardBasicExtraction,
   processStoryboardMatching,
 } from "./processors/storyboard-processors";
+import { processShotDecomposition } from "./processors/shot-decomposition";
 import {
   processShotImageGeneration,
   processBatchShotImageGeneration,
@@ -38,6 +39,7 @@ export function registerAllProcessors(): void {
     storyboard_generation: processStoryboardGeneration,
     storyboard_basic_extraction: processStoryboardBasicExtraction,
     storyboard_matching: processStoryboardMatching,
+    shot_decomposition: processShotDecomposition,
     shot_image_generation: processShotImageGeneration,
     batch_shot_image_generation: processBatchShotImageGeneration,
     video_generation: processVideoGeneration,

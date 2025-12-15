@@ -8,6 +8,7 @@ export type JobType =
   | "storyboard_generation" // 剧本自动分镜（触发入口）
   | "storyboard_basic_extraction" // 基础分镜提取（第一步）
   | "storyboard_matching" // 角色场景匹配（第二步）
+  | "shot_decomposition" // 分镜拆解
   | "shot_image_generation" // 单个分镜图片生成
   | "batch_shot_image_generation" // 批量分镜图片生成
   | "batch_image_generation" // 批量图像生成
@@ -82,6 +83,12 @@ export interface StoryboardMatchingInput {
   episodeId: string;
   basicExtractionJobId: string; // 第一步任务的ID，用于读取基础提取结果
   parentJobId?: string; // 父任务ID，用于追溯
+}
+
+// 分镜拆解输入
+export interface ShotDecompositionInput {
+  shotId: string;
+  episodeId: string;
 }
 
 export interface BatchImageGenerationInput {
@@ -216,6 +223,36 @@ export interface StoryboardMatchingResult {
   shotCount: number;
   matchedSceneCount: number;
   matchedCharacterCount: number;
+}
+
+// 分镜拆解结果
+export interface ShotDecompositionResult {
+  originalShotId: string;
+  originalOrder: number; // 原分镜的顺序
+  decomposedShots: Array<{
+    order: number; // 子分镜的顺序（相对于原分镜）
+    shotSize: string;
+    cameraMovement: string;
+    duration: number;
+    visualDescription: string;
+    visualPrompt: string;
+    audioPrompt?: string;
+    sceneId?: string; // 继承原分镜的场景ID
+    characters: Array<{
+      characterId: string;
+      characterImageId?: string;
+      position?: string;
+      action?: string;
+    }>;
+    dialogues: Array<{
+      characterId?: string;
+      dialogueText: string;
+      emotionTag?: string;
+      order: number;
+    }>;
+  }>;
+  decomposedCount: number;
+  reasoningExplanation: string; // AI的拆解理由
 }
 
 export interface BatchImageGenerationResult {

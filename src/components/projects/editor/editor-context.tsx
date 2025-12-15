@@ -48,6 +48,13 @@ export interface EditorState {
     episodeId: string | null;
     jobId: string | null;
   };
+
+  // 分镜拆解对话框状态
+  shotDecompositionDialog: {
+    open: boolean;
+    shotId: string | null;
+    jobId: string | null;
+  };
 }
 
 // 编辑器动作类型
@@ -67,7 +74,9 @@ type EditorAction =
   | { type: "SET_SCROLL_POSITION"; payload: number }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "OPEN_STORYBOARD_EXTRACTION_DIALOG"; payload: { episodeId: string; jobId: string } }
-  | { type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" };
+  | { type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" }
+  | { type: "OPEN_SHOT_DECOMPOSITION_DIALOG"; payload: { shotId: string; jobId: string } }
+  | { type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" };
 
 // 初始状态
 const initialState: EditorState = {
@@ -86,6 +95,11 @@ const initialState: EditorState = {
   storyboardExtractionDialog: {
     open: false,
     episodeId: null,
+    jobId: null,
+  },
+  shotDecompositionDialog: {
+    open: false,
+    shotId: null,
     jobId: null,
   },
 };
@@ -219,6 +233,26 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         },
       };
 
+    case "OPEN_SHOT_DECOMPOSITION_DIALOG":
+      return {
+        ...state,
+        shotDecompositionDialog: {
+          open: true,
+          shotId: action.payload.shotId,
+          jobId: action.payload.jobId,
+        },
+      };
+
+    case "CLOSE_SHOT_DECOMPOSITION_DIALOG":
+      return {
+        ...state,
+        shotDecompositionDialog: {
+          open: false,
+          shotId: null,
+          jobId: null,
+        },
+      };
+
     default:
       return state;
   }
@@ -241,6 +275,8 @@ interface EditorContextType {
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
   openStoryboardExtractionDialog: (episodeId: string, jobId: string) => void;
   closeStoryboardExtractionDialog: () => void;
+  openShotDecompositionDialog: (shotId: string, jobId: string) => void;
+  closeShotDecompositionDialog: () => void;
   // 计算属性
   selectedEpisode: Episode | null;
   selectedShot: ShotDetail | null;
@@ -317,6 +353,14 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
 
   const closeStoryboardExtractionDialog = useCallback(() => {
     dispatch({ type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" });
+  }, []);
+
+  const openShotDecompositionDialog = useCallback((shotId: string, jobId: string) => {
+    dispatch({ type: "OPEN_SHOT_DECOMPOSITION_DIALOG", payload: { shotId, jobId } });
+  }, []);
+
+  const closeShotDecompositionDialog = useCallback(() => {
+    dispatch({ type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" });
   }, []);
 
   // 计算属性

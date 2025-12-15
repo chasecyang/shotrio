@@ -17,6 +17,7 @@ import { getEpisodeShots, createShot, deleteShot, batchGenerateShotImages } from
 import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { toast } from "sonner";
 import { FileText, Eye, Film } from "lucide-react";
+import { ShotDecompositionDialog } from "./preview-panel/shot-decomposition-dialog";
 
 interface EditorLayoutProps {
   project: ProjectDetail;
@@ -31,7 +32,7 @@ function EditorLayoutInner({
   resourcePanel,
   previewPanel,
 }: EditorLayoutProps) {
-  const { state, dispatch } = useEditor();
+  const { state, dispatch, closeShotDecompositionDialog } = useEditor();
 
   // 注册键盘快捷键
   useEditorKeyboard();
@@ -263,6 +264,27 @@ function EditorLayoutInner({
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* 分镜拆解对话框 */}
+      {state.shotDecompositionDialog.open && state.shotDecompositionDialog.jobId && (
+        <ShotDecompositionDialog
+          shotId={state.shotDecompositionDialog.shotId || ""}
+          jobId={state.shotDecompositionDialog.jobId}
+          open={state.shotDecompositionDialog.open}
+          onOpenChange={(open) => {
+            if (!open) {
+              closeShotDecompositionDialog();
+            }
+          }}
+          onImportSuccess={async () => {
+            // 刷新分镜列表
+            if (state.selectedEpisodeId) {
+              const shots = await getEpisodeShots(state.selectedEpisodeId);
+              dispatch({ type: "SET_SHOTS", payload: shots });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

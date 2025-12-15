@@ -56,6 +56,7 @@ export const jobTypeEnum = pgEnum("job_type", [
   "storyboard_generation", // 剧本自动分镜（触发入口）
   "storyboard_basic_extraction", // 基础分镜提取（第一步）
   "storyboard_matching", // 角色场景匹配（第二步）
+  "shot_decomposition", // 分镜拆解
   "shot_image_generation", // 单个分镜图片生成
   "batch_shot_image_generation", // 批量分镜图片生成
   "batch_image_generation", // 批量图像生成

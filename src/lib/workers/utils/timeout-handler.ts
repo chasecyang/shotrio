@@ -22,6 +22,7 @@ const TIMEOUT_CONFIG = {
   // AI处理任务
   storyboard_generation: 20,
   storyboard_basic_extraction: 20,
+  shot_decomposition: 15, // 分镜拆解，使用reasoning模式
 };
 
 /**

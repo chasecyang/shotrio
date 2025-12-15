@@ -16,6 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateShot, generateShotImage, updateShotCharacterImage } from "@/lib/actions/project";
 import { generateShotVideo } from "@/lib/actions/video/generate";
+import { createShotDecompositionJob } from "@/lib/actions/storyboard/decompose-shot";
 import { toast } from "sonner";
 import {
   Image as ImageIcon,
@@ -29,6 +30,7 @@ import {
   Loader2,
   RefreshCw,
   PlayIcon,
+  Scissors,
 } from "lucide-react";
 import {
   EditableField,
@@ -50,7 +52,7 @@ interface ShotEditorProps {
 }
 
 export function ShotEditor({ shot }: ShotEditorProps) {
-  const { state, dispatch } = useEditor();
+  const { state, dispatch, openShotDecompositionDialog } = useEditor();
   const { project } = state;
 
   const [formData, setFormData] = useState({
@@ -64,6 +66,8 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [generationJobId, setGenerationJobId] = useState<string | null>(null);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoGenerationJobId, setVideoGenerationJobId] = useState<string | null>(null);
+  const [isDecomposing, setIsDecomposing] = useState(false);
+  const [decompositionJobId, setDecompositionJobId] = useState<string | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -82,6 +86,11 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   // 过滤出分镜视频生成任务
   const videoGenerationTasks = jobs?.filter(
     (job) => job.type === "shot_video_generation"
+  ) || [];
+
+  // 过滤出分镜拆解任务
+  const decompositionTasks = jobs?.filter(
+    (job) => job.type === "shot_decomposition"
   ) || [];
 
   // 同步 shot 更新
@@ -240,6 +249,52 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       setIsGeneratingVideo(false);
     }
   };
+
+  // 处理分镜拆解
+  const handleDecompose = async () => {
+    if (!shot.episodeId) {
+      toast.error("无法获取剧集信息");
+      return;
+    }
+
+    setIsDecomposing(true);
+    try {
+      const result = await createShotDecompositionJob({
+        shotId: shot.id,
+        episodeId: shot.episodeId,
+      });
+
+      if (result.success && result.jobId) {
+        setDecompositionJobId(result.jobId);
+        toast.success("已启动分镜拆解任务");
+      } else {
+        toast.error(result.error || "启动失败");
+        setIsDecomposing(false);
+      }
+    } catch (error) {
+      toast.error("启动失败");
+      setIsDecomposing(false);
+    }
+  };
+
+  // 监听拆解任务状态
+  useEffect(() => {
+    const activeTask = decompositionTasks.find((task) => {
+      const inputData = task.inputData ? JSON.parse(task.inputData) : {};
+      return inputData.shotId === shot.id && task.status !== "failed" && task.status !== "cancelled";
+    });
+
+    if (activeTask?.status === "completed" && activeTask.id === decompositionJobId) {
+      // 任务完成，打开预览对话框
+      setIsDecomposing(false);
+      openShotDecompositionDialog(shot.id, activeTask.id);
+    } else if (activeTask?.status === "failed") {
+      setIsDecomposing(false);
+      toast.error(activeTask.errorMessage || "拆解失败");
+    } else {
+      setIsDecomposing(!!activeTask);
+    }
+  }, [decompositionTasks, shot.id, decompositionJobId, openShotDecompositionDialog]);
 
   // 获取当前生成任务的进度
   const currentTask = generationTasks.find((task) => task.id === generationJobId);
@@ -600,6 +655,37 @@ export function ShotEditor({ shot }: ShotEditorProps) {
             <p className="text-sm text-muted-foreground">暂无对话</p>
           )}
         </div>
+
+        {/* 分镜拆解按钮 */}
+        {(shot.dialogues.length >= 2 || (shot.duration && shot.duration >= 8000)) && (
+          <div className="pt-4 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2"
+              onClick={handleDecompose}
+              disabled={isDecomposing}
+            >
+              {isDecomposing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  AI 正在分析拆解方案...
+                </>
+              ) : (
+                <>
+                  <Scissors className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
+                  拆解分镜
+                </>
+              )}
+            </Button>
+            {(shot.dialogues.length >= 2) && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                此分镜包含多个对话，可拆解为多个小分镜
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </ScrollArea>
   );
