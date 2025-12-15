@@ -6,10 +6,36 @@ import { ShotEditor } from "./shot-editor";
 import { CharacterDetail } from "./character-detail";
 import { SceneDetail } from "./scene-detail";
 import { EmptyPreview } from "./empty-preview";
+import { ShotPlaybackPlayer } from "./shot-playback-player";
 
 export function PreviewPanel() {
-  const { state, selectedEpisode, selectedShot, selectedCharacter, selectedScene } = useEditor();
-  const { selectedResource } = state;
+  const { 
+    state, 
+    selectedEpisode, 
+    selectedShot, 
+    selectedCharacter, 
+    selectedScene,
+    stopPlayback,
+    nextShot,
+    previousShot,
+    togglePlaybackPause,
+  } = useEditor();
+  const { selectedResource, playbackState } = state;
+
+  // 如果在播放模式，显示播放器
+  if (playbackState.isPlaybackMode) {
+    return (
+      <ShotPlaybackPlayer
+        shots={state.shots}
+        currentIndex={playbackState.currentShotIndex}
+        isPaused={playbackState.isPaused}
+        onNext={nextShot}
+        onPrevious={previousShot}
+        onTogglePause={togglePlaybackPause}
+        onExit={stopPlayback}
+      />
+    );
+  }
 
   // 根据选中资源类型显示对应编辑器
   if (!selectedResource) {

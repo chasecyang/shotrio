@@ -29,6 +29,13 @@ export interface TimelineState {
   scrollPosition: number; // 水平滚动位置
 }
 
+// 播放器状态
+export interface PlaybackState {
+  isPlaybackMode: boolean; // 是否处于播放模式
+  currentShotIndex: number; // 当前播放的分镜索引
+  isPaused: boolean; // 是否暂停
+}
+
 // 编辑器状态
 export interface EditorState {
   // 项目数据
@@ -42,6 +49,9 @@ export interface EditorState {
   
   // 时间轴状态
   timeline: TimelineState;
+  
+  // 播放器状态
+  playbackState: PlaybackState;
   
   // 当前剧集的分镜列表
   shots: ShotDetail[];
@@ -87,7 +97,11 @@ type EditorAction =
   | { type: "OPEN_STORYBOARD_EXTRACTION_DIALOG"; payload: { episodeId: string; jobId: string } }
   | { type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" }
   | { type: "OPEN_SHOT_DECOMPOSITION_DIALOG"; payload: { shotId: string; jobId: string } }
-  | { type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" };
+  | { type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" }
+  | { type: "START_PLAYBACK" }
+  | { type: "STOP_PLAYBACK" }
+  | { type: "SET_PLAYBACK_SHOT_INDEX"; payload: number }
+  | { type: "TOGGLE_PLAYBACK_PAUSE" };
 
 // 初始状态
 const initialState: EditorState = {
@@ -99,6 +113,11 @@ const initialState: EditorState = {
     playhead: 0,
     isPlaying: false,
     scrollPosition: 0,
+  },
+  playbackState: {
+    isPlaybackMode: false,
+    currentShotIndex: 0,
+    isPaused: false,
   },
   shots: [],
   selectedShotIds: [],
@@ -140,12 +159,24 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         selectedEpisodeId: action.payload,
         selectedShotIds: [],
         shots: [],
+        // 退出播放模式
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
       };
 
     case "SELECT_RESOURCE":
       return {
         ...state,
         selectedResource: action.payload,
+        // 退出播放模式
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
       };
 
     case "SET_SHOTS":
@@ -167,6 +198,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         ...state,
         selectedShotIds: [action.payload],
         selectedResource: { type: "shot", id: action.payload },
+        // 退出播放模式
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
       };
 
     case "SELECT_SHOTS":
@@ -178,6 +215,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           : action.payload.length > 1
           ? { type: "shot", id: action.payload[0] } // 多选时显示第一个
           : null,
+        // 退出播放模式
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
       };
 
     case "TOGGLE_SHOT_SELECTION":
@@ -191,6 +234,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         selectedResource: newSelection.length > 0
           ? { type: "shot", id: newSelection[newSelection.length - 1] }
           : state.selectedResource,
+        // 退出播放模式
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
       };
 
     case "CLEAR_SHOT_SELECTION":
@@ -240,6 +289,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         // 同时切换到对应的剧集
         selectedEpisodeId: action.payload.episodeId,
         selectedResource: { type: "episode", id: action.payload.episodeId },
+        // 退出播放模式
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
       };
 
     case "CLOSE_STORYBOARD_EXTRACTION_DIALOG":
@@ -272,6 +327,44 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         },
       };
 
+    case "START_PLAYBACK":
+      return {
+        ...state,
+        playbackState: {
+          isPlaybackMode: true,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
+      };
+
+    case "STOP_PLAYBACK":
+      return {
+        ...state,
+        playbackState: {
+          isPlaybackMode: false,
+          currentShotIndex: 0,
+          isPaused: false,
+        },
+      };
+
+    case "SET_PLAYBACK_SHOT_INDEX":
+      return {
+        ...state,
+        playbackState: {
+          ...state.playbackState,
+          currentShotIndex: action.payload,
+        },
+      };
+
+    case "TOGGLE_PLAYBACK_PAUSE":
+      return {
+        ...state,
+        playbackState: {
+          ...state.playbackState,
+          isPaused: !state.playbackState.isPaused,
+        },
+      };
+
     default:
       return state;
   }
@@ -297,6 +390,12 @@ interface EditorContextType {
   closeStoryboardExtractionDialog: () => void;
   openShotDecompositionDialog: (shotId: string, jobId: string) => void;
   closeShotDecompositionDialog: () => void;
+  // 播放控制方法
+  startPlayback: () => void;
+  stopPlayback: () => void;
+  nextShot: () => void;
+  previousShot: () => void;
+  togglePlaybackPause: () => void;
   // 计算属性
   selectedEpisode: Episode | null;
   selectedShot: ShotDetail | null;
@@ -438,6 +537,36 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" });
   }, []);
 
+  // 播放控制方法
+  const startPlayback = useCallback(() => {
+    dispatch({ type: "START_PLAYBACK" });
+  }, []);
+
+  const stopPlayback = useCallback(() => {
+    dispatch({ type: "STOP_PLAYBACK" });
+  }, []);
+
+  const nextShot = useCallback(() => {
+    const currentIndex = state.playbackState.currentShotIndex;
+    if (currentIndex < state.shots.length - 1) {
+      dispatch({ type: "SET_PLAYBACK_SHOT_INDEX", payload: currentIndex + 1 });
+    } else {
+      // 最后一个分镜，退出播放模式
+      dispatch({ type: "STOP_PLAYBACK" });
+    }
+  }, [state.playbackState.currentShotIndex, state.shots.length]);
+
+  const previousShot = useCallback(() => {
+    const currentIndex = state.playbackState.currentShotIndex;
+    if (currentIndex > 0) {
+      dispatch({ type: "SET_PLAYBACK_SHOT_INDEX", payload: currentIndex - 1 });
+    }
+  }, [state.playbackState.currentShotIndex]);
+
+  const togglePlaybackPause = useCallback(() => {
+    dispatch({ type: "TOGGLE_PLAYBACK_PAUSE" });
+  }, []);
+
   // 计算属性
   const selectedEpisode = useMemo(() => {
     if (!state.project || !state.selectedEpisodeId) return null;
@@ -482,6 +611,11 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       closeStoryboardExtractionDialog,
       openShotDecompositionDialog,
       closeShotDecompositionDialog,
+      startPlayback,
+      stopPlayback,
+      nextShot,
+      previousShot,
+      togglePlaybackPause,
       selectedEpisode,
       selectedShot,
       selectedCharacter,
@@ -507,6 +641,11 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       closeStoryboardExtractionDialog,
       openShotDecompositionDialog,
       closeShotDecompositionDialog,
+      startPlayback,
+      stopPlayback,
+      nextShot,
+      previousShot,
+      togglePlaybackPause,
       selectedEpisode,
       selectedShot,
       selectedCharacter,

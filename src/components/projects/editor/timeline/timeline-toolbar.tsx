@@ -26,6 +26,7 @@ import {
   Sparkles,
   Film,
   X,
+  Play,
 } from "lucide-react";
 import { useEditor } from "../editor-context";
 import { formatDurationMMSS } from "@/lib/utils/shot-utils";
@@ -46,8 +47,8 @@ interface TimelineToolbarProps {
 
 // 核心控制栏 - 第一行
 function CoreControlBar() {
-  const { state, setTimelineZoom, setPlayhead, totalDuration, selectEpisode } = useEditor();
-  const { timeline, project, selectedEpisodeId } = state;
+  const { state, setTimelineZoom, setPlayhead, totalDuration, selectEpisode, startPlayback } = useEditor();
+  const { timeline, project, selectedEpisodeId, playbackState, shots } = state;
   const isMobile = useIsMobile();
 
   const handleZoomIn = () => {
@@ -65,6 +66,16 @@ function CoreControlBar() {
   const handleSkipToEnd = () => {
     setPlayhead(totalDuration);
   };
+
+  const handlePlayback = () => {
+    if (shots.length === 0) {
+      toast.error("没有可播放的分镜");
+      return;
+    }
+    startPlayback();
+  };
+
+  const canPlayback = shots.length > 0 && !playbackState.isPlaybackMode;
 
   return (
     <div className="h-10 border-b border-border flex items-center px-3 md:px-4 gap-2 md:gap-4 shrink-0 bg-muted/30">
@@ -90,8 +101,27 @@ function CoreControlBar() {
 
       <div className="flex-1" />
 
-      {/* 中间：时间播放控制 */}
+      {/* 中间：播放和时间控制 */}
       <div className="flex items-center gap-1.5 md:gap-2">
+        {/* 播放按钮 */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-7 w-7 hover:bg-muted",
+            canPlayback 
+              ? "text-primary hover:text-primary" 
+              : "text-muted-foreground cursor-not-allowed"
+          )}
+          onClick={handlePlayback}
+          disabled={!canPlayback}
+          title={canPlayback ? "播放分镜" : "没有可播放的分镜"}
+        >
+          <Play className="h-3.5 w-3.5" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-4 bg-border/50 mx-0.5" />
+
         <Button
           variant="ghost"
           size="icon"
