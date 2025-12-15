@@ -11,7 +11,6 @@ import type {
   StoryboardGenerationInput,
   StoryboardBasicExtractionInput,
   StoryboardMatchingInput,
-  NovelSplitInput,
   ShotDecompositionInput,
   ShotDecompositionResult,
 } from "@/types/job";
@@ -156,13 +155,6 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
         }
         break;
       }
-
-      case "novel_split": {
-        const input = inputData as NovelSplitInput;
-        const wordCount = input.content.length;
-        baseDetails.displaySubtitle = `约 ${Math.floor(wordCount / 1000)}k 字`;
-        break;
-      }
     }
   } catch (error) {
     console.error("解析任务详情失败:", error);
@@ -191,7 +183,6 @@ export async function getJobsDetails(jobs: Partial<Job>[]): Promise<Map<string, 
 
 function getTaskTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    novel_split: "小说拆分",
     character_extraction: "角色提取",
     scene_extraction: "场景提取",
     character_image_generation: "角色造型生成",

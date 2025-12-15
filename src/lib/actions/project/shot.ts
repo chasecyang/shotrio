@@ -5,8 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { episode, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
 import { eq, asc } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
-import { unstable_cache } from "next/cache";
 import { randomUUID } from "crypto";
 import {
   type NewShot,
@@ -22,7 +20,7 @@ import {
 
 /**
  * 获取某剧集的所有分镜（按order排序）
- * 使用缓存标签，可以通过 revalidateTag 来使缓存失效
+ * 直接查询数据库，依赖客户端刷新机制
  */
 export async function getEpisodeShots(
   episodeId: string,
@@ -34,52 +32,33 @@ export async function getEpisodeShots(
     throw new Error("未登录");
   }
 
-  // 使用 unstable_cache 并设置标签
-  const getCachedShots = unstable_cache(
-    async (episodeId: string) => {
-      try {
-        const shots = await db.query.shot.findMany({
-          where: eq(shot.episodeId, episodeId),
-          orderBy: [asc(shot.order)],
+  try {
+    const shots = await db.query.shot.findMany({
+      where: eq(shot.episodeId, episodeId),
+      orderBy: [asc(shot.order)],
+      with: {
+        scene: true,
+        shotCharacters: {
+          orderBy: (shotCharacter, { asc }) => [asc(shotCharacter.order)],
           with: {
-            scene: true,
-            shotCharacters: {
-              orderBy: (shotCharacter, { asc }) => [asc(shotCharacter.order)],
-              with: {
-                character: true,
-                characterImage: true,
-              },
-            },
-            dialogues: {
-              orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
-              with: {
-                character: true,
-              },
-            },
+            character: true,
+            characterImage: true,
           },
-        });
+        },
+        dialogues: {
+          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
+          with: {
+            character: true,
+          },
+        },
+      },
+    });
 
-        return shots as ShotDetail[];
-      } catch (error) {
-        console.error("获取分镜列表失败:", error);
-        return [];
-      }
-    },
-    [`episode-shots-${episodeId}`],
-    {
-      tags: [`episode-shots-${episodeId}`],
-      revalidate: 3600, // 1小时缓存，但可以通过 revalidateTag 提前失效
-    }
-  );
-
-  return getCachedShots(episodeId);
-}
-
-/**
- * 使某个剧集的分镜缓存失效
- */
-export async function revalidateEpisodeShots(episodeId: string) {
-  revalidateTag(`episode-shots-${episodeId}`, "max");
+    return shots as ShotDetail[];
+  } catch (error) {
+    console.error("获取分镜列表失败:", error);
+    return [];
+  }
 }
 
 /**
@@ -131,7 +110,6 @@ export async function createShot(data: {
 
     const [created] = await db.insert(shot).values(newShot).returning();
 
-    revalidatePath(`/projects/${episodeData.projectId}/editor`);
     return { success: true, data: created };
   } catch (error) {
     console.error("创建分镜失败:", error);
@@ -166,7 +144,7 @@ export async function updateShot(shotId: string, data: Partial<NewShot>) {
     });
 
     if (episodeData) {
-      revalidatePath(`/projects/${episodeData.projectId}/editor`);
+(`/projects/${episodeData.projectId}/editor`);
     }
 
     return { success: true, data: updated };
@@ -229,14 +207,7 @@ export async function deleteShot(shotId: string) {
       }
     });
 
-    // 获取剧集信息以便刷新路径
-    const episodeData = await db.query.episode.findFirst({
-      where: eq(episode.id, shotData.episodeId),
-    });
 
-    if (episodeData) {
-      revalidatePath(`/projects/${episodeData.projectId}/editor`);
-    }
 
     return { success: true };
   } catch (error) {
@@ -271,14 +242,6 @@ export async function reorderShots(
         .where(eq(shot.id, shotOrder.id));
     }
 
-    // 获取剧集信息以便刷新路径
-    const episodeData = await db.query.episode.findFirst({
-      where: eq(episode.id, episodeId),
-    });
-
-    if (episodeData) {
-      revalidatePath(`/projects/${episodeData.projectId}/editor`);
-    }
 
     return { success: true };
   } catch (error) {
@@ -330,20 +293,7 @@ export async function addCharacterToShot(data: {
 
     const [created] = await db.insert(shotCharacter).values(newShotCharacter).returning();
 
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, data.shotId),
-      with: { episode: true },
-    });
 
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
-    }
 
     return { success: true, data: created };
   } catch (error) {
@@ -377,21 +327,6 @@ export async function removeCharacterFromShot(shotCharacterId: string) {
 
     await db.delete(shotCharacter).where(eq(shotCharacter.id, shotCharacterId));
 
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, shotCharacterData.shotId),
-      with: { episode: true },
-    });
-
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
-    }
-
     return { success: true };
   } catch (error) {
     console.error("移除角色失败:", error);
@@ -422,21 +357,6 @@ export async function updateShotCharacter(
       .set(data)
       .where(eq(shotCharacter.id, shotCharacterId))
       .returning();
-
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, updated.shotId),
-      with: { episode: true },
-    });
-
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
-    }
 
     return { success: true, data: updated };
   } catch (error) {
@@ -491,20 +411,7 @@ export async function addDialogueToShot(data: {
 
     const [created] = await db.insert(shotDialogue).values(newDialogue).returning();
 
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, data.shotId),
-      with: { episode: true },
-    });
 
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
-    }
 
     return { success: true, data: created };
   } catch (error) {
@@ -537,20 +444,7 @@ export async function updateShotDialogue(
       .where(eq(shotDialogue.id, dialogueId))
       .returning();
 
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, updated.shotId),
-      with: { episode: true },
-    });
 
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
-    }
 
     return { success: true, data: updated };
   } catch (error) {
@@ -584,20 +478,7 @@ export async function deleteShotDialogue(dialogueId: string) {
 
     await db.delete(shotDialogue).where(eq(shotDialogue.id, dialogueId));
 
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, dialogueData.shotId),
-      with: { episode: true },
-    });
 
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
-    }
 
     return { success: true };
   } catch (error) {
@@ -630,21 +511,6 @@ export async function reorderShotDialogues(
         .update(shotDialogue)
         .set({ order: dialogueOrder.order })
         .where(eq(shotDialogue.id, dialogueOrder.id));
-    }
-
-    // 获取shot信息以便刷新路径
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, shotId),
-      with: { episode: true },
-    });
-
-    if (shotData?.episode) {
-      const episodeData = await db.query.episode.findFirst({
-        where: eq(episode.id, shotData.episodeId),
-      });
-      if (episodeData) {
-        revalidatePath(`/projects/${episodeData.projectId}/editor`);
-      }
     }
 
     return { success: true };
@@ -762,8 +628,6 @@ export async function importExtractedShots(
       };
     });
 
-    // 刷新路径
-    revalidatePath(`/projects/${episodeData.projectId}/editor`);
 
     return {
       success: true,
@@ -954,15 +818,6 @@ export async function updateShotCharacterImage(
         characterImageId,
       })
       .where(eq(shotCharacter.id, shotCharacterId));
-
-    // 刷新页面和缓存
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const episodeData = (shotCharData.shot as any).episode;
-    if (episodeData) {
-      // 清除剧集分镜缓存
-      revalidateTag(`episode-shots-${shotCharData.shot.episodeId}`, "max");
-      revalidatePath(`/projects/${episodeData.projectId}/editor`);
-    }
 
     return { success: true };
   } catch (error) {

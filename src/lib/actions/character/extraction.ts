@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { character, characterImage, project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import type { ExtractedCharacter } from "@/types/project";
 
@@ -121,8 +120,6 @@ export async function importExtractedCharacters(
         }
       }
     });
-
-    revalidatePath(`/projects/${projectId}/characters`);
 
     return {
       success: true,

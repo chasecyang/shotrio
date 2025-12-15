@@ -13,7 +13,6 @@ import {
   Ban,
   RotateCcw,
   X as XIcon,
-  BookOpen,
   Users,
   Sparkles,
   Film,
@@ -37,10 +36,6 @@ interface TaskItemProps {
 }
 
 const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-  novel_split: {
-    label: "小说拆分",
-    icon: <BookOpen className="w-4 h-4" />,
-  },
   character_extraction: {
     label: "角色提取",
     icon: <Users className="w-4 h-4" />,

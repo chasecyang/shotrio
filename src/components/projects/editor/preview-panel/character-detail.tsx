@@ -30,7 +30,6 @@ import { generateImageForCharacterStyle, regenerateCharacterStyleImage } from "@
 import { useEditor } from "../editor-context";
 import { getProjectDetail } from "@/lib/actions/project";
 import { toast } from "sonner";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import type { Job, CharacterImageGenerationInput } from "@/types/job";
 import { CharacterImageViewer } from "@/components/projects/characters/character-image-viewer";
 
@@ -100,8 +99,8 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewingImage, setViewingImage] = useState<CharacterImage | null>(null);
 
-  // 订阅任务更新
-  const { jobs } = useTaskSubscription();
+  // 从 EditorContext 获取任务状态（单例轮询）
+  const { jobs } = useEditor();
 
   // 查找角色图片生成任务
   const getImageGenerationJob = (imageId: string) => {
@@ -117,33 +116,6 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
       }
     }) as Partial<Job> | undefined;
   };
-
-  // 监听任务完成，自动刷新项目数据
-  useEffect(() => {
-    const checkCompletedJobs = async () => {
-      const relevantJobs = jobs.filter((job) => {
-        if (job.type !== "character_image_generation") return false;
-        if (job.status !== "completed") return false;
-        
-        try {
-          const input: CharacterImageGenerationInput = JSON.parse(job.inputData || "{}");
-          return input.characterId === character.id;
-        } catch {
-          return false;
-        }
-      });
-
-      if (relevantJobs.length > 0) {
-        // 有任务完成，刷新项目数据
-        const updatedProject = await getProjectDetail(character.projectId);
-        if (updatedProject) {
-          updateProject(updatedProject);
-        }
-      }
-    };
-
-    checkCompletedJobs();
-  }, [jobs, character.id, character.projectId, updateProject]);
 
   // 基础信息自动保存
   const { saveStatus } = useAutoSave({
@@ -164,14 +136,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
         }
       );
       
-      // 刷新项目数据
-      if (result.success) {
-        const updatedProject = await getProjectDetail(character.projectId);
-        if (updatedProject) {
-          updateProject(updatedProject);
-        }
-      }
-      
+      // 基础信息更新不需要手动刷新，EditorContext 会在角色图片生成完成时自动刷新
       return result;
     },
   });
@@ -198,12 +163,6 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
           setTimeout(() => {
             setStyleSaveStatus(prev => ({ ...prev, [imageId]: "idle" }));
           }, 3000);
-          
-          // 刷新项目数据
-          const updatedProject = await getProjectDetail(character.projectId);
-          if (updatedProject) {
-            updateProject(updatedProject);
-          }
         } else {
           setStyleSaveStatus(prev => ({ ...prev, [imageId]: "error" }));
         }
@@ -238,12 +197,6 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
           setTimeout(() => {
             setStyleSaveStatus(prev => ({ ...prev, [imageId]: "idle" }));
           }, 3000);
-          
-          // 刷新项目数据
-          const updatedProject = await getProjectDetail(character.projectId);
-          if (updatedProject) {
-            updateProject(updatedProject);
-          }
         } else {
           setStyleSaveStatus(prev => ({ ...prev, [imageId]: "error" }));
         }
@@ -420,7 +373,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
               角色造型
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3">
               {character.images.map((image) => {
                 const styleLabel = styleLabelMap[image.id] || image.label;
                 const stylePrompt = stylePromptMap[image.id] || image.imagePrompt || "";
@@ -448,105 +401,112 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                       </div>
                     )}
 
-                    <div className="relative aspect-square bg-muted flex items-center justify-center group">
-                      {hasImage ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={image.imageUrl ?? ''}
-                            alt={styleLabel}
-                            className="w-full h-full object-cover cursor-pointer"
-                            onClick={() => setViewingImage(image)}
-                          />
-                          {/* 悬停时显示操作按钮 */}
-                          {!imageJob && (
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setViewingImage(image);
-                                }}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                查看大图
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRegenerateImage(image.id);
-                                }}
-                                disabled={isGenerating}
-                              >
-                                <RotateCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                                重新生成
-                              </Button>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center gap-3 p-4">
-                          <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
-                          {!imageJob ? (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleGenerateImage(image.id)}
-                                disabled={isGenerating || !stylePrompt}
-                              >
-                                <Sparkles className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                                {isGenerating ? "生成中..." : "生成图片"}
-                              </Button>
-                              {!stylePrompt && (
-                                <p className="text-xs text-muted-foreground text-center">
-                                  请先输入提示词
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 text-sm text-primary">
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>生成中...</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3 space-y-2">
-                      {/* 造型标签 - 内联编辑 */}
-                      <div className="flex items-center gap-2">
-                        <EditableInput
-                          value={styleLabel}
-                          onChange={(label) => updateStyleLabel(image.id, label)}
-                          placeholder="造型标签"
-                          emptyText="点击输入标签"
-                          className="flex-1 text-sm font-medium"
-                          inputClassName="h-auto py-1 text-sm font-medium"
-                        />
-                        {image.isPrimary && (
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            主造型
-                          </Badge>
+                    <div className="flex flex-col sm:flex-row">
+                      {/* 左侧图片区域 */}
+                      <div className="relative w-full sm:w-48 h-48 sm:h-auto bg-muted flex items-center justify-center group shrink-0">
+                        {hasImage ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={image.imageUrl ?? ''}
+                              alt={styleLabel}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => setViewingImage(image)}
+                            />
+                            {/* 悬停时显示操作按钮 */}
+                            {!imageJob && (
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 p-2">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingImage(image);
+                                  }}
+                                  className="w-full"
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  查看大图
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRegenerateImage(image.id);
+                                  }}
+                                  disabled={isGenerating}
+                                  className="w-full"
+                                >
+                                  <RotateCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                                  重新生成
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 p-4">
+                            <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
+                            {!imageJob ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleGenerateImage(image.id)}
+                                  disabled={isGenerating || !stylePrompt}
+                                >
+                                  <Sparkles className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                                  {isGenerating ? "生成中..." : "生成图片"}
+                                </Button>
+                                {!stylePrompt && (
+                                  <p className="text-xs text-muted-foreground text-center">
+                                    请先输入提示词
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 text-sm text-primary">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>生成中...</span>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                      
-                      {/* 提示词 - 内联编辑 */}
-                      <EditableField
-                        label="图片提示词"
-                        saveStatus={styleSaveState}
-                      >
-                        <EditableTextarea
-                          value={stylePrompt}
-                          onChange={(prompt) => updateStylePrompt(image.id, prompt)}
-                          placeholder="描述这个造型的特征..."
-                          emptyText="点击输入提示词"
-                          minHeight="min-h-[60px]"
-                          rows={2}
-                        />
-                      </EditableField>
+
+                      {/* 右侧信息区域 */}
+                      <div className="flex-1 p-4 space-y-3">
+                        {/* 造型标签 - 内联编辑 */}
+                        <div className="flex items-center gap-2">
+                          <EditableInput
+                            value={styleLabel}
+                            onChange={(label) => updateStyleLabel(image.id, label)}
+                            placeholder="造型标签"
+                            emptyText="点击输入标签"
+                            className="flex-1 text-base font-medium"
+                            inputClassName="h-auto py-1 text-base font-medium"
+                          />
+                          {image.isPrimary && (
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              主造型
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* 提示词 - 内联编辑 */}
+                        <EditableField
+                          label="图片提示词"
+                          saveStatus={styleSaveState}
+                        >
+                          <EditableTextarea
+                            value={stylePrompt}
+                            onChange={(prompt) => updateStylePrompt(image.id, prompt)}
+                            placeholder="描述这个造型的特征..."
+                            emptyText="点击输入提示词"
+                            minHeight="min-h-[80px]"
+                            rows={3}
+                          />
+                        </EditableField>
+                      </div>
                     </div>
                   </div>
                 );

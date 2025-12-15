@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
 import { getUserJobs } from "@/lib/actions/job/user-operations";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import { useEditor } from "../editor-context";
 import { cn } from "@/lib/utils";
 import type { Job, StoryboardMatchingResult } from "@/types/job";
 
@@ -21,7 +21,7 @@ export function StoryboardExtractionBanner({
   onOpenPreview,
   compact = false,
 }: StoryboardExtractionBannerProps) {
-  const { jobs: activeJobs } = useTaskSubscription();
+  const { jobs: activeJobs } = useEditor();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [matchingJob, setMatchingJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);

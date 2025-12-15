@@ -252,7 +252,7 @@ export async function markJobAsImported(jobId: string): Promise<{
 
 /**
  * 获取任务详情（包含 inputData 和 resultData）
- * 用于按需获取完整任务数据，避免在 SSE 中传输大字段
+ * 用于按需获取完整任务数据
  */
 export async function getJobDetail(jobId: string): Promise<{
   success: boolean;

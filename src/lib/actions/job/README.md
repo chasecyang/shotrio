@@ -51,8 +51,8 @@ import {
 const result = await createJob({
   userId: "user-id",
   projectId: "project-id",
-  type: "novel_split",
-  inputData: { /* ... */ }
+  type: "character_extraction",
+  inputData: { episodeIds: ["episode-id"] }
 });
 
 // 查询任务状态

@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { episode } from "@/lib/db/schemas/project";
 import { eq, asc } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { type NewEpisode } from "@/types/project";
 
@@ -39,7 +38,6 @@ export async function createEpisode(data: {
 
     const [created] = await db.insert(episode).values(newEpisode).returning();
 
-    revalidatePath(`/projects/${data.projectId}/editor`);
     return { success: true, data: created };
   } catch (error) {
     console.error("创建剧集失败:", error);
@@ -71,7 +69,7 @@ export async function updateEpisode(
       .where(eq(episode.id, episodeId))
       .returning();
 
-    revalidatePath(`/projects/${updated.projectId}/editor`);
+(`/projects/${updated.projectId}/editor`);
     return { success: true, data: updated };
   } catch (error) {
     console.error("更新剧集失败:", error);
@@ -132,7 +130,7 @@ export async function deleteEpisode(episodeId: string) {
       }
     });
 
-    revalidatePath(`/projects/${episodeData.projectId}/editor`);
+(`/projects/${episodeData.projectId}/editor`);
     return { success: true };
   } catch (error) {
     console.error("删除剧集失败:", error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import { useTaskPolling } from "@/hooks/use-task-polling";
 import { startStoryboardGeneration } from "@/lib/actions/storyboard";
 import { toast } from "sonner";
 import type { Job, StoryboardMatchingResult } from "@/types/job";
@@ -23,7 +23,7 @@ export function useStoryboardExtraction({
   episodeId,
   onExtractionComplete,
 }: UseStoryboardExtractionOptions): UseStoryboardExtractionReturn {
-  const { jobs: activeJobs } = useTaskSubscription();
+  const { jobs: activeJobs } = useTaskPolling();
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [extractionResult, setExtractionResult] = useState<StoryboardMatchingResult | null>(null);
   const [isStarting, setIsStarting] = useState(false);

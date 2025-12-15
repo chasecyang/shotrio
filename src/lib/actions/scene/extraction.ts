@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { scene, project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import type { ExtractedScene } from "@/types/project";
 
@@ -73,8 +72,6 @@ export async function importExtractedScenes(
         }
       }
     });
-
-    revalidatePath(`/projects/${projectId}/editor`);
 
     return {
       success: true,

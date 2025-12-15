@@ -17,7 +17,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs, cancelJob, retryJob, getJobDetail } from "@/lib/actions/job/user-operations";
 import { getJobsDetails, type JobDetails } from "@/lib/actions/job/details";
 import { toast } from "sonner";
@@ -31,7 +30,6 @@ import {
   Ban,
   RotateCcw,
   X as XIcon,
-  BookOpen,
   Users,
   Sparkles,
   Film,
@@ -47,10 +45,6 @@ import type { Job } from "@/types/job";
 import { buildTaskTree, getNodeOverallStatus, type TaskNode } from "@/lib/utils/task-tree";
 
 const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-  novel_split: {
-    label: "小说拆分",
-    icon: <BookOpen className="w-3.5 h-3.5" />,
-  },
   character_extraction: {
     label: "角色提取",
     icon: <Users className="w-3.5 h-3.5" />,
@@ -149,8 +143,7 @@ const statusConfig: Record<
 };
 
 export function BackgroundTasks() {
-  const { jobs: activeJobs } = useTaskSubscription();
-  const { openStoryboardExtractionDialog, openShotDecompositionDialog } = useEditor();
+  const { jobs: activeJobs, openStoryboardExtractionDialog, openShotDecompositionDialog } = useEditor();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);

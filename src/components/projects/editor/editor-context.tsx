@@ -2,6 +2,16 @@
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback } from "react";
 import { ProjectDetail, ShotDetail, Episode, Character, CharacterImage, Scene } from "@/types/project";
+import { useTaskPolling } from "@/hooks/use-task-polling";
+import { useTaskRefresh } from "@/hooks/use-task-refresh";
+import type { Job } from "@/types/job";
+import {
+  refreshShot,
+  refreshCharacter,
+  refreshScene,
+  refreshEpisodeShots,
+  refreshProject,
+} from "@/lib/actions/project/refresh";
 
 // 选中资源类型
 export type SelectedResourceType = "episode" | "shot" | "character" | "scene" | null;
@@ -293,6 +303,9 @@ interface EditorContextType {
   selectedCharacter: (Character & { images: CharacterImage[] }) | null;
   selectedScene: Scene | null;
   totalDuration: number;
+  // 任务轮询（单例）
+  jobs: Job[];
+  refreshJobs: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -315,6 +328,54 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
         }
       : initialState
   );
+
+  // 单例任务轮询 - 整个编辑器只有一个轮询实例
+  const { jobs, refresh: refreshJobs } = useTaskPolling();
+
+  // 集成统一的任务刷新机制
+  useTaskRefresh({
+    jobs,
+    onRefreshShot: useCallback(async (shotId: string) => {
+      const result = await refreshShot(shotId);
+      if (result.success && result.shot) {
+        // 更新 shots 列表中的对应 shot
+        dispatch({ type: "UPDATE_SHOT", payload: result.shot });
+      }
+    }, []),
+
+    onRefreshCharacter: useCallback(async (characterId: string, projectId: string) => {
+      // 刷新整个项目以更新角色数据
+      const updatedProject = await refreshProject(projectId);
+      if (updatedProject) {
+        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+      }
+    }, []),
+
+    onRefreshScene: useCallback(async (sceneId: string, projectId: string) => {
+      // 刷新整个项目以更新场景数据
+      const updatedProject = await refreshProject(projectId);
+      if (updatedProject) {
+        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+      }
+    }, []),
+
+    onRefreshEpisode: useCallback(async (episodeId: string) => {
+      const result = await refreshEpisodeShots(episodeId);
+      if (result.success && result.shots) {
+        // 只有当该剧集是当前选中的剧集时才更新 shots
+        if (state.selectedEpisodeId === episodeId) {
+          dispatch({ type: "SET_SHOTS", payload: result.shots });
+        }
+      }
+    }, [state.selectedEpisodeId]),
+
+    onRefreshProject: useCallback(async (projectId: string) => {
+      const updatedProject = await refreshProject(projectId);
+      if (updatedProject) {
+        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+      }
+    }, []),
+  });
 
   // 便捷方法
   const selectEpisode = useCallback((episodeId: string | null) => {
@@ -426,6 +487,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       selectedCharacter,
       selectedScene,
       totalDuration,
+      jobs,
+      refreshJobs,
     }),
     [
       state,
@@ -449,6 +512,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       selectedCharacter,
       selectedScene,
       totalDuration,
+      jobs,
+      refreshJobs,
     ]
   );
 

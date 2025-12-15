@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { project, artStyle } from "@/lib/db/schemas/project";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import {
   type NewProject,
@@ -50,7 +49,6 @@ export async function createProject(data: {
         .where(eq(artStyle.id, data.styleId));
     }
 
-    revalidatePath("/projects");
     return { success: true, data: created };
   } catch (error) {
     console.error("创建项目失败:", error);
@@ -170,7 +168,6 @@ export async function updateProject(
       .where(and(eq(project.id, projectId), eq(project.userId, session.user.id)))
       .returning();
 
-    revalidatePath(`/projects/${projectId}`);
     return { success: true, data: updated };
   } catch (error) {
     console.error("更新项目失败:", error);
@@ -198,8 +195,6 @@ export async function deleteProject(projectId: string) {
       .where(
         and(eq(project.id, projectId), eq(project.userId, session.user.id)),
       );
-
-    revalidatePath("/projects");
     return { success: true };
   } catch (error) {
     console.error("删除项目失败:", error);

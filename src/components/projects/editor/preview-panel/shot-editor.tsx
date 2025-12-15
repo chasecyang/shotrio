@@ -64,9 +64,8 @@ import {
   secondsToMilliseconds,
 } from "@/lib/utils/shot-utils";
 import { useEditor } from "../editor-context";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { Progress } from "@/components/ui/progress";
-import { getEpisodeShots } from "@/lib/actions/project";
+import { refreshShot } from "@/lib/actions/project/refresh";
 
 interface ShotEditorProps {
   shot: ShotDetail;
@@ -110,7 +109,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const cameraMovementOptions = getCameraMovementOptions();
 
   // 监听图片生成任务
-  const { jobs } = useTaskSubscription();
+  const { jobs } = useEditor();
   
   // 过滤出分镜图片生成任务 - 使用 useMemo 避免每次 render 都创建新数组
   const generationTasks = useMemo(() => 
@@ -258,20 +257,21 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   };
 
+  // 刷新当前分镜数据的辅助函数
+  const refreshCurrentShot = async () => {
+    const result = await refreshShot(shot.id);
+    if (result.success && result.shot) {
+      updateShot(result.shot);
+    }
+  };
+
   // 处理造型切换
   const handleChangeCharacterImage = async (shotCharacterId: string, characterImageId: string) => {
     try {
       const result = await updateShotCharacterImage(shotCharacterId, characterImageId);
       if (result.success) {
         toast.success("造型已更新");
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "更新失败");
       }
@@ -286,14 +286,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       const result = await removeCharacterFromShot(shotCharacterId);
       if (result.success) {
         toast.success("已移除角色");
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "删除失败");
       }
@@ -307,14 +300,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     try {
       const result = await updateShotDialogue(dialogueId, { dialogueText });
       if (result.success) {
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "更新失败");
       }
@@ -330,14 +316,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         characterId: characterId || null 
       });
       if (result.success) {
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "更新失败");
       }
@@ -353,14 +332,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         emotionTag: emotionTag || null 
       });
       if (result.success) {
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "更新失败");
       }
@@ -375,14 +347,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       const result = await deleteShotDialogue(dialogueId);
       if (result.success) {
         toast.success("已删除对话");
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "删除失败");
       }
@@ -401,14 +366,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       });
       if (result.success) {
         toast.success("已添加角色");
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "添加失败");
       }
@@ -429,14 +387,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       });
       if (result.success) {
         toast.success("已添加对话");
-        // 重新获取该分镜的数据以更新UI
-        if (shot.episodeId) {
-          const updatedShots = await getEpisodeShots(shot.episodeId);
-          const updatedShot = updatedShots.find((s) => s.id === shot.id);
-          if (updatedShot) {
-            updateShot(updatedShot);
-          }
-        }
+        await refreshCurrentShot();
       } else {
         toast.error(result.error || "添加失败");
       }
@@ -516,55 +467,58 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   }, [decompositionTasks, shot.id, decompositionJobId, openShotDecompositionDialog]);
 
-  // 监听图片生成任务完成，自动刷新分镜数据
-  // 注意：由于使用了 revalidateTag，Next.js 会自动重新获取数据
-  // 这里只需要更新 UI 状态和显示提示
+  // 监听图片生成任务完成状态（只用于显示提示和重置 UI 状态）
+  // 数据刷新由 EditorContext 中的统一刷新机制处理
   useEffect(() => {
-    const checkCompletedJobs = async () => {
-      // 查找所有匹配当前分镜的任务（包括完成和失败的）
-      const relevantJob = generationTasks.find((task) => {
-        if (!task.inputData) return false;
-        if (task.status !== "completed" && task.status !== "failed") return false;
-        try {
-          const inputData = JSON.parse(task.inputData);
-          return inputData.shotId === shot.id;
-        } catch {
-          return false;
-        }
-      });
-
-      // 只处理我们跟踪的任务（通过 generationJobId 或当前正在生成的任务）
-      if (relevantJob && (relevantJob.id === generationJobId || isGenerating)) {
-        if (relevantJob.status === "completed") {
-          // 任务完成，重置状态
-          // 由于使用了 revalidateTag，Next.js 会自动重新获取数据
-          setIsGenerating(false);
-          setGenerationJobId(null);
-          
-          // 重新获取分镜数据（Next.js 缓存已失效，会获取最新数据）
-          if (shot.episodeId) {
-            try {
-              const updatedShots = await getEpisodeShots(shot.episodeId);
-              const updatedShot = updatedShots.find((s) => s.id === shot.id);
-              if (updatedShot) {
-                updateShot(updatedShot);
-                toast.success("图片生成完成");
-              }
-            } catch (error) {
-              console.error("刷新分镜数据失败:", error);
-            }
-          }
-        } else if (relevantJob.status === "failed") {
-          // 任务失败
-          setIsGenerating(false);
-          setGenerationJobId(null);
-          toast.error(relevantJob.errorMessage || "图片生成失败");
-        }
+    const relevantJob = generationTasks.find((task) => {
+      if (!task.inputData) return false;
+      if (task.status !== "completed" && task.status !== "failed") return false;
+      try {
+        const inputData = JSON.parse(task.inputData);
+        return inputData.shotId === shot.id;
+      } catch {
+        return false;
       }
-    };
+    });
 
-    checkCompletedJobs();
-  }, [generationTasks, shot.id, shot.episodeId, generationJobId, isGenerating, updateShot]);
+    if (relevantJob && (relevantJob.id === generationJobId || isGenerating)) {
+      if (relevantJob.status === "completed") {
+        setIsGenerating(false);
+        setGenerationJobId(null);
+        toast.success("图片生成完成");
+      } else if (relevantJob.status === "failed") {
+        setIsGenerating(false);
+        setGenerationJobId(null);
+        toast.error(relevantJob.errorMessage || "图片生成失败");
+      }
+    }
+  }, [generationTasks, shot.id, generationJobId, isGenerating]);
+
+  // 监听视频生成任务完成状态（只用于显示提示和重置 UI 状态）
+  useEffect(() => {
+    const relevantJob = videoGenerationTasks.find((task) => {
+      if (!task.inputData) return false;
+      if (task.status !== "completed" && task.status !== "failed") return false;
+      try {
+        const inputData = JSON.parse(task.inputData);
+        return inputData.shotId === shot.id;
+      } catch {
+        return false;
+      }
+    });
+
+    if (relevantJob && (relevantJob.id === videoGenerationJobId || isGeneratingVideo)) {
+      if (relevantJob.status === "completed") {
+        setIsGeneratingVideo(false);
+        setVideoGenerationJobId(null);
+        toast.success("视频生成完成");
+      } else if (relevantJob.status === "failed") {
+        setIsGeneratingVideo(false);
+        setVideoGenerationJobId(null);
+        toast.error(relevantJob.errorMessage || "视频生成失败");
+      }
+    }
+  }, [videoGenerationTasks, shot.id, videoGenerationJobId, isGeneratingVideo]);
 
   // 获取当前生成任务的进度
   // 优先查找匹配当前分镜的任务，如果没有则使用 jobId

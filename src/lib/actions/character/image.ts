@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { characterImage, project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { createJob } from "@/lib/actions/job";
 import type { CharacterImageGenerationInput } from "@/types/job";
@@ -245,7 +244,6 @@ export async function saveCharacterImage(
       isPrimary: data.isPrimary || false,
     });
 
-    revalidatePath(`/projects/${projectId}/characters`);
     return { success: true };
   } catch (error) {
     console.error("保存图片状态失败:", error);
@@ -282,7 +280,7 @@ export async function deleteCharacterImage(projectId: string, imageId: string) {
 
     await db.delete(characterImage).where(eq(characterImage.id, imageId));
 
-    revalidatePath(`/projects/${projectId}/characters`);
+(`/projects/${projectId}/characters`);
     return { success: true };
   } catch (error) {
     console.error("删除图片状态失败:", error);
@@ -334,7 +332,7 @@ export async function setCharacterPrimaryImage(
         .where(eq(characterImage.id, imageId));
     });
 
-    revalidatePath(`/projects/${projectId}/characters`);
+(`/projects/${projectId}/characters`);
     return { success: true };
   } catch (error) {
     console.error("设置主图失败:", error);

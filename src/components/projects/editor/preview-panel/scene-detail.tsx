@@ -30,7 +30,6 @@ import { startMasterLayoutGeneration, startQuarterViewGeneration } from "@/lib/a
 import { useEditor } from "../editor-context";
 import { getProjectDetail } from "@/lib/actions/project";
 import { toast } from "sonner";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import type { Job, SceneImageGenerationInput } from "@/types/job";
 
 interface SceneDetailProps {
@@ -66,8 +65,8 @@ export function SceneDetail({ scene }: SceneDetailProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 订阅任务更新
-  const { jobs } = useTaskSubscription();
+  // 从 EditorContext 获取任务状态（单例轮询）
+  const { jobs } = useEditor();
 
   // 查找场景图片生成任务
   const getImageGenerationJob = (imageId: string | undefined) => {
@@ -89,32 +88,7 @@ export function SceneDetail({ scene }: SceneDetailProps) {
   const masterLayoutJob = getImageGenerationJob(masterLayout?.id);
   const quarterViewJob = getImageGenerationJob(quarterView?.id);
 
-  // 监听任务完成，自动刷新项目数据
-  useEffect(() => {
-    const checkCompletedJobs = async () => {
-      const relevantJobs = jobs.filter((job) => {
-        if (job.type !== "scene_image_generation") return false;
-        if (job.status !== "completed") return false;
-        
-        try {
-          const input: SceneImageGenerationInput = JSON.parse(job.inputData || "{}");
-          return input.sceneId === scene.id;
-        } catch {
-          return false;
-        }
-      });
-
-      if (relevantJobs.length > 0) {
-        // 有任务完成，刷新项目数据
-        const updatedProject = await getProjectDetail(scene.projectId);
-        if (updatedProject) {
-          updateProject(updatedProject);
-        }
-      }
-    };
-
-    checkCompletedJobs();
-  }, [jobs, scene.id, scene.projectId, updateProject]);
+  // 数据刷新由 EditorContext 中的统一刷新机制处理，无需手动监听
 
   // 自动保存
   const { saveStatus } = useAutoSave({
@@ -130,14 +104,7 @@ export function SceneDetail({ scene }: SceneDetailProps) {
         description: data.description || undefined,
       });
       
-      // 刷新项目数据
-      if (result.success) {
-        const updatedProject = await getProjectDetail(scene.projectId);
-        if (updatedProject) {
-          updateProject(updatedProject);
-        }
-      }
-      
+      // 基础信息更新不需要手动刷新，EditorContext 会在场景图片生成完成时自动刷新
       return result;
     },
   });

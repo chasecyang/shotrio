@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
-import { useTaskSubscription } from "@/hooks/use-task-subscription";
+import { useEditor } from "../editor/editor-context";
 import { getUserJobs } from "@/lib/actions/job/user-operations";
 import { CheckCircle2, Loader2, Sparkles, Users, X, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ export function CharacterExtractionBanner({
   onOpenPreview,
   compact = false,
 }: CharacterExtractionBannerProps) {
-  const { jobs: activeJobs } = useTaskSubscription();
+  const { jobs: activeJobs } = useEditor();
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
 

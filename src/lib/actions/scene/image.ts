@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { sceneImage, scene, project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { buildMasterLayoutPrompt, buildQuarterViewPrompt } from "@/lib/prompts/scene";
 import type { SceneImageType } from "@/types/project";
@@ -271,7 +270,6 @@ export async function deleteSceneImage(projectId: string, imageId: string) {
 
     await db.delete(sceneImage).where(eq(sceneImage.id, imageId));
 
-    revalidatePath(`/projects/${projectId}/editor`);
     return { success: true };
   } catch (error) {
     console.error("删除场景图片失败:", error);

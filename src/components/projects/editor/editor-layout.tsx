@@ -13,7 +13,8 @@ import { TimelineContainer } from "./timeline/timeline-container";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
-import { getEpisodeShots, createShot, deleteShot, batchGenerateShotImages } from "@/lib/actions/project";
+import { createShot, deleteShot, batchGenerateShotImages } from "@/lib/actions/project";
+import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { toast } from "sonner";
 import { FileText, Eye, Film } from "lucide-react";
@@ -47,8 +48,12 @@ function EditorLayoutInner({
 
       dispatch({ type: "SET_LOADING", payload: true });
       try {
-        const shots = await getEpisodeShots(state.selectedEpisodeId);
-        dispatch({ type: "SET_SHOTS", payload: shots });
+        const result = await refreshEpisodeShots(state.selectedEpisodeId);
+        if (result.success && result.shots) {
+          dispatch({ type: "SET_SHOTS", payload: result.shots });
+        } else {
+          toast.error(result.error || "加载分镜失败");
+        }
       } catch (error) {
         console.error("加载分镜失败:", error);
         toast.error("加载分镜失败");
@@ -78,8 +83,10 @@ function EditorLayoutInner({
       if (result.success) {
         toast.success("分镜已添加");
         // 重新加载分镜
-        const shots = await getEpisodeShots(state.selectedEpisodeId);
-        dispatch({ type: "SET_SHOTS", payload: shots });
+        const refreshResult = await refreshEpisodeShots(state.selectedEpisodeId);
+        if (refreshResult.success && refreshResult.shots) {
+          dispatch({ type: "SET_SHOTS", payload: refreshResult.shots });
+        }
       } else {
         toast.error(result.error || "添加失败");
       }
@@ -102,8 +109,10 @@ function EditorLayoutInner({
       
       // 重新加载分镜
       if (state.selectedEpisodeId) {
-        const shots = await getEpisodeShots(state.selectedEpisodeId);
-        dispatch({ type: "SET_SHOTS", payload: shots });
+        const result = await refreshEpisodeShots(state.selectedEpisodeId);
+        if (result.success && result.shots) {
+          dispatch({ type: "SET_SHOTS", payload: result.shots });
+        }
       }
     } catch (error) {
       console.error(error);
@@ -279,8 +288,10 @@ function EditorLayoutInner({
           onImportSuccess={async () => {
             // 刷新分镜列表
             if (state.selectedEpisodeId) {
-              const shots = await getEpisodeShots(state.selectedEpisodeId);
-              dispatch({ type: "SET_SHOTS", payload: shots });
+              const result = await refreshEpisodeShots(state.selectedEpisodeId);
+              if (result.success && result.shots) {
+                dispatch({ type: "SET_SHOTS", payload: result.shots });
+              }
             }
           }}
         />
