@@ -2,11 +2,16 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import db from "@/lib/db";
 import { job } from "@/lib/db/schemas/project";
-import { eq, and, or, inArray, isNull } from "drizzle-orm";
+import { eq, and, or, inArray } from "drizzle-orm";
 
 /**
  * SSE (Server-Sent Events) 端点
  * 实时推送用户的任务更新
+ * 
+ * 优化策略：
+ * - 有活动任务时：每 5 秒轮询一次
+ * - 空闲状态时：每 15 秒轮询一次
+ * - 减少数据传输：移除大字段（inputData, resultData）
  * 
  * GET /api/tasks/stream
  */
@@ -33,8 +38,15 @@ export async function GET(request: NextRequest) {
           encoder.encode(`data: ${JSON.stringify({ type: "connected" })}\n\n`)
         );
 
-        // 定期查询任务更新
-        const intervalId = setInterval(async () => {
+        // 空闲检测变量
+        let isIdle = false;
+        let currentInterval = 5000; // 初始间隔 5 秒
+        const ACTIVE_INTERVAL = 5000; // 有活动任务时：5 秒
+        const IDLE_INTERVAL = 15000; // 空闲时：15 秒
+        let intervalId: NodeJS.Timeout;
+
+        // 查询任务的函数
+        const queryAndSendJobs = async () => {
           try {
             // 1. 查询活跃的根任务（没有父任务的）
             const activeRootJobs = await db.query.job.findMany({
@@ -45,6 +57,22 @@ export async function GET(request: NextRequest) {
               orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
               limit: 50, // 增加限制以包含子任务
             });
+
+            // 检测是否有活动任务
+            const hasActiveJobs = activeRootJobs.length > 0;
+            const wasIdle = isIdle;
+            isIdle = !hasActiveJobs;
+
+            // 如果空闲状态改变，调整轮询间隔
+            if (wasIdle !== isIdle) {
+              const newInterval = isIdle ? IDLE_INTERVAL : ACTIVE_INTERVAL;
+              if (newInterval !== currentInterval) {
+                currentInterval = newInterval;
+                clearInterval(intervalId);
+                intervalId = setInterval(queryAndSendJobs, currentInterval);
+                console.log(`[SSE] 用户 ${userId} 切换到 ${isIdle ? '空闲' : '活动'} 模式，间隔: ${currentInterval}ms`);
+              }
+            }
 
             // 2. 构建任务ID集合（包括父任务ID）
             const rootJobIds = new Set<string>();
@@ -103,7 +131,7 @@ export async function GET(request: NextRequest) {
             });
             const allJobs = Array.from(jobMap.values());
 
-            // 发送任务更新
+            // 发送任务更新（优化：移除大字段以减少流量）
             const data = JSON.stringify({
               type: "jobs_update",
               jobs: allJobs.map((j) => ({
@@ -116,13 +144,15 @@ export async function GET(request: NextRequest) {
                 totalSteps: j.totalSteps,
                 progressMessage: j.progressMessage,
                 errorMessage: j.errorMessage,
-                resultData: j.resultData,
-                inputData: j.inputData, // 添加 inputData 字段
+                // 优化：移除 resultData 和 inputData 以减少流量
+                // 客户端需要这些数据时可以单独请求
+                parentJobId: j.parentJobId,
                 createdAt: j.createdAt,
                 startedAt: j.startedAt,
                 updatedAt: j.updatedAt,
               })),
               timestamp: new Date().toISOString(),
+              isIdle, // 告知客户端当前是否空闲
             });
 
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
@@ -135,7 +165,13 @@ export async function GET(request: NextRequest) {
               )
             );
           }
-        }, 2000); // 每 2 秒推送一次
+        };
+
+        // 立即执行一次查询
+        await queryAndSendJobs();
+
+        // 定期查询任务更新
+        intervalId = setInterval(queryAndSendJobs, currentInterval);
 
         // 心跳检测（每 30 秒）
         const heartbeatId = setInterval(() => {

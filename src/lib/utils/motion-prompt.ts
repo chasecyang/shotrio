@@ -1,4 +1,17 @@
-import { CameraMovement } from "@/types/project";
+import { CameraMovement, EmotionTag } from "@/types/project";
+
+/**
+ * 情绪标签的英文描述映射
+ */
+const emotionDescriptions: Record<EmotionTag, string> = {
+  neutral: "neutral",
+  happy: "happily",
+  sad: "sadly",
+  angry: "angrily",
+  surprised: "surprised",
+  fearful: "fearfully",
+  disgusted: "disgustedly",
+};
 
 /**
  * 根据运镜类型生成Kling Video API的运动提示词（简化版）
@@ -42,6 +55,7 @@ export function buildVideoPrompt(params: {
   dialogues?: Array<{          // 对话内容
     characterName?: string;
     dialogueText: string;
+    emotionTag?: EmotionTag | null;  // 情绪标签
   }>;
 }): string {
   const { visualDescription, visualPrompt, cameraMovement, dialogues } = params;
@@ -59,13 +73,27 @@ export function buildVideoPrompt(params: {
     parts.push(visualPrompt);
   }
   
-  // 3. 对话内容
+  // 3. 对话内容（包含情绪）
   if (dialogues && dialogues.length > 0) {
     const dialogueText = dialogues
       .map(d => {
+        const emotion = d.emotionTag ? emotionDescriptions[d.emotionTag] : null;
+        
         if (d.characterName) {
+          // 有角色名和情绪
+          if (emotion && emotion !== "neutral") {
+            return `${d.characterName} says ${emotion}: "${d.dialogueText}"`;
+          }
+          // 只有角色名
           return `${d.characterName}: "${d.dialogueText}"`;
         }
+        
+        // 旁白，包含情绪
+        if (emotion && emotion !== "neutral") {
+          return `${emotion}: "${d.dialogueText}"`;
+        }
+        
+        // 普通旁白
         return `"${d.dialogueText}"`;
       })
       .join(", ");

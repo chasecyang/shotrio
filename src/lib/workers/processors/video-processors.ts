@@ -213,6 +213,7 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
           dialogues: shotData.dialogues?.map(d => ({
             characterName: d.character?.name,
             dialogueText: d.dialogueText,
+            emotionTag: d.emotionTag,
           })),
         });
 

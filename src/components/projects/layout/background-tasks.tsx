@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
-import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job/user-operations";
+import { getUserJobs, cancelJob, retryJob, getJobDetail } from "@/lib/actions/job/user-operations";
 import { getJobsDetails, type JobDetails } from "@/lib/actions/job/details";
 import { toast } from "sonner";
 import { useEditor } from "../editor/editor-context";
@@ -250,7 +250,7 @@ export function BackgroundTasks() {
   };
 
   // 查看结果（根据任务类型）
-  const handleView = (jobId: string) => {
+  const handleView = async (jobId: string) => {
     const job = allJobs.find((j) => j.id === jobId);
     if (!job) {
       toast.error("任务不存在");
@@ -261,12 +261,13 @@ export function BackgroundTasks() {
     try {
       switch (job.type) {
         case "storyboard_generation": {
-          // 分镜提取任务：直接打开预览对话框
-          if (!job.inputData) {
+          // 分镜提取任务：获取完整任务数据并打开预览对话框
+          const result = await getJobDetail(jobId);
+          if (!result.success || !result.job?.inputData) {
             toast.error("无法获取任务数据");
             return;
           }
-          const inputData = JSON.parse(job.inputData);
+          const inputData = JSON.parse(result.job.inputData);
           const episodeId = inputData.episodeId;
           
           if (episodeId) {
@@ -278,12 +279,13 @@ export function BackgroundTasks() {
         }
         
         case "shot_decomposition": {
-          // 分镜拆解任务：直接打开预览对话框
-          if (!job.inputData) {
+          // 分镜拆解任务：获取完整任务数据并打开预览对话框
+          const result = await getJobDetail(jobId);
+          if (!result.success || !result.job?.inputData) {
             toast.error("无法获取任务数据");
             return;
           }
-          const decompositionInputData = JSON.parse(job.inputData);
+          const decompositionInputData = JSON.parse(result.job.inputData);
           const shotId = decompositionInputData.shotId;
           
           if (!shotId) {

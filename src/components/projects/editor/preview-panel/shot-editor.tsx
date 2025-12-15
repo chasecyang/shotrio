@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { ShotDetail, ShotSize, CameraMovement } from "@/types/project";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { ShotDetail, ShotSize, CameraMovement, EmotionTag } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateShot as updateShotAction, generateShotImage, updateShotCharacterImage } from "@/lib/actions/project";
+import { 
+  updateShot as updateShotAction, 
+  generateShotImage, 
+  updateShotCharacterImage,
+  removeCharacterFromShot,
+  updateShotDialogue,
+  deleteShotDialogue,
+  addCharacterToShot,
+  addDialogueToShot,
+} from "@/lib/actions/project";
 import { generateShotVideo } from "@/lib/actions/video/generate";
 import { createShotDecompositionJob } from "@/lib/actions/storyboard/decompose-shot";
 import { toast } from "sonner";
@@ -31,10 +40,21 @@ import {
   RefreshCw,
   PlayIcon,
   Scissors,
+  Trash2,
+  Plus,
+  UserPlus,
+  Smile,
+  Frown,
+  Angry,
+  AlertCircle,
+  Ghost,
+  ThumbsDown,
+  Meh,
 } from "lucide-react";
 import {
   EditableField,
   EditableTextarea,
+  EditableInput,
   SaveStatus,
 } from "@/components/ui/inline-editable-field";
 import {
@@ -51,6 +71,17 @@ import { getEpisodeShots } from "@/lib/actions/project";
 interface ShotEditorProps {
   shot: ShotDetail;
 }
+
+// 情绪标签配置
+const emotionOptions: { value: EmotionTag; label: string; icon: typeof Smile; color: string }[] = [
+  { value: 'neutral', label: '平静', icon: Meh, color: 'text-gray-500' },
+  { value: 'happy', label: '开心', icon: Smile, color: 'text-yellow-500' },
+  { value: 'sad', label: '悲伤', icon: Frown, color: 'text-blue-500' },
+  { value: 'angry', label: '愤怒', icon: Angry, color: 'text-red-500' },
+  { value: 'surprised', label: '惊讶', icon: AlertCircle, color: 'text-purple-500' },
+  { value: 'fearful', label: '恐惧', icon: Ghost, color: 'text-gray-700' },
+  { value: 'disgusted', label: '厌恶', icon: ThumbsDown, color: 'text-green-700' },
+];
 
 export function ShotEditor({ shot }: ShotEditorProps) {
   const { state, openShotDecompositionDialog, updateShot } = useEditor();
@@ -69,6 +100,8 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [videoGenerationJobId, setVideoGenerationJobId] = useState<string | null>(null);
   const [isDecomposing, setIsDecomposing] = useState(false);
   const [decompositionJobId, setDecompositionJobId] = useState<string | null>(null);
+  const [isAddingCharacter, setIsAddingCharacter] = useState(false);
+  const [isAddingDialogue, setIsAddingDialogue] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -79,20 +112,23 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   // 监听图片生成任务
   const { jobs } = useTaskSubscription();
   
-  // 过滤出分镜图片生成任务
-  const generationTasks = jobs?.filter(
-    (job) => job.type === "shot_image_generation"
-  ) || [];
+  // 过滤出分镜图片生成任务 - 使用 useMemo 避免每次 render 都创建新数组
+  const generationTasks = useMemo(() => 
+    jobs?.filter((job) => job.type === "shot_image_generation") || [],
+    [jobs]
+  );
 
   // 过滤出分镜视频生成任务
-  const videoGenerationTasks = jobs?.filter(
-    (job) => job.type === "shot_video_generation"
-  ) || [];
+  const videoGenerationTasks = useMemo(() =>
+    jobs?.filter((job) => job.type === "shot_video_generation") || [],
+    [jobs]
+  );
 
   // 过滤出分镜拆解任务
-  const decompositionTasks = jobs?.filter(
-    (job) => job.type === "shot_decomposition"
-  ) || [];
+  const decompositionTasks = useMemo(() =>
+    jobs?.filter((job) => job.type === "shot_decomposition") || [],
+    [jobs]
+  );
 
   // 同步 shot 更新
   useEffect(() => {
@@ -216,7 +252,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         toast.error(result.error || "启动失败");
         setIsGenerating(false);
       }
-    } catch (error) {
+    } catch {
       toast.error("生成失败");
       setIsGenerating(false);
     }
@@ -239,8 +275,175 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       } else {
         toast.error(result.error || "更新失败");
       }
-    } catch (error) {
+    } catch {
       toast.error("更新失败");
+    }
+  };
+
+  // 处理删除角色
+  const handleRemoveCharacter = async (shotCharacterId: string) => {
+    try {
+      const result = await removeCharacterFromShot(shotCharacterId);
+      if (result.success) {
+        toast.success("已移除角色");
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "删除失败");
+      }
+    } catch {
+      toast.error("删除失败");
+    }
+  };
+
+  // 处理更新对话内容
+  const handleUpdateDialogue = async (dialogueId: string, dialogueText: string) => {
+    try {
+      const result = await updateShotDialogue(dialogueId, { dialogueText });
+      if (result.success) {
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "更新失败");
+      }
+    } catch {
+      toast.error("更新失败");
+    }
+  };
+
+  // 处理更新对话角色
+  const handleUpdateDialogueCharacter = async (dialogueId: string, characterId: string | null) => {
+    try {
+      const result = await updateShotDialogue(dialogueId, { 
+        characterId: characterId || null 
+      });
+      if (result.success) {
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "更新失败");
+      }
+    } catch {
+      toast.error("更新失败");
+    }
+  };
+
+  // 处理更新对话情绪
+  const handleUpdateDialogueEmotion = async (dialogueId: string, emotionTag: EmotionTag | null) => {
+    try {
+      const result = await updateShotDialogue(dialogueId, { 
+        emotionTag: emotionTag || null 
+      });
+      if (result.success) {
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "更新失败");
+      }
+    } catch {
+      toast.error("更新失败");
+    }
+  };
+
+  // 处理删除对话
+  const handleDeleteDialogue = async (dialogueId: string) => {
+    try {
+      const result = await deleteShotDialogue(dialogueId);
+      if (result.success) {
+        toast.success("已删除对话");
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "删除失败");
+      }
+    } catch {
+      toast.error("删除失败");
+    }
+  };
+
+  // 处理添加角色
+  const handleAddCharacter = async (characterId: string) => {
+    setIsAddingCharacter(true);
+    try {
+      const result = await addCharacterToShot({
+        shotId: shot.id,
+        characterId,
+      });
+      if (result.success) {
+        toast.success("已添加角色");
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "添加失败");
+      }
+    } catch {
+      toast.error("添加失败");
+    } finally {
+      setIsAddingCharacter(false);
+    }
+  };
+
+  // 处理添加对话
+  const handleAddDialogue = async () => {
+    setIsAddingDialogue(true);
+    try {
+      const result = await addDialogueToShot({
+        shotId: shot.id,
+        dialogueText: "",
+      });
+      if (result.success) {
+        toast.success("已添加对话");
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
+      } else {
+        toast.error(result.error || "添加失败");
+      }
+    } catch {
+      toast.error("添加失败");
+    } finally {
+      setIsAddingDialogue(false);
     }
   };
 
@@ -261,7 +464,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         toast.error(result.error || "启动失败");
         setIsGeneratingVideo(false);
       }
-    } catch (error) {
+    } catch {
       toast.error("生成失败");
       setIsGeneratingVideo(false);
     }
@@ -288,7 +491,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         toast.error(result.error || "启动失败");
         setIsDecomposing(false);
       }
-    } catch (error) {
+    } catch {
       toast.error("启动失败");
       setIsDecomposing(false);
     }
@@ -644,7 +847,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                 return (
                   <div
                     key={sc.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
+                    className="group relative flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
                   >
                     <Avatar className="w-10 h-10 shrink-0">
                       <AvatarImage src={sc.characterImage?.imageUrl || undefined} />
@@ -691,12 +894,54 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                         <p className="text-xs text-muted-foreground mt-1">无造型</p>
                       )}
                     </div>
+                    {/* 删除按钮 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleRemoveCharacter(sc.id)}
+                      title="移除角色"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 );
               })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">暂无角色</p>
+          )}
+
+          {/* 添加角色按钮 */}
+          {project?.characters && project.characters.length > 0 && (
+            <Select onValueChange={handleAddCharacter} disabled={isAddingCharacter}>
+              <SelectTrigger className="w-full">
+                <div className="flex items-center gap-2">
+                  {isAddingCharacter ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="w-4 h-4" />
+                  )}
+                  <span>添加角色</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {project.characters
+                  .filter((char) => !shot.shotCharacters.some((sc) => sc.characterId === char.id))
+                  .map((char) => (
+                    <SelectItem key={char.id} value={char.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="text-xs">
+                            {char.name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{char.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
@@ -714,26 +959,107 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                 const character = project?.characters.find(
                   (c) => c.id === dialogue.characterId
                 );
+                const emotion = emotionOptions.find((e) => e.value === dialogue.emotionTag);
+                const EmotionIcon = emotion?.icon || Meh;
+                
                 return (
                   <div
                     key={dialogue.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border"
+                    className="group relative flex flex-col gap-2 p-3 rounded-lg bg-muted/50 border"
                   >
-                    {character && (
-                      <Avatar className="w-6 h-6 shrink-0">
-                        <AvatarFallback className="text-xs">
-                          {character.name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      {character && (
-                        <p className="text-xs font-medium text-muted-foreground mb-0.5">
-                          {character.name}
-                        </p>
+                    {/* 角色和情绪选择 */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* 角色选择 */}
+                      {character ? (
+                        <Avatar className="w-6 h-6 shrink-0">
+                          <AvatarFallback className="text-xs">
+                            {character.name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : null}
+                      {project?.characters && project.characters.length > 0 && (
+                        <Select
+                          value={dialogue.characterId || "none"}
+                          onValueChange={(value) => 
+                            handleUpdateDialogueCharacter(dialogue.id, value === "none" ? null : value)
+                          }
+                        >
+                          <SelectTrigger className="h-7 text-xs w-fit">
+                            <SelectValue placeholder="选择角色">
+                              {character ? character.name : "旁白/无角色"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground">旁白/无角色</span>
+                            </SelectItem>
+                            {project.characters.map((char) => (
+                              <SelectItem key={char.id} value={char.id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-6 h-6">
+                                    <AvatarFallback className="text-xs">
+                                      {char.name[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{char.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
-                      <p className="text-sm">{dialogue.dialogueText || "（空白对话）"}</p>
+                      
+                      {/* 情绪选择 */}
+                      <Select
+                        value={dialogue.emotionTag || "neutral"}
+                        onValueChange={(value) => 
+                          handleUpdateDialogueEmotion(dialogue.id, value as EmotionTag)
+                        }
+                      >
+                        <SelectTrigger className="h-7 text-xs w-fit">
+                          <div className="flex items-center gap-1.5">
+                            <EmotionIcon className={`w-3.5 h-3.5 ${emotion?.color || 'text-muted-foreground'}`} />
+                            <span>{emotion?.label || '平静'}</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {emotionOptions.map((opt) => {
+                            const Icon = opt.icon;
+                            return (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                  <Icon className={`w-4 h-4 ${opt.color}`} />
+                                  <span>{opt.label}</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
                     </div>
+                    
+                    {/* 对话内容 */}
+                    <div className="flex-1 min-w-0">
+                      <EditableInput
+                        value={dialogue.dialogueText || ""}
+                        onChange={(value) => handleUpdateDialogue(dialogue.id, value)}
+                        placeholder="输入对话内容..."
+                        emptyText="点击添加对话内容"
+                        className="!p-0 !border-0 hover:bg-muted/50"
+                        inputClassName="text-sm"
+                      />
+                    </div>
+                    
+                    {/* 删除按钮 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteDialogue(dialogue.id)}
+                      title="删除对话"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 );
               })}
@@ -741,6 +1067,22 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           ) : (
             <p className="text-sm text-muted-foreground">暂无对话</p>
           )}
+
+          {/* 添加对话按钮 */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+            onClick={handleAddDialogue}
+            disabled={isAddingDialogue}
+          >
+            {isAddingDialogue ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            添加对话
+          </Button>
         </div>
 
         {/* 分镜拆解按钮 */}

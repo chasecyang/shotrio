@@ -249,3 +249,49 @@ export async function markJobAsImported(jobId: string): Promise<{
     };
   }
 }
+
+/**
+ * 获取任务详情（包含 inputData 和 resultData）
+ * 用于按需获取完整任务数据，避免在 SSE 中传输大字段
+ */
+export async function getJobDetail(jobId: string): Promise<{
+  success: boolean;
+  job?: Job;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    // 获取任务详情
+    const jobData = await db.query.job.findFirst({
+      where: and(eq(job.id, jobId), eq(job.userId, session.user.id)),
+    });
+
+    if (!jobData) {
+      return {
+        success: false,
+        error: "任务不存在或无权限",
+      };
+    }
+
+    return {
+      success: true,
+      job: jobData as Job,
+    };
+  } catch (error) {
+    console.error("获取任务详情失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "获取任务详情失败",
+    };
+  }
+}

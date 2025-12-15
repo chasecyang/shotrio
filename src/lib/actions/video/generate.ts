@@ -55,6 +55,7 @@ export async function generateShotVideo(shotId: string): Promise<{
       dialogues: shotData.dialogues?.map(d => ({
         characterName: d.character?.name,
         dialogueText: d.dialogueText,
+        emotionTag: d.emotionTag,
       })),
     });
 

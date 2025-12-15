@@ -955,10 +955,12 @@ export async function updateShotCharacterImage(
       })
       .where(eq(shotCharacter.id, shotCharacterId));
 
-    // 刷新页面
+    // 刷新页面和缓存
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const episodeData = (shotCharData.shot as any).episode;
     if (episodeData) {
+      // 清除剧集分镜缓存
+      revalidateTag(`episode-shots-${shotCharData.shot.episodeId}`, "max");
       revalidatePath(`/projects/${episodeData.projectId}/editor`);
     }
 
