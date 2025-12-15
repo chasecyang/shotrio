@@ -591,9 +591,9 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
         {/* 顶部：分镜预览图 */}
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* 大图预览 */}
-          <div className="w-80 shrink-0">
+          <div className="w-full lg:w-80 shrink-0">
             <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative">
               {shot.imageUrl && !isGenerating ? (
                 <>
@@ -601,7 +601,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                   <img
                     src={shot.imageUrl}
                     alt={`分镜 ${shot.order}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   {/* 重新生成按钮 */}
                   <Button
@@ -623,7 +623,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                       <img
                         src={shot.imageUrl}
                         alt={`分镜 ${shot.order}`}
-                        className="w-full h-full object-cover absolute inset-0 opacity-50"
+                        className="w-full h-full object-contain absolute inset-0 opacity-50"
                       />
                       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center" />
                     </>
