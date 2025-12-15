@@ -91,6 +91,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     cameraMovement: shot.cameraMovement || "static",
     visualDescription: shot.visualDescription || "",
     duration: millisecondsToSeconds(shot.duration || 3000),
+    sceneId: shot.sceneId || null,
   });
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -136,6 +137,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       cameraMovement: shot.cameraMovement || "static",
       visualDescription: shot.visualDescription || "",
       duration: millisecondsToSeconds(shot.duration || 3000),
+      sceneId: shot.sceneId || null,
     });
   }, [shot]);
 
@@ -149,7 +151,8 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       formData.shotSize !== shot.shotSize ||
       formData.cameraMovement !== (shot.cameraMovement || "static") ||
       formData.visualDescription !== (shot.visualDescription || "") ||
-      formData.duration !== millisecondsToSeconds(shot.duration || 3000);
+      formData.duration !== millisecondsToSeconds(shot.duration || 3000) ||
+      formData.sceneId !== (shot.sceneId || null);
 
     if (hasChanges) {
       setSaveStatus("idle");
@@ -162,10 +165,16 @@ export function ShotEditor({ shot }: ShotEditorProps) {
             cameraMovement: formData.cameraMovement,
             visualDescription: formData.visualDescription || null,
             duration: secondsToMilliseconds(formData.duration),
+            sceneId: formData.sceneId || null,
           });
 
           if (result.success) {
             setSaveStatus("saved");
+            // 刷新分镜数据以确保 EditorContext 中的数据同步
+            const refreshResult = await refreshShot(shot.id);
+            if (refreshResult.success && refreshResult.shot) {
+              updateShot(refreshResult.shot);
+            }
             if (savedTimeoutRef.current) {
               clearTimeout(savedTimeoutRef.current);
             }
@@ -188,7 +197,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [formData, shot]);
+  }, [formData, shot, updateShot]);
 
   useEffect(() => {
     return () => {
@@ -676,25 +685,6 @@ export function ShotEditor({ shot }: ShotEditorProps) {
               <h2 className="text-xl font-semibold">分镜编辑</h2>
             </div>
 
-            {/* 场景信息 */}
-            {shot.scene && (
-              <div className="p-3 rounded-lg border bg-muted/30">
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{shot.scene.name}</span>
-                    </div>
-                    {shot.scene.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {shot.scene.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 景别和运镜选择器 */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -792,6 +782,71 @@ export function ShotEditor({ shot }: ShotEditorProps) {
               rows={4}
             />
           </EditableField>
+        </div>
+
+        {/* 关联场景 */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">关联场景</h3>
+          </div>
+          
+          {project?.scenes && project.scenes.length > 0 ? (
+            <Select
+              value={formData.sceneId || "none"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, sceneId: value === "none" ? null : value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="选择场景">
+                  {formData.sceneId 
+                    ? project.scenes.find((s) => s.id === formData.sceneId)?.name 
+                    : "未关联场景"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  <span className="text-muted-foreground">未关联场景</span>
+                </SelectItem>
+                {project.scenes.map((scene) => (
+                  <SelectItem key={scene.id} value={scene.id}>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">{scene.name}</span>
+                      {scene.description && (
+                        <span className="text-xs text-muted-foreground line-clamp-1">
+                          {scene.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              暂无场景，请先在资源面板中创建场景
+            </p>
+          )}
+
+          {/* 当前关联的场景信息 */}
+          {formData.sceneId && shot.scene && (
+            <div className="p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm">{shot.scene.name}</span>
+                  </div>
+                  {shot.scene.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {shot.scene.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 角色列表 */}

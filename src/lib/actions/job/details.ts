@@ -51,7 +51,7 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
           },
         });
 
-        if (imageRecord) {
+        if (imageRecord && imageRecord.character && !Array.isArray(imageRecord.character)) {
           baseDetails.displayTitle = imageRecord.character.name;
           baseDetails.displaySubtitle = `造型: ${imageRecord.label}`;
         }
@@ -69,7 +69,7 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
           },
         });
 
-        if (imageRecord) {
+        if (imageRecord && imageRecord.scene && !Array.isArray(imageRecord.scene)) {
           baseDetails.displayTitle = imageRecord.scene.name;
           baseDetails.displaySubtitle = `视角: ${imageRecord.label}`;
         }
