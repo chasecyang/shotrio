@@ -1,8 +1,8 @@
 "use server";
 
 import db from "@/lib/db";
-import { shot, sceneImage, characterImage, shotCharacter } from "@/lib/db/schemas/project";
-import { eq, and } from "drizzle-orm";
+import { shot, sceneImage } from "@/lib/db/schemas/project";
+import { eq } from "drizzle-orm";
 import { editImage } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
@@ -330,6 +330,10 @@ export async function processShotImageGeneration(
       updatedAt: new Date(),
     })
     .where(eq(shot.id, shotId));
+
+  // 使该剧集的分镜缓存失效，这样前端会自动获取最新数据
+  const { revalidateTag } = await import("next/cache");
+  revalidateTag(`episode-shots-${shotData.episodeId}`, "max");
 
   const resultData: ShotImageGenerationResult = {
     shotId,

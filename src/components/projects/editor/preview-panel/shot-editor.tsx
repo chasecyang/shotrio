@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateShot, generateShotImage, updateShotCharacterImage } from "@/lib/actions/project";
+import { updateShot as updateShotAction, generateShotImage, updateShotCharacterImage } from "@/lib/actions/project";
 import { generateShotVideo } from "@/lib/actions/video/generate";
 import { createShotDecompositionJob } from "@/lib/actions/storyboard/decompose-shot";
 import { toast } from "sonner";
@@ -53,7 +53,7 @@ interface ShotEditorProps {
 }
 
 export function ShotEditor({ shot }: ShotEditorProps) {
-  const { state, dispatch, openShotDecompositionDialog, updateShot } = useEditor();
+  const { state, openShotDecompositionDialog, updateShot } = useEditor();
   const { project } = state;
 
   const [formData, setFormData] = useState({
@@ -122,7 +122,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       saveTimeoutRef.current = setTimeout(async () => {
         setSaveStatus("saving");
         try {
-          const result = await updateShot(shot.id, {
+          const result = await updateShotAction(shot.id, {
             shotSize: formData.shotSize,
             cameraMovement: formData.cameraMovement,
             visualDescription: formData.visualDescription || null,
@@ -165,7 +165,8 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   // 检查是否有正在进行的生成任务
   useEffect(() => {
     const activeTask = generationTasks.find((task) => {
-      if (task.status !== "processing" || !task.inputData) return false;
+      // 检查任务状态：pending 或 processing
+      if ((task.status !== "processing" && task.status !== "pending") || !task.inputData) return false;
       try {
         const inputData = JSON.parse(task.inputData);
         return inputData.shotId === shot.id;
@@ -176,13 +177,17 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     setIsGenerating(!!activeTask);
     if (activeTask?.id) {
       setGenerationJobId(activeTask.id);
+    } else if (!activeTask) {
+      // 如果没有找到活动任务，清除 jobId
+      setGenerationJobId(null);
     }
   }, [generationTasks, shot.id]);
 
   // 检查是否有正在进行的视频生成任务
   useEffect(() => {
     const activeTask = videoGenerationTasks.find((task) => {
-      if (task.status !== "processing" || !task.inputData) return false;
+      // 检查任务状态：pending 或 processing
+      if ((task.status !== "processing" && task.status !== "pending") || !task.inputData) return false;
       try {
         const inputData = JSON.parse(task.inputData);
         return inputData.shotId === shot.id;
@@ -193,6 +198,9 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     setIsGeneratingVideo(!!activeTask);
     if (activeTask?.id) {
       setVideoGenerationJobId(activeTask.id);
+    } else if (!activeTask) {
+      // 如果没有找到活动任务，清除 jobId
+      setVideoGenerationJobId(null);
     }
   }, [videoGenerationTasks, shot.id]);
 
@@ -305,8 +313,69 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   }, [decompositionTasks, shot.id, decompositionJobId, openShotDecompositionDialog]);
 
+  // 监听图片生成任务完成，自动刷新分镜数据
+  // 注意：由于使用了 revalidateTag，Next.js 会自动重新获取数据
+  // 这里只需要更新 UI 状态和显示提示
+  useEffect(() => {
+    const checkCompletedJobs = async () => {
+      // 查找所有匹配当前分镜的任务（包括完成和失败的）
+      const relevantJob = generationTasks.find((task) => {
+        if (!task.inputData) return false;
+        if (task.status !== "completed" && task.status !== "failed") return false;
+        try {
+          const inputData = JSON.parse(task.inputData);
+          return inputData.shotId === shot.id;
+        } catch {
+          return false;
+        }
+      });
+
+      // 只处理我们跟踪的任务（通过 generationJobId 或当前正在生成的任务）
+      if (relevantJob && (relevantJob.id === generationJobId || isGenerating)) {
+        if (relevantJob.status === "completed") {
+          // 任务完成，重置状态
+          // 由于使用了 revalidateTag，Next.js 会自动重新获取数据
+          setIsGenerating(false);
+          setGenerationJobId(null);
+          
+          // 重新获取分镜数据（Next.js 缓存已失效，会获取最新数据）
+          if (shot.episodeId) {
+            try {
+              const updatedShots = await getEpisodeShots(shot.episodeId);
+              const updatedShot = updatedShots.find((s) => s.id === shot.id);
+              if (updatedShot) {
+                updateShot(updatedShot);
+                toast.success("图片生成完成");
+              }
+            } catch (error) {
+              console.error("刷新分镜数据失败:", error);
+            }
+          }
+        } else if (relevantJob.status === "failed") {
+          // 任务失败
+          setIsGenerating(false);
+          setGenerationJobId(null);
+          toast.error(relevantJob.errorMessage || "图片生成失败");
+        }
+      }
+    };
+
+    checkCompletedJobs();
+  }, [generationTasks, shot.id, shot.episodeId, generationJobId, isGenerating, updateShot]);
+
   // 获取当前生成任务的进度
-  const currentTask = generationTasks.find((task) => task.id === generationJobId);
+  // 优先查找匹配当前分镜的任务，如果没有则使用 jobId
+  const currentTask = generationTasks.find((task) => {
+    if (!task.inputData) return false;
+    try {
+      const inputData = JSON.parse(task.inputData);
+      return inputData.shotId === shot.id && 
+             (task.status === "processing" || task.status === "pending");
+    } catch {
+      return false;
+    }
+  }) || generationTasks.find((task) => task.id === generationJobId);
+  
   const generationProgress = currentTask?.progress || 0;
   const generationMessage = currentTask?.progressMessage || "正在生成...";
 
@@ -323,7 +392,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           {/* 大图预览 */}
           <div className="w-80 shrink-0">
             <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative">
-              {shot.imageUrl ? (
+              {shot.imageUrl && !isGenerating ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -339,20 +408,29 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                     onClick={handleGenerateImage}
                     disabled={isGenerating}
                   >
-                    {isGenerating ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    )}
+                    <RefreshCw className="w-3.5 h-3.5" />
                     重新生成
                   </Button>
                 </>
               ) : isGenerating ? (
-                <div className="text-center p-6">
-                  <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin text-primary" />
-                  <p className="text-sm font-medium mb-2">{generationMessage}</p>
-                  <Progress value={generationProgress} className="w-full max-w-[200px] mx-auto" />
-                  <p className="text-xs text-muted-foreground mt-2">{generationProgress}%</p>
+                <div className="text-center p-6 w-full">
+                  {shot.imageUrl && (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={shot.imageUrl}
+                        alt={`分镜 ${shot.order}`}
+                        className="w-full h-full object-cover absolute inset-0 opacity-50"
+                      />
+                      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center" />
+                    </>
+                  )}
+                  <div className="relative z-10">
+                    <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin text-primary" />
+                    <p className="text-sm font-medium mb-2">{generationMessage}</p>
+                    <Progress value={generationProgress} className="w-full max-w-[200px] mx-auto" />
+                    <p className="text-xs text-muted-foreground mt-2">{generationProgress}%</p>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground p-6">

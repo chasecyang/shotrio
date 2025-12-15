@@ -5,7 +5,8 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { episode, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
 import { eq, asc } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { unstable_cache } from "next/cache";
 import { randomUUID } from "crypto";
 import {
   type NewShot,
@@ -21,6 +22,7 @@ import {
 
 /**
  * 获取某剧集的所有分镜（按order排序）
+ * 使用缓存标签，可以通过 revalidateTag 来使缓存失效
  */
 export async function getEpisodeShots(
   episodeId: string,
@@ -32,33 +34,52 @@ export async function getEpisodeShots(
     throw new Error("未登录");
   }
 
-  try {
-    const shots = await db.query.shot.findMany({
-      where: eq(shot.episodeId, episodeId),
-      orderBy: [asc(shot.order)],
-      with: {
-        scene: true,
-        shotCharacters: {
-          orderBy: (shotCharacter, { asc }) => [asc(shotCharacter.order)],
+  // 使用 unstable_cache 并设置标签
+  const getCachedShots = unstable_cache(
+    async (episodeId: string) => {
+      try {
+        const shots = await db.query.shot.findMany({
+          where: eq(shot.episodeId, episodeId),
+          orderBy: [asc(shot.order)],
           with: {
-            character: true,
-            characterImage: true,
+            scene: true,
+            shotCharacters: {
+              orderBy: (shotCharacter, { asc }) => [asc(shotCharacter.order)],
+              with: {
+                character: true,
+                characterImage: true,
+              },
+            },
+            dialogues: {
+              orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
+              with: {
+                character: true,
+              },
+            },
           },
-        },
-        dialogues: {
-          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
-          with: {
-            character: true,
-          },
-        },
-      },
-    });
+        });
 
-    return shots as ShotDetail[];
-  } catch (error) {
-    console.error("获取分镜列表失败:", error);
-    return [];
-  }
+        return shots as ShotDetail[];
+      } catch (error) {
+        console.error("获取分镜列表失败:", error);
+        return [];
+      }
+    },
+    [`episode-shots-${episodeId}`],
+    {
+      tags: [`episode-shots-${episodeId}`],
+      revalidate: 3600, // 1小时缓存，但可以通过 revalidateTag 提前失效
+    }
+  );
+
+  return getCachedShots(episodeId);
+}
+
+/**
+ * 使某个剧集的分镜缓存失效
+ */
+export async function revalidateEpisodeShots(episodeId: string) {
+  revalidateTag(`episode-shots-${episodeId}`, "max");
 }
 
 /**
@@ -791,9 +812,13 @@ export async function generateShotImage(shotId: string): Promise<{
 
     // 创建图片生成任务
     const { createJob } = await import("@/lib/actions/job");
+    const episodeData = Array.isArray(shotData.episode) ? shotData.episode[0] : shotData.episode;
+    if (!episodeData) {
+      return { success: false, error: "无法获取剧集信息" };
+    }
     const result = await createJob({
       userId: session.user.id,
-      projectId: shotData.episode.projectId,
+      projectId: episodeData.projectId,
       type: "shot_image_generation",
       inputData: {
         shotId,
@@ -855,9 +880,13 @@ export async function batchGenerateShotImages(shotIds: string[]): Promise<{
 
     // 创建批量生成任务
     const { createJob } = await import("@/lib/actions/job");
+    const episodeData = Array.isArray(firstShot.episode) ? firstShot.episode[0] : firstShot.episode;
+    if (!episodeData) {
+      return { success: false, error: "无法获取剧集信息" };
+    }
     const result = await createJob({
       userId: session.user.id,
-      projectId: firstShot.episode.projectId,
+      projectId: episodeData.projectId,
       type: "batch_shot_image_generation",
       inputData: {
         shotIds,
