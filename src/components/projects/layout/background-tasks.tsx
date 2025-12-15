@@ -21,7 +21,7 @@ import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job/user-operations";
 import { getJobsDetails, type JobDetails } from "@/lib/actions/job/details";
 import { toast } from "sonner";
-import { useEditorOptional } from "../editor/editor-context";
+import { useEditor } from "../editor/editor-context";
 import {
   Activity,
   Loader2,
@@ -78,6 +78,10 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
   storyboard_matching: {
     label: "角色场景匹配",
     icon: <Users className="w-3.5 h-3.5" />,
+  },
+  shot_decomposition: {
+    label: "分镜拆解",
+    icon: <Film className="w-3.5 h-3.5" />,
   },
   batch_image_generation: {
     label: "批量图像生成",
@@ -146,8 +150,7 @@ const statusConfig: Record<
 
 export function BackgroundTasks() {
   const { jobs: activeJobs } = useTaskSubscription();
-  const editorContext = useEditorOptional();
-  const openStoryboardExtractionDialog = editorContext?.openStoryboardExtractionDialog;
+  const { openStoryboardExtractionDialog, openShotDecompositionDialog } = useEditor();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -259,10 +262,6 @@ export function BackgroundTasks() {
       switch (job.type) {
         case "storyboard_generation": {
           // 分镜提取任务：直接打开预览对话框
-          if (!openStoryboardExtractionDialog) {
-            toast.info("请在编辑器页面查看分镜提取结果");
-            return;
-          }
           if (!job.inputData) {
             toast.error("无法获取任务数据");
             return;
@@ -275,6 +274,24 @@ export function BackgroundTasks() {
           } else {
             toast.error("无法获取剧集信息");
           }
+          break;
+        }
+        
+        case "shot_decomposition": {
+          // 分镜拆解任务：直接打开预览对话框
+          if (!job.inputData) {
+            toast.error("无法获取任务数据");
+            return;
+          }
+          const decompositionInputData = JSON.parse(job.inputData);
+          const shotId = decompositionInputData.shotId;
+          
+          if (!shotId) {
+            toast.error("无法获取分镜信息");
+            return;
+          }
+
+          openShotDecompositionDialog(shotId, jobId);
           break;
         }
         
@@ -425,10 +442,12 @@ function TaskNodeItem({
   const canRetry = job.status === "failed" || job.status === "cancelled";
   
   // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
+  // 注意：character_extraction 和 scene_extraction 在资源面板中显示横幅，不需要在这里查看
   const viewableTaskTypes = [
     "storyboard_generation",
     "character_extraction",
     "scene_extraction",
+    "shot_decomposition",
   ];
   const canView = job.status === "completed" && 
                   job.type && 

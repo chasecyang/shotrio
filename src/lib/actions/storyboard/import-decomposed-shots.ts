@@ -2,7 +2,7 @@
 
 import db from "@/lib/db";
 import { job, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/actions/utils/auth";
 import type { ShotDecompositionResult } from "@/types/job";
 import { nanoid } from "nanoid";
@@ -103,7 +103,7 @@ export async function importDecomposedShots(params: {
         await tx
           .update(shot)
           .set({
-            order: db.raw(`"order" + ${orderIncrement}`),
+            order: sql`${shot.order} + ${orderIncrement}`,
           })
           .where(
             gte(shot.order, originalOrder + 1)

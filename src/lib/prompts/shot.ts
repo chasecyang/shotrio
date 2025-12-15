@@ -64,8 +64,6 @@ export function buildShotImagePrompt(params: {
 
   const parts: string[] = [];
 
-  // 0. 明确说明这是分镜图生成
-  parts.push("Cinematic storyboard frame for film production.");
 
   // 1. 景别和运镜描述
   const shotSizeDesc = SHOT_SIZE_DESCRIPTIONS[shotSize] || "medium shot";
@@ -118,10 +116,6 @@ export function buildShotImagePrompt(params: {
     parts.push(visualDescription);
   }
 
-  // 5. 分镜图专业要求
-  parts.push(
-    "Cinematic storyboard frame for film production"
-  );
 
   return parts.join(" ");
 }
@@ -140,7 +134,7 @@ export function buildSimpleShotPrompt(params: {
   const cameraMovementDesc =
     CAMERA_MOVEMENT_DESCRIPTIONS[cameraMovement] || "static camera";
 
-  return `Cinematic storyboard frame for film production. ${shotSizeDesc}, ${cameraMovementDesc}. ${visualDescription} Professional film storyboard quality, cinematic composition, 16:9 aspect ratio.`;
+  return `${shotSizeDesc}, ${cameraMovementDesc}. ${visualDescription} Professional film storyboard quality.`;
 }
 
 /**

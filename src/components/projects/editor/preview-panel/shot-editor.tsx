@@ -46,13 +46,14 @@ import {
 import { useEditor } from "../editor-context";
 import { useTaskSubscription } from "@/hooks/use-task-subscription";
 import { Progress } from "@/components/ui/progress";
+import { getEpisodeShots } from "@/lib/actions/project";
 
 interface ShotEditorProps {
   shot: ShotDetail;
 }
 
 export function ShotEditor({ shot }: ShotEditorProps) {
-  const { state, dispatch, openShotDecompositionDialog } = useEditor();
+  const { state, dispatch, openShotDecompositionDialog, updateShot } = useEditor();
   const { project } = state;
 
   const [formData, setFormData] = useState({
@@ -219,6 +220,14 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       const result = await updateShotCharacterImage(shotCharacterId, characterImageId);
       if (result.success) {
         toast.success("造型已更新");
+        // 重新获取该分镜的数据以更新UI
+        if (shot.episodeId) {
+          const updatedShots = await getEpisodeShots(shot.episodeId);
+          const updatedShot = updatedShots.find((s) => s.id === shot.id);
+          if (updatedShot) {
+            updateShot(updatedShot);
+          }
+        }
       } else {
         toast.error(result.error || "更新失败");
       }

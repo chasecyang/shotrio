@@ -64,6 +64,7 @@ type EditorAction =
   | { type: "SELECT_EPISODE"; payload: string | null }
   | { type: "SELECT_RESOURCE"; payload: SelectedResource | null }
   | { type: "SET_SHOTS"; payload: ShotDetail[] }
+  | { type: "UPDATE_SHOT"; payload: ShotDetail } // 更新单个分镜
   | { type: "SELECT_SHOT"; payload: string }
   | { type: "SELECT_SHOTS"; payload: string[] }
   | { type: "TOGGLE_SHOT_SELECTION"; payload: string }
@@ -141,6 +142,14 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         shots: action.payload,
+      };
+
+    case "UPDATE_SHOT":
+      return {
+        ...state,
+        shots: state.shots.map((shot) =>
+          shot.id === action.payload.id ? action.payload : shot
+        ),
       };
 
     case "SELECT_SHOT":
@@ -269,6 +278,7 @@ interface EditorContextType {
   selectShots: (shotIds: string[]) => void;
   toggleShotSelection: (shotId: string) => void;
   clearShotSelection: () => void;
+  updateShot: (shot: ShotDetail) => void; // 更新单个分镜
   setTimelineZoom: (zoom: number) => void;
   setPlayhead: (position: number) => void;
   setPlaying: (playing: boolean) => void;
@@ -329,6 +339,10 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
 
   const clearShotSelection = useCallback(() => {
     dispatch({ type: "CLEAR_SHOT_SELECTION" });
+  }, []);
+
+  const updateShot = useCallback((shot: ShotDetail) => {
+    dispatch({ type: "UPDATE_SHOT", payload: shot });
   }, []);
 
   const setTimelineZoom = useCallback((zoom: number) => {
@@ -398,12 +412,15 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       selectShots,
       toggleShotSelection,
       clearShotSelection,
+      updateShot,
       setTimelineZoom,
       setPlayhead,
       setPlaying,
       updateProject,
       openStoryboardExtractionDialog,
       closeStoryboardExtractionDialog,
+      openShotDecompositionDialog,
+      closeShotDecompositionDialog,
       selectedEpisode,
       selectedShot,
       selectedCharacter,
@@ -418,12 +435,15 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       selectShots,
       toggleShotSelection,
       clearShotSelection,
+      updateShot,
       setTimelineZoom,
       setPlayhead,
       setPlaying,
       updateProject,
       openStoryboardExtractionDialog,
       closeStoryboardExtractionDialog,
+      openShotDecompositionDialog,
+      closeShotDecompositionDialog,
       selectedEpisode,
       selectedShot,
       selectedCharacter,
@@ -441,12 +461,6 @@ export function useEditor() {
   if (!context) {
     throw new Error("useEditor must be used within an EditorProvider");
   }
-  return context;
-}
-
-// 可选的 Hook，在 EditorProvider 外部返回 null 而不是抛出错误
-export function useEditorOptional() {
-  const context = useContext(EditorContext);
   return context;
 }
 

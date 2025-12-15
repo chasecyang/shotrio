@@ -69,6 +69,10 @@ const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> =
     label: "角色场景匹配",
     icon: <Users className="w-4 h-4" />,
   },
+  shot_decomposition: {
+    label: "分镜拆解",
+    icon: <Film className="w-4 h-4" />,
+  },
   batch_image_generation: {
     label: "批量图像生成",
     icon: <Images className="w-4 h-4" />,
@@ -156,6 +160,7 @@ export function TaskItem({
     "storyboard_generation",
     "character_extraction",
     "scene_extraction",
+    "shot_decomposition",
   ];
   const canView = job.status === "completed" && 
                   job.type && 

@@ -12,6 +12,8 @@ import type {
   StoryboardBasicExtractionInput,
   StoryboardMatchingInput,
   NovelSplitInput,
+  ShotDecompositionInput,
+  ShotDecompositionResult,
 } from "@/types/job";
 
 export interface JobDetails {
@@ -138,6 +140,23 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
         break;
       }
 
+      case "shot_decomposition": {
+        // 如果任务已完成，显示拆解结果
+        if (job.status === "completed" && job.resultData) {
+          try {
+            const resultData = JSON.parse(job.resultData) as ShotDecompositionResult;
+            const decomposedCount = resultData.decomposedCount || resultData.decomposedShots?.length || 0;
+            baseDetails.displayTitle = "分镜拆解";
+            baseDetails.displaySubtitle = `已拆解为 ${decomposedCount} 个子分镜`;
+          } catch {
+            baseDetails.displaySubtitle = "分镜拆解完成";
+          }
+        } else {
+          baseDetails.displaySubtitle = "AI 分析中...";
+        }
+        break;
+      }
+
       case "novel_split": {
         const input = inputData as NovelSplitInput;
         const wordCount = input.content.length;
@@ -180,8 +199,15 @@ function getTaskTypeLabel(type: string): string {
     storyboard_generation: "分镜提取",
     storyboard_basic_extraction: "基础分镜提取",
     storyboard_matching: "角色场景匹配",
+    shot_decomposition: "分镜拆解",
     batch_image_generation: "批量图像生成",
+    shot_image_generation: "分镜图生成",
+    batch_shot_image_generation: "批量分镜图生成",
     video_generation: "视频生成",
+    shot_video_generation: "单镜视频生成",
+    batch_video_generation: "批量视频生成",
+    shot_tts_generation: "语音合成",
+    final_video_export: "最终成片导出",
   };
   return labels[type] || "未知任务";
 }
