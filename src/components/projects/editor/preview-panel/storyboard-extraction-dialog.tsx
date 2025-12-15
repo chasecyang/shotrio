@@ -145,7 +145,7 @@ export function StoryboardExtractionDialog({
         return;
       }
 
-      setExtractedShots(extractionResult.shots);
+      setExtractedShots(extractionResult.shots as ExtractedShot[]);
       // 默认全选
       setSelectedShots(new Set(extractionResult.shots.map((_, idx) => idx)));
       setStep("preview");
@@ -528,7 +528,7 @@ export function StoryboardExtractionDialog({
                               <Textarea
                                 value={currentShot.audioPrompt || ""}
                                 onChange={(e) =>
-                                  updateShot(selectedShotIndex, { audioPrompt: e.target.value || null })
+                                  updateShot(selectedShotIndex, { audioPrompt: e.target.value || undefined })
                                 }
                                 rows={2}
                               />

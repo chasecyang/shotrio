@@ -13,7 +13,7 @@ interface UseStoryboardExtractionOptions {
 
 interface UseStoryboardExtractionReturn {
   isExtracting: boolean;
-  extractionJob: Job | null;
+  extractionJob: Partial<Job> | null;
   extractionResult: StoryboardMatchingResult | null;
   startExtraction: () => Promise<void>;
   clearResult: () => void;

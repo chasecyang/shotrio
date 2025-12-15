@@ -52,7 +52,7 @@ async function ProjectSidebarWrapper({ projectId }: { projectId: string }) {
         title: p.title,
         description: p.description,
       }))}
-      currentProject={currentProject}
+      currentProject={currentProject ?? undefined}
       user={{
         id: user.id,
         name: user.name,

@@ -453,7 +453,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={image.imageUrl}
+                            src={image.imageUrl ?? ''}
                             alt={styleLabel}
                             className="w-full h-full object-cover cursor-pointer"
                             onClick={() => setViewingImage(image)}

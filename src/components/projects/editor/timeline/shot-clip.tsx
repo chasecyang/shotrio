@@ -166,13 +166,13 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
             {/* 内容状态图标 */}
             <div className="flex items-center gap-0.5 ml-auto">
               {shot.videoUrl && (
-                <Video className="w-3 h-3 text-primary" title="已生成视频" />
+                <Video className="w-3 h-3 text-primary" />
               )}
               {!shot.videoUrl && shot.imageUrl && (
-                <ImageIcon className="w-3 h-3 text-blue-500" title="已生成图片" />
+                <ImageIcon className="w-3 h-3 text-blue-500" />
               )}
               {!shot.videoUrl && !shot.imageUrl && (
-                <FileText className="w-3 h-3 text-muted-foreground/50" title="仅文字描述" />
+                <FileText className="w-3 h-3 text-muted-foreground/50" />
               )}
             </div>
           </div>

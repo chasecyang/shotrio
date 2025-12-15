@@ -139,7 +139,7 @@ async function checkTaskDepth(parentJobId: string | undefined): Promise<{
   let currentParentId: string | null = parentJobId;
 
   while (currentParentId && depth < MAX_DEPTH + 1) {
-    const parentJob = await db.query.job.findFirst({
+    const parentJob: { parentJobId: string | null } | undefined = await db.query.job.findFirst({
       where: eq(job.id, currentParentId),
       columns: {
         parentJobId: true,

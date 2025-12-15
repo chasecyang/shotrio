@@ -112,14 +112,6 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
                       <Link href={item.href}>
                         <item.icon />
                         <span>{item.name}</span>
-                        {item.badge !== undefined && item.badge > 0 && (
-                          <Badge 
-                            variant="outline"
-                            className="ml-auto"
-                          >
-                            {item.badge}
-                          </Badge>
-                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

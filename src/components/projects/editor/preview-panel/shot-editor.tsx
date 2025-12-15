@@ -154,22 +154,34 @@ export function ShotEditor({ shot }: ShotEditorProps) {
 
   // 检查是否有正在进行的生成任务
   useEffect(() => {
-    const activeTask = generationTasks.find(
-      (task) => task.status === "processing" && task.inputData?.shotId === shot.id
-    );
+    const activeTask = generationTasks.find((task) => {
+      if (task.status !== "processing" || !task.inputData) return false;
+      try {
+        const inputData = JSON.parse(task.inputData);
+        return inputData.shotId === shot.id;
+      } catch {
+        return false;
+      }
+    });
     setIsGenerating(!!activeTask);
-    if (activeTask) {
+    if (activeTask?.id) {
       setGenerationJobId(activeTask.id);
     }
   }, [generationTasks, shot.id]);
 
   // 检查是否有正在进行的视频生成任务
   useEffect(() => {
-    const activeTask = videoGenerationTasks.find(
-      (task) => task.status === "processing" && task.inputData?.shotId === shot.id
-    );
+    const activeTask = videoGenerationTasks.find((task) => {
+      if (task.status !== "processing" || !task.inputData) return false;
+      try {
+        const inputData = JSON.parse(task.inputData);
+        return inputData.shotId === shot.id;
+      } catch {
+        return false;
+      }
+    });
     setIsGeneratingVideo(!!activeTask);
-    if (activeTask) {
+    if (activeTask?.id) {
       setVideoGenerationJobId(activeTask.id);
     }
   }, [videoGenerationTasks, shot.id]);
