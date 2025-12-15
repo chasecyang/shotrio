@@ -331,10 +331,7 @@ export async function processShotImageGeneration(
     })
     .where(eq(shot.id, shotId));
 
-  // 使该剧集的分镜缓存失效，这样前端会自动获取最新数据
-  const { revalidateTag } = await import("next/cache");
-  revalidateTag(`episode-shots-${shotData.episodeId}`, "max");
-
+  // 前端会通过任务订阅系统自动获取最新数据，无需手动 revalidate
   const resultData: ShotImageGenerationResult = {
     shotId,
     imageUrl: finalImageUrl,
