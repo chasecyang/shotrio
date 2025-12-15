@@ -331,16 +331,7 @@ export async function processShotImageGeneration(
     })
     .where(eq(shot.id, shotId));
 
-  // 🆕 使缓存失效
-  const { revalidateEpisodeShots } = await import("../utils/revalidate-client");
-  const shotForRevalidate = await db.query.shot.findFirst({
-    where: eq(shot.id, shotId),
-    columns: { episodeId: true },
-  });
-  
-  if (shotForRevalidate?.episodeId) {
-    await revalidateEpisodeShots(shotForRevalidate.episodeId);
-  }
+  // 注意：数据更新会通过前端的轮询机制自动刷新，无需手动 revalidate
 
   const resultData: ShotImageGenerationResult = {
     shotId,

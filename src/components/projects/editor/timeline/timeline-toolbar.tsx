@@ -40,6 +40,8 @@ interface TimelineToolbarProps {
   onDeleteShots?: () => void;
   onGenerateImages?: () => void;
   onGenerateVideos?: () => void;
+  isBatchGeneratingImages?: boolean;
+  isBatchGeneratingVideos?: boolean;
 }
 
 // 核心控制栏 - 第一行
@@ -251,14 +253,29 @@ function SelectionActionsBar({
   onDeleteShots,
   onGenerateImages,
   onGenerateVideos,
+  isBatchGeneratingImages,
+  isBatchGeneratingVideos,
 }: {
   onDeleteShots?: () => void;
   onGenerateImages?: () => void;
   onGenerateVideos?: () => void;
+  isBatchGeneratingImages?: boolean;
+  isBatchGeneratingVideos?: boolean;
 }) {
-  const { state, clearShotSelection } = useEditor();
+  const { state, clearShotSelection, jobs } = useEditor();
   const { selectedShotIds } = state;
   const isMobile = useIsMobile();
+
+  // 检查是否有活跃的批量任务
+  const hasBatchImageJob = jobs.some(job => 
+    job.type === 'batch_shot_image_generation' && 
+    (job.status === 'pending' || job.status === 'processing')
+  );
+
+  const hasBatchVideoJob = jobs.some(job => 
+    job.type === 'batch_video_generation' && 
+    (job.status === 'pending' || job.status === 'processing')
+  );
 
   return (
     <motion.div
@@ -295,15 +312,16 @@ function SelectionActionsBar({
         variant="outline"
         size="sm"
         onClick={onGenerateImages}
+        disabled={isBatchGeneratingImages || hasBatchImageJob}
         className={cn(
           "h-7 text-xs border-purple-200 dark:border-purple-800/50",
           "hover:bg-purple-50 hover:border-purple-300 dark:hover:bg-purple-950/30 dark:hover:border-purple-700"
         )}
       >
-        <ImageIcon className="h-3.5 w-3.5 mr-1" />
+        <ImageIcon className={cn("h-3.5 w-3.5 mr-1", (isBatchGeneratingImages || hasBatchImageJob) && "animate-spin")} />
         <Sparkles className="h-3 w-3 mr-1" />
-        生成图片
-        {!isMobile && (
+        {(isBatchGeneratingImages || hasBatchImageJob) ? "生成中..." : "生成图片"}
+        {!isMobile && !(isBatchGeneratingImages || hasBatchImageJob) && (
           <Badge variant="secondary" className="ml-1.5 h-4 text-[10px] px-1">
             {selectedShotIds.length}
           </Badge>
@@ -314,14 +332,15 @@ function SelectionActionsBar({
         variant="outline"
         size="sm"
         onClick={onGenerateVideos}
+        disabled={isBatchGeneratingVideos || hasBatchVideoJob}
         className={cn(
           "h-7 text-xs border-purple-200 dark:border-purple-800/50",
           "hover:bg-purple-50 hover:border-purple-300 dark:hover:bg-purple-950/30 dark:hover:border-purple-700"
         )}
       >
-        <Video className="h-3.5 w-3.5 mr-1" />
+        <Video className={cn("h-3.5 w-3.5 mr-1", (isBatchGeneratingVideos || hasBatchVideoJob) && "animate-spin")} />
         <Sparkles className="h-3 w-3 mr-1" />
-        生成视频
+        {(isBatchGeneratingVideos || hasBatchVideoJob) ? "生成中..." : "生成视频"}
       </Button>
 
       <div className="flex-1" />
@@ -347,6 +366,8 @@ export function TimelineToolbar({
   onDeleteShots,
   onGenerateImages,
   onGenerateVideos,
+  isBatchGeneratingImages,
+  isBatchGeneratingVideos,
 }: TimelineToolbarProps) {
   const { state, clearShotSelection } = useEditor();
   const { selectedShotIds } = state;
@@ -379,6 +400,8 @@ export function TimelineToolbar({
             onDeleteShots={onDeleteShots}
             onGenerateImages={onGenerateImages}
             onGenerateVideos={onGenerateVideos}
+            isBatchGeneratingImages={isBatchGeneratingImages}
+            isBatchGeneratingVideos={isBatchGeneratingVideos}
           />
         ) : (
           <DefaultActionsBar key="default" onAddShot={onAddShot} />

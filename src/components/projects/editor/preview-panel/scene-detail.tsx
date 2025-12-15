@@ -88,6 +88,19 @@ export function SceneDetail({ scene }: SceneDetailProps) {
   const masterLayoutJob = getImageGenerationJob(masterLayout?.id);
   const quarterViewJob = getImageGenerationJob(quarterView?.id);
 
+  // 当检测到 Job 时，重置本地 loading 状态
+  useEffect(() => {
+    if (masterLayoutJob) {
+      setGeneratingMaster(false);
+    }
+  }, [masterLayoutJob]);
+
+  useEffect(() => {
+    if (quarterViewJob) {
+      setGeneratingQuarter(false);
+    }
+  }, [quarterViewJob]);
+
   // 数据刷新由 EditorContext 中的统一刷新机制处理，无需手动监听
 
   // 自动保存
@@ -121,14 +134,15 @@ export function SceneDetail({ scene }: SceneDetailProps) {
       const result = await startMasterLayoutGeneration(scene.projectId, scene.id);
       if (result.success) {
         toast.success("已开始生成全景布局图，请稍后在任务中心查看进度");
+        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || "创建任务失败");
+        setGeneratingMaster(false); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error("生成全景布局图失败");
-    } finally {
-      setGeneratingMaster(false);
+      setGeneratingMaster(false); // 出错时才重置
     }
   };
 
@@ -149,14 +163,15 @@ export function SceneDetail({ scene }: SceneDetailProps) {
       const result = await startQuarterViewGeneration(scene.projectId, scene.id);
       if (result.success) {
         toast.success("已开始生成叙事视角图，请稍后在任务中心查看进度");
+        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || "创建任务失败");
+        setGeneratingQuarter(false); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error("生成叙事视角图失败");
-    } finally {
-      setGeneratingQuarter(false);
+      setGeneratingQuarter(false); // 出错时才重置
     }
   };
 
@@ -269,15 +284,15 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                 全景布局图
                 <Badge variant="outline" className="text-xs">第一步</Badge>
               </div>
-              {masterLayout?.imageUrl && !masterLayoutJob && (
+              {masterLayout?.imageUrl && (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleGenerateMasterLayout}
-                  disabled={generatingMaster || !formData.description}
+                  disabled={generatingMaster || !!masterLayoutJob || !formData.description}
                 >
-                  <RotateCw className={`w-3.5 h-3.5 mr-2 ${generatingMaster ? 'animate-spin' : ''}`} />
-                  {generatingMaster ? "生成中..." : "重新生成"}
+                  <RotateCw className={`w-3.5 h-3.5 mr-2 ${(generatingMaster || masterLayoutJob) ? 'animate-spin' : ''}`} />
+                  {(generatingMaster || masterLayoutJob) ? "生成中..." : "重新生成"}
                 </Button>
               )}
             </div>
@@ -312,13 +327,13 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                   <p className="text-sm text-muted-foreground text-center">
                     建立空间认知，展示场景的完整布局和深度层次
                   </p>
-                  {!masterLayoutJob ? (
+                  {!(generatingMaster || masterLayoutJob) ? (
                     <Button
                       onClick={handleGenerateMasterLayout}
-                      disabled={generatingMaster || !formData.description}
+                      disabled={!formData.description}
                     >
-                      <Sparkles className={`w-4 h-4 mr-2 ${generatingMaster ? 'animate-spin' : ''}`} />
-                      {generatingMaster ? "生成中..." : "生成全景布局图"}
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      生成全景布局图
                     </Button>
                   ) : (
                     <div className="flex items-center gap-2 text-sm text-primary">
@@ -344,15 +359,15 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                 叙事视角图
                 <Badge variant="outline" className="text-xs">第二步</Badge>
               </div>
-              {quarterView?.imageUrl && !quarterViewJob && (
+              {quarterView?.imageUrl && (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleGenerateQuarterView}
-                  disabled={generatingQuarter || !formData.description || !masterLayout?.imageUrl}
+                  disabled={generatingQuarter || !!quarterViewJob || !formData.description || !masterLayout?.imageUrl}
                 >
-                  <RotateCw className={`w-3.5 h-3.5 mr-2 ${generatingQuarter ? 'animate-spin' : ''}`} />
-                  {generatingQuarter ? "生成中..." : "重新生成"}
+                  <RotateCw className={`w-3.5 h-3.5 mr-2 ${(generatingQuarter || quarterViewJob) ? 'animate-spin' : ''}`} />
+                  {(generatingQuarter || quarterViewJob) ? "生成中..." : "重新生成"}
                 </Button>
               )}
             </div>
@@ -387,14 +402,14 @@ export function SceneDetail({ scene }: SceneDetailProps) {
                   <p className="text-sm text-muted-foreground text-center">
                     叙事主力视角，从全景聚焦到表演空间
                   </p>
-                  {!quarterViewJob ? (
+                  {!(generatingQuarter || quarterViewJob) ? (
                     <>
                       <Button
                         onClick={handleGenerateQuarterView}
-                        disabled={generatingQuarter || !formData.description || !masterLayout?.imageUrl}
+                        disabled={!formData.description || !masterLayout?.imageUrl}
                       >
-                        <Sparkles className={`w-4 h-4 mr-2 ${generatingQuarter ? 'animate-spin' : ''}`} />
-                        {generatingQuarter ? "生成中..." : "生成叙事视角图"}
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        生成叙事视角图
                       </Button>
                       {!masterLayout?.imageUrl && formData.description && (
                         <p className="text-xs text-amber-600 dark:text-amber-400 text-center">

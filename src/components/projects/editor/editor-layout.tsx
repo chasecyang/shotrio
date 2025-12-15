@@ -33,10 +33,38 @@ function EditorLayoutInner({
   resourcePanel,
   previewPanel,
 }: EditorLayoutProps) {
-  const { state, dispatch, closeShotDecompositionDialog } = useEditor();
+  const { state, dispatch, closeShotDecompositionDialog, jobs } = useEditor();
 
   // 注册键盘快捷键
   useEditorKeyboard();
+
+  // 批量生成的 loading 状态
+  const [isBatchGeneratingImages, setIsBatchGeneratingImages] = useState(false);
+  const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
+
+  // 检查是否有活跃的批量生成任务
+  const hasBatchImageJob = jobs.some(job => 
+    job.type === 'batch_shot_image_generation' && 
+    (job.status === 'pending' || job.status === 'processing')
+  );
+
+  const hasBatchVideoJob = jobs.some(job => 
+    job.type === 'batch_video_generation' && 
+    (job.status === 'pending' || job.status === 'processing')
+  );
+
+  // 当检测到 Job 时，重置本地 loading 状态
+  useEffect(() => {
+    if (hasBatchImageJob) {
+      setIsBatchGeneratingImages(false);
+    }
+  }, [hasBatchImageJob]);
+
+  useEffect(() => {
+    if (hasBatchVideoJob) {
+      setIsBatchGeneratingVideos(false);
+    }
+  }, [hasBatchVideoJob]);
 
   // 加载分镜数据
   useEffect(() => {
@@ -127,16 +155,20 @@ function EditorLayoutInner({
       return;
     }
 
+    setIsBatchGeneratingImages(true);
     try {
       const result = await batchGenerateShotImages(state.selectedShotIds);
       if (result.success) {
         toast.success(`已启动 ${state.selectedShotIds.length} 个分镜的图片生成任务`);
+        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || "启动失败");
+        setIsBatchGeneratingImages(false); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error("启动批量生成失败");
+      setIsBatchGeneratingImages(false); // 出错时才重置
     }
   };
 
@@ -157,16 +189,20 @@ function EditorLayoutInner({
       return;
     }
 
+    setIsBatchGeneratingVideos(true);
     try {
       const result = await batchGenerateShotVideos(state.selectedShotIds);
       if (result.success) {
         toast.success(`已启动 ${state.selectedShotIds.length} 个分镜的视频生成任务`);
+        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || "启动失败");
+        setIsBatchGeneratingVideos(false); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error("启动批量生成失败");
+      setIsBatchGeneratingVideos(false); // 出错时才重置
     }
   };
 
@@ -218,6 +254,8 @@ function EditorLayoutInner({
                 onDeleteShots={handleDeleteShots}
                 onGenerateImages={handleGenerateImages}
                 onGenerateVideos={handleGenerateVideos}
+                isBatchGeneratingImages={isBatchGeneratingImages || hasBatchImageJob}
+                isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
               />
             </div>
           </TabsContent>
@@ -269,6 +307,8 @@ function EditorLayoutInner({
               onDeleteShots={handleDeleteShots}
               onGenerateImages={handleGenerateImages}
               onGenerateVideos={handleGenerateVideos}
+              isBatchGeneratingImages={isBatchGeneratingImages || hasBatchImageJob}
+              isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
             />
           </div>
         </ResizablePanel>

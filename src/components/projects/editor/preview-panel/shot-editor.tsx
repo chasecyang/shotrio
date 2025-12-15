@@ -209,11 +209,16 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         return false;
       }
     });
-    setIsGenerating(!!activeTask);
-    if (activeTask?.id) {
-      setGenerationJobId(activeTask.id);
-    } else if (!activeTask) {
-      // 如果没有找到活动任务，清除 jobId
+    
+    if (activeTask) {
+      // 有活动任务时，设置状态和 jobId
+      setIsGenerating(true);
+      if (activeTask.id) {
+        setGenerationJobId(activeTask.id);
+      }
+    } else {
+      // 没有活动任务时，重置状态
+      setIsGenerating(false);
       setGenerationJobId(null);
     }
   }, [generationTasks, shot.id]);
@@ -230,11 +235,16 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         return false;
       }
     });
-    setIsGeneratingVideo(!!activeTask);
-    if (activeTask?.id) {
-      setVideoGenerationJobId(activeTask.id);
-    } else if (!activeTask) {
-      // 如果没有找到活动任务，清除 jobId
+    
+    if (activeTask) {
+      // 有活动任务时，设置状态和 jobId
+      setIsGeneratingVideo(true);
+      if (activeTask.id) {
+        setVideoGenerationJobId(activeTask.id);
+      }
+    } else {
+      // 没有活动任务时，重置状态
+      setIsGeneratingVideo(false);
       setVideoGenerationJobId(null);
     }
   }, [videoGenerationTasks, shot.id]);
@@ -247,13 +257,14 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       if (result.success && result.jobId) {
         setGenerationJobId(result.jobId);
         toast.success("已启动图片生成任务");
+        // 不在这里重置状态，等待 useEffect 检测到任务后再处理
       } else {
         toast.error(result.error || "启动失败");
-        setIsGenerating(false);
+        setIsGenerating(false); // 失败时才重置
       }
     } catch {
       toast.error("生成失败");
-      setIsGenerating(false);
+      setIsGenerating(false); // 出错时才重置
     }
   };
 
@@ -411,13 +422,14 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       if (result.success && result.jobId) {
         setVideoGenerationJobId(result.jobId);
         toast.success("已启动视频生成任务");
+        // 不在这里重置状态，等待 useEffect 检测到任务后再处理
       } else {
         toast.error(result.error || "启动失败");
-        setIsGeneratingVideo(false);
+        setIsGeneratingVideo(false); // 失败时才重置
       }
     } catch {
       toast.error("生成失败");
-      setIsGeneratingVideo(false);
+      setIsGeneratingVideo(false); // 出错时才重置
     }
   };
 

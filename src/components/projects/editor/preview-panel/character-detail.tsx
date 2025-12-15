@@ -117,6 +117,26 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
     }) as Partial<Job> | undefined;
   };
 
+  // 当检测到 Job 时，重置对应图片的本地 loading 状态
+  useEffect(() => {
+    const newGeneratingImages: Record<string, boolean> = {};
+    let hasChanges = false;
+
+    // 遍历所有造型，检查是否有对应的活跃任务
+    character.images.forEach((image) => {
+      const job = getImageGenerationJob(image.id);
+      if (job && generatingImages[image.id]) {
+        // 如果有 Job 且本地状态为 true，重置本地状态
+        newGeneratingImages[image.id] = false;
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      setGeneratingImages((prev) => ({ ...prev, ...newGeneratingImages }));
+    }
+  }, [jobs, character.images, generatingImages]);
+
   // 基础信息自动保存
   const { saveStatus } = useAutoSave({
     data: formData,
@@ -222,14 +242,15 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
 
       if (result.success) {
         toast.success("已开始生成图片，请稍后在任务中心查看进度");
+        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || "创建任务失败");
+        setGeneratingImages(prev => ({ ...prev, [imageId]: false })); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error("生成图片失败");
-    } finally {
-      setGeneratingImages(prev => ({ ...prev, [imageId]: false }));
+      setGeneratingImages(prev => ({ ...prev, [imageId]: false })); // 出错时才重置
     }
   };
 
@@ -246,14 +267,15 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
 
       if (result.success) {
         toast.success("已开始重新生成图片，请稍后在任务中心查看进度");
+        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || "创建任务失败");
+        setGeneratingImages(prev => ({ ...prev, [imageId]: false })); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error("重新生成图片失败");
-    } finally {
-      setGeneratingImages(prev => ({ ...prev, [imageId]: false }));
+      setGeneratingImages(prev => ({ ...prev, [imageId]: false })); // 出错时才重置
     }
   };
 
@@ -414,7 +436,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                               onClick={() => setViewingImage(image)}
                             />
                             {/* 悬停时显示操作按钮 */}
-                            {!imageJob && (
+                            {!(isGenerating || imageJob) && (
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 p-2">
                                 <Button
                                   size="sm"
@@ -435,10 +457,9 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                                     e.stopPropagation();
                                     handleRegenerateImage(image.id);
                                   }}
-                                  disabled={isGenerating}
                                   className="w-full"
                                 >
-                                  <RotateCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                                  <RotateCw className="w-4 h-4 mr-2" />
                                   重新生成
                                 </Button>
                               </div>
@@ -447,15 +468,15 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
                         ) : (
                           <div className="flex flex-col items-center gap-3 p-4">
                             <ImageIcon className="w-12 h-12 text-muted-foreground/50" />
-                            {!imageJob ? (
+                            {!(isGenerating || imageJob) ? (
                               <>
                                 <Button
                                   size="sm"
                                   onClick={() => handleGenerateImage(image.id)}
-                                  disabled={isGenerating || !stylePrompt}
+                                  disabled={!stylePrompt}
                                 >
-                                  <Sparkles className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                                  {isGenerating ? "生成中..." : "生成图片"}
+                                  <Sparkles className="w-4 h-4 mr-2" />
+                                  生成图片
                                 </Button>
                                 {!stylePrompt && (
                                   <p className="text-xs text-muted-foreground text-center">
