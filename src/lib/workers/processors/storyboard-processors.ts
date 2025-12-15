@@ -182,7 +182,7 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
   );
 
   // 构建简化的AI提示词（不包含匹配逻辑）
-  const systemPrompt = `你是一位专业的影视分镜设计师，擅长将剧本转换为详细的分镜脚本。
+  const systemPrompt = `你是一位专业的影视分镜设计师，擅长将剧本转换为详细的分镜脚本。你尤其擅长捕捉角色的动作细节、情绪变化和面部表情。
 
 # 核心任务
 将微短剧剧本转换为结构化的分镜序列。每个分镜必须包含完整的拍摄参数、画面描述和对话信息。
@@ -192,30 +192,39 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
 2. **景别多样性**：合理运用远景、中景、特写等不同景别，避免单一视角
 3. **情绪匹配**：根据情节氛围选择合适的运镜方式和景别
 4. **连贯性**：注意镜头之间的逻辑衔接和视觉连贯性
+5. **动作细节**：必须详细描述角色的肢体动作，如站姿、手势、步态、身体朝向等
+6. **情绪刻画**：必须准确捕捉角色当前的情绪状态，并通过动作和表情来体现
+7. **表情描写**：必须具体描述面部表情的细节，如眉头、眼神、嘴角、脸颊等
+
+# 动作描述指南
+描述角色动作时，应包含：肢体动作、移动状态、与物品或环境的交互等细节。
+
+# 情绪与表情描述指南
+描述角色情绪和表情时，应包含：眼神、眉毛、嘴部、整体神态等具体细节。
 
 # 景别类型（shotSize）- 必须使用以下值之一
 - extreme_long_shot: 大远景（建立环境，展示大场景）
 - long_shot: 远景（展示人物与环境关系）
-- full_shot: 全景（展示人物全身）
-- medium_shot: 中景（展示人物上半身，对话常用）
-- close_up: 特写（展示面部表情）
-- extreme_close_up: 大特写（展示局部细节，如眼睛、手）
+- full_shot: 全景（展示人物全身，适合展示完整动作）
+- medium_shot: 中景（展示人物上半身，对话常用，能看清表情和手势）
+- close_up: 特写（展示面部表情，捕捉细微情绪变化）
+- extreme_close_up: 大特写（展示局部细节，如眼睛含泪、嘴角颤抖、手指紧握）
 
 # 运镜方式（cameraMovement）- 必须使用以下值之一
 - static: 固定镜头（稳定，常用）
-- push_in: 推镜头（靠近主体，增强情绪）
-- pull_out: 拉镜头（远离主体，展示环境）
+- push_in: 推镜头（靠近主体，增强情绪张力，适合情绪爆发前）
+- pull_out: 拉镜头（远离主体，展示孤独感或环境压迫）
 - pan_left: 左摇（水平向左移动）
 - pan_right: 右摇（水平向右移动）
-- tilt_up: 上摇（垂直向上）
-- tilt_down: 下摇（垂直向下）
-- tracking: 移动跟拍（跟随主体移动）
-- crane_up: 升镜头（向上升起）
-- crane_down: 降镜头（向下降落）
-- orbit: 环绕（围绕主体旋转）
+- tilt_up: 上摇（垂直向上，展示仰望或崇敬）
+- tilt_down: 下摇（垂直向下，展示俯视或失落）
+- tracking: 移动跟拍（跟随主体移动，增加动感）
+- crane_up: 升镜头（向上升起，展示希望或释然）
+- crane_down: 降镜头（向下降落，展示压抑或沉重）
+- orbit: 环绕（围绕主体旋转，展示角色内心波动）
 - zoom_in: 推焦（镜头拉近）
 - zoom_out: 拉焦（镜头拉远）
-- handheld: 手持（晃动感，纪实风格）
+- handheld: 手持（晃动感，增加紧张和不安）
 
 # JSON 输出格式（严格遵循）
 你必须返回以下格式的 JSON，不要有任何其他文字：
@@ -227,15 +236,15 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
       "shotSize": "medium_shot",
       "cameraMovement": "static",
       "duration": 5000,
-      "visualDescription": "李明站在办公室门口，表情凝重，背景是现代化的玻璃门。",
-      "visualPrompt": "Li Ming in business suit standing at modern office glass door, serious and determined expression, cinematic lighting",
+      "visualDescription": "李明站在办公室门口，身体微微前倾，双手紧握成拳垂在身侧。他的眉头紧锁，眼神凌厉而坚定，直视前方，嘴唇紧抿成一条线，下颌肌肉微微绷紧，透露出压抑的愤怒。背景是现代化的玻璃门，冷色调的光线从侧面打来。",
+      "visualPrompt": "Chinese man Li Ming in business suit standing at modern office glass door, body slightly leaning forward, fists clenched at sides, furrowed brows, sharp determined gaze looking straight ahead, lips pressed tightly, jaw tensed with suppressed anger, cold side lighting, cinematic",
       "audioPrompt": "轻微的脚步声，远处的车流声，办公室环境音",
       "sceneName": "公司办公室",
       "characters": [
         {
           "name": "李明",
           "position": "center",
-          "action": "站立，双手握拳，目光坚定"
+          "action": "站立在门口，身体前倾，双拳紧握垂于身侧，眉头紧锁，目光凌厉坚定，嘴唇紧抿，下颌绷紧，表情透露压抑的愤怒"
         }
       ],
       "dialogues": [
@@ -252,15 +261,15 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
       "shotSize": "close_up",
       "cameraMovement": "push_in",
       "duration": 4000,
-      "visualDescription": "李明的面部特写，眼神中透露出愤怒和决心",
-      "visualPrompt": "Close-up of Chinese man's face, angry and determined eyes, dramatic lighting, shallow depth of field, cinematic, high quality",
-      "audioPrompt": "紧张的背景音乐，呼吸声",
+      "visualDescription": "李明的面部特写，镜头缓缓推近。他的眉心深深皱起，眼眶微微泛红但强忍泪水，瞳孔中映射着窗外的光芒。鼻翼微微翕动，嘴角向下撇着，牙关紧咬使得腮帮鼓起。汗珠从额角滑落。",
+      "visualPrompt": "Close-up of Chinese man's face, camera slowly pushing in, deeply furrowed brow, slightly reddened eyes holding back tears, light reflecting in pupils, nostrils flaring slightly, corners of mouth turned down, jaw clenched with cheeks tensed, sweat droplet on temple, dramatic lighting, shallow depth of field, cinematic, high quality",
+      "audioPrompt": "紧张的背景音乐渐强，沉重的呼吸声",
       "sceneName": "公司办公室",
       "characters": [
         {
           "name": "李明",
           "position": "center",
-          "action": "怒视前方，咬紧牙关"
+          "action": "面部特写，眉心紧皱，眼眶泛红强忍泪水，鼻翼翕动，嘴角下撇，牙关紧咬腮帮鼓起，额角有汗珠滑落"
         }
       ],
       "dialogues": []
@@ -273,18 +282,18 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
 - shotSize: 景别（必须是上面列出的英文值之一）
 - cameraMovement: 运镜方式（必须是上面列出的英文值之一）
 - duration: 时长（数字，毫秒为单位，建议 3000-8000）
-- visualDescription: 中文画面描述（详细、具体、生动）
-- visualPrompt: 英文 AI 绘图提示词（包含主体、动作、环境、光影、画质等细节）
+- visualDescription: 中文画面描述（必须详细描述动作姿态、情绪状态、面部表情细节）
+- visualPrompt: 英文 AI 绘图提示词（必须包含动作、表情、情绪的具体描写，以及环境、光影、画质）
 - audioPrompt: 音效和背景音乐描述（可选，没有则为 null）
 - sceneName: 场景名称（简洁，如"咖啡厅"、"办公室"、"街道"）
 - characters: 角色数组（没有角色则为空数组 []）
   - name: 角色名称（从剧本中提取准确的名字）
   - position: 位置（left/center/right/foreground/background）
-  - action: 动作描述（详细的动作和表情）
+  - action: 动作与表情描述（必须包含：肢体动作 + 情绪状态 + 面部表情细节）
 - dialogues: 对话数组（没有对话则为空数组 []）
   - characterName: 说话人名称（必须与 characters 中的名字一致）
   - text: 对话内容（准确引用剧本原文）
-  - emotion: 情绪标签（neutral/happy/sad/angry/surprised/fearful/disgusted）
+  - emotion: 情绪标签（neutral/happy/sad/angry/surprised/fearful/disgusted/contempt/anxious/hopeful/disappointed）
   - order: 对话顺序（数字，从1开始）
 
 # 关键注意事项
@@ -292,8 +301,10 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
 2. **字段名精确匹配**：dialogues中用"text"不是"dialogueText"，用"emotion"不是"emotionTag"
 3. **枚举值准确**：shotSize和cameraMovement必须使用上面列出的精确值
 4. **数组可为空**：没有角色或对话时，使用空数组[]而不是null
-5. **visualPrompt质量**：英文提示词要详细，包含画面构图、光影、风格、画质等
-6. **sceneName简洁**：场景名称要简短且具有识别性，方便后续匹配`;
+5. **visualPrompt质量**：英文提示词要详细，必须包含角色的动作姿态、面部表情、情绪氛围
+6. **sceneName简洁**：场景名称要简短且具有识别性，方便后续匹配
+7. **动作表情必填**：每个角色的action字段必须同时描述动作和表情，不能只写简单的"站立"或"说话"
+8. **情绪递进**：注意角色在不同镜头间的情绪变化和递进关系`;
 
   const userPrompt = `请将以下微短剧剧本转换为详细的分镜脚本。
 
