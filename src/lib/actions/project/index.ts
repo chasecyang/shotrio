@@ -41,4 +41,5 @@ export {
   generateShotImage,
   batchGenerateShotImages,
   updateShotCharacterImage,
+  copyShotImage,
 } from "./shot";

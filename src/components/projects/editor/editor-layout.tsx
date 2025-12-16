@@ -16,9 +16,11 @@ import { ProjectDetail } from "@/types/project";
 import { createShot, deleteShot, batchGenerateShotImages } from "@/lib/actions/project";
 import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
+import { getExportableShots } from "@/lib/actions/video/export";
 import { toast } from "sonner";
 import { FileText, Eye, Film } from "lucide-react";
 import { ShotDecompositionDialog } from "./preview-panel/shot-decomposition-dialog";
+import JSZip from "jszip";
 
 interface EditorLayoutProps {
   project: ProjectDetail;
@@ -41,6 +43,7 @@ function EditorLayoutInner({
   // 批量生成的 loading 状态
   const [isBatchGeneratingImages, setIsBatchGeneratingImages] = useState(false);
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
+  const [isExportingVideos, setIsExportingVideos] = useState(false);
 
   // 检查是否有活跃的批量生成任务
   const hasBatchImageJob = jobs.some(job => 
@@ -206,6 +209,104 @@ function EditorLayoutInner({
     }
   };
 
+  // 批量导出视频
+  const handleExportVideos = async () => {
+    if (state.selectedShotIds.length === 0) {
+      toast.error("请先选择要导出的分镜");
+      return;
+    }
+
+    setIsExportingVideos(true);
+    const toastId = toast.loading("正在准备导出...");
+
+    try {
+      // 1. 获取可导出的分镜数据
+      const result = await getExportableShots(state.selectedShotIds);
+      
+      if (!result.success || !result.shots || result.shots.length === 0) {
+        toast.error(result.error || "没有可导出的视频", { id: toastId });
+        setIsExportingVideos(false);
+        return;
+      }
+
+      // 显示跳过信息
+      if (result.skippedCount > 0) {
+        toast.info(`已跳过 ${result.skippedCount} 个未生成视频的分镜`, { id: toastId });
+      }
+
+      // 2. 创建 ZIP
+      const zip = new JSZip();
+      const totalVideos = result.shots.length;
+
+      // 3. 下载并添加每个视频到 ZIP
+      for (let i = 0; i < result.shots.length; i++) {
+        const shotData = result.shots[i];
+        
+        toast.loading(`正在打包视频 (${i + 1}/${totalVideos})...`, { id: toastId });
+
+        try {
+          // 下载视频文件
+          const response = await fetch(shotData.videoUrl);
+          if (!response.ok) {
+            throw new Error(`下载失败: ${response.statusText}`);
+          }
+          
+          const blob = await response.blob();
+          
+          // 生成文件名: shot-001.mp4
+          const filename = `shot-${String(shotData.order).padStart(3, '0')}.mp4`;
+          
+          // 添加到 ZIP
+          zip.file(filename, blob);
+        } catch (error) {
+          console.error(`下载视频失败 (Shot ${shotData.order}):`, error);
+          toast.warning(`镜头 ${shotData.order} 下载失败，已跳过`, { id: toastId });
+        }
+      }
+
+      // 4. 生成 ZIP 并下载
+      toast.loading("正在生成压缩包...", { id: toastId });
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 6
+        }
+      });
+
+      // 5. 触发浏览器下载
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // 获取当前剧集信息生成更友好的文件名
+      const currentEpisode = state.project?.episodes.find(
+        ep => ep.id === state.selectedEpisodeId
+      );
+      const episodeName = currentEpisode 
+        ? `第${currentEpisode.order}集` 
+        : 'shots';
+      
+      a.download = `${episodeName}-分镜视频-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // 6. 显示成功消息
+      toast.success(`成功导出 ${totalVideos} 个视频`, { id: toastId });
+      
+    } catch (error) {
+      console.error("导出视频失败:", error);
+      toast.error(
+        error instanceof Error ? error.message : "导出失败，请重试",
+        { id: toastId }
+      );
+    } finally {
+      setIsExportingVideos(false);
+    }
+  };
+
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState<string>("timeline");
 
@@ -254,8 +355,10 @@ function EditorLayoutInner({
                 onDeleteShots={handleDeleteShots}
                 onGenerateImages={handleGenerateImages}
                 onGenerateVideos={handleGenerateVideos}
+                onExportVideos={handleExportVideos}
                 isBatchGeneratingImages={isBatchGeneratingImages || hasBatchImageJob}
                 isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
+                isExportingVideos={isExportingVideos}
               />
             </div>
           </TabsContent>
@@ -307,8 +410,10 @@ function EditorLayoutInner({
               onDeleteShots={handleDeleteShots}
               onGenerateImages={handleGenerateImages}
               onGenerateVideos={handleGenerateVideos}
+              onExportVideos={handleExportVideos}
               isBatchGeneratingImages={isBatchGeneratingImages || hasBatchImageJob}
               isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
+              isExportingVideos={isExportingVideos}
             />
           </div>
         </ResizablePanel>

@@ -1,62 +1,158 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { shot, episode } from "@/lib/db/schemas/project";
-import { eq } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth/auth-utils";
+import db from "@/lib/db";
+import { shot } from "@/lib/db/schemas/project";
+import { inArray, and, isNotNull } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-export async function getEpisodeForExport(episodeId: string) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { success: false, error: "未登录" };
+export type ExportableShotData = {
+  id: string;
+  order: number;
+  videoUrl: string;
+};
+
+export type GetExportableShotsResult = {
+  success: boolean;
+  shots?: ExportableShotData[];
+  totalSelected: number;
+  totalExportable: number;
+  skippedCount: number;
+  error?: string;
+};
+
+/**
+ * 获取可导出的分镜数据
+ * 只返回有视频的分镜，自动跳过没有视频的分镜
+ */
+export async function getExportableShots(
+  shotIds: string[]
+): Promise<GetExportableShotsResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+      totalSelected: shotIds.length,
+      totalExportable: 0,
+      skippedCount: 0,
+    };
+  }
+
+  if (!shotIds || shotIds.length === 0) {
+    return {
+      success: false,
+      error: "未选择分镜",
+      totalSelected: 0,
+      totalExportable: 0,
+      skippedCount: 0,
+    };
   }
 
   try {
-    // 获取剧集信息和所有分镜
-    const episodeData = await db.query.episode.findFirst({
-      where: eq(episode.id, episodeId),
+    // 查询所有选中的分镜
+    const allShots = await db.query.shot.findMany({
+      where: inArray(shot.id, shotIds),
       with: {
-        project: true,
-        shots: {
-          orderBy: (shots, { asc }) => [asc(shots.order)],
+        episode: {
           with: {
-            dialogues: {
-              orderBy: (dialogues, { asc }) => [asc(dialogues.order)],
-              with: {
-                character: true,
-              },
-            },
+            project: true,
           },
         },
       },
     });
 
+    if (allShots.length === 0) {
+      return {
+        success: false,
+        error: "未找到分镜",
+        totalSelected: shotIds.length,
+        totalExportable: 0,
+        skippedCount: 0,
+      };
+    }
+
+    // 验证用户权限（检查第一个分镜所属项目）
+    const firstShot = allShots[0];
+    const episodeData = Array.isArray(firstShot.episode)
+      ? firstShot.episode[0]
+      : firstShot.episode;
+    
     if (!episodeData) {
-      return { success: false, error: "剧集不存在" };
+      return {
+        success: false,
+        error: "无法获取剧集信息",
+        totalSelected: shotIds.length,
+        totalExportable: 0,
+        skippedCount: 0,
+      };
     }
 
-    // 检查权限
-    if (episodeData.project.userId !== user.id) {
-      return { success: false, error: "无权限操作" };
+    const projectData = Array.isArray(episodeData.project)
+      ? episodeData.project[0]
+      : episodeData.project;
+
+    if (!projectData) {
+      return {
+        success: false,
+        error: "无法获取项目信息",
+        totalSelected: shotIds.length,
+        totalExportable: 0,
+        skippedCount: 0,
+      };
     }
 
-    // 过滤出有视频的分镜
-    const shotsWithVideo = episodeData.shots.filter((s) => s.videoUrl);
+    // 验证项目所有权
+    if (projectData.userId !== session.user.id) {
+      return {
+        success: false,
+        error: "无权访问该项目",
+        totalSelected: shotIds.length,
+        totalExportable: 0,
+        skippedCount: 0,
+      };
+    }
 
-    if (shotsWithVideo.length === 0) {
-      return { success: false, error: "该剧集没有已生成的视频" };
+    // 筛选出有视频的分镜
+    const exportableShots = allShots
+      .filter((s) => s.videoUrl)
+      .map((s) => ({
+        id: s.id,
+        order: s.order,
+        videoUrl: s.videoUrl as string,
+      }))
+      .sort((a, b) => a.order - b.order); // 按照 order 排序
+
+    const skippedCount = allShots.length - exportableShots.length;
+
+    // 如果没有可导出的分镜
+    if (exportableShots.length === 0) {
+      return {
+        success: false,
+        error: "没有可导出的视频，请先生成视频",
+        totalSelected: shotIds.length,
+        totalExportable: 0,
+        skippedCount,
+      };
     }
 
     return {
       success: true,
-      episode: {
-        id: episodeData.id,
-        title: episodeData.title,
-        shots: shotsWithVideo,
-      },
+      shots: exportableShots,
+      totalSelected: shotIds.length,
+      totalExportable: exportableShots.length,
+      skippedCount,
     };
   } catch (error) {
-    console.error("获取剧集导出数据失败:", error);
-    return { success: false, error: "服务器错误" };
+    console.error("获取可导出分镜失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "获取失败",
+      totalSelected: shotIds.length,
+      totalExportable: 0,
+      skippedCount: 0,
+    };
   }
 }

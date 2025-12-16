@@ -444,10 +444,15 @@ function TaskNodeItem({
     "scene_extraction",
     "shot_decomposition",
   ];
+  
+  // 对于分镜拆解任务，即使已导入也可以查看结果
+  // 对于其他提取类任务，导入后就不再显示"查看结果"按钮
+  const canViewEvenIfImported = job.type === "shot_decomposition";
+  
   const canView = job.status === "completed" && 
                   job.type && 
                   viewableTaskTypes.includes(job.type) &&
-                  !job.isImported;
+                  (canViewEvenIfImported || !job.isImported);
 
   const getTimeText = () => {
     if (!job.createdAt) return "";

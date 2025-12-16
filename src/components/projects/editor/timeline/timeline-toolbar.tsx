@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -27,6 +27,7 @@ import {
   Film,
   X,
   Play,
+  Download,
 } from "lucide-react";
 import { useEditor } from "../editor-context";
 import { formatDurationMMSS } from "@/lib/utils/shot-utils";
@@ -34,6 +35,8 @@ import { cn } from "@/lib/utils";
 import { startStoryboardGeneration } from "@/lib/actions/storyboard";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import JSZip from "jszip";
+import { getExportableShots } from "@/lib/actions/video/export";
 
 interface TimelineToolbarProps {
   episodeTitle?: string;
@@ -41,8 +44,10 @@ interface TimelineToolbarProps {
   onDeleteShots?: () => void;
   onGenerateImages?: () => void;
   onGenerateVideos?: () => void;
+  onExportVideos?: () => void;
   isBatchGeneratingImages?: boolean;
   isBatchGeneratingVideos?: boolean;
+  isExportingVideos?: boolean;
 }
 
 // 核心控制栏 - 第一行
@@ -283,14 +288,18 @@ function SelectionActionsBar({
   onDeleteShots,
   onGenerateImages,
   onGenerateVideos,
+  onExportVideos,
   isBatchGeneratingImages,
   isBatchGeneratingVideos,
+  isExportingVideos,
 }: {
   onDeleteShots?: () => void;
   onGenerateImages?: () => void;
   onGenerateVideos?: () => void;
+  onExportVideos?: () => void;
   isBatchGeneratingImages?: boolean;
   isBatchGeneratingVideos?: boolean;
+  isExportingVideos?: boolean;
 }) {
   const { state, clearShotSelection, jobs } = useEditor();
   const { selectedShotIds } = state;
@@ -373,6 +382,28 @@ function SelectionActionsBar({
         {(isBatchGeneratingVideos || hasBatchVideoJob) ? "生成中..." : "生成视频"}
       </Button>
 
+      <Separator orientation="vertical" className="h-4 bg-border/50" />
+
+      {/* 导出视频按钮 */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onExportVideos}
+        disabled={isExportingVideos}
+        className={cn(
+          "h-7 text-xs border-green-200 dark:border-green-800/50",
+          "hover:bg-green-50 hover:border-green-300 dark:hover:bg-green-950/30 dark:hover:border-green-700"
+        )}
+      >
+        <Download className={cn("h-3.5 w-3.5 mr-1", isExportingVideos && "animate-bounce")} />
+        {isExportingVideos ? "导出中..." : "导出视频"}
+        {!isMobile && !isExportingVideos && (
+          <Badge variant="secondary" className="ml-1.5 h-4 text-[10px] px-1">
+            {selectedShotIds.length}
+          </Badge>
+        )}
+      </Button>
+
       <div className="flex-1" />
 
       {/* 取消选择 */}
@@ -396,8 +427,10 @@ export function TimelineToolbar({
   onDeleteShots,
   onGenerateImages,
   onGenerateVideos,
+  onExportVideos,
   isBatchGeneratingImages,
   isBatchGeneratingVideos,
+  isExportingVideos,
 }: TimelineToolbarProps) {
   const { state, clearShotSelection } = useEditor();
   const { selectedShotIds } = state;
@@ -430,8 +463,10 @@ export function TimelineToolbar({
             onDeleteShots={onDeleteShots}
             onGenerateImages={onGenerateImages}
             onGenerateVideos={onGenerateVideos}
+            onExportVideos={onExportVideos}
             isBatchGeneratingImages={isBatchGeneratingImages}
             isBatchGeneratingVideos={isBatchGeneratingVideos}
+            isExportingVideos={isExportingVideos}
           />
         ) : (
           <DefaultActionsBar key="default" onAddShot={onAddShot} />

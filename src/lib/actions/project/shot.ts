@@ -828,3 +828,64 @@ export async function updateShotCharacterImage(
     };
   }
 }
+
+/**
+ * 复制其他分镜的图片到当前分镜
+ */
+export async function copyShotImage(
+  shotId: string,
+  sourceShotId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 验证目标分镜存在
+    const targetShot = await db.query.shot.findFirst({
+      where: eq(shot.id, shotId),
+      with: {
+        episode: true,
+      },
+    });
+
+    if (!targetShot) {
+      return { success: false, error: "分镜不存在" };
+    }
+
+    // 验证源分镜存在且有图片
+    const sourceShot = await db.query.shot.findFirst({
+      where: eq(shot.id, sourceShotId),
+    });
+
+    if (!sourceShot) {
+      return { success: false, error: "源分镜不存在" };
+    }
+
+    if (!sourceShot.imageUrl) {
+      return { success: false, error: "源分镜还没有图片" };
+    }
+
+    // 更新分镜，复制图片URL
+    await db
+      .update(shot)
+      .set({
+        imageUrl: sourceShot.imageUrl,
+      })
+      .where(eq(shot.id, shotId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("复制分镜图片失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "复制失败",
+    };
+  }
+}

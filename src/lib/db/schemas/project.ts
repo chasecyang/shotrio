@@ -313,7 +313,8 @@ export const shotDialogue = pgTable("shot_dialogue", {
 });
 
 // 5. 任务表 (Job) - 异步任务队列
-export const job = pgTable("job", {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const job: any = pgTable("job", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()

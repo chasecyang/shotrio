@@ -23,6 +23,7 @@ import {
   deleteShotDialogue,
   addCharacterToShot,
   addDialogueToShot,
+  copyShotImage,
 } from "@/lib/actions/project";
 import { generateShotVideo } from "@/lib/actions/video/generate";
 import { createShotDecompositionJob } from "@/lib/actions/storyboard/decompose-shot";
@@ -50,6 +51,7 @@ import {
   Ghost,
   ThumbsDown,
   Meh,
+  Copy,
 } from "lucide-react";
 import {
   EditableField,
@@ -66,6 +68,7 @@ import {
 import { useEditor } from "../editor-context";
 import { Progress } from "@/components/ui/progress";
 import { refreshShot } from "@/lib/actions/project/refresh";
+import { ReferenceImageDialog } from "./reference-image-dialog";
 
 interface ShotEditorProps {
   shot: ShotDetail;
@@ -102,6 +105,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [decompositionJobId, setDecompositionJobId] = useState<string | null>(null);
   const [isAddingCharacter, setIsAddingCharacter] = useState(false);
   const [isAddingDialogue, setIsAddingDialogue] = useState(false);
+  const [showReferenceDialog, setShowReferenceDialog] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -274,6 +278,22 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     } catch {
       toast.error("生成失败");
       setIsGenerating(false); // 出错时才重置
+    }
+  };
+
+  // 处理复制其他分镜图片
+  const handleCopyImage = async (sourceShotId: string) => {
+    try {
+      const result = await copyShotImage(shot.id, sourceShotId);
+      if (result.success) {
+        toast.success("成功复制分镜图片");
+        // 刷新当前分镜数据
+        await refreshCurrentShot();
+      } else {
+        toast.error(result.error || "复制失败");
+      }
+    } catch {
+      toast.error("复制失败");
     }
   };
 
@@ -578,17 +598,28 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                     alt={`分镜 ${shot.order}`}
                     className="w-full h-full object-contain"
                   />
-                  {/* 重新生成按钮 */}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="absolute bottom-2 right-2 gap-1.5"
-                    onClick={handleGenerateImage}
-                    disabled={isGenerating}
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    重新生成
-                  </Button>
+                  {/* 操作按钮组 */}
+                  <div className="absolute bottom-2 right-2 flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 bg-background/80 backdrop-blur-sm"
+                      onClick={() => setShowReferenceDialog(true)}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      复制图片
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={handleGenerateImage}
+                      disabled={isGenerating}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      重新生成
+                    </Button>
+                  </div>
                 </>
               ) : isGenerating ? (
                 <div className="text-center p-6 w-full">
@@ -614,15 +645,26 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                 <div className="text-center text-muted-foreground p-6">
                   <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm mb-3">暂无图片</p>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={handleGenerateImage}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    生成图片
-                  </Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={handleGenerateImage}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      生成图片
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setShowReferenceDialog(true)}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      复制图片
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1137,6 +1179,15 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           </div>
         )}
       </div>
+
+      {/* 复制图片对话框 */}
+      <ReferenceImageDialog
+        open={showReferenceDialog}
+        onOpenChange={setShowReferenceDialog}
+        currentShotOrder={shot.order}
+        availableShots={state.shots}
+        onSelectShot={handleCopyImage}
+      />
     </ScrollArea>
   );
 }

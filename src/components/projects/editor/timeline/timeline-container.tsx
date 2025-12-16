@@ -11,8 +11,10 @@ interface TimelineContainerProps {
   onDeleteShots?: () => void;
   onGenerateImages?: () => void;
   onGenerateVideos?: () => void;
+  onExportVideos?: () => void;
   isBatchGeneratingImages?: boolean;
   isBatchGeneratingVideos?: boolean;
+  isExportingVideos?: boolean;
 }
 
 export function TimelineContainer({ 
@@ -20,8 +22,10 @@ export function TimelineContainer({
   onDeleteShots,
   onGenerateImages,
   onGenerateVideos,
+  onExportVideos,
   isBatchGeneratingImages,
   isBatchGeneratingVideos,
+  isExportingVideos,
 }: TimelineContainerProps) {
   const { state, selectedEpisode, totalDuration } = useEditor();
   const { shots, isLoading, selectedEpisodeId } = state;
@@ -46,8 +50,10 @@ export function TimelineContainer({
         onDeleteShots={onDeleteShots}
         onGenerateImages={onGenerateImages}
         onGenerateVideos={onGenerateVideos}
+        onExportVideos={onExportVideos}
         isBatchGeneratingImages={isBatchGeneratingImages}
         isBatchGeneratingVideos={isBatchGeneratingVideos}
+        isExportingVideos={isExportingVideos}
       />
 
       {/* 时间轴内容 */}
