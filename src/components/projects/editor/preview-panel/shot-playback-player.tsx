@@ -10,7 +10,7 @@ import {
   SkipForward, 
   X 
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface ShotPlaybackPlayerProps {
   shots: ShotDetail[];
@@ -133,11 +133,14 @@ export function ShotPlaybackPlayer({
         )}
 
         {contentType === "image" && currentShot.imageUrl && (
-          <img
-            src={currentShot.imageUrl}
-            alt={`分镜 ${currentShot.order}`}
-            className="max-w-full max-h-full object-contain"
-          />
+          <div className="relative w-full h-full">
+            <Image
+              src={currentShot.imageUrl}
+              alt={`分镜 ${currentShot.order}`}
+              fill
+              className="object-contain"
+            />
+          </div>
         )}
 
         {contentType === "text" && (

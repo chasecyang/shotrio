@@ -9,29 +9,29 @@
  */
 
 // 模拟创建多个测试任务
-async function createTestJobs(count = 10) {
-  console.log(`\n🧪 创建 ${count} 个测试任务...\n`);
-  
-  const jobTypes = [
-    'character_extraction',
-    'scene_extraction',
-    'scene_image_generation',
-  ];
-  
-  for (let i = 0; i < count; i++) {
-    const type = jobTypes[i % jobTypes.length];
-    console.log(`  📝 任务 ${i + 1}/${count}: ${type}`);
-    
-    // 这里需要调用实际的 createJob API
-    // 暂时只是演示脚本框架
-  }
-  
-  console.log(`\n✅ ${count} 个任务已创建`);
-  console.log(`\n💡 提示：`);
-  console.log(`   - 查看 worker 日志观察并发处理情况`);
-  console.log(`   - 应该看到多个任务同时处理（最多 5 个）`);
-  console.log(`   - 任务完成后会快速启动新任务（约 2 秒内）\n`);
-}
+// async function createTestJobs(count = 10) {
+//   console.log(`\n🧪 创建 ${count} 个测试任务...\n`);
+//   
+//   const jobTypes = [
+//     'character_extraction',
+//     'scene_extraction',
+//     'scene_image_generation',
+//   ];
+//   
+//   for (let i = 0; i < count; i++) {
+//     const type = jobTypes[i % jobTypes.length];
+//     console.log(`  📝 任务 ${i + 1}/${count}: ${type}`);
+//     
+//     // 这里需要调用实际的 createJob API
+//     // 暂时只是演示脚本框架
+//   }
+//   
+//   console.log(`\n✅ ${count} 个任务已创建`);
+//   console.log(`\n💡 提示：`);
+//   console.log(`   - 查看 worker 日志观察并发处理情况`);
+//   console.log(`   - 应该看到多个任务同时处理（最多 5 个）`);
+//   console.log(`   - 任务完成后会快速启动新任务（约 2 秒内）\n`);
+// }
 
 // 分析并发性能
 function analyzePerformance() {

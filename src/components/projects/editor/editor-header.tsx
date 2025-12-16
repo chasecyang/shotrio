@@ -29,7 +29,6 @@ interface EditorHeaderProps {
 export function EditorHeader({
   projectId,
   projectTitle,
-  userId,
 }: EditorHeaderProps) {
   const { state, setPlaying } = useEditor();
   const { timeline } = state;

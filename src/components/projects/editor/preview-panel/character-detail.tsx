@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Character, CharacterImage } from "@/types/project";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +103,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
   const { jobs } = useEditor();
 
   // 查找角色图片生成任务
-  const getImageGenerationJob = (imageId: string) => {
+  const getImageGenerationJob = useCallback((imageId: string) => {
     return jobs.find((job) => {
       if (job.type !== "character_image_generation") return false;
       if (job.status === "completed" || job.status === "failed" || job.status === "cancelled") return false;
@@ -115,7 +115,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
         return false;
       }
     }) as Partial<Job> | undefined;
-  };
+  }, [jobs]);
 
   // 当检测到 Job 时，重置对应图片的本地 loading 状态
   useEffect(() => {
@@ -135,7 +135,7 @@ export function CharacterDetail({ character }: CharacterDetailProps) {
     if (hasChanges) {
       setGeneratingImages((prev) => ({ ...prev, ...newGeneratingImages }));
     }
-  }, [jobs, character.images, generatingImages]);
+  }, [jobs, character.images, generatingImages, getImageGenerationJob]);
 
   // 基础信息自动保存
   const { saveStatus } = useAutoSave({

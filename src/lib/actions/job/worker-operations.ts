@@ -112,8 +112,12 @@ export async function startJob(
  */
 async function updateParentJobStatus(
   parentJobId: string,
-  workerToken: string
+  workerToken?: string
 ): Promise<void> {
+  if (!verifyWorkerToken(workerToken)) {
+    console.error("[Security] 未授权的 updateParentJobStatus 调用");
+    return;
+  }
   try {
     // 查询所有子任务
     const childJobs = await db.query.job.findMany({

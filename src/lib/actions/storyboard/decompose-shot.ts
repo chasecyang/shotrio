@@ -48,10 +48,11 @@ export async function createShotDecompositionJob(params: {
     }
 
     // 4. 验证项目权限
-    const projectId = shotData.episode.projectId;
-    const project = shotData.episode.project;
+    const episode = shotData.episode as { projectId?: string; project?: { userId?: string } } | null;
+    const projectId = episode?.projectId;
+    const project = episode?.project;
 
-    if (!project) {
+    if (!project || !projectId) {
       return {
         success: false,
         error: "项目不存在",

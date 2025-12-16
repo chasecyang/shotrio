@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface StyleSelectorProps {
   styles: ArtStyle[];
@@ -41,10 +42,11 @@ export function StyleSelector({ styles, selectedStyleId, onSelect }: StyleSelect
             {/* 预览图或占位符 */}
             <div className="relative h-32 bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">
               {style.previewImage ? (
-                <img
+                <Image
                   src={style.previewImage}
                   alt={style.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               ) : (
                 <Palette className="w-12 h-12 text-muted-foreground/50" />

@@ -1,7 +1,6 @@
 "use server";
 
 import db from "@/lib/db";
-import { episode } from "@/lib/db/schemas/project";
 import { getChatCompletion } from "@/lib/services/openai.service";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import type {

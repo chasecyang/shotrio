@@ -21,8 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { ExtractedShot, ShotSize, CameraMovement, Scene, Character, CharacterImage, EmotionTag, CharacterPosition } from "@/types/project";
 import type { StoryboardMatchingResult } from "@/types/job";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
-import { getShotSizeOptions, getCameraMovementOptions, getShotSizeLabel, getCameraMovementLabel, formatDuration } from "@/lib/utils/shot-utils";
+import { getShotSizeOptions, getCameraMovementOptions, getShotSizeLabel } from "@/lib/utils/shot-utils";
 
 interface StoryboardExtractionDialogProps {
   episodeId: string;
@@ -46,7 +45,6 @@ export function StoryboardExtractionDialog({
   onImportSuccess,
 }: StoryboardExtractionDialogProps) {
   const router = useRouter();
-  const locale = useLocale();
   const [step, setStep] = useState<Step>("loading");
   const [extractedShots, setExtractedShots] = useState<ExtractedShot[]>([]);
   const [selectedShots, setSelectedShots] = useState<Set<number>>(new Set());
@@ -332,7 +330,6 @@ export function StoryboardExtractionDialog({
                   <ScrollArea className="flex-1 min-h-0">
                     <div className="p-2 space-y-1.5">
                       {extractedShots.map((shot, index) => {
-                        const hasScene = !!shot.sceneId;
                         const hasCharacters = shot.characters && shot.characters.length > 0;
                         const hasDialogues = shot.dialogues && shot.dialogues.length > 0;
                         const matchedScene = scenes.find(s => s.id === shot.sceneId);

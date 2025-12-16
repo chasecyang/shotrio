@@ -2,7 +2,7 @@
 
 import db from "@/lib/db";
 import { shot } from "@/lib/db/schemas/project";
-import { inArray, and, isNotNull } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 

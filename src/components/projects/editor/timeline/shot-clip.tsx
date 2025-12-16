@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ShotDetail } from "@/types/project";
 import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Image as ImageIcon, GripVertical, Video, FileText } from "lucide-react";
-import { updateShot, getEpisodeShots } from "@/lib/actions/project";
+import { updateShot } from "@/lib/actions/project";
 import { useEditor } from "../editor-context";
 import { toast } from "sonner";
-import { formatDuration, secondsToMilliseconds, millisecondsToSeconds } from "@/lib/utils/shot-utils";
+import { formatDuration } from "@/lib/utils/shot-utils";
+import Image from "next/image";
 
 interface ShotClipProps {
   shot: ShotDetail;
@@ -21,9 +22,7 @@ interface ShotClipProps {
 export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipProps) {
   const { state, dispatch } = useEditor();
   const [isResizing, setIsResizing] = useState(false);
-  const [resizeStartX, setResizeStartX] = useState(0);
   const [originalDuration, setOriginalDuration] = useState(0);
-  const clipRef = useRef<HTMLDivElement>(null);
 
   const duration = shot.duration || 3000;
   const width = duration * pixelsPerMs;
@@ -51,7 +50,6 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
       e.stopPropagation();
       e.preventDefault();
       setIsResizing(true);
-      setResizeStartX(e.clientX);
       setOriginalDuration(duration);
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -130,11 +128,11 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
           <div className="w-12 h-full rounded bg-muted/50 flex items-center justify-center overflow-hidden relative">
             {shot.imageUrl ? (
               <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={shot.imageUrl}
                   alt={`#${shot.order}`}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
                 {/* 视频标识 */}
                 {shot.videoUrl && (

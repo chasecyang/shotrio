@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { useEditor } from "../editor-context";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,6 @@ export function TimelineRuler({ totalDuration }: TimelineRulerProps) {
 
   const tickInterval = getTickInterval();
   const pixelsPerMs = 0.1 * timeline.zoom; // 每毫秒的像素数
-  const tickWidth = tickInterval * pixelsPerMs; // 每个刻度的宽度
 
   // 显示的总时长（至少显示30秒）
   const displayDuration = Math.max(totalDuration, 30000);

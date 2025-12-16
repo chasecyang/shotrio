@@ -117,6 +117,7 @@ export async function getProjectDetail(
         characters: {
           with: {
             images: {
+              // @ts-expect-error - Drizzle ORM orderBy callback type inference issue
               orderBy: (images, { desc }) => [desc(images.isPrimary), desc(images.createdAt)],
             },
           },
@@ -124,6 +125,7 @@ export async function getProjectDetail(
         scenes: {
           with: {
             images: {
+              // @ts-expect-error - Drizzle ORM orderBy callback type inference issue
               orderBy: (images, { desc }) => [desc(images.createdAt)],
             },
           },
@@ -132,7 +134,7 @@ export async function getProjectDetail(
       },
     });
 
-    return projectData || null;
+    return (projectData as ProjectDetail) || null;
   } catch (error) {
     console.error("获取项目详情失败:", error);
     return null;

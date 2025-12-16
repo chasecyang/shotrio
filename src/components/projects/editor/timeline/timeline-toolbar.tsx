@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -35,11 +35,8 @@ import { cn } from "@/lib/utils";
 import { startStoryboardGeneration } from "@/lib/actions/storyboard";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import JSZip from "jszip";
-import { getExportableShots } from "@/lib/actions/video/export";
 
 interface TimelineToolbarProps {
-  episodeTitle?: string;
   onAddShot?: () => void;
   onDeleteShots?: () => void;
   onGenerateImages?: () => void;
@@ -422,7 +419,6 @@ function SelectionActionsBar({
 
 // 主组件
 export function TimelineToolbar({
-  episodeTitle,
   onAddShot,
   onDeleteShots,
   onGenerateImages,

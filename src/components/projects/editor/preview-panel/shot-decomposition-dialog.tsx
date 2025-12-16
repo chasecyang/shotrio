@@ -26,7 +26,6 @@ interface ShotDecompositionDialogProps {
 type Step = "loading" | "preview" | "importing" | "success";
 
 export function ShotDecompositionDialog({
-  shotId,
   jobId,
   open,
   onOpenChange,
@@ -242,9 +241,9 @@ export function ShotDecompositionDialog({
                       </Badge>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Maximize2 className="w-3.5 h-3.5" />
-                        {getShotSizeLabel(subShot.shotSize as any)}
+                        {getShotSizeLabel(subShot.shotSize)}
                         <span>•</span>
-                        {getCameraMovementLabel(subShot.cameraMovement as any)}
+                        {getCameraMovementLabel(subShot.cameraMovement)}
                         <span>•</span>
                         <Clock className="w-3.5 h-3.5" />
                         {formatDuration(subShot.duration)}

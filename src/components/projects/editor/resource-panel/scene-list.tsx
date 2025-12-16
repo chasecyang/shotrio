@@ -94,7 +94,7 @@ export function SceneList({ scenes, projectId }: SceneListProps) {
                   <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                   <div>
                     <span className="font-medium">提示：</span>
-                    先在"剧本"标签中添加剧集内容，即可使用 AI 智能提取场景功能
+                    先在&ldquo;剧本&rdquo;标签中添加剧集内容，即可使用 AI 智能提取场景功能
                   </div>
                 </div>
               </AlertDescription>

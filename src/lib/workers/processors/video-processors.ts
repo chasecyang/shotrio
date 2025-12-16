@@ -1,8 +1,8 @@
 "use server";
 
 import db from "@/lib/db";
-import { shot, episode, shotDialogue } from "@/lib/db/schemas/project";
-import { eq, inArray, asc } from "drizzle-orm";
+import { shot, episode } from "@/lib/db/schemas/project";
+import { eq, inArray } from "drizzle-orm";
 import { generateImageToVideo } from "@/lib/services/fal.service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
@@ -164,7 +164,7 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
       where: inArray(shot.id, shotIds),
       with: {
         dialogues: {
-          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
+          orderBy: (dialogues, { asc }) => [asc(dialogues.order)],
           with: {
             character: true,
           },
@@ -371,7 +371,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       duration: totalDuration,
       fileSize: 0, // 暂时返回0
       // 返回视频列表供前端使用
-      videoList: videoList as any,
+      videoList: videoList as Array<{ shotId: string; videoUrl: string; duration: number }>,
     };
 
     await completeJob(

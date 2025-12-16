@@ -10,7 +10,7 @@ interface RefreshStrategy {
   /** 资源类型 */
   type: "shot" | "character" | "scene" | "episode" | "project";
   /** 触发刷新的状态 */
-  refreshOn: Array<"completed" | "failed" | "processing" | "pending">;
+  refreshOn: Array<"completed" | "failed" | "processing" | "pending" | "cancelled">;
   /** 是否需要延迟刷新（避免过于频繁） */
   debounce?: number;
 }
@@ -127,7 +127,7 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
         }
 
         // 检查任务状态是否匹配刷新条件
-        if (!strategy.refreshOn.includes(job.status as any)) {
+        if (!strategy.refreshOn.includes(job.status)) {
           continue;
         }
 
@@ -135,7 +135,7 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
         processedJobsRef.current.add(job.id);
 
         // 解析任务输入数据
-        let inputData: any = {};
+        let inputData: Record<string, unknown> = {};
         try {
           inputData = job.inputData ? JSON.parse(job.inputData) : {};
         } catch (error) {
@@ -167,9 +167,10 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
     processJobs();
 
     // 清理定时器
+    const timers = refreshTimersRef.current;
     return () => {
-      refreshTimersRef.current.forEach((timer) => clearTimeout(timer));
-      refreshTimersRef.current.clear();
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
   }, [jobs, callbacks]);
 
@@ -205,7 +206,7 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
  */
 async function executeRefresh(
   type: RefreshStrategy["type"],
-  inputData: any,
+  inputData: Record<string, unknown>,
   callbacks: RefreshCallbacks,
   job: Partial<Job>
 ) {
@@ -213,25 +214,25 @@ async function executeRefresh(
     switch (type) {
       case "shot":
         if (callbacks.onRefreshShot && inputData.shotId) {
-          await callbacks.onRefreshShot(inputData.shotId);
+          await callbacks.onRefreshShot(inputData.shotId as string);
         }
         break;
 
       case "character":
         if (callbacks.onRefreshCharacter && inputData.characterId && job.projectId) {
-          await callbacks.onRefreshCharacter(inputData.characterId, job.projectId);
+          await callbacks.onRefreshCharacter(inputData.characterId as string, job.projectId);
         }
         break;
 
       case "scene":
         if (callbacks.onRefreshScene && inputData.sceneId && job.projectId) {
-          await callbacks.onRefreshScene(inputData.sceneId, job.projectId);
+          await callbacks.onRefreshScene(inputData.sceneId as string, job.projectId);
         }
         break;
 
       case "episode":
         if (callbacks.onRefreshEpisode && inputData.episodeId) {
-          await callbacks.onRefreshEpisode(inputData.episodeId);
+          await callbacks.onRefreshEpisode(inputData.episodeId as string);
         }
         break;
 

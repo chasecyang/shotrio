@@ -1,8 +1,8 @@
 "use server";
 
 import db from "@/lib/db";
-import { shot, shotCharacter, shotDialogue, scene, character } from "@/lib/db/schemas/project";
-import { eq, inArray } from "drizzle-orm";
+import { shot } from "@/lib/db/schemas/project";
+import { eq } from "drizzle-orm";
 import { getChatCompletion } from "@/lib/services/openai.service";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import type {
@@ -109,8 +109,9 @@ export async function processShotDecomposition(
   }));
 
   // 构建场景信息
-  const sceneName = shotData.scene?.name;
-  const sceneDescription = shotData.scene?.description || undefined;
+  const scene = shotData.scene as { name?: string; description?: string } | null;
+  const sceneName = scene?.name;
+  const sceneDescription = scene?.description || undefined;
   const sceneId = shotData.sceneId || undefined;
 
   // 构建AI Prompt
@@ -178,10 +179,31 @@ export async function processShotDecomposition(
   }
 
   // 构建结果
+  type DecomposedShotData = {
+    shotSize?: string;
+    cameraMovement?: string;
+    duration?: number;
+    visualDescription?: string;
+    visualPrompt?: string;
+    audioPrompt?: string;
+    characters?: Array<{
+      characterId?: string;
+      characterImageId?: string;
+      position?: string;
+      action?: string;
+    }>;
+    dialogues?: Array<{
+      characterId?: string;
+      dialogueText?: string;
+      emotionTag?: string;
+      order?: number;
+    }>;
+  };
+
   const result: ShotDecompositionResult = {
     originalShotId: shotId,
     originalOrder: shotData.order,
-    decomposedShots: decomposedShots.map((subShot: any, index: number) => ({
+    decomposedShots: (decomposedShots as DecomposedShotData[]).map((subShot, index: number) => ({
       order: index + 1,
       shotSize: subShot.shotSize,
       cameraMovement: subShot.cameraMovement || "static",
@@ -190,13 +212,13 @@ export async function processShotDecomposition(
       visualPrompt: subShot.visualPrompt || subShot.visualDescription,
       audioPrompt: subShot.audioPrompt,
       sceneId: sceneId, // 继承原分镜的场景ID
-      characters: (subShot.characters || []).map((char: any) => ({
+      characters: (subShot.characters || []).map((char) => ({
         characterId: char.characterId,
         characterImageId: char.characterImageId,
         position: char.position,
         action: char.action,
       })),
-      dialogues: (subShot.dialogues || []).map((dlg: any) => ({
+      dialogues: (subShot.dialogues || []).map((dlg) => ({
         characterId: dlg.characterId,
         dialogueText: dlg.dialogueText,
         emotionTag: dlg.emotionTag || "neutral",

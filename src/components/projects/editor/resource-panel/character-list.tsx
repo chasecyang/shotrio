@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useEditor } from "../editor-context";
-import { Users, Plus, Sparkles, Loader2, FileText, Info } from "lucide-react";
+import { Users, Plus, Sparkles, Loader2, Info } from "lucide-react";
 import { CharacterDialog } from "../../characters/character-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CharacterExtractionBanner } from "../../characters/character-extraction-banner";
@@ -15,7 +15,6 @@ import { getProjectDetail } from "@/lib/actions/project";
 import { startCharacterExtraction } from "@/lib/actions/character";
 import { toast } from "sonner";
 import { useState } from "react";
-import { CharacterImageViewer } from "@/components/projects/characters/character-image-viewer";
 
 interface CharacterListProps {
   characters: (Character & { images: CharacterImage[] })[];
@@ -97,7 +96,7 @@ export function CharacterList({ characters, projectId }: CharacterListProps) {
                   <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                   <div>
                     <span className="font-medium">提示：</span>
-                    先在"剧本"标签中添加剧集内容，即可使用 AI 智能提取角色功能
+                    先在&ldquo;剧本&rdquo;标签中添加剧集内容，即可使用 AI 智能提取角色功能
                   </div>
                 </div>
               </AlertDescription>

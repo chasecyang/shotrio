@@ -15,7 +15,6 @@ import {
   SidebarMenuButton,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import { ProjectSelector } from "./project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 

@@ -138,15 +138,6 @@ export async function updateShot(shotId: string, data: Partial<NewShot>) {
       .where(eq(shot.id, shotId))
       .returning();
 
-    // 获取剧集信息以便刷新路径
-    const episodeData = await db.query.episode.findFirst({
-      where: eq(episode.id, updated.episodeId),
-    });
-
-    if (episodeData) {
-(`/projects/${episodeData.projectId}/editor`);
-    }
-
     return { success: true, data: updated };
   } catch (error) {
     console.error("更新分镜失败:", error);

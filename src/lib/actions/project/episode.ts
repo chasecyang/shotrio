@@ -69,7 +69,6 @@ export async function updateEpisode(
       .where(eq(episode.id, episodeId))
       .returning();
 
-(`/projects/${updated.projectId}/editor`);
     return { success: true, data: updated };
   } catch (error) {
     console.error("更新剧集失败:", error);
@@ -130,7 +129,6 @@ export async function deleteEpisode(episodeId: string) {
       }
     });
 
-(`/projects/${episodeData.projectId}/editor`);
     return { success: true };
   } catch (error) {
     console.error("删除剧集失败:", error);

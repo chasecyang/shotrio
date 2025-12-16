@@ -4,7 +4,6 @@ import { useRef, useState, useCallback } from "react";
 import { ShotDetail } from "@/types/project";
 import { useEditor } from "../editor-context";
 import { ShotClip } from "./shot-clip";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Clapperboard, Plus } from "lucide-react";
 import {
@@ -22,7 +21,7 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { reorderShots, getEpisodeShots } from "@/lib/actions/project";
+import { reorderShots } from "@/lib/actions/project";
 import { toast } from "sonner";
 
 interface TimelineTrackProps {

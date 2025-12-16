@@ -128,9 +128,10 @@ export async function createTaskForEpisode(params: {
       ...params.additionalInputData,
     };
 
+    const episode = episodeData as { project?: { projectId?: string }; projectId?: string };
     const result = await createJob({
       userId,
-      projectId: episodeData.project.projectId || episodeData.projectId,
+      projectId: episode.project?.projectId || episode.projectId || "",
       type: params.jobType,
       inputData,
     });

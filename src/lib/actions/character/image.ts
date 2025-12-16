@@ -280,7 +280,6 @@ export async function deleteCharacterImage(projectId: string, imageId: string) {
 
     await db.delete(characterImage).where(eq(characterImage.id, imageId));
 
-(`/projects/${projectId}/characters`);
     return { success: true };
   } catch (error) {
     console.error("删除图片状态失败:", error);
@@ -332,7 +331,6 @@ export async function setCharacterPrimaryImage(
         .where(eq(characterImage.id, imageId));
     });
 
-(`/projects/${projectId}/characters`);
     return { success: true };
   } catch (error) {
     console.error("设置主图失败:", error);

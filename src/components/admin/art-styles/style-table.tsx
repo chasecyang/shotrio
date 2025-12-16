@@ -48,6 +48,7 @@ import {
 } from "@/lib/actions/admin/art-style-admin";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { StyleEditDialog } from "./style-edit-dialog";
 
 interface StyleTableProps {
@@ -301,14 +302,15 @@ export function StyleTable({ styles }: StyleTableProps) {
                       </TableCell>
                       <TableCell>
                         {style.previewImage ? (
-                          <div 
+                          <div
                             className="w-20 h-14 relative group cursor-pointer"
                             onClick={() => setViewingImage({ url: style.previewImage!, name: style.name })}
                           >
-                            <img
+                            <Image
                               src={style.previewImage}
                               alt={style.name}
-                              className="w-full h-full object-cover rounded border"
+                              fill
+                              className="object-cover rounded border"
                             />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
                               <ZoomIn className="w-4 h-4 text-white" />
@@ -425,11 +427,12 @@ export function StyleTable({ styles }: StyleTableProps) {
             <DialogTitle>{viewingImage?.name}</DialogTitle>
           </DialogHeader>
           {viewingImage && (
-            <div className="relative w-full">
-              <img
+            <div className="relative w-full aspect-video">
+              <Image
                 src={viewingImage.url}
                 alt={viewingImage.name}
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                fill
+                className="object-contain rounded-lg"
               />
             </div>
           )}
@@ -455,10 +458,11 @@ export function StyleTable({ styles }: StyleTableProps) {
                       name: viewingStyle.name 
                     })}
                   >
-                    <img
+                    <Image
                       src={viewingStyle.previewImage}
                       alt={viewingStyle.name}
-                      className="w-full h-full object-cover rounded-lg"
+                      fill
+                      className="object-cover rounded-lg"
                     />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                       <ZoomIn className="w-8 h-8 text-white" />

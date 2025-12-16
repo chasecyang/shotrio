@@ -4,7 +4,7 @@
  * 安全的 JSON 解析函数
  * 处理 AI 返回的可能包含格式问题的 JSON
  */
-export function safeJsonParse(response: string): any {
+export function safeJsonParse(response: string): unknown {
   try {
     // 尝试直接解析
     return JSON.parse(response);

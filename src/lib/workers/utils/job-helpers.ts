@@ -10,15 +10,14 @@ export async function createChildJob(
     type: string;
     inputData: unknown;
     parentJobId?: string;
-  },
-  workerToken: string
+  }
 ): Promise<{ success: boolean; jobId?: string; error?: string }> {
   try {
     const { createJob } = await import("@/lib/actions/job/create");
     return await createJob({
       userId: params.userId,
       projectId: params.projectId,
-      type: params.type as any,
+      type: params.type,
       inputData: params.inputData,
       parentJobId: params.parentJobId,
     });

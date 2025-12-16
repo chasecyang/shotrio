@@ -17,6 +17,7 @@ import { Loader2, ZoomIn } from "lucide-react";
 import { createSystemArtStyle, updateArtStyleAdmin } from "@/lib/actions/admin/art-style-admin";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface StyleEditDialogProps {
   open: boolean;
@@ -136,10 +137,11 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
                   className="relative w-full aspect-video cursor-pointer group"
                   onClick={() => setViewingImage(style.previewImage!)}
                 >
-                  <img
+                  <Image
                     src={style.previewImage}
                     alt={style.name}
-                    className="w-full h-full object-cover rounded-lg border"
+                    fill
+                    className="object-cover rounded-lg border"
                   />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                     <ZoomIn className="w-6 h-6 text-white" />
@@ -229,11 +231,12 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
             <DialogTitle>预览图</DialogTitle>
           </DialogHeader>
           {viewingImage && (
-            <div className="relative w-full">
-              <img
+            <div className="relative w-full aspect-video">
+              <Image
                 src={viewingImage}
                 alt="Preview"
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                fill
+                className="object-contain rounded-lg"
               />
             </div>
           )}

@@ -53,7 +53,13 @@ export async function getChatCompletion(
     const openai = getOpenAIClient();
     
     // 构建请求参数
-    const requestParams: any = {
+    const requestParams: {
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      max_tokens?: number;
+      response_format?: { type: string };
+      temperature?: number;
+    } = {
       model,
       messages,
       max_tokens: maxTokens,

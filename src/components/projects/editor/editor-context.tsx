@@ -7,8 +7,6 @@ import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
 import {
   refreshShot,
-  refreshCharacter,
-  refreshScene,
   refreshEpisodeShots,
   refreshProject,
 } from "@/lib/actions/project/refresh";

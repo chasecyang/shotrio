@@ -1,8 +1,6 @@
 "use server";
 
 import db from "@/lib/db";
-import { episode, character } from "@/lib/db/schemas/project";
-import { eq } from "drizzle-orm";
 import { getChatCompletion } from "@/lib/services/openai.service";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import type {

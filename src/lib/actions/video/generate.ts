@@ -63,9 +63,10 @@ export async function generateShotVideo(shotId: string): Promise<{
 
     // 创建视频生成任务
     const { createJob } = await import("@/lib/actions/job");
+    const episode = shotData.episode as { projectId?: string } | null;
     const result = await createJob({
       userId: session.user.id,
-      projectId: shotData.episode.projectId,
+      projectId: episode?.projectId || "",
       type: "shot_video_generation",
       inputData: {
         shotId,
@@ -130,9 +131,10 @@ export async function batchGenerateShotVideos(shotIds: string[]): Promise<{
 
     // 创建批量视频生成任务
     const { createJob } = await import("@/lib/actions/job");
+    const episode = firstShot.episode as { projectId?: string } | null;
     const result = await createJob({
       userId: session.user.id,
-      projectId: firstShot.episode.projectId,
+      projectId: episode?.projectId || "",
       type: "batch_video_generation",
       inputData: {
         shotIds,
@@ -187,7 +189,8 @@ export async function updateShotVideo(shotId: string, videoUrl: string) {
       return { success: false, error: "分镜不存在" };
     }
 
-    if (shotData.episode.project.userId !== session.user.id) {
+    const episodeData = shotData.episode as { project?: { userId?: string } } | null;
+    if (episodeData?.project?.userId !== session.user.id) {
       return { success: false, error: "无权限操作" };
     }
 

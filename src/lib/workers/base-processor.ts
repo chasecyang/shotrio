@@ -31,7 +31,7 @@ export abstract class BaseProcessor<TInput = unknown, TResult = unknown> {
 
       // 2. 验证项目所有权（如果有projectId）
       if (this.job.projectId) {
-        await this.verifyAccess(input);
+        await this.verifyAccess();
       }
 
       // 3. 执行实际的业务逻辑
@@ -68,7 +68,7 @@ export abstract class BaseProcessor<TInput = unknown, TResult = unknown> {
    * 验证项目访问权限
    * 默认实现检查项目所有权，子类可以重写以实现自定义的权限验证
    */
-  protected async verifyAccess(input: TInput): Promise<void> {
+  protected async verifyAccess(): Promise<void> {
     if (this.job.projectId) {
       const hasAccess = await verifyProjectOwnership(
         this.job.projectId,

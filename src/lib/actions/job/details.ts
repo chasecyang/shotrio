@@ -11,7 +11,6 @@ import type {
   StoryboardGenerationInput,
   StoryboardBasicExtractionInput,
   StoryboardMatchingInput,
-  ShotDecompositionInput,
   ShotDecompositionResult,
 } from "@/types/job";
 
@@ -71,7 +70,8 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
 
         if (imageRecord && imageRecord.scene && !Array.isArray(imageRecord.scene)) {
           baseDetails.displayTitle = imageRecord.scene.name;
-          baseDetails.displaySubtitle = `视角: ${imageRecord.label}`;
+          const imageTypeLabel = imageRecord.imageType === "master_layout" ? "全景布局" : "45度视角";
+          baseDetails.displaySubtitle = `视角: ${imageTypeLabel}`;
         }
         break;
       }

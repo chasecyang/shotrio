@@ -122,7 +122,7 @@ export function buildVideoPrompt(params: {
   
   // 3. 对话内容（根据画面描述语言调整格式）
   if (dialogues && dialogues.length > 0) {
-    const dialogueParts = dialogues.map((d, index) => {
+    const dialogueParts = dialogues.map((d) => {
       if (isChinesePrompt) {
         // 中文格式：更自然的中文表达，适合音频生成
         const emotion = d.emotionTag ? emotionDescriptionsCN[d.emotionTag] : null;
