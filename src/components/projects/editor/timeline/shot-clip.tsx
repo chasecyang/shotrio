@@ -23,6 +23,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
   const { state, dispatch } = useEditor();
   const [isResizing, setIsResizing] = useState(false);
   const [originalDuration, setOriginalDuration] = useState(0);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const duration = shot.duration || 3000;
   const width = duration * pixelsPerMs;
@@ -97,6 +98,49 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
     [duration, originalDuration, pixelsPerMs, shot.id, state.shots, dispatch]
   );
 
+  // 处理素材拖拽放置
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    try {
+      const data = e.dataTransfer.getData("application/json");
+      if (!data) return;
+
+      const { assetId, assetType } = JSON.parse(data);
+      if (!assetId) return;
+
+      // 更新分镜关联的素材
+      const result = await updateShot(shot.id, {
+        imageAssetId: assetId,
+      });
+
+      if (result.success) {
+        toast.success("素材已应用到分镜");
+        // 刷新分镜数据
+        dispatch({ type: "UPDATE_SHOT", payload: { ...shot, imageAssetId: assetId } });
+      } else {
+        toast.error(result.error || "应用失败");
+      }
+    } catch (error) {
+      console.error("应用素材失败:", error);
+      toast.error("应用素材失败");
+    }
+  }, [shot, dispatch]);
+
   return (
     <div
       ref={setNodeRef}
@@ -108,9 +152,13 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
           ? "border-primary ring-2 ring-primary/30"
           : "border-border hover:border-primary/40",
         isDragging && "opacity-50 z-50",
-        isResizing && "select-none"
+        isResizing && "select-none",
+        isDragOver && "border-primary ring-2 ring-primary/50 bg-primary/10"
       )}
       onClick={onClick}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {/* 分镜内容 */}
       <div className="absolute inset-0 flex">

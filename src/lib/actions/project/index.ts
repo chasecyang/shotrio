@@ -28,10 +28,6 @@ export {
   deleteShot,
   reorderShots,
   importExtractedShots,
-  // 角色管理
-  addCharacterToShot,
-  removeCharacterFromShot,
-  updateShotCharacter,
   // 对话管理
   addDialogueToShot,
   updateShotDialogue,
@@ -40,6 +36,5 @@ export {
   // 图片生成
   generateShotImage,
   batchGenerateShotImages,
-  updateShotCharacterImage,
   copyShotImage,
 } from "./shot";

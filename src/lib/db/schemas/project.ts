@@ -40,25 +40,15 @@ export const cameraMovementEnum = pgEnum("camera_movement", [
   "handheld", // 手持
 ]);
 
-// 场景图片类型
-export const sceneImageTypeEnum = pgEnum("scene_image_type", [
-  "master_layout", // 全景布局图
-  "quarter_view", // 45度视角
-]);
-
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
-  "character_extraction", // 角色提取
-  "scene_extraction", // 场景提取
-  "character_image_generation", // 角色造型生成
-  "scene_image_generation", // 场景视角生成
   "storyboard_generation", // 剧本自动分镜（触发入口）
   "storyboard_basic_extraction", // 基础分镜提取（第一步）
-  "storyboard_matching", // 角色场景匹配（第二步）
   "shot_decomposition", // 分镜拆解
   "shot_image_generation", // 单个分镜图片生成
   "batch_shot_image_generation", // 批量分镜图片生成
   "batch_image_generation", // 批量图像生成
+  "asset_image_generation", // 素材图片生成
   "video_generation", // 视频生成
   "shot_video_generation", // 单镜视频生成
   "batch_video_generation", // 批量视频生成
@@ -131,38 +121,39 @@ export const project = pgTable("project", {
     .notNull(),
 });
 
-// 2. 角色表 (Character) - 关键！用于固定角色长相
-export const character = pgTable("character", {
+// 2. 资产表 (Asset) - 统一的图片资产管理
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const asset: any = pgTable("asset", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
     .notNull()
     .references(() => project.id, { onDelete: "cascade" }),
-
-  name: text("name").notNull(),
-  description: text("description"), // 角色小传 (性格、背景)
-  appearance: text("appearance"), // 基础外貌 (Text Setting)，所有状态的公约数
-
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-// 2.1 角色形象状态表 (Character Image) - 角色的肉身/状态
-export const characterImage = pgTable("character_image", {
-  id: text("id").primaryKey(),
-  characterId: text("character_id")
+  userId: text("user_id")
     .notNull()
-    .references(() => character.id, { onDelete: "cascade" }),
+    .references(() => user.id, { onDelete: "cascade" }),
 
-  label: text("label").notNull(), // 状态名称 (e.g. "Default", "Home", "Battle")
-  imagePrompt: text("image_prompt"), // 该状态特定的外貌描写
-  imageUrl: text("image_url"), // 生成并选定后的图片地址
-  seed: integer("seed"), // 固定 Seed
+  // 基本信息
+  name: text("name").notNull(), // 资产名称，如 "张三-正面-愤怒"
   
-  isPrimary: boolean("is_primary").default(false), // 是否为主图/封面
-
+  // 图片资源
+  imageUrl: text("image_url").notNull(), // 图片URL
+  thumbnailUrl: text("thumbnail_url"), // 缩略图URL
+  
+  // 生成信息
+  prompt: text("prompt"), // 生成用的prompt
+  seed: integer("seed"), // 固定seed
+  modelUsed: text("model_used"), // 使用的模型
+  
+  // 派生关系
+  sourceAssetId: text("source_asset_id").references(() => asset.id, { onDelete: "set null" }),
+  derivationType: text("derivation_type"), // 'generate' | 'img2img' | 'inpaint' | 'edit' | 'remix' | 'composite'
+  
+  // 灵活的元数据字段（JSON）
+  meta: text("meta"), // JSON字符串，存储类型特定的元数据
+  
+  // 统计信息
+  usageCount: integer("usage_count").default(0).notNull(),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -170,40 +161,17 @@ export const characterImage = pgTable("character_image", {
     .notNull(),
 });
 
-// 2.2 场景表 (Scene) - 拍摄场景/地点
-export const scene = pgTable("scene", {
+// 2.1 资产标签表 (Asset Tag) - 多对多标签系统
+export const assetTag = pgTable("asset_tag", {
   id: text("id").primaryKey(),
-  projectId: text("project_id")
+  assetId: text("asset_id")
     .notNull()
-    .references(() => project.id, { onDelete: "cascade" }),
-
-  name: text("name").notNull(), // 场景名称 (e.g. "咖啡厅", "主角的家-客厅")
-  description: text("description"), // 场景描述
-
+    .references(() => asset.id, { onDelete: "cascade" }),
+  
+  // 标签值（扁平化结构）
+  tagValue: text("tag_value").notNull(), // 标签的具体值，如"角色"、"场景"、"道具"或自定义值
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-// 2.3 场景视角图表 (Scene Image) - 场景的不同视角参考图
-export const sceneImage = pgTable("scene_image", {
-  id: text("id").primaryKey(),
-  sceneId: text("scene_id")
-    .notNull()
-    .references(() => scene.id, { onDelete: "cascade" }),
-
-  imageType: sceneImageTypeEnum("image_type").notNull(), // 图片类型: master_layout | quarter_view
-  imagePrompt: text("image_prompt"), // 该视角的图像生成prompt
-  imageUrl: text("image_url"), // 生成并选定后的图片地址
-  seed: integer("seed"), // 固定 Seed
-
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
 });
 
 // 3. 剧集表 (Episode) - 每一集短剧
@@ -251,9 +219,8 @@ export const shot = pgTable("shot", {
   videoUrl: text("video_url"), // 生成的视频片段
   finalAudioUrl: text("final_audio_url"), // 混音后的完整音频
 
-  // 关联 (用于辅助生成)
-  // 关联场景，用于提取场景的视觉风格
-  sceneId: text("scene_id").references(() => scene.id),
+  // 关联资产（可选，关联到asset表）
+  imageAssetId: text("image_asset_id").references(() => asset.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -262,36 +229,15 @@ export const shot = pgTable("shot", {
     .notNull(),
 });
 
-// 4.1 镜头角色关联表 (Shot Character) - 记录镜头中出现的角色
-export const shotCharacter = pgTable("shot_character", {
-  id: text("id").primaryKey(),
-  shotId: text("shot_id")
-    .notNull()
-    .references(() => shot.id, { onDelete: "cascade" }),
-  characterId: text("character_id")
-    .notNull()
-    .references(() => character.id, { onDelete: "cascade" }),
-  
-  // 角色在这个镜头中的特定设定
-  characterImageId: text("character_image_id")
-    .references(() => characterImage.id, { onDelete: "set null" }),
-  
-  position: text("position"), // 'left' | 'center' | 'right' | 'foreground' | 'background'
-  order: integer("order").default(0).notNull(), // 显示顺序
-  
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// 4.2 镜头对话表 (Shot Dialogue) - 记录镜头中的对话序列
+// 4.1 镜头对话表 (Shot Dialogue) - 记录镜头中的对话序列
 export const shotDialogue = pgTable("shot_dialogue", {
   id: text("id").primaryKey(),
   shotId: text("shot_id")
     .notNull()
     .references(() => shot.id, { onDelete: "cascade" }),
   
-  // 说话人（可以为null表示旁白/画外音）
-  characterId: text("character_id")
-    .references(() => character.id, { onDelete: "set null" }),
+  // 说话人名称（纯文本，可以为null表示旁白/画外音）
+  speakerName: text("speaker_name"),
   
   // 对话内容
   dialogueText: text("dialogue_text").notNull(),
@@ -371,39 +317,35 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     fields: [project.styleId],
     references: [artStyle.id],
   }),
-  characters: many(character),
-  scenes: many(scene),
+  assets: many(asset),
   episodes: many(episode),
   jobs: many(job),
 }));
 
-export const characterRelations = relations(character, ({ one, many }) => ({
+export const assetRelations = relations(asset, ({ one, many }) => ({
   project: one(project, {
-    fields: [character.projectId],
+    fields: [asset.projectId],
     references: [project.id],
   }),
-  images: many(characterImage),
-}));
-
-export const characterImageRelations = relations(characterImage, ({ one }) => ({
-  character: one(character, {
-    fields: [characterImage.characterId],
-    references: [character.id],
+  user: one(user, {
+    fields: [asset.userId],
+    references: [user.id],
   }),
-}));
-
-export const sceneRelations = relations(scene, ({ one, many }) => ({
-  project: one(project, {
-    fields: [scene.projectId],
-    references: [project.id],
+  sourceAsset: one(asset, {
+    fields: [asset.sourceAssetId],
+    references: [asset.id],
+    relationName: "assetDerivation",
   }),
-  images: many(sceneImage),
+  derivedAssets: many(asset, {
+    relationName: "assetDerivation",
+  }),
+  tags: many(assetTag),
 }));
 
-export const sceneImageRelations = relations(sceneImage, ({ one }) => ({
-  scene: one(scene, {
-    fields: [sceneImage.sceneId],
-    references: [scene.id],
+export const assetTagRelations = relations(assetTag, ({ one }) => ({
+  asset: one(asset, {
+    fields: [assetTag.assetId],
+    references: [asset.id],
   }),
 }));
 
@@ -420,14 +362,12 @@ export const shotRelations = relations(shot, ({ one, many }) => ({
     fields: [shot.episodeId],
     references: [episode.id],
   }),
-  // 关联场景，用于提取场景视觉参考
-  scene: one(scene, {
-    fields: [shot.sceneId],
-    references: [scene.id],
+  // 关联资产图片（可选）
+  imageAsset: one(asset, {
+    fields: [shot.imageAssetId],
+    references: [asset.id],
   }),
-  // 新增：镜头中的角色列表
-  shotCharacters: many(shotCharacter),
-  // 新增：镜头中的对话列表
+  // 镜头中的对话列表
   dialogues: many(shotDialogue),
 }));
 
@@ -450,29 +390,10 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   }),
 }));
 
-export const shotCharacterRelations = relations(shotCharacter, ({ one }) => ({
-  shot: one(shot, {
-    fields: [shotCharacter.shotId],
-    references: [shot.id],
-  }),
-  character: one(character, {
-    fields: [shotCharacter.characterId],
-    references: [character.id],
-  }),
-  characterImage: one(characterImage, {
-    fields: [shotCharacter.characterImageId],
-    references: [characterImage.id],
-  }),
-}));
-
 export const shotDialogueRelations = relations(shotDialogue, ({ one }) => ({
   shot: one(shot, {
     fields: [shotDialogue.shotId],
     references: [shot.id],
-  }),
-  character: one(character, {
-    fields: [shotDialogue.characterId],
-    references: [character.id],
   }),
 }));
 

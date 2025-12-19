@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Settings, PenTool } from "lucide-react";
 import { Link, usePathname } from "@/i18n/routing";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Sidebar,
@@ -18,28 +20,18 @@ import {
 import { ProjectSelector } from "./project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 
-interface Episode {
-  id: string;
-  title: string;
-  order: number;
-}
-
 interface Project {
   id: string;
   title: string;
   description?: string | null;
 }
 
-interface ProjectDetail {
-  id: string;
-  title: string;
-  episodes: Episode[];
-  characters: Array<{ id: string }>;
-}
-
 interface ProjectSidebarProps {
   projects: Project[];
-  currentProject?: ProjectDetail;
+  currentProject?: {
+    id: string;
+    title: string;
+  };
   user: {
     id: string;
     name: string;
@@ -51,20 +43,27 @@ interface ProjectSidebarProps {
 
 export function ProjectSidebar({ projects, currentProject, user }: ProjectSidebarProps) {
   const pathname = usePathname();
+  const params = useParams();
   const t = useTranslations('projects.nav');
-
+  
+  // 从路由参数中获取当前项目ID
+  const projectIdFromRoute = params.id as string | undefined;
+  
+  // 使用路由中的项目ID或传入的项目ID
+  const currentProjectId = projectIdFromRoute || currentProject?.id;
+  
   const isActive = (path: string) => pathname === path;
 
-  const navigation = currentProject
+  const navigation = currentProjectId
     ? [
         {
           name: "编辑器",
-          href: `/projects/${currentProject.id}/editor`,
+          href: `/projects/${currentProjectId}/editor`,
           icon: PenTool,
         },
         {
           name: t('settings'),
-          href: `/projects/${currentProject.id}/settings`,
+          href: `/projects/${currentProjectId}/settings`,
           icon: Settings,
         },
       ]
@@ -92,13 +91,13 @@ export function ProjectSidebar({ projects, currentProject, user }: ProjectSideba
           <SidebarGroupContent>
             <ProjectSelector 
               projects={projects}
-              currentProjectId={currentProject?.id}
+              currentProjectId={currentProjectId}
             />
           </SidebarGroupContent>
         </SidebarGroup>
 
         {/* 主导航 */}
-        {currentProject && (
+        {currentProjectId && (
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>

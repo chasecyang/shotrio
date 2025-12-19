@@ -182,6 +182,181 @@
         "action": "Add Shot"
       },
       "addShot": "Add Shot"
+    },
+    "assets": {
+      "title": "Assets",
+      "empty": {
+        "title": "No Assets Yet",
+        "description": "Upload image assets to build your asset library",
+        "action": "Upload Asset"
+      },
+      "loading": "Loading assets...",
+      "upload": {
+        "title": "Upload Asset",
+        "button": "Upload",
+        "dragHint": "Click or drag file here to upload",
+        "fileInfo": "Supports JPG, PNG, WebP, GIF, max 10MB",
+        "name": "Asset Name",
+        "namePlaceholder": "Enter asset name",
+        "type": "Asset Type",
+        "uploading": "Uploading...",
+        "progress": "Upload Progress",
+        "success": "Asset uploaded successfully",
+        "error": "Upload failed"
+      },
+      "types": {
+        "character": "Character",
+        "scene": "Scene",
+        "prop": "Prop",
+        "storyboard": "Storyboard",
+        "effect": "Effect",
+        "reference": "Reference"
+      },
+      "detail": {
+        "title": "Asset Details",
+        "basicInfo": "Basic Information",
+        "type": "Type",
+        "usageCount": "Usage Count",
+        "createdAt": "Created At",
+        "generationInfo": "Generation Info",
+        "prompt": "Prompt",
+        "model": "Model",
+        "seed": "Seed",
+        "tags": "Tags",
+        "addTag": "Add Tag",
+        "addTagPlaceholder": "Add tag...",
+        "derivedFrom": "Derived From",
+        "derivationType": "Derivation Type",
+        "delete": "Delete",
+        "derive": "Derive",
+        "close": "Close",
+        "edit": "Edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "nameUpdated": "Name updated",
+        "tagAdded": "Tag added",
+        "tagRemoved": "Tag removed"
+      },
+      "derive": {
+        "title": "Derive New Asset",
+        "sourceAsset": "Source Asset",
+        "type": "Derivation Type",
+        "types": {
+          "img2img": {
+            "label": "Image to Image",
+            "description": "Generate variations based on original image"
+          },
+          "inpaint": {
+            "label": "Inpaint",
+            "description": "Modify specific regions of the image"
+          },
+          "edit": {
+            "label": "Edit",
+            "description": "Edit image based on prompt"
+          },
+          "remix": {
+            "label": "Remix",
+            "description": "Mix elements from multiple images"
+          }
+        },
+        "name": "Derived Asset Name",
+        "prompt": "Prompt",
+        "promptPlaceholder": "Describe the image you want...",
+        "promptHint": "Modify the source asset's prompt, or enter a new one",
+        "strength": "Derivation Strength",
+        "strengthMin": "Keep Original (0.1)",
+        "strengthMax": "Full Redraw (1.0)",
+        "strengthHint": "Lower values preserve more original features, higher values create more variation",
+        "hint": "The derivation feature will use AI generation services to create new asset variants. The generation process may take some time, please check progress in Task Center.",
+        "button": "Start Deriving",
+        "processing": "Processing...",
+        "success": "Derivation request submitted",
+        "inDevelopment": "Derivation feature in development, stay tuned"
+      },
+      "filter": {
+        "button": "Filter",
+        "title": "Tag Filter",
+        "clearAll": "Clear All",
+        "noTags": "No tags available",
+        "tagTypes": {
+          "type": "Type",
+          "character": "Character",
+          "scene": "Scene",
+          "prop": "Prop",
+          "emotion": "Emotion",
+          "style": "Style",
+          "location": "Location",
+          "action": "Action",
+          "custom": "Custom"
+        }
+      },
+      "delete": {
+        "title": "Confirm Delete",
+        "description": "Are you sure you want to delete asset \"{name}\"? This action cannot be undone.",
+        "warning": "Warning: This asset has been used {count} times, deletion will invalidate related references.",
+        "confirm": "Confirm Delete",
+        "cancel": "Cancel",
+        "deleting": "Deleting...",
+        "success": "Asset deleted",
+        "error": "Delete failed"
+      },
+      "actions": {
+        "applied": "Asset applied to shot",
+        "applyError": "Apply failed"
+      },
+      "viewMode": {
+        "grid": "Grid View",
+        "list": "List View"
+      },
+      "generation": {
+        "title": "AI Asset Generation",
+        "subtitle": "Generate images from text descriptions using AI",
+        "form": {
+          "assetName": "Asset Name",
+          "assetNamePlaceholder": "Enter asset name...",
+          "prompt": "Describe what you want to create",
+          "promptPlaceholderDefault": "Describe in detail what you want to create, for example:\n\nA 30-year-old Asian woman, short hair, modern professional attire, confident smile, studio lighting, high-quality photography, cinematic texture, professional portrait style...",
+          "promptPlaceholderWithReference": "Create based on reference images, for example:\n\nAdjust to warm sunset tones, keep character pose and expression unchanged, add soft backlight, enhance atmospheric mood...",
+          "promptHint": "Detailed descriptions help AI generate more accurate images. Include: subject, style, lighting, composition, etc.",
+          "parameters": "Advanced Parameters",
+          "aspectRatio": "Aspect Ratio",
+          "resolution": "Resolution",
+          "numImages": "Number of Images",
+          "referenceAssets": "Reference Images",
+          "referenceAssetsCount": "({count}/14)",
+          "referenceAssetsOptional": "Optional",
+          "referenceAssetsHint": "Select reference images from the asset library on the left, AI will create based on these images",
+          "noReferenceSelected": "No reference images selected",
+          "noReferenceHint": "Select from asset library on the left, or start creating directly",
+          "referenceSelectedCount": "{count} reference image(s) selected"
+        },
+        "resolutions": {
+          "1K": "1K (Quick Preview)",
+          "2K": "2K (Recommended)",
+          "4K": "4K (Highest Quality)"
+        },
+        "actions": {
+          "generate": "Generate Image",
+          "editImage": "Edit Image",
+          "generating": "Generating...",
+          "cancel": "Cancel"
+        },
+        "results": {
+          "title": "Generation Successful",
+          "savedToLibrary": "Images have been automatically saved to the asset library and can be viewed in the asset panel on the left",
+          "count": "{count} image(s)"
+        },
+        "errors": {
+          "promptRequired": "Please enter a prompt",
+          "nameRequired": "Please enter asset name",
+          "noReferenceSelected": "Please select reference assets first",
+          "generationFailed": "Generation failed",
+          "saveFailed": "Save failed"
+        },
+        "success": {
+          "generated": "Successfully generated {count} image(s) and saved to asset library"
+        }
+      }
     }
   },
   "footer": {

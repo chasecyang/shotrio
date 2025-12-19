@@ -28,7 +28,7 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   stream?: boolean;
   jsonMode?: boolean;
-  useReasoning?: boolean; // 是否使用 DeepSeek reasoning 模式
+  useReasoning?: boolean; // 是否使用 reasoning 模式（自动选择 OPENAI_REASONING_MODEL）
 }
 
 /**
@@ -42,12 +42,25 @@ export async function getChatCompletion(
   options: ChatCompletionOptions = {},
 ): Promise<string> {
   const {
-    model = process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+    model: explicitModel,
     temperature = 0.7,
     maxTokens = 4096,
     jsonMode = false,
     useReasoning = false,
   } = options;
+
+  // 模型选择逻辑：
+  // 1. 如果明确指定了 model，使用指定的 model
+  // 2. 如果 useReasoning=true，使用 OPENAI_REASONING_MODEL (thinking 模型)
+  // 3. 否则使用 OPENAI_CHAT_MODEL (chat 模型)
+  let model: string;
+  if (explicitModel) {
+    model = explicitModel;
+  } else if (useReasoning) {
+    model = process.env.OPENAI_REASONING_MODEL || "deepseek-reasoner";
+  } else {
+    model = process.env.OPENAI_CHAT_MODEL || "deepseek-chat";
+  }
 
   try {
     const openai = getOpenAIClient();
@@ -59,6 +72,7 @@ export async function getChatCompletion(
       max_tokens?: number;
       response_format?: { type: string };
       temperature?: number;
+      thinking?: { type: string }; // 用于 DeepSeek reasoning 模式
     } = {
       model,
       messages,
@@ -66,22 +80,49 @@ export async function getChatCompletion(
       response_format: jsonMode ? { type: "json_object" } : undefined,
     };
 
-    // 如果使用 reasoning 模式，添加 thinking 参数
-    // 注意：reasoning 模式不支持 temperature 等参数
-    if (useReasoning) {
+    // 检测是否是 reasoner 模型
+    const isReasonerModel = model.includes('reasoner');
+    
+    // 如果使用 reasoning 模式或检测到 reasoner 模型，添加 thinking 参数
+    if (useReasoning || isReasonerModel) {
       requestParams.thinking = { type: "enabled" };
       // reasoning 模式下，max_tokens 建议设置为 32K 或 64K
       if (maxTokens < 32000) {
         requestParams.max_tokens = 32000;
+      }
+      // reasoner 模式不支持 response_format
+      if (isReasonerModel && jsonMode) {
+        console.warn("⚠️ reasoner 模型不支持 JSON 模式，已自动禁用");
+        requestParams.response_format = undefined;
       }
     } else {
       // 非 reasoning 模式才设置 temperature
       requestParams.temperature = temperature;
     }
 
+    console.log("OpenAI请求:", {
+      model,
+      jsonMode,
+      maxTokens: requestParams.max_tokens,
+      useReasoning: useReasoning || isReasonerModel,
+    });
+    
     const response = await openai.chat.completions.create(requestParams);
+    
+    console.log("OpenAI响应:", {
+      id: response.id,
+      model: response.model,
+      finish_reason: response.choices[0]?.finish_reason,
+      contentLength: response.choices[0]?.message?.content?.length || 0,
+    });
 
-    return response.choices[0]?.message?.content || "";
+    const content = response.choices[0]?.message?.content;
+    
+    if (!content) {
+      throw new Error(`OpenAI返回了空内容，finish_reason: ${response.choices[0]?.finish_reason || 'unknown'}`);
+    }
+
+    return content;
   } catch (error: unknown) {
     console.error("OpenAI API调用失败:", error);
     const message = error instanceof Error ? error.message : "未知错误";
@@ -100,10 +141,18 @@ export async function getChatCompletionStream(
   options: ChatCompletionOptions = {},
 ) {
   const {
-    model = process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+    model: explicitModel,
     temperature = 0.7,
     maxTokens = 4096,
+    useReasoning = false,
   } = options;
+
+  // 使用与 getChatCompletion 相同的模型选择逻辑
+  const model = explicitModel 
+    ? explicitModel
+    : useReasoning
+    ? process.env.OPENAI_REASONING_MODEL || "deepseek-reasoner"
+    : process.env.OPENAI_CHAT_MODEL || "deepseek-chat";
 
   try {
     const openai = getOpenAIClient();

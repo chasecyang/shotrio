@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { episode, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
+import { episode, shot, shotDialogue } from "@/lib/db/schemas/project";
 import { eq, asc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
@@ -11,9 +11,7 @@ import {
   type ShotDetail,
   type ShotSize,
   type CameraMovement,
-  type NewShotCharacter,
   type NewShotDialogue,
-  type CharacterPosition,
   type EmotionTag,
   type ExtractedShot,
 } from "@/types/project";
@@ -37,19 +35,13 @@ export async function getEpisodeShots(
       where: eq(shot.episodeId, episodeId),
       orderBy: [asc(shot.order)],
       with: {
-        scene: true,
-        shotCharacters: {
-          orderBy: (shotCharacter, { asc }) => [asc(shotCharacter.order)],
+        imageAsset: {
           with: {
-            character: true,
-            characterImage: true,
+            tags: true,
           },
         },
         dialogues: {
           orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
-          with: {
-            character: true,
-          },
         },
       },
     });
@@ -73,7 +65,7 @@ export async function createShot(data: {
   visualDescription?: string;
   visualPrompt?: string;
   audioPrompt?: string;
-  sceneId?: string;
+  imageAssetId?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -102,7 +94,7 @@ export async function createShot(data: {
       visualDescription: data.visualDescription || null,
       visualPrompt: data.visualPrompt || null,
       audioPrompt: data.audioPrompt || null,
-      sceneId: data.sceneId || null,
+      imageAssetId: data.imageAssetId || null,
       imageUrl: null,
       videoUrl: null,
       finalAudioUrl: null,
@@ -244,121 +236,6 @@ export async function reorderShots(
   }
 }
 
-// ==================== 角色管理 Actions ====================
-
-/**
- * 添加角色到镜头
- */
-export async function addCharacterToShot(data: {
-  shotId: string;
-  characterId: string;
-  characterImageId?: string;
-  position?: CharacterPosition;
-  order?: number;
-}) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    throw new Error("未登录");
-  }
-
-  try {
-    // 获取当前镜头的最大order
-    const existingCharacters = await db.query.shotCharacter.findMany({
-      where: eq(shotCharacter.shotId, data.shotId),
-    });
-
-    const maxOrder = existingCharacters.length > 0 
-      ? Math.max(...existingCharacters.map(sc => sc.order)) 
-      : 0;
-
-    const newShotCharacter: NewShotCharacter = {
-      id: randomUUID(),
-      shotId: data.shotId,
-      characterId: data.characterId,
-      characterImageId: data.characterImageId || null,
-      position: data.position || null,
-      order: data.order !== undefined ? data.order : maxOrder + 1,
-    };
-
-    const [created] = await db.insert(shotCharacter).values(newShotCharacter).returning();
-
-
-
-    return { success: true, data: created };
-  } catch (error) {
-    console.error("添加角色失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "添加角色失败",
-    };
-  }
-}
-
-/**
- * 从镜头移除角色
- */
-export async function removeCharacterFromShot(shotCharacterId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    throw new Error("未登录");
-  }
-
-  try {
-    const shotCharacterData = await db.query.shotCharacter.findFirst({
-      where: eq(shotCharacter.id, shotCharacterId),
-    });
-
-    if (!shotCharacterData) {
-      throw new Error("角色关联不存在");
-    }
-
-    await db.delete(shotCharacter).where(eq(shotCharacter.id, shotCharacterId));
-
-    return { success: true };
-  } catch (error) {
-    console.error("移除角色失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "移除角色失败",
-    };
-  }
-}
-
-/**
- * 更新镜头中的角色信息
- */
-export async function updateShotCharacter(
-  shotCharacterId: string,
-  data: Partial<NewShotCharacter>
-) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    throw new Error("未登录");
-  }
-
-  try {
-    const [updated] = await db
-      .update(shotCharacter)
-      .set(data)
-      .where(eq(shotCharacter.id, shotCharacterId))
-      .returning();
-
-    return { success: true, data: updated };
-  } catch (error) {
-    console.error("更新角色信息失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "更新失败",
-    };
-  }
-}
-
 // ==================== 对话管理 Actions ====================
 
 /**
@@ -366,7 +243,7 @@ export async function updateShotCharacter(
  */
 export async function addDialogueToShot(data: {
   shotId: string;
-  characterId?: string;
+  speakerName?: string;
   dialogueText: string;
   order?: number;
   emotionTag?: EmotionTag;
@@ -391,7 +268,7 @@ export async function addDialogueToShot(data: {
     const newDialogue: NewShotDialogue = {
       id: randomUUID(),
       shotId: data.shotId,
-      characterId: data.characterId || null,
+      speakerName: data.speakerName || null,
       dialogueText: data.dialogueText,
       order: data.order !== undefined ? data.order : maxOrder + 1,
       emotionTag: data.emotionTag || null,
@@ -544,7 +421,6 @@ export async function importExtractedShots(
     // 使用事务批量插入
     const result = await db.transaction(async (tx) => {
       const insertedShots: string[] = [];
-      let totalCharacters = 0;
       let totalDialogues = 0;
 
       for (const extractedShot of extractedShots) {
@@ -560,7 +436,7 @@ export async function importExtractedShots(
           visualDescription: extractedShot.visualDescription || null,
           visualPrompt: extractedShot.visualPrompt || null,
           audioPrompt: extractedShot.audioPrompt || null,
-          sceneId: extractedShot.sceneId || null,
+          imageAssetId: null,
           imageUrl: null,
           videoUrl: null,
           finalAudioUrl: null,
@@ -569,35 +445,13 @@ export async function importExtractedShots(
         await tx.insert(shot).values(newShot);
         insertedShots.push(shotId);
 
-        // 2. 创建角色关联记录
-        if (extractedShot.characters && extractedShot.characters.length > 0) {
-          for (let i = 0; i < extractedShot.characters.length; i++) {
-            const char = extractedShot.characters[i];
-            
-            // 只有当角色匹配成功时才创建关联
-            if (char.characterId) {
-              const newShotChar: NewShotCharacter = {
-                id: randomUUID(),
-                shotId,
-                characterId: char.characterId,
-                characterImageId: char.characterImageId || null,
-                position: (char.position as CharacterPosition) || null,
-                order: i + 1,
-              };
-
-              await tx.insert(shotCharacter).values(newShotChar);
-              totalCharacters++;
-            }
-          }
-        }
-
-        // 3. 创建对话记录
+        // 2. 创建对话记录
         if (extractedShot.dialogues && extractedShot.dialogues.length > 0) {
           for (const dialogue of extractedShot.dialogues) {
             const newDialogue: NewShotDialogue = {
               id: randomUUID(),
               shotId,
-              characterId: dialogue.characterId || null,
+              speakerName: dialogue.speakerName || null,
               dialogueText: dialogue.dialogueText,
               order: dialogue.order,
               emotionTag: (dialogue.emotionTag as EmotionTag) || null,
@@ -614,7 +468,6 @@ export async function importExtractedShots(
 
       return {
         insertedShots,
-        totalCharacters,
         totalDialogues,
       };
     });
@@ -624,7 +477,6 @@ export async function importExtractedShots(
       success: true,
       imported: {
         newShots: result.insertedShots.length,
-        newCharacterLinks: result.totalCharacters,
         newDialogues: result.totalDialogues,
       },
     };
@@ -764,58 +616,6 @@ export async function batchGenerateShotImages(shotIds: string[]): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : "生成失败",
-    };
-  }
-}
-
-/**
- * 更新分镜角色的造型
- */
-export async function updateShotCharacterImage(
-  shotCharacterId: string,
-  characterImageId: string
-): Promise<{
-  success: boolean;
-  error?: string;
-}> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  try {
-    // 验证 shotCharacter 存在
-    const shotCharData = await db.query.shotCharacter.findFirst({
-      where: eq(shotCharacter.id, shotCharacterId),
-      with: {
-        shot: {
-          with: {
-            episode: true,
-          },
-        },
-      },
-    });
-
-    if (!shotCharData) {
-      return { success: false, error: "分镜角色不存在" };
-    }
-
-    // 更新造型关联
-    await db
-      .update(shotCharacter)
-      .set({
-        characterImageId,
-      })
-      .where(eq(shotCharacter.id, shotCharacterId));
-
-    return { success: true };
-  } catch (error) {
-    console.error("更新分镜角色造型失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "更新失败",
     };
   }
 }

@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { project, episode, shot, character, scene } from "@/lib/db/schemas/project";
+import { project, episode, shot } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 
 /**
@@ -96,56 +96,6 @@ export async function requireShotAccess(shotId: string, userId: string) {
   }
 
   return shotData;
-}
-
-/**
- * 验证用户对角色的访问权限（通过项目权限）
- * @throws {Error} 如果角色不存在或用户无权限
- */
-export async function requireCharacterAccess(characterId: string, userId: string) {
-  const characterData = await db.query.character.findFirst({
-    where: eq(character.id, characterId),
-    with: {
-      project: true,
-    },
-  });
-
-  if (!characterData) {
-    throw new Error("角色不存在");
-  }
-
-  // 类型断言：project 是一个对象
-  const projectData = characterData.project as { userId: string } | undefined;
-  if (!projectData || projectData.userId !== userId) {
-    throw new Error("无权限访问该角色");
-  }
-
-  return characterData;
-}
-
-/**
- * 验证用户对场景的访问权限（通过项目权限）
- * @throws {Error} 如果场景不存在或用户无权限
- */
-export async function requireSceneAccess(sceneId: string, userId: string) {
-  const sceneData = await db.query.scene.findFirst({
-    where: eq(scene.id, sceneId),
-    with: {
-      project: true,
-    },
-  });
-
-  if (!sceneData) {
-    throw new Error("场景不存在");
-  }
-
-  // 类型断言：project 是一个对象
-  const projectData = sceneData.project as { userId: string } | undefined;
-  if (!projectData || projectData.userId !== userId) {
-    throw new Error("无权限访问该场景");
-  }
-
-  return sceneData;
 }
 
 /**

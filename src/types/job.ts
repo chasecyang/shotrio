@@ -1,17 +1,13 @@
 // 任务类型定义
 
 export type JobType =
-  | "character_extraction" // 角色提取
-  | "scene_extraction" // 场景提取
-  | "character_image_generation" // 角色造型生成
-  | "scene_image_generation" // 场景视角生成
   | "storyboard_generation" // 剧本自动分镜（触发入口）
   | "storyboard_basic_extraction" // 基础分镜提取（第一步）
-  | "storyboard_matching" // 角色场景匹配（第二步）
   | "shot_decomposition" // 分镜拆解
   | "shot_image_generation" // 单个分镜图片生成
   | "batch_shot_image_generation" // 批量分镜图片生成
   | "batch_image_generation" // 批量图像生成
+  | "asset_image_generation" // 素材图片生成
   | "video_generation" // 视频生成
   | "shot_video_generation" // 单镜视频生成
   | "batch_video_generation" // 批量视频生成
@@ -47,26 +43,6 @@ export interface Job {
 }
 
 // 各种任务的输入数据类型
-export interface CharacterExtractionInput {
-  episodeIds: string[];
-}
-
-export interface SceneExtractionInput {
-  episodeIds: string[];
-}
-
-export interface CharacterImageGenerationInput {
-  characterId: string;
-  imageId: string; // characterImage 的 ID，用于更新
-  regenerate?: boolean; // 是否重新生成已有图片
-}
-
-export interface SceneImageGenerationInput {
-  sceneId: string;
-  imageId: string; // sceneImage 的 ID，用于更新
-  regenerate?: boolean; // 是否重新生成已有图片
-}
-
 export interface StoryboardGenerationInput {
   episodeId: string;
   autoGenerateImages?: boolean;
@@ -78,11 +54,11 @@ export interface StoryboardBasicExtractionInput {
   parentJobId?: string; // 父任务ID，用于追溯
 }
 
-// 角色场景匹配输入（第二步）
+// @deprecated 已废弃 - 角色场景匹配功能已移除
 export interface StoryboardMatchingInput {
   episodeId: string;
-  basicExtractionJobId: string; // 第一步任务的ID，用于读取基础提取结果
-  parentJobId?: string; // 父任务ID，用于追溯
+  basicExtractionJobId: string;
+  parentJobId?: string;
 }
 
 // 分镜拆解输入
@@ -114,38 +90,20 @@ export interface VideoGenerationInput {
   imageUrl?: string;
 }
 
+// 素材图片生成输入
+export interface AssetImageGenerationInput {
+  projectId: string;
+  prompt: string;
+  assetType: "character" | "scene" | "prop" | "reference";
+  aspectRatio?: string;
+  resolution?: "1K" | "2K" | "4K";
+  numImages?: number;
+  // 参考图（用于图生图）
+  sourceAssetIds?: string[];
+  mode: "text-to-image" | "image-to-image";
+}
+
 // 任务结果数据类型
-export interface CharacterExtractionResult {
-  characters: Array<{
-    name: string;
-    description: string;
-    appearance: string;
-    styles: Array<{
-      label: string;
-      prompt: string;
-    }>;
-  }>;
-  characterCount: number;
-}
-
-export interface SceneExtractionResult {
-  scenes: Array<{
-    name: string;
-    description: string;
-  }>;
-  sceneCount: number;
-}
-
-export interface CharacterImageGenerationResult {
-  imageId: string; // 生成的 characterImage ID
-  imageUrl: string; // 生成的图片URL
-}
-
-export interface SceneImageGenerationResult {
-  imageId: string; // 生成的 sceneImage ID
-  imageUrl: string; // 生成的图片URL
-}
-
 export interface ShotImageGenerationResult {
   shotId: string;
   imageUrl: string;
@@ -190,36 +148,9 @@ export interface StoryboardBasicExtractionResult {
   shotCount: number;
 }
 
-// 角色场景匹配结果（第二步）
+// @deprecated 已废弃 - 角色场景匹配功能已移除
 export interface StoryboardMatchingResult {
-  shots: Array<{
-    order: number;
-    shotSize: string;
-    cameraMovement: string;
-    duration: number;
-    visualDescription: string;
-    visualPrompt: string;
-    audioPrompt?: string;
-    sceneName?: string;
-    sceneId?: string; // 匹配后的场景ID
-    sceneMatchConfidence?: number;
-    characters: Array<{
-      name: string;
-      characterId?: string; // 匹配后的角色ID
-      characterImageId?: string; // 匹配后的角色造型ID
-      position?: string;
-      action?: string;
-      matchConfidence?: number;
-    }>;
-    dialogues: Array<{
-      characterName?: string;
-      characterId?: string; // 匹配后的角色ID
-      dialogueText: string;
-      emotionTag?: string;
-      order: number;
-      matchConfidence?: number;
-    }>;
-  }>;
+  shots: Array<Record<string, unknown>>;
   shotCount: number;
   matchedSceneCount: number;
   matchedCharacterCount: number;
@@ -267,6 +198,20 @@ export interface BatchImageGenerationResult {
 export interface VideoGenerationResult {
   videoUrl: string;
   duration: number;
+}
+
+// 素材图片生成结果
+export interface AssetImageGenerationResult {
+  assets: Array<{
+    id: string;
+    name: string;
+    imageUrl: string;
+    thumbnailUrl?: string;
+    tags: string[];
+  }>;
+  successCount: number;
+  failedCount: number;
+  errors?: string[];
 }
 
 // 单镜视频生成输入

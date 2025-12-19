@@ -7,7 +7,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { generateImage } from "@/lib/services/fal.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
-import { ImageCategory } from "@/lib/storage";
+import { AssetCategory } from "@/lib/storage";
 import { requireAdmin } from "@/lib/auth/auth-utils";
 import type { ArtStyle } from "@/types/art-style";
 import { INITIAL_ART_STYLES } from "@/lib/db/seeds/art-styles";
@@ -253,7 +253,7 @@ export async function generateStylePreview(
     // 3. 上传到R2
     const uploadResult = await uploadImageFromUrl(
       result.images[0].url,
-      ImageCategory.OTHER, // 使用OTHER分类，或者添加ART_STYLES分类
+      AssetCategory.OTHER,
       user.id
     );
 

@@ -61,6 +61,9 @@ BETTER_AUTH_URL=http://localhost:3000
 
 # OpenAI
 OPENAI_API_KEY=sk-xxx
+OPENAI_BASE_URL=https://api.deepseek.com  # 可选，默认使用 OpenAI 官方 API
+OPENAI_CHAT_MODEL=deepseek-chat           # 用于普通对话和 JSON 生成
+OPENAI_REASONING_MODEL=deepseek-reasoner  # 用于复杂推理任务（可选）
 
 # Fal.ai
 FAL_KEY=xxx

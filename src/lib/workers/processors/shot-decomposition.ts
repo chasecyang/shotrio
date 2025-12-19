@@ -59,19 +59,10 @@ export async function processShotDecomposition(
   const shotData = await db.query.shot.findFirst({
     where: eq(shot.id, shotId),
     with: {
-      shotCharacters: {
-        with: {
-          character: true,
-          characterImage: true,
-        },
-      },
       dialogues: {
         orderBy: (dialogues, { asc }) => [asc(dialogues.order)],
-        with: {
-          character: true,
-        },
       },
-      scene: true,
+      imageAsset: true,
     },
   });
 
@@ -93,26 +84,32 @@ export async function processShotDecomposition(
     workerToken
   );
 
-  // 构建角色信息
-  const characters = shotData.shotCharacters.map((sc) => ({
-    id: sc.characterId,
-    name: sc.character.name,
-    appearance: sc.character.appearance || undefined,
+  // 构建角色信息（从对话中提取角色名）
+  const uniqueSpeakers = new Set<string>();
+  shotData.dialogues.forEach((d) => {
+    if (d.speakerName && d.speakerName.trim()) {
+      uniqueSpeakers.add(d.speakerName.trim());
+    }
+  });
+  
+  const characters = Array.from(uniqueSpeakers).map((name) => ({
+    id: name, // 使用名字作为临时ID
+    name: name,
+    appearance: undefined,
   }));
 
   // 构建对话信息
   const dialogues = shotData.dialogues.map((d) => ({
-    characterId: d.characterId || undefined,
-    characterName: d.character?.name || undefined,
+    characterId: d.speakerName || undefined,
+    characterName: d.speakerName || undefined,
     text: d.dialogueText,
     order: d.order,
   }));
 
-  // 构建场景信息
-  const scene = shotData.scene as { name?: string; description?: string } | null;
-  const sceneName = scene?.name;
-  const sceneDescription = scene?.description || undefined;
-  const sceneId = shotData.sceneId || undefined;
+  // 场景信息不再可用（已移除 scene 表）
+  const sceneName = undefined;
+  const sceneDescription = undefined;
+  const sceneId = undefined;
 
   // 构建AI Prompt
   const prompt = buildShotDecompositionPrompt({
@@ -140,7 +137,7 @@ export async function processShotDecomposition(
   const response = await getChatCompletion(
     [{ role: "user", content: prompt }],
     {
-      model: process.env.OPENAI_MODEL || "deepseek-chat",
+      // useReasoning=true 自动使用 OPENAI_REASONING_MODEL
       temperature: 0.3, // 使用较低温度保持结果一致性
       maxTokens: 8000,
       jsonMode: true,
@@ -211,7 +208,7 @@ export async function processShotDecomposition(
       visualDescription: subShot.visualDescription,
       visualPrompt: subShot.visualPrompt || subShot.visualDescription,
       audioPrompt: subShot.audioPrompt,
-      sceneId: sceneId, // 继承原分镜的场景ID
+      sceneId: undefined, // 场景系统已废弃
       characters: (subShot.characters || []).map((char) => ({
         characterId: char.characterId,
         characterImageId: char.characterImageId,

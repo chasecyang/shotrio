@@ -1,8 +1,8 @@
 "use server";
 
 import db from "@/lib/db";
-import { job, shot, shotCharacter, shotDialogue } from "@/lib/db/schemas/project";
-import { eq, gte, sql } from "drizzle-orm";
+import { job, shot, shotDialogue } from "@/lib/db/schemas/project";
+import { eq, gte, sql, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/actions/utils/auth";
 import type { ShotDecompositionResult } from "@/types/job";
 import { nanoid } from "nanoid";
@@ -106,11 +106,14 @@ export async function importDecomposedShots(params: {
             order: sql`${shot.order} + ${orderIncrement}`,
           })
           .where(
-            gte(shot.order, originalOrder + 1)
+            and(
+              eq(shot.episodeId, episodeId),
+              gte(shot.order, originalOrder + 1)
+            )
           );
       }
 
-      // 6.3 删除原分镜（级联删除dialogues和shotCharacters）
+      // 6.3 删除原分镜（级联删除dialogues）
       await tx.delete(shot).where(eq(shot.id, result.originalShotId));
 
       // 6.4 插入新的子分镜
@@ -124,35 +127,29 @@ export async function importDecomposedShots(params: {
           id: newShotId,
           episodeId,
           order: newOrder,
-          shotSize: subShot.shotSize,
-          cameraMovement: subShot.cameraMovement,
+          shotSize: subShot.shotSize as typeof shot.$inferInsert.shotSize,
+          cameraMovement: subShot.cameraMovement as typeof shot.$inferInsert.cameraMovement,
           duration: subShot.duration,
-          visualDescription: subShot.visualDescription,
-          visualPrompt: subShot.visualPrompt,
-          audioPrompt: subShot.audioPrompt,
-          sceneId: subShot.sceneId,
+          visualDescription: subShot.visualDescription || null,
+          visualPrompt: subShot.visualPrompt || null,
+          audioPrompt: subShot.audioPrompt || null,
+          // sceneId 已废弃 - 使用 asset tag 系统代替
         });
 
-        // 插入角色关联
-        for (const char of subShot.characters) {
-          await tx.insert(shotCharacter).values({
-            id: nanoid(),
-            shotId: newShotId,
-            characterId: char.characterId,
-            characterImageId: char.characterImageId,
-            position: char.position,
-            order: 0,
-          });
-        }
+        // 角色信息现在通过 asset tag 系统管理，不再需要 shotCharacter 关联表
 
         // 插入对话
         for (const dlg of subShot.dialogues) {
+          const speakerName = (dlg as { characterName?: string; dialogueText: string; emotionTag?: string; order: number }).characterName || 
+                             (dlg as { characterId?: string; dialogueText: string; emotionTag?: string; order: number }).characterId || 
+                             null;
+          
           await tx.insert(shotDialogue).values({
             id: nanoid(),
             shotId: newShotId,
-            characterId: dlg.characterId,
+            speakerName: speakerName,
             dialogueText: dlg.dialogueText,
-            emotionTag: dlg.emotionTag,
+            emotionTag: dlg.emotionTag || null,
             order: dlg.order,
           });
         }

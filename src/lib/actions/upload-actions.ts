@@ -7,7 +7,7 @@ import {
   uploadVideoToR2,
   deleteImageFromR2,
   extractKeyFromUrl,
-  ImageCategory,
+  AssetCategory,
 } from "@/lib/storage";
 
 /**
@@ -15,7 +15,7 @@ import {
  */
 export async function uploadImage(
   formData: FormData,
-  category: ImageCategory = ImageCategory.OTHER
+  category: AssetCategory = AssetCategory.OTHER
 ) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -51,31 +51,13 @@ export async function uploadImage(
  */
 export async function uploadImageFromUrl(
   imageUrl: string,
-  category: ImageCategory = ImageCategory.OTHER,
+  category: AssetCategory = AssetCategory.OTHER,
   userId?: string
 ): Promise<{ success: boolean; url?: string; key?: string; error?: string }> {
   try {
-    // 下载图片
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.statusText}`);
-    }
-
-    // 获取图片数据
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // 从 URL 或 Content-Type 获取文件扩展名
-    const contentType = response.headers.get("content-type") || "image/png";
-    const extension = contentType.split("/")[1] || "png";
-
-    // 创建一个 File 对象
-    const filename = `generated-${Date.now()}.${extension}`;
-    const file = new File([buffer], filename, { type: contentType });
-
-    // 上传到 R2
-    const result = await uploadImageToR2(file, {
-      userId: userId || "system", // 使用提供的用户ID或系统用户ID
+    // 直接使用重构后的 uploadImageToR2（现在支持 URL）
+    const result = await uploadImageToR2(imageUrl, {
+      userId: userId || "system",
       category,
     });
 
@@ -97,33 +79,13 @@ export async function uploadVideoFromUrl(
   videoUrl: string,
   filename: string,
   userId: string,
-  category: ImageCategory = ImageCategory.OTHER
+  category: AssetCategory = AssetCategory.VIDEOS
 ): Promise<{ success: boolean; url?: string; key?: string; error?: string }> {
   try {
     console.log(`[Upload] 开始下载视频: ${videoUrl}`);
-    
-    // 下载视频
-    const response = await fetch(videoUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video: ${response.statusText}`);
-    }
 
-    // 获取视频数据
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    console.log(`[Upload] 视频下载完成，大小: ${buffer.length} bytes`);
-
-    // 从 URL 或 Content-Type 获取文件类型
-    const contentType = response.headers.get("content-type") || "video/mp4";
-
-    // 创建一个 File 对象
-    const file = new File([buffer], filename, { type: contentType });
-
-    console.log(`[Upload] 开始上传到 R2...`);
-
-    // 上传到 R2
-    const result = await uploadVideoToR2(file, {
+    // 直接使用重构后的 uploadVideoToR2（现在支持 URL）
+    const result = await uploadVideoToR2(videoUrl, {
       userId,
       category,
     });

@@ -11,7 +11,7 @@ import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, getImageSrc } from "@/lib/utils";
 import { uploadImage, deleteImage } from "@/lib/actions/upload-actions";
-import { ImageCategory } from "@/lib/storage";
+import { AssetCategory } from "@/lib/storage";
 import Image from "next/image";
 
 interface ImageUploadProps {
@@ -26,9 +26,9 @@ interface ImageUploadProps {
   onChange?: (url: string | undefined) => void;
   
   /**
-   * 图片分类
+   * 资产分类
    */
-  category?: ImageCategory;
+  category?: AssetCategory;
   
   /**
    * 占位符文本
@@ -54,7 +54,7 @@ interface ImageUploadProps {
 export function ImageUpload({
   value,
   onChange,
-  category = ImageCategory.OTHER,
+  category = AssetCategory.OTHER,
   placeholder = "点击或拖拽上传图片",
   disabled = false,
   className,

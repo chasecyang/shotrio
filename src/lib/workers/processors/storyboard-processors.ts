@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/db";
-import { episode, scene, character, job as jobSchema } from "@/lib/db/schemas/project";
+import { episode, job as jobSchema } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { getChatCompletion } from "@/lib/services/openai.service";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
@@ -418,7 +418,7 @@ ${episodeData.scriptContent}
     workerToken
   );
 
-  // 完成第一步任务
+  // 完成任务
   await completeJob(
     {
       jobId: jobData.id,
@@ -426,33 +426,18 @@ ${episodeData.scriptContent}
     },
     workerToken
   );
-
-  // 自动创建第二步任务：角色场景匹配
-  const matchingInput: StoryboardMatchingInput = {
-    episodeId,
-    basicExtractionJobId: jobData.id,
-    parentJobId: input.parentJobId,
-  };
-
-  const matchingResult = await createChildJob({
-    userId: jobData.userId,
-    projectId: jobData.projectId || undefined,
-    type: "storyboard_matching",
-    inputData: matchingInput,
-    parentJobId: input.parentJobId,
-  }, workerToken);
-
-  if (!matchingResult.success) {
-    console.error("创建匹配任务失败:", matchingResult.error);
-    // 不抛出错误，因为第一步已经成功了
-  }
 }
 
 /**
+ * @deprecated 此功能已废弃，使用新的 asset tag 系统代替
  * 处理角色场景匹配任务（第二步）
  * 读取第一步的结果，进行智能匹配
  */
 export async function processStoryboardMatching(jobData: Job, workerToken: string): Promise<void> {
+  // 此功能已废弃 - 旧的 character/scene 表已被 asset tag 系统取代
+  throw new Error("storyboard_matching 功能已废弃，请使用新的分镜导入流程");
+  
+  /*
   const input: StoryboardMatchingInput = JSON.parse(jobData.inputData || "{}");
   const { episodeId, basicExtractionJobId } = input;
 
@@ -703,5 +688,6 @@ export async function processStoryboardMatching(jobData: Job, workerToken: strin
       // 不抛出错误，因为匹配任务已经成功了
     }
   }
+  */
 }
 

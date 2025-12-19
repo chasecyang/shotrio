@@ -1,0 +1,260 @@
+"use server";
+
+import db from "@/lib/db";
+import { updateJobProgress, completeJob } from "@/lib/actions/job";
+import { verifyProjectOwnership } from "../utils/validation";
+import { analyzePromptForBatch } from "@/lib/services/ai-tagging.service";
+import { generateImage, editImage } from "@/lib/services/fal.service";
+import { uploadImageToR2, AssetCategory } from "@/lib/storage/r2.service";
+import { createAssetInternal } from "@/lib/actions/asset/crud";
+import type {
+  Job,
+  AssetImageGenerationInput,
+  AssetImageGenerationResult,
+} from "@/types/job";
+import type { AspectRatio } from "@/lib/services/fal.service";
+import type { AssetType } from "@/types/asset";
+import { ASSET_TYPE_TO_TAG_MAP } from "@/lib/constants/asset-tags";
+import { asset } from "@/lib/db/schemas/project";
+import { inArray } from "drizzle-orm";
+
+/**
+ * 处理素材图片生成任务
+ */
+export async function processAssetImageGeneration(
+  jobData: Job,
+  workerToken: string
+): Promise<void> {
+  const input: AssetImageGenerationInput = JSON.parse(
+    jobData.inputData || "{}"
+  );
+
+  const {
+    projectId,
+    prompt,
+    assetType,
+    aspectRatio = "16:9",
+    resolution = "2K",
+    numImages = 1,
+    sourceAssetIds = [],
+    mode,
+  } = input;
+
+  // 验证项目所有权
+  if (projectId) {
+    const hasAccess = await verifyProjectOwnership(projectId, jobData.userId);
+    if (!hasAccess) {
+      throw new Error("无权访问该项目");
+    }
+  }
+
+  // 步骤1: AI分析（10%）
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 5,
+      progressMessage: "AI正在分析prompt...",
+    },
+    workerToken
+  );
+
+  let baseAnalysis;
+  let names: string[] = [];
+  
+  try {
+    const analysisResult = await analyzePromptForBatch(
+      prompt,
+      numImages
+    );
+    baseAnalysis = analysisResult.baseAnalysis;
+    names = analysisResult.names;
+  } catch (error) {
+    console.error("AI分析失败，使用fallback:", error);
+    // 使用fallback名称和标签
+    const timestamp = Date.now();
+    baseAnalysis = {
+      name: `AI生成-${timestamp}`,
+      tags: ["AI生成"],
+    };
+    names = Array.from({ length: numImages }, (_, i) => 
+      numImages > 1 ? `${baseAnalysis.name}-${String(i + 1).padStart(2, "0")}` : baseAnalysis.name
+    );
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 10,
+      progressMessage: "AI分析完成，准备生成图片...",
+    },
+    workerToken
+  );
+
+  // 步骤2: 生成图片（50%）
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 20,
+      progressMessage: "正在生成图片...",
+    },
+    workerToken
+  );
+
+  let generatedImages: Array<{ url: string; width?: number; height?: number }> = [];
+
+  if (mode === "image-to-image" && sourceAssetIds.length > 0) {
+    // 图生图模式：获取源素材的图片URL
+    const sourceAssets = await db.query.asset.findMany({
+      where: inArray(asset.id, sourceAssetIds),
+      columns: {
+        imageUrl: true,
+      },
+    });
+
+    if (sourceAssets.length === 0) {
+      throw new Error("未找到源素材");
+    }
+
+    const imageUrls = sourceAssets.map((a) => a.imageUrl);
+
+    // 调用图生图API
+    const editResult = await editImage({
+      prompt: prompt.trim(),
+      image_urls: imageUrls,
+      num_images: numImages,
+      aspect_ratio: aspectRatio as AspectRatio | "auto",
+      resolution: resolution as "1K" | "2K" | "4K",
+      output_format: "png",
+    });
+
+    if (!editResult.images || editResult.images.length === 0) {
+      throw new Error("生成图片失败");
+    }
+
+    generatedImages = editResult.images;
+  } else {
+    // 文生图模式
+    const generateResult = await generateImage({
+      prompt: prompt.trim(),
+      num_images: numImages,
+      aspect_ratio: aspectRatio as AspectRatio,
+      resolution: resolution as "1K" | "2K" | "4K",
+      output_format: "png",
+    });
+
+    if (!generateResult.images || generateResult.images.length === 0) {
+      throw new Error("生成图片失败");
+    }
+
+    generatedImages = generateResult.images;
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 50,
+      progressMessage: `成功生成 ${generatedImages.length} 张图片`,
+    },
+    workerToken
+  );
+
+  // 步骤3: 上传并保存（80%-95%）
+  const createdAssets: Array<{
+    id: string;
+    name: string;
+    imageUrl: string;
+    thumbnailUrl?: string;
+    tags: string[];
+  }> = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < generatedImages.length; i++) {
+    const generatedImage = generatedImages[i];
+    const assetName = names[i];
+
+    try {
+      // 计算进度：50% + (i / total) * 45%
+      const progress = 50 + Math.floor((i / generatedImages.length) * 45);
+      await updateJobProgress(
+        {
+          jobId: jobData.id,
+          progress,
+          progressMessage: `正在上传第 ${i + 1}/${generatedImages.length} 张图片...`,
+        },
+        workerToken
+      );
+
+      // 上传到R2
+      const uploadResult = await uploadImageToR2(generatedImage.url, {
+        userId: jobData.userId,
+        category: AssetCategory.PROJECTS,
+      });
+
+      if (!uploadResult.success || !uploadResult.url) {
+        errors.push(`上传第 ${i + 1} 张图片失败: ${uploadResult.error}`);
+        continue;
+      }
+
+      // 创建素材记录
+      const createResult = await createAssetInternal({
+        projectId,
+        userId: jobData.userId,
+        name: assetName,
+        imageUrl: uploadResult.url,
+        thumbnailUrl: uploadResult.url,
+        prompt: prompt.trim(),
+        modelUsed: "nano-banana",
+        sourceAssetId: sourceAssetIds.length > 0 ? sourceAssetIds[0] : undefined,
+        derivationType: mode === "image-to-image" ? "img2img" : "generate",
+        tags: baseAnalysis.tags,
+      });
+
+      if (createResult.success && createResult.asset) {
+        createdAssets.push({
+          id: createResult.asset.id,
+          name: createResult.asset.name,
+          imageUrl: createResult.asset.imageUrl,
+          thumbnailUrl: createResult.asset.thumbnailUrl || undefined,
+          tags: baseAnalysis.tags,
+        });
+      } else {
+        errors.push(`保存第 ${i + 1} 张图片失败: ${createResult.error}`);
+      }
+    } catch (error) {
+      console.error(`处理第 ${i + 1} 张图片失败:`, error);
+      errors.push(
+        `处理第 ${i + 1} 张图片失败: ${error instanceof Error ? error.message : "未知错误"}`
+      );
+    }
+  }
+
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 95,
+      progressMessage: "保存完成，正在整理结果...",
+    },
+    workerToken
+  );
+
+  // 步骤4: 完成任务（100%）
+  if (createdAssets.length === 0) {
+    throw new Error(`所有图片生成失败: ${errors.join("; ")}`);
+  }
+
+  const resultData: AssetImageGenerationResult = {
+    assets: createdAssets,
+    successCount: createdAssets.length,
+    failedCount: errors.length,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+
+  await completeJob(
+    {
+      jobId: jobData.id,
+      resultData,
+    },
+    workerToken
+  );
+}
+

@@ -32,20 +32,20 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 // 最大视频文件大小 (100MB)
 export const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
 
-// 图片分类枚举
-export enum ImageCategory {
-  AVATARS = "avatars",       // 用户头像
-  PROJECTS = "projects",      // 项目相关图片
-  CHARACTERS = "characters",  // 角色图片
-  SCENES = "scenes",          // 场景图片
-  EPISODES = "episodes",      // 剧集图片
-  COVERS = "covers",          // 封面图片
-  OTHER = "other",            // 其他
+// 资产分类枚举（适用于所有用户资产）
+export enum AssetCategory {
+  AVATARS = "avatars",   // 头像图片
+  VIDEOS = "videos",     // 视频
+  PROJECTS = "projects", // 项目图片
+  OTHER = "other",       // 其他
 }
+
+// 保持向后兼容
+export const ImageCategory = AssetCategory;
 
 export interface UploadOptions {
   userId: string;               // 用户ID（必填）
-  category?: ImageCategory;     // 图片分类（默认为 OTHER）
+  category?: AssetCategory;     // 资产分类（默认为 OTHER）
   metadata?: Record<string, string>;
 }
 
@@ -56,7 +56,7 @@ export interface UploadOptions {
 function generateStorageKey(
   originalName: string, 
   userId: string,
-  category: ImageCategory = ImageCategory.OTHER
+  category: AssetCategory = AssetCategory.OTHER
 ): string {
   const timestamp = Date.now();
   const uuid = crypto.randomUUID();
@@ -114,11 +114,11 @@ export function getImageUrl(key: string): string {
 /**
  * 上传图片到 R2
  * 
- * @param file - 要上传的文件
+ * @param input - File 对象或图片 URL
  * @param options - 上传选项（必须包含 userId）
  */
 export async function uploadImageToR2(
-  file: File,
+  input: File | string,
   options: UploadOptions
 ): Promise<{
   success: boolean;
@@ -131,29 +131,77 @@ export async function uploadImageToR2(
       return { success: false, error: "缺少用户ID" };
     }
 
-    const validation = validateFile(file);
-    if (!validation.valid) {
-      return { success: false, error: validation.error };
-    }
-
-    const category = options.category || ImageCategory.OTHER;
+    const category = options.category || AssetCategory.OTHER;
     const metadata = options.metadata || {};
 
-    // 生成 Key (包含 userId 和 category)
-    const key = generateStorageKey(file.name, options.userId, category);
+    let buffer: Buffer;
+    let contentType: string;
+    let fileName: string;
+    let fileSize: number;
 
-    // 转换为 Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // 判断输入类型：File 对象或 URL 字符串
+    if (typeof input === "string") {
+      // 从 URL 下载图片
+      const response = await fetch(input);
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: `下载图片失败: ${response.statusText}` 
+        };
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = response.headers.get("content-type") || "image/png";
+      fileSize = buffer.length;
+      
+      // 从 URL 或 content-type 生成文件名
+      const ext = contentType.split("/")[1] || "png";
+      fileName = `downloaded-image.${ext}`;
+
+      metadata.originalUrl = input;
+    } else {
+      // File 对象
+      const validation = validateFile(input);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const arrayBuffer = await input.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = input.type;
+      fileName = input.name;
+      fileSize = input.size;
+
+      metadata.originalName = input.name;
+    }
+
+    // 验证内容类型
+    if (!ALLOWED_IMAGE_TYPES.includes(contentType as typeof ALLOWED_IMAGE_TYPES[number])) {
+      return {
+        success: false,
+        error: `不支持的图片格式: ${contentType}`,
+      };
+    }
+
+    // 验证文件大小
+    if (fileSize > MAX_FILE_SIZE) {
+      return {
+        success: false,
+        error: `文件大小超过限制。最大允许: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+      };
+    }
+
+    // 生成 Key (包含 userId 和 category)
+    const key = generateStorageKey(fileName, options.userId, category);
 
     const command = new PutObjectCommand({
       Bucket: R2_CONFIG.bucketName,
       Key: key,
       Body: buffer,
-      ContentType: file.type,
-      ContentLength: file.size,
+      ContentType: contentType,
+      ContentLength: fileSize,
       Metadata: {
-        originalName: file.name,
         userId: options.userId,
         category,
         uploadedAt: new Date().toISOString(),
@@ -186,11 +234,11 @@ export async function uploadImageToR2(
 /**
  * 上传视频到 R2
  * 
- * @param file - 要上传的视频文件
+ * @param input - File 对象或视频 URL
  * @param options - 上传选项（必须包含 userId）
  */
 export async function uploadVideoToR2(
-  file: File,
+  input: File | string,
   options: UploadOptions
 ): Promise<{
   success: boolean;
@@ -203,29 +251,77 @@ export async function uploadVideoToR2(
       return { success: false, error: "缺少用户ID" };
     }
 
-    const validation = validateVideoFile(file);
-    if (!validation.valid) {
-      return { success: false, error: validation.error };
-    }
-
-    const category = options.category || ImageCategory.OTHER;
+    const category = options.category || AssetCategory.VIDEOS;
     const metadata = options.metadata || {};
 
-    // 生成 Key (包含 userId 和 category)
-    const key = generateStorageKey(file.name, options.userId, category);
+    let buffer: Buffer;
+    let contentType: string;
+    let fileName: string;
+    let fileSize: number;
 
-    // 转换为 Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // 判断输入类型：File 对象或 URL 字符串
+    if (typeof input === "string") {
+      // 从 URL 下载视频
+      const response = await fetch(input);
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: `下载视频失败: ${response.statusText}` 
+        };
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = response.headers.get("content-type") || "video/mp4";
+      fileSize = buffer.length;
+      
+      // 从 URL 或 content-type 生成文件名
+      const ext = contentType.split("/")[1] || "mp4";
+      fileName = `downloaded-video.${ext}`;
+
+      metadata.originalUrl = input;
+    } else {
+      // File 对象
+      const validation = validateVideoFile(input);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const arrayBuffer = await input.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = input.type;
+      fileName = input.name;
+      fileSize = input.size;
+
+      metadata.originalName = input.name;
+    }
+
+    // 验证内容类型
+    if (!ALLOWED_VIDEO_TYPES.includes(contentType as typeof ALLOWED_VIDEO_TYPES[number])) {
+      return {
+        success: false,
+        error: `不支持的视频格式: ${contentType}`,
+      };
+    }
+
+    // 验证文件大小
+    if (fileSize > MAX_VIDEO_SIZE) {
+      return {
+        success: false,
+        error: `视频文件大小超过限制。最大允许: ${MAX_VIDEO_SIZE / 1024 / 1024}MB`,
+      };
+    }
+
+    // 生成 Key (包含 userId 和 category)
+    const key = generateStorageKey(fileName, options.userId, category);
 
     const command = new PutObjectCommand({
       Bucket: R2_CONFIG.bucketName,
       Key: key,
       Body: buffer,
-      ContentType: file.type,
-      ContentLength: file.size,
+      ContentType: contentType,
+      ContentLength: fileSize,
       Metadata: {
-        originalName: file.name,
         userId: options.userId,
         category,
         uploadedAt: new Date().toISOString(),

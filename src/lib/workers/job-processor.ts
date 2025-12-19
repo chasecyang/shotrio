@@ -5,14 +5,9 @@ import type { Job } from "@/types/job";
 import { registry } from "./processor-registry";
 
 // 导入各个处理器
-import { processCharacterExtraction } from "./processors/character-extraction";
-import { processSceneExtraction } from "./processors/scene-extraction";
-import { processCharacterImageGeneration } from "./processors/character-image-generation";
-import { processSceneImageGeneration } from "./processors/scene-image-generation";
 import {
   processStoryboardGeneration,
   processStoryboardBasicExtraction,
-  processStoryboardMatching,
 } from "./processors/storyboard-processors";
 import { processShotDecomposition } from "./processors/shot-decomposition";
 import {
@@ -25,6 +20,7 @@ import {
   processBatchVideoGeneration,
   processFinalVideoExport,
 } from "./processors/video-processors";
+import { processAssetImageGeneration } from "./processors/asset-image-generation";
 
 /**
  * 注册所有处理器
@@ -32,16 +28,12 @@ import {
  */
 export function registerAllProcessors(): void {
   registry.registerAll({
-    character_extraction: processCharacterExtraction,
-    scene_extraction: processSceneExtraction,
-    character_image_generation: processCharacterImageGeneration,
-    scene_image_generation: processSceneImageGeneration,
     storyboard_generation: processStoryboardGeneration,
     storyboard_basic_extraction: processStoryboardBasicExtraction,
-    storyboard_matching: processStoryboardMatching,
     shot_decomposition: processShotDecomposition,
     shot_image_generation: processShotImageGeneration,
     batch_shot_image_generation: processBatchShotImageGeneration,
+    asset_image_generation: processAssetImageGeneration,
     video_generation: processVideoGeneration,
     shot_video_generation: processShotVideoGeneration,
     batch_video_generation: processBatchVideoGeneration,

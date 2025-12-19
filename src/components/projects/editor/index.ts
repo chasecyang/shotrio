@@ -7,15 +7,11 @@ export type { EditorState, SelectedResource, TimelineState } from "./editor-cont
 // Resource panel
 export { ResourcePanel } from "./resource-panel/resource-panel";
 export { EpisodeList } from "./resource-panel/episode-list";
-export { CharacterList } from "./resource-panel/character-list";
-export { SceneList } from "./resource-panel/scene-list";
 
 // Preview panel
 export { PreviewPanel } from "./preview-panel/preview-panel";
 export { EpisodeEditor } from "./preview-panel/episode-editor";
 export { ShotEditor } from "./preview-panel/shot-editor";
-export { CharacterDetail } from "./preview-panel/character-detail";
-export { SceneDetail } from "./preview-panel/scene-detail";
 export { EmptyPreview } from "./preview-panel/empty-preview";
 
 // Timeline

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback } from "react";
-import { ProjectDetail, ShotDetail, Episode, Character, CharacterImage, Scene } from "@/types/project";
+import { ProjectDetail, ShotDetail, Episode } from "@/types/project";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
@@ -10,9 +10,10 @@ import {
   refreshEpisodeShots,
   refreshProject,
 } from "@/lib/actions/project/refresh";
+import type { GenerationHistoryItem } from "@/types/asset";
 
 // 选中资源类型
-export type SelectedResourceType = "episode" | "shot" | "character" | "scene" | null;
+export type SelectedResourceType = "episode" | "shot" | "asset-generation" | "asset" | null;
 
 export interface SelectedResource {
   type: SelectedResourceType;
@@ -32,6 +33,13 @@ export interface PlaybackState {
   isPlaybackMode: boolean; // 是否处于播放模式
   currentShotIndex: number; // 当前播放的分镜索引
   isPaused: boolean; // 是否暂停
+}
+
+// 素材生成状态
+export interface AssetGenerationState {
+  mode: "text-to-image" | "image-to-image";
+  selectedSourceAssets: string[]; // 素材ID数组
+  generationHistory: GenerationHistoryItem[];
 }
 
 // 编辑器状态
@@ -73,6 +81,9 @@ export interface EditorState {
     shotId: string | null;
     jobId: string | null;
   };
+
+  // 素材生成状态
+  assetGeneration: AssetGenerationState;
 }
 
 // 编辑器动作类型
@@ -99,7 +110,11 @@ type EditorAction =
   | { type: "START_PLAYBACK" }
   | { type: "STOP_PLAYBACK" }
   | { type: "SET_PLAYBACK_SHOT_INDEX"; payload: number }
-  | { type: "TOGGLE_PLAYBACK_PAUSE" };
+  | { type: "TOGGLE_PLAYBACK_PAUSE" }
+  | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
+  | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
+  | { type: "ADD_GENERATION_HISTORY"; payload: GenerationHistoryItem }
+  | { type: "CLEAR_GENERATION_HISTORY" };
 
 // 初始状态
 const initialState: EditorState = {
@@ -129,6 +144,11 @@ const initialState: EditorState = {
     open: false,
     shotId: null,
     jobId: null,
+  },
+  assetGeneration: {
+    mode: "text-to-image",
+    selectedSourceAssets: [],
+    generationHistory: [],
   },
 };
 
@@ -363,6 +383,44 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         },
       };
 
+    case "SET_ASSET_GENERATION_MODE":
+      return {
+        ...state,
+        assetGeneration: {
+          ...state.assetGeneration,
+          mode: action.payload,
+          // 切换到文生图模式时清空已选源素材
+          selectedSourceAssets: action.payload === "text-to-image" ? [] : state.assetGeneration.selectedSourceAssets,
+        },
+      };
+
+    case "SET_SELECTED_SOURCE_ASSETS":
+      return {
+        ...state,
+        assetGeneration: {
+          ...state.assetGeneration,
+          selectedSourceAssets: action.payload,
+        },
+      };
+
+    case "ADD_GENERATION_HISTORY":
+      return {
+        ...state,
+        assetGeneration: {
+          ...state.assetGeneration,
+          generationHistory: [action.payload, ...state.assetGeneration.generationHistory].slice(0, 50), // 保留最近50条
+        },
+      };
+
+    case "CLEAR_GENERATION_HISTORY":
+      return {
+        ...state,
+        assetGeneration: {
+          ...state.assetGeneration,
+          generationHistory: [],
+        },
+      };
+
     default:
       return state;
   }
@@ -397,12 +455,15 @@ interface EditorContextType {
   // 计算属性
   selectedEpisode: Episode | null;
   selectedShot: ShotDetail | null;
-  selectedCharacter: (Character & { images: CharacterImage[] }) | null;
-  selectedScene: Scene | null;
   totalDuration: number;
   // 任务轮询（单例）
   jobs: Job[];
   refreshJobs: () => void;
+  // 素材生成相关方法
+  setAssetGenerationMode: (mode: "text-to-image" | "image-to-image") => void;
+  setSelectedSourceAssets: (assetIds: string[]) => void;
+  addGenerationHistory: (history: GenerationHistoryItem) => void;
+  clearGenerationHistory: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -440,21 +501,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       }
     }, []),
 
-    onRefreshCharacter: useCallback(async (characterId: string, projectId: string) => {
-      // 刷新整个项目以更新角色数据
-      const updatedProject = await refreshProject(projectId);
-      if (updatedProject) {
-        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
-      }
-    }, []),
-
-    onRefreshScene: useCallback(async (sceneId: string, projectId: string) => {
-      // 刷新整个项目以更新场景数据
-      const updatedProject = await refreshProject(projectId);
-      if (updatedProject) {
-        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
-      }
-    }, []),
+    // onRefreshCharacter 和 onRefreshScene 已废弃 - 使用 asset 系统代替
 
     onRefreshEpisode: useCallback(async (episodeId: string) => {
       const result = await refreshEpisodeShots(episodeId);
@@ -565,6 +612,23 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "TOGGLE_PLAYBACK_PAUSE" });
   }, []);
 
+  // 素材生成相关方法
+  const setAssetGenerationMode = useCallback((mode: "text-to-image" | "image-to-image") => {
+    dispatch({ type: "SET_ASSET_GENERATION_MODE", payload: mode });
+  }, []);
+
+  const setSelectedSourceAssets = useCallback((assetIds: string[]) => {
+    dispatch({ type: "SET_SELECTED_SOURCE_ASSETS", payload: assetIds });
+  }, []);
+
+  const addGenerationHistory = useCallback((history: GenerationHistoryItem) => {
+    dispatch({ type: "ADD_GENERATION_HISTORY", payload: history });
+  }, []);
+
+  const clearGenerationHistory = useCallback(() => {
+    dispatch({ type: "CLEAR_GENERATION_HISTORY" });
+  }, []);
+
   // 计算属性
   const selectedEpisode = useMemo(() => {
     if (!state.project || !state.selectedEpisodeId) return null;
@@ -576,15 +640,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     return state.shots.find((shot) => shot.id === state.selectedResource?.id) || null;
   }, [state.selectedResource, state.shots]);
 
-  const selectedCharacter = useMemo(() => {
-    if (state.selectedResource?.type !== "character" || !state.project) return null;
-    return state.project.characters.find((c) => c.id === state.selectedResource?.id) || null;
-  }, [state.selectedResource, state.project]);
-
-  const selectedScene = useMemo(() => {
-    if (state.selectedResource?.type !== "scene" || !state.project?.scenes) return null;
-    return state.project.scenes.find((s) => s.id === state.selectedResource?.id) || null;
-  }, [state.selectedResource, state.project]);
 
   const totalDuration = useMemo(() => {
     return state.shots.reduce((total, shot) => total + (shot.duration || 3000), 0);
@@ -614,10 +669,12 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       nextShot,
       previousShot,
       togglePlaybackPause,
+      setAssetGenerationMode,
+      setSelectedSourceAssets,
+      addGenerationHistory,
+      clearGenerationHistory,
       selectedEpisode,
       selectedShot,
-      selectedCharacter,
-      selectedScene,
       totalDuration,
       jobs,
       refreshJobs,
@@ -644,10 +701,12 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       nextShot,
       previousShot,
       togglePlaybackPause,
+      setAssetGenerationMode,
+      setSelectedSourceAssets,
+      addGenerationHistory,
+      clearGenerationHistory,
       selectedEpisode,
       selectedShot,
-      selectedCharacter,
-      selectedScene,
       totalDuration,
       jobs,
       refreshJobs,

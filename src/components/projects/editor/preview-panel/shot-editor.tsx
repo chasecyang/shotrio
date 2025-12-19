@@ -17,11 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   updateShot as updateShotAction, 
   generateShotImage, 
-  updateShotCharacterImage,
-  removeCharacterFromShot,
   updateShotDialogue,
   deleteShotDialogue,
-  addCharacterToShot,
   addDialogueToShot,
   copyShotImage,
 } from "@/lib/actions/project";
@@ -94,7 +91,6 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     cameraMovement: shot.cameraMovement || "static",
     visualDescription: shot.visualDescription || "",
     duration: millisecondsToSeconds(shot.duration || 3000),
-    sceneId: shot.sceneId || null,
   });
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -141,7 +137,6 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       cameraMovement: shot.cameraMovement || "static",
       visualDescription: shot.visualDescription || "",
       duration: millisecondsToSeconds(shot.duration || 3000),
-      sceneId: shot.sceneId || null,
     });
   }, [shot]);
 
@@ -155,8 +150,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       formData.shotSize !== shot.shotSize ||
       formData.cameraMovement !== (shot.cameraMovement || "static") ||
       formData.visualDescription !== (shot.visualDescription || "") ||
-      formData.duration !== millisecondsToSeconds(shot.duration || 3000) ||
-      formData.sceneId !== (shot.sceneId || null);
+      formData.duration !== millisecondsToSeconds(shot.duration || 3000);
 
     if (hasChanges) {
       setSaveStatus("idle");
@@ -169,7 +163,6 @@ export function ShotEditor({ shot }: ShotEditorProps) {
             cameraMovement: formData.cameraMovement,
             visualDescription: formData.visualDescription || null,
             duration: secondsToMilliseconds(formData.duration),
-            sceneId: formData.sceneId || null,
           });
 
           if (result.success) {
@@ -826,187 +819,9 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           </EditableField>
         </div>
 
-        {/* 关联场景 */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium">关联场景</h3>
-          </div>
-          
-          {project?.scenes && project.scenes.length > 0 ? (
-            <Select
-              value={formData.sceneId || "none"}
-              onValueChange={(value) =>
-                setFormData({ ...formData, sceneId: value === "none" ? null : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="选择场景">
-                  {formData.sceneId 
-                    ? project.scenes.find((s) => s.id === formData.sceneId)?.name 
-                    : "未关联场景"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">
-                  <span className="text-muted-foreground">未关联场景</span>
-                </SelectItem>
-                {project.scenes.map((scene) => (
-                  <SelectItem key={scene.id} value={scene.id}>
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium">{scene.name}</span>
-                      {scene.description && (
-                        <span className="text-xs text-muted-foreground line-clamp-1">
-                          {scene.description}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              暂无场景，请先在资源面板中创建场景
-            </p>
-          )}
+        {/* 场景功能已移除 - 使用 asset tag 系统代替 */}
 
-          {/* 当前关联的场景信息 */}
-          {formData.sceneId && shot.scene && (
-            <div className="p-3 rounded-lg border bg-muted/30">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{shot.scene.name}</span>
-                  </div>
-                  {shot.scene.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {shot.scene.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 角色列表 */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium">出场角色</h3>
-            <Badge variant="secondary">{shot.shotCharacters.length}</Badge>
-          </div>
-
-          {shot.shotCharacters.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {shot.shotCharacters.map((sc) => {
-                // 获取该角色的所有造型
-                const allCharacterImages = project?.characters
-                  .find((c) => c.id === sc.characterId)
-                  ?.images || [];
-
-                return (
-                  <div
-                    key={sc.id}
-                    className="group relative flex items-center gap-3 p-3 rounded-lg bg-muted/50 border"
-                  >
-                    <Avatar className="w-10 h-10 shrink-0">
-                      <AvatarImage src={sc.characterImage?.imageUrl || undefined} />
-                      <AvatarFallback className="text-xs">
-                        {sc.character.name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{sc.character.name}</p>
-                      {allCharacterImages.length > 0 ? (
-                        <Select
-                          value={sc.characterImageId || ""}
-                          onValueChange={(value) => handleChangeCharacterImage(sc.id, value)}
-                        >
-                          <SelectTrigger className="h-7 text-xs mt-1">
-                            <SelectValue placeholder="选择造型" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allCharacterImages.map((img) => (
-                              <SelectItem key={img.id} value={img.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded overflow-hidden bg-muted shrink-0">
-                                    {img.imageUrl && (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        src={img.imageUrl}
-                                        alt={img.label}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    )}
-                                  </div>
-                                  <span>{img.label}</span>
-                                  {img.isPrimary && (
-                                    <Badge variant="outline" className="text-[10px] h-4 px-1">
-                                      主
-                                    </Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <p className="text-xs text-muted-foreground mt-1">无造型</p>
-                      )}
-                    </div>
-                    {/* 删除按钮 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleRemoveCharacter(sc.id)}
-                      title="移除角色"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">暂无角色</p>
-          )}
-
-          {/* 添加角色按钮 */}
-          {project?.characters && project.characters.length > 0 && (
-            <Select onValueChange={handleAddCharacter} disabled={isAddingCharacter}>
-              <SelectTrigger className="w-full">
-                <div className="flex items-center gap-2">
-                  {isAddingCharacter ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <UserPlus className="w-4 h-4" />
-                  )}
-                  <span>添加角色</span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {project.characters
-                  .filter((char) => !shot.shotCharacters.some((sc) => sc.characterId === char.id))
-                  .map((char) => (
-                    <SelectItem key={char.id} value={char.id}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs">
-                            {char.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{char.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {/* 角色功能已移除 - 使用 asset tag 系统代替 */}
 
         {/* 对话列表 */}
         <div className="space-y-3">
@@ -1019,9 +834,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           {shot.dialogues.length > 0 ? (
             <div className="space-y-2">
               {shot.dialogues.map((dialogue) => {
-                const character = project?.characters.find(
-                  (c) => c.id === dialogue.characterId
-                );
+                // 角色系统已废弃，使用 speakerName
                 const emotion = emotionOptions.find((e) => e.value === dialogue.emotionTag);
                 const EmotionIcon = emotion?.icon || Meh;
                 
@@ -1030,46 +843,13 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                     key={dialogue.id}
                     className="group relative flex flex-col gap-2 p-3 rounded-lg bg-muted/50 border"
                   >
-                    {/* 角色和情绪选择 */}
+                    {/* 说话人和情绪 */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      {/* 角色选择 */}
-                      {character ? (
-                        <Avatar className="w-6 h-6 shrink-0">
-                          <AvatarFallback className="text-xs">
-                            {character.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : null}
-                      {project?.characters && project.characters.length > 0 && (
-                        <Select
-                          value={dialogue.characterId || "none"}
-                          onValueChange={(value) => 
-                            handleUpdateDialogueCharacter(dialogue.id, value === "none" ? null : value)
-                          }
-                        >
-                          <SelectTrigger className="h-7 text-xs w-fit">
-                            <SelectValue placeholder="选择角色">
-                              {character ? character.name : "旁白/无角色"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              <span className="text-muted-foreground">旁白/无角色</span>
-                            </SelectItem>
-                            {project.characters.map((char) => (
-                              <SelectItem key={char.id} value={char.id}>
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="w-6 h-6">
-                                    <AvatarFallback className="text-xs">
-                                      {char.name[0]}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span>{char.name}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      {/* 说话人 */}
+                      {dialogue.speakerName && (
+                        <Badge variant="secondary" className="text-xs">
+                          {dialogue.speakerName}
+                        </Badge>
                       )}
                       
                       {/* 情绪选择 */}

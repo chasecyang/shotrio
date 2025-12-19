@@ -3,13 +3,14 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { project, artStyle } from "@/lib/db/schemas/project";
+import { project, artStyle, episode } from "@/lib/db/schemas/project";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   type NewProject,
   type ProjectWithStats,
   type ProjectDetail,
+  type NewEpisode,
 } from "@/types/project";
 
 /**
@@ -49,6 +50,19 @@ export async function createProject(data: {
         .where(eq(artStyle.id, data.styleId));
     }
 
+    // 自动创建第1集
+    const newEpisode: NewEpisode = {
+      id: randomUUID(),
+      projectId: created.id,
+      title: "第1集",
+      summary: null,
+      hook: null,
+      scriptContent: null,
+      order: 1,
+    };
+
+    await db.insert(episode).values(newEpisode);
+
     return { success: true, data: created };
   } catch (error) {
     console.error("创建项目失败:", error);
@@ -76,14 +90,14 @@ export async function getUserProjects(): Promise<ProjectWithStats[]> {
       orderBy: [desc(project.updatedAt)],
       with: {
         episodes: true,
-        characters: true,
+        assets: true,
       },
     });
 
     return projects.map((p) => ({
       ...p,
       episodeCount: p.episodes.length,
-      characterCount: p.characters.length,
+      assetCount: p.assets.length,
     }));
   } catch (error) {
     console.error("获取项目列表失败:", error);
@@ -92,7 +106,7 @@ export async function getUserProjects(): Promise<ProjectWithStats[]> {
 }
 
 /**
- * 获取项目详情（含剧集和角色）
+ * 获取项目详情（含剧集和资产）
  */
 export async function getProjectDetail(
   projectId: string,
@@ -114,21 +128,11 @@ export async function getProjectDetail(
         episodes: {
           orderBy: (episodes, { asc }) => [asc(episodes.order)],
         },
-        characters: {
+        assets: {
           with: {
-            images: {
-              // @ts-expect-error - Drizzle ORM orderBy callback type inference issue
-              orderBy: (images, { desc }) => [desc(images.isPrimary), desc(images.createdAt)],
-            },
+            tags: true,
           },
-        },
-        scenes: {
-          with: {
-            images: {
-              // @ts-expect-error - Drizzle ORM orderBy callback type inference issue
-              orderBy: (images, { desc }) => [desc(images.createdAt)],
-            },
-          },
+          orderBy: (assets, { desc }) => [desc(assets.createdAt)],
         },
         artStyle: true, // 关联查询美术风格
       },

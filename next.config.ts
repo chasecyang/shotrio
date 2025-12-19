@@ -16,6 +16,11 @@ const remotePatterns = [
   {
     protocol: 'https' as const,
     hostname: '**.r2.cloudflarestorage.com',
+  },
+  // 添加 s3.cineqo.com 支持
+  {
+    protocol: 'https' as const,
+    hostname: 's3.cineqo.com',
   }
 ];
 
@@ -29,6 +34,7 @@ if (r2Hostname) {
 const nextConfig: NextConfig = {
   images: {
     remotePatterns,
+    unoptimized: process.env.NODE_ENV !== "production",
   },
   experimental:{
     serverActions:{

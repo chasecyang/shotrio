@@ -3,18 +3,16 @@
 import { useEditor } from "../editor-context";
 import { EpisodeEditor } from "./episode-editor";
 import { ShotEditor } from "./shot-editor";
-import { CharacterDetail } from "./character-detail";
-import { SceneDetail } from "./scene-detail";
 import { EmptyPreview } from "./empty-preview";
 import { ShotPlaybackPlayer } from "./shot-playback-player";
+import { AssetGenerationEditor } from "./asset-generation-editor";
+import { AssetDetailEditor } from "./asset-detail-editor";
 
 export function PreviewPanel() {
   const { 
     state, 
     selectedEpisode, 
     selectedShot, 
-    selectedCharacter, 
-    selectedScene,
     stopPlayback,
     nextShot,
     previousShot,
@@ -55,15 +53,15 @@ export function PreviewPanel() {
       }
       break;
 
-    case "character":
-      if (selectedCharacter) {
-        return <CharacterDetail character={selectedCharacter} />;
+    case "asset-generation":
+      if (selectedResource.id) {
+        return <AssetGenerationEditor projectId={selectedResource.id} />;
       }
       break;
 
-    case "scene":
-      if (selectedScene) {
-        return <SceneDetail scene={selectedScene} />;
+    case "asset":
+      if (selectedResource.id) {
+        return <AssetDetailEditor assetId={selectedResource.id} />;
       }
       break;
   }

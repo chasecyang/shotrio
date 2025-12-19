@@ -60,10 +60,7 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
     type: "episode",
     refreshOn: ["completed"],
   },
-  storyboard_matching: {
-    type: "episode",
-    refreshOn: ["completed"],
-  },
+  // storyboard_matching 已废弃
   shot_decomposition: {
     type: "shot",
     refreshOn: ["completed"],
