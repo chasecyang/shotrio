@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AssetWithTags, parseAssetMeta } from "@/types/asset";
 import { getAsset } from "@/lib/actions/asset";
 import { updateAsset, deleteAsset, addAssetTag, removeAssetTag } from "@/lib/actions/asset";
@@ -58,7 +58,6 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagValue, setNewTagValue] = useState("");
   const [removingTagIds, setRemovingTagIds] = useState<Set<string>>(new Set());
-  const tagInputRef = useRef<HTMLInputElement>(null);
 
   // 表单数据
   const [formData, setFormData] = useState({
@@ -410,7 +409,6 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
                     {isAddingTag && (
                       <div className="flex items-center gap-2 w-full">
                         <Input
-                          ref={tagInputRef}
                           value={newTagValue}
                           onChange={(e) => setNewTagValue(e.target.value)}
                           onKeyDown={handleTagInputKeyDown}

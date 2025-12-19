@@ -40,8 +40,10 @@ import type { AspectRatio } from "@/lib/services/fal.service";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { uploadAsset } from "@/lib/actions/asset/upload-asset";
+import { getAsset } from "@/lib/actions/asset";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import type { Job, AssetImageGenerationResult } from "@/types/job";
+import type { AssetWithTags } from "@/types/asset";
 
 interface AssetGenerationEditorProps {
   projectId: string;
@@ -62,6 +64,7 @@ const ASPECT_RATIO_OPTIONS: Array<{ label: string; value: AspectRatio }> = [
 export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps) {
   const { 
     state,
+    setSelectedSourceAssets,
   } = useEditor();
 
   const { assetGeneration } = state;
@@ -79,6 +82,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     id: string;
   }>>([]);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // 从素材库选择的素材
+  const [selectedAssets, setSelectedAssets] = useState<AssetWithTags[]>([]);
   
   // 表单状态（移除assetName）
   const [prompt, setPrompt] = useState("");
@@ -132,16 +138,36 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     }
   }, [currentJob, uploadedImages]);
 
+  // 加载选中的素材详情
+  useEffect(() => {
+    const loadSelectedAssets = async () => {
+      const assets: AssetWithTags[] = [];
+      for (const assetId of assetGeneration.selectedSourceAssets) {
+        const result = await getAsset(assetId);
+        if (result.success && result.asset) {
+          assets.push(result.asset);
+        }
+      }
+      setSelectedAssets(assets);
+    };
+
+    if (assetGeneration.selectedSourceAssets.length > 0) {
+      loadSelectedAssets();
+    } else {
+      setSelectedAssets([]);
+    }
+  }, [assetGeneration.selectedSourceAssets]);
+
   // 智能占位符：根据是否有参考图动态显示
   const placeholder = useMemo(() => {
-    const hasImages = uploadedImages.length > 0 || assetGeneration.selectedSourceAssets.length > 0;
+    const hasImages = uploadedImages.length > 0 || selectedAssets.length > 0;
     
     if (hasImages) {
       return "基于参考图进行创作，例如：调整为温暖的日落色调，保持人物姿势和表情不变...";
     }
     
     return "详细描述你想要创作的内容，例如：一位30岁的亚洲女性，短发，现代职业装，自信的微笑...";
-  }, [uploadedImages.length, assetGeneration.selectedSourceAssets.length]);
+  }, [uploadedImages.length, selectedAssets.length]);
 
   // 处理文件拖拽
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -155,7 +181,20 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    // 只有当鼠标真正离开容器时才取消拖拽状态
+    // 检查 relatedTarget 是否在当前元素内
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (
+      x <= rect.left ||
+      x >= rect.right ||
+      y <= rect.top ||
+      y >= rect.bottom
+    ) {
+      setIsDragging(false);
+    }
   };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -170,6 +209,22 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
     if (isGenerating || isUploading) return;
 
+    // 尝试获取素材数据（从素材库拖拽）
+    const assetData = e.dataTransfer.getData("application/json");
+    if (assetData) {
+      try {
+        const { assetId } = JSON.parse(assetData);
+        if (assetId && !assetGeneration.selectedSourceAssets.includes(assetId)) {
+          setSelectedSourceAssets([...assetGeneration.selectedSourceAssets, assetId]);
+          toast.success("已添加参考素材");
+        }
+        return;
+      } catch (error) {
+        console.error("解析素材数据失败:", error);
+      }
+    }
+
+    // 如果没有素材数据，尝试处理文件
     const files = Array.from(e.dataTransfer.files).filter(file => 
       file.type.startsWith('image/')
     );
@@ -216,6 +271,12 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     });
   };
 
+  const handleRemoveSelectedAsset = (assetId: string) => {
+    setSelectedSourceAssets(
+      assetGeneration.selectedSourceAssets.filter(id => id !== assetId)
+    );
+  };
+
   // 生成图片 - 创建后台任务
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
@@ -227,13 +288,10 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
     try {
       let result;
-      const hasUploadedImages = uploadedImages.length > 0;
-      const hasReference = assetGeneration.selectedSourceAssets.length > 0;
-      const hasImages = hasUploadedImages || hasReference;
-
+      
       // 如果有上传的图片，先上传到服务器
       let uploadedAssetIds: string[] = [];
-      if (hasUploadedImages) {
+      if (uploadedImages.length > 0) {
         toast.info("正在上传参考图片...");
         for (const img of uploadedImages) {
           const uploadResult = await uploadAsset({
@@ -253,7 +311,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       // 合并所有参考图的ID
       const allReferenceIds = [...uploadedAssetIds, ...assetGeneration.selectedSourceAssets];
 
-      if (hasImages && allReferenceIds.length > 0) {
+      if (allReferenceIds.length > 0) {
         // 图生图模式
         result = await editAssetImage({
           projectId,
@@ -321,12 +379,11 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              onClick={() => !isGenerating && !isUploading && fileInputRef.current?.click()}
               className={cn(
-                "relative border-b bg-muted/20 cursor-pointer transition-all",
-                uploadedImages.length === 0 ? "min-h-[240px]" : "min-h-[160px]",
+                "relative border-b bg-muted/20 transition-all",
+                (uploadedImages.length === 0 && selectedAssets.length === 0) ? "min-h-[240px]" : "min-h-[160px]",
                 isDragging && "border-primary bg-primary/5",
-                (isGenerating || isUploading) && "cursor-not-allowed opacity-60"
+                (isGenerating || isUploading) && "opacity-60"
               )}
             >
               <input
@@ -339,8 +396,14 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                 disabled={isGenerating || isUploading}
               />
 
-              {uploadedImages.length === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+              {(uploadedImages.length === 0 && selectedAssets.length === 0) ? (
+                <div 
+                  onClick={() => !isGenerating && !isUploading && fileInputRef.current?.click()}
+                  className={cn(
+                    "absolute inset-0 flex flex-col items-center justify-center gap-3 cursor-pointer",
+                    (isGenerating || isUploading) && "cursor-not-allowed"
+                  )}
+                >
                   <div className="w-12 h-12 rounded-full bg-background border flex items-center justify-center">
                     <Upload className="w-6 h-6 text-muted-foreground" />
                   </div>
@@ -349,13 +412,40 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                       拖拽图片到此处，或点击上传
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      没有图片？我们将根据你的提示词生成
+                      也可以从左侧素材库拖拽素材作为参考
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="p-4">
                   <div className="flex flex-wrap gap-3">
+                    {/* 从素材库选择的素材 */}
+                    {selectedAssets.map((asset) => (
+                      <div key={asset.id} className="relative group">
+                        <div className="w-24 h-24 rounded-lg overflow-hidden border bg-background">
+                          <Image
+                            src={asset.thumbnailUrl || asset.imageUrl}
+                            alt={asset.name}
+                            width={96}
+                            height={96}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveSelectedAsset(asset.id);
+                          }}
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <div className="absolute bottom-1 left-1 right-1 bg-primary/90 text-primary-foreground text-[10px] px-1 py-0.5 rounded truncate">
+                          素材库
+                        </div>
+                      </div>
+                    ))}
+                    {/* 上传的图片 */}
                     {uploadedImages.map((img) => (
                       <div key={img.id} className="relative group">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border bg-background">
@@ -372,7 +462,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                             e.stopPropagation();
                             handleRemoveImage(img.id);
                           }}
-                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                         >
                           <X className="w-4 h-4" />
                         </button>

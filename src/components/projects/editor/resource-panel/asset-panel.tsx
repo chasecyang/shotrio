@@ -5,8 +5,6 @@ import { useEditor } from "../editor-context";
 import { AssetList } from "./asset-list";
 import { AssetToolbar } from "./asset-toolbar";
 import { AssetUploadDialog } from "./asset-upload-dialog";
-import { AssetDetailDialog } from "./asset-detail-dialog";
-import { AssetDeriveDialog } from "./asset-derive-dialog";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
 import { toast } from "sonner";
@@ -32,9 +30,6 @@ export function AssetPanel({ userId }: AssetPanelProps) {
 
   // 对话框状态
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [deriveDialogOpen, setDeriveDialogOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<AssetWithTags | null>(null);
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -97,14 +92,6 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     });
   };
 
-  // 处理编辑 - 在编辑区域显示（与点击行为一致）
-  const handleEdit = (asset: AssetWithTags) => {
-    selectResource({
-      type: "asset",
-      id: asset.id,
-    });
-  };
-
   // 处理删除 - 在编辑区域显示详情，用户可以在那里删除
   const handleDelete = (asset: AssetWithTags) => {
     selectResource({
@@ -113,29 +100,8 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     });
   };
 
-  // 处理派生
-  const handleDerive = (asset: AssetWithTags) => {
-    setSelectedAsset(asset);
-    setDeriveDialogOpen(true);
-  };
-
   // 处理上传成功
   const handleUploadSuccess = () => {
-    loadAssets();
-  };
-
-  // 处理删除成功
-  const handleDeleted = () => {
-    loadAssets();
-  };
-
-  // 处理更新成功
-  const handleUpdated = () => {
-    loadAssets();
-  };
-
-  // 处理派生成功
-  const handleDeriveSuccess = () => {
     loadAssets();
   };
 
@@ -170,9 +136,7 @@ export function AssetPanel({ userId }: AssetPanelProps) {
             viewMode={viewMode}
             isLoading={isLoading}
             selectedAssetId={selectedAssetId}
-            onEdit={handleEdit}
             onDelete={handleDelete}
-            onDerive={handleDerive}
             onClick={handleAssetClick}
             onUpload={() => setUploadDialogOpen(true)}
           />
@@ -187,34 +151,6 @@ export function AssetPanel({ userId }: AssetPanelProps) {
         userId={userId}
         onSuccess={handleUploadSuccess}
       />
-
-      {/* 详情对话框 */}
-      {selectedAsset && (
-        <AssetDetailDialog
-          open={detailDialogOpen}
-          onOpenChange={setDetailDialogOpen}
-          asset={selectedAsset}
-          onEdit={() => {
-            setDetailDialogOpen(true);
-          }}
-          onDerive={() => {
-            setDetailDialogOpen(false);
-            setDeriveDialogOpen(true);
-          }}
-          onDeleted={handleDeleted}
-          onUpdated={handleUpdated}
-        />
-      )}
-
-      {/* 派生对话框 */}
-      {selectedAsset && (
-        <AssetDeriveDialog
-          open={deriveDialogOpen}
-          onOpenChange={setDeriveDialogOpen}
-          sourceAsset={selectedAsset}
-          onSuccess={handleDeriveSuccess}
-        />
-      )}
     </div>
   );
 }

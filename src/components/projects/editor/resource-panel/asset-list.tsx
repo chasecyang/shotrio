@@ -11,9 +11,7 @@ interface AssetListProps {
   viewMode: "grid" | "list";
   isLoading?: boolean;
   selectedAssetId?: string | null;
-  onEdit: (asset: AssetWithTags) => void;
   onDelete: (asset: AssetWithTags) => void;
-  onDerive: (asset: AssetWithTags) => void;
   onClick: (asset: AssetWithTags) => void;
   onUpload: () => void;
 }
@@ -23,9 +21,7 @@ export function AssetList({
   viewMode,
   isLoading = false,
   selectedAssetId,
-  onEdit,
   onDelete,
-  onDerive,
   onClick,
   onUpload,
 }: AssetListProps) {
@@ -72,9 +68,7 @@ export function AssetList({
           asset={asset}
           viewMode={viewMode}
           isSelected={selectedAssetId === asset.id}
-          onEdit={onEdit}
           onDelete={onDelete}
-          onDerive={onDerive}
           onClick={onClick}
         />
       ))}

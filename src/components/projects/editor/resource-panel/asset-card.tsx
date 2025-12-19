@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Edit, Trash2, Copy, Info } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 
@@ -18,9 +18,7 @@ interface AssetCardProps {
   asset: AssetWithTags;
   viewMode: "grid" | "list";
   isSelected?: boolean;
-  onEdit: (asset: AssetWithTags) => void;
   onDelete: (asset: AssetWithTags) => void;
-  onDerive: (asset: AssetWithTags) => void;
   onClick: (asset: AssetWithTags) => void;
 }
 
@@ -28,9 +26,7 @@ export function AssetCard({
   asset,
   viewMode,
   isSelected = false,
-  onEdit,
   onDelete,
-  onDerive,
   onClick,
 }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -66,7 +62,7 @@ export function AssetCard({
       >
         {/* 缩略图区域 */}
         <div
-          className="relative aspect-video bg-muted/30 overflow-hidden"
+          className="relative aspect-video bg-muted/30 overflow-hidden cursor-pointer"
           onClick={() => onClick(asset)}
         >
           <Image
@@ -78,57 +74,28 @@ export function AssetCard({
           />
           {/* 悬停遮罩 */}
           {isHovered && (
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center gap-1 animate-in fade-in duration-200">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 w-8 p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClick(asset);
-                }}
-              >
-                <Info className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 w-8 p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(asset);
-                }}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 w-8 p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDerive(asset);
-                }}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
+            <div className="absolute inset-0 animate-in fade-in duration-200">
+              {/* 右上角删除按钮 */}
               <Button
                 size="sm"
                 variant="destructive"
-                className="h-8 w-8 p-0"
+                className="absolute top-2 right-2 h-7 w-7 p-0 shadow-lg cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(asset);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           )}
         </div>
 
         {/* 信息区域 */}
-        <div className="p-3 space-y-1.5">
+        <div 
+          className="p-3 space-y-1.5 cursor-pointer"
+          onClick={() => onClick(asset)}
+        >
           <div className="flex items-start justify-between gap-2">
             <h4 className="text-sm font-medium truncate flex-1" title={asset.name}>
               {asset.name}
@@ -279,29 +246,7 @@ export function AssetCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(asset);
-            }}
-          >
-            <Edit className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDerive(asset);
-            }}
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0 text-destructive"
+            className="h-7 w-7 p-0 text-destructive cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(asset);
