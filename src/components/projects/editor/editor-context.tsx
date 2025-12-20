@@ -519,6 +519,11 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
         dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
       }
     }, []),
+
+    onRefreshAssets: useCallback(async () => {
+      // 触发素材列表刷新事件，AssetPanel 会监听此事件
+      window.dispatchEvent(new CustomEvent("asset-created"));
+    }, []),
   });
 
   // 便捷方法

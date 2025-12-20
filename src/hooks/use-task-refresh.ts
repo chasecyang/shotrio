@@ -8,7 +8,7 @@ import type { Job } from "@/types/job";
  */
 interface RefreshStrategy {
   /** 资源类型 */
-  type: "shot" | "character" | "scene" | "episode" | "project";
+  type: "shot" | "character" | "scene" | "episode" | "project" | "asset";
   /** 触发刷新的状态 */
   refreshOn: Array<"completed" | "failed" | "processing" | "pending" | "cancelled">;
   /** 是否需要延迟刷新（避免过于频繁） */
@@ -38,6 +38,12 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
   },
   batch_shot_image_generation: {
     type: "episode",
+    refreshOn: ["completed"],
+  },
+
+  // 素材生成
+  asset_image_generation: {
+    type: "asset",
     refreshOn: ["completed"],
   },
 
@@ -97,6 +103,8 @@ export interface RefreshCallbacks {
   onRefreshEpisode?: (episodeId: string) => Promise<void>;
   /** 刷新整个项目 */
   onRefreshProject?: (projectId: string) => Promise<void>;
+  /** 刷新素材列表 */
+  onRefreshAssets?: (projectId: string) => Promise<void>;
 }
 
 /**
@@ -236,6 +244,12 @@ async function executeRefresh(
       case "project":
         if (callbacks.onRefreshProject && job.projectId) {
           await callbacks.onRefreshProject(job.projectId);
+        }
+        break;
+
+      case "asset":
+        if (callbacks.onRefreshAssets && job.projectId) {
+          await callbacks.onRefreshAssets(job.projectId);
         }
         break;
     }

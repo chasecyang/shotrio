@@ -125,7 +125,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
           setTimeout(() => setSaveStatus("idle"), 2000);
           
           // 触发素材更新事件，通知素材列表刷新
-          window.dispatchEvent(new Event("asset-created"));
+          window.dispatchEvent(new CustomEvent("asset-created"));
         } else {
           setSaveStatus("error");
           toast.error(result.error || "保存失败");
@@ -152,7 +152,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
         selectResource(null);
         
         // 触发素材更新事件，通知素材列表刷新
-        window.dispatchEvent(new Event("asset-created"));
+        window.dispatchEvent(new CustomEvent("asset-created"));
       } else {
         toast.error(result.error || "删除失败");
       }
@@ -173,7 +173,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
 
   // 派生成功回调
   const handleDeriveSuccess = useCallback(() => {
-    window.dispatchEvent(new Event("asset-created"));
+    window.dispatchEvent(new CustomEvent("asset-created"));
   }, []);
   
   // 添加标签
@@ -198,7 +198,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
         await refreshAsset();
         
         // 触发素材更新事件
-        window.dispatchEvent(new Event("asset-created"));
+        window.dispatchEvent(new CustomEvent("asset-created"));
       } else {
         toast.error(result.error || "添加标签失败");
       }
@@ -222,7 +222,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
         await refreshAsset();
         
         // 触发素材更新事件
-        window.dispatchEvent(new Event("asset-created"));
+        window.dispatchEvent(new CustomEvent("asset-created"));
       } else {
         toast.error(result.error || "删除标签失败");
       }

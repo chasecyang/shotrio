@@ -121,8 +121,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         setGeneratedAssets(result.assets || []);
         toast.success(`成功生成 ${result.assets?.length || 0} 张图片`);
         
-        // 触发素材列表刷新
-        window.dispatchEvent(new CustomEvent("asset-created"));
+        // 注意：素材列表刷新由 editor-context.tsx 中的 useTaskRefresh 统一处理
         
         // 清空当前任务ID和上传的图片
         setTimeout(() => {

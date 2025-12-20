@@ -24,6 +24,9 @@ import { queryAssets } from "../asset/queries";
 import { refreshEpisodeShots } from "../project/refresh";
 import { createJob } from "../job";
 import type { AssetImageGenerationInput } from "@/types/job";
+import { getSystemArtStyles } from "../art-style/queries";
+import { updateProject } from "../project/base";
+import { analyzeAssetsByType } from "../asset/stats";
 
 /**
  * 执行单个 function call
@@ -140,35 +143,32 @@ export async function executeFunction(
           limit: 1000,
         });
 
-        const stats = {
-          totalAssets: assetsResult.total || 0,
-          assetsByType: {} as Record<string, number>,
-          assetsWithoutImage: 0,
-        };
-
-        if (assetsResult.assets) {
-          assetsResult.assets.forEach((asset) => {
-            const tags = asset.tags.map((t) => t.tagValue);
-            if (tags.includes("character")) {
-              stats.assetsByType.character = (stats.assetsByType.character || 0) + 1;
-            } else if (tags.includes("scene")) {
-              stats.assetsByType.scene = (stats.assetsByType.scene || 0) + 1;
-            } else if (tags.includes("prop")) {
-              stats.assetsByType.prop = (stats.assetsByType.prop || 0) + 1;
-            } else {
-              stats.assetsByType.other = (stats.assetsByType.other || 0) + 1;
-            }
-
-            if (!asset.imageUrl) {
-              stats.assetsWithoutImage++;
-            }
-          });
-        }
+        const assetStats = assetsResult.assets 
+          ? analyzeAssetsByType(assetsResult.assets)
+          : { byType: {}, withoutImage: 0 };
 
         result = {
           functionCallId: functionCall.id,
           success: true,
-          data: stats,
+          data: {
+            totalAssets: assetsResult.total || 0,
+            assetsByType: assetStats.byType,
+            assetsWithoutImage: assetStats.withoutImage,
+          },
+        };
+        break;
+      }
+
+      case "query_available_art_styles": {
+        const styles = await getSystemArtStyles();
+        
+        result = {
+          functionCallId: functionCall.id,
+          success: true,
+          data: {
+            styles,
+            message: `找到 ${styles.length} 个系统预设风格`,
+          },
         };
         break;
       }
@@ -284,7 +284,13 @@ export async function executeFunction(
           input.name = parameters.name as string;
         }
         if (parameters.tags) {
-          input.tags = JSON.parse(parameters.tags as string);
+          const tagsStr = (parameters.tags as string).trim();
+          // 支持 JSON 数组格式和逗号分隔格式
+          if (tagsStr.startsWith('[')) {
+            input.tags = JSON.parse(tagsStr);
+          } else {
+            input.tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+          }
         }
 
         // 可选：参考图（图生图模式）
@@ -312,7 +318,7 @@ export async function executeFunction(
         const assetsData = JSON.parse(parameters.assets as string) as Array<{
           name?: string;
           prompt: string;
-          tags?: string[];
+          tags?: string | string[];
           sourceAssetIds?: string[];
         }>;
 
@@ -321,11 +327,21 @@ export async function executeFunction(
 
         // 为每个素材创建独立的生成任务
         for (const assetData of assetsData) {
+          // 处理 tags：支持逗号分隔字符串或数组格式
+          let parsedTags: string[] | undefined;
+          if (assetData.tags) {
+            if (Array.isArray(assetData.tags)) {
+              parsedTags = assetData.tags;
+            } else {
+              parsedTags = assetData.tags.split(',').map(t => t.trim()).filter(Boolean);
+            }
+          }
+
           const input: AssetImageGenerationInput = {
             projectId: parameters.projectId as string,
             prompt: assetData.prompt,
             name: assetData.name,
-            tags: assetData.tags,
+            tags: parsedTags,
             sourceAssetIds: assetData.sourceAssetIds,
             numImages: 1,
           };
@@ -437,6 +453,21 @@ export async function executeFunction(
           functionCallId: functionCall.id,
           success: reorderResult.success,
           error: reorderResult.error,
+        };
+        break;
+      }
+
+      case "set_project_art_style": {
+        const updateResult = await updateProject(
+          parameters.projectId as string,
+          { styleId: parameters.styleId as string }
+        );
+
+        result = {
+          functionCallId: functionCall.id,
+          success: updateResult.success,
+          data: updateResult.data,
+          error: updateResult.error,
         };
         break;
       }

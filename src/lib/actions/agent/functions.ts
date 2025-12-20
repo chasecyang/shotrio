@@ -106,6 +106,17 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     category: "read",
     needsConfirmation: false,
   },
+  {
+    name: "query_available_art_styles",
+    description: "查询可用的美术风格列表（系统预设风格）。用于为项目推荐或设置合适的美术风格",
+    displayName: "查询美术风格",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+    category: "read",
+    needsConfirmation: false,
+  },
 
   // ============================================
   // 生成类工具（需要确认）
@@ -228,7 +239,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         tags: {
           type: "string",
-          description: '标签数组（JSON字符串格式），包含类型标签如"角色"、"场景"、"道具"、"分镜"等，例如 \'["角色", "男性", "张三"]\'',
+          description: '标签（逗号分隔），包含类型和名称，如 "角色,男性,张三" 或 "场景,室内,卧室"',
         },
         numImages: {
           type: "string",
@@ -257,7 +268,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         assets: {
           type: "string",
-          description: '素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（英文自然语言描述，用完整句子描述画面）、tags（标签数组，如["角色","男性"]）、sourceAssetIds（可选，参考素材ID数组）',
+          description: '素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（英文自然语言描述，用完整句子描述画面）、tags（逗号分隔的标签字符串，如"角色,男性"）、sourceAssetIds（可选，参考素材ID数组）。示例：[{"name":"林晓","prompt":"A young man...","tags":"角色,男性,主角"}]',
         },
       },
       required: ["projectId", "assets"],
@@ -372,7 +383,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         tags: {
           type: "string",
-          description: "标签数组（JSON字符串格式）",
+          description: "标签（逗号分隔），如 \"角色,男性,张三\"",
         },
       },
       required: ["assetId"],
@@ -397,6 +408,27 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
       },
       required: ["episodeId", "shotOrders"],
+    },
+    category: "modification",
+    needsConfirmation: true,
+  },
+  {
+    name: "set_project_art_style",
+    description: "为项目设置美术风格。美术风格会影响所有图像生成的整体风格和氛围",
+    displayName: "设置美术风格",
+    parameters: {
+      type: "object",
+      properties: {
+        projectId: {
+          type: "string",
+          description: "项目ID",
+        },
+        styleId: {
+          type: "string",
+          description: "风格ID（从 query_available_art_styles 获取）",
+        },
+      },
+      required: ["projectId", "styleId"],
     },
     category: "modification",
     needsConfirmation: true,

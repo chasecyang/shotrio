@@ -6,7 +6,7 @@ import type { AgentContext } from "@/types/agent";
 import { getProjectDetail } from "@/lib/actions/project/base";
 import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { queryAssets } from "@/lib/actions/asset/queries";
-import type { AssetWithTags } from "@/types/asset";
+import { analyzeAssetsByType } from "@/lib/actions/asset/stats";
 
 /**
  * 收集 Agent 上下文信息
@@ -33,9 +33,19 @@ export async function collectContext(context: AgentContext): Promise<string> {
       if (project.description) {
         parts.push(`项目描述: ${project.description}`);
       }
-      if (project.stylePrompt) {
+      
+      // 美术风格信息（优先显示新的artStyle，fallback到旧的stylePrompt）
+      if (project.artStyle) {
+        parts.push(`美术风格: ${project.artStyle.name} (${project.artStyle.prompt})`);
+        if (project.artStyle.description) {
+          parts.push(`风格描述: ${project.artStyle.description}`);
+        }
+      } else if (project.stylePrompt) {
         parts.push(`艺术风格: ${project.stylePrompt}`);
+      } else {
+        parts.push(`美术风格: 未设置（建议先设置美术风格以获得更好的图像生成效果）`);
       }
+      
       parts.push(`剧集数量: ${project.episodes.length}`);
       parts.push("");
     }
@@ -114,24 +124,15 @@ export async function collectContext(context: AgentContext): Promise<string> {
         parts.push(`总素材数: ${assetsResult.total || assetsResult.assets.length}`);
         
         // 统计各类素材
-        const byType: Record<string, number> = {};
-        assetsResult.assets.forEach((asset: AssetWithTags) => {
-          const tags = asset.tags.map((t: { tagValue: string }) => t.tagValue);
-          if (tags.includes("character")) byType.character = (byType.character || 0) + 1;
-          else if (tags.includes("scene")) byType.scene = (byType.scene || 0) + 1;
-          else if (tags.includes("prop")) byType.prop = (byType.prop || 0) + 1;
-          else byType.other = (byType.other || 0) + 1;
-        });
+        const assetStats = analyzeAssetsByType(assetsResult.assets);
         
-        if (byType.character) parts.push(`- 角色: ${byType.character} 个`);
-        if (byType.scene) parts.push(`- 场景: ${byType.scene} 个`);
-        if (byType.prop) parts.push(`- 道具: ${byType.prop} 个`);
-        if (byType.other) parts.push(`- 其他: ${byType.other} 个`);
+        if (assetStats.byType.character) parts.push(`- 角色: ${assetStats.byType.character} 个`);
+        if (assetStats.byType.scene) parts.push(`- 场景: ${assetStats.byType.scene} 个`);
+        if (assetStats.byType.prop) parts.push(`- 道具: ${assetStats.byType.prop} 个`);
+        if (assetStats.byType.other) parts.push(`- 其他: ${assetStats.byType.other} 个`);
         
-        // 统计没有图片的素材
-        const noImage = assetsResult.assets.filter((a: AssetWithTags) => !a.imageUrl).length;
-        if (noImage > 0) {
-          parts.push(`- 待生成图片: ${noImage} 个`);
+        if (assetStats.withoutImage > 0) {
+          parts.push(`- 待生成图片: ${assetStats.withoutImage} 个`);
         }
         parts.push("");
       }
