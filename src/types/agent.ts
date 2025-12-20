@@ -54,6 +54,8 @@ export interface AgentMessage {
   iterations?: IterationStep[];
   // 标识消息是否正在流式输出中
   isStreaming?: boolean;
+  // 标识消息是否被用户中断
+  isInterrupted?: boolean;
 }
 
 /**

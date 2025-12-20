@@ -119,12 +119,12 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   // ============================================
-  // 生成类工具（需要确认）
+  // 创建类工具（需要确认）
   // ============================================
   {
-    name: "generate_storyboard",
-    description: "根据剧本自动生成分镜脚本（包括景别、运镜、对话等）",
-    displayName: "生成分镜脚本",
+    name: "create_shot",
+    description: "创建一个新的分镜。需要指定景别和视觉描述，其他参数可选",
+    displayName: "创建分镜",
     parameters: {
       type: "object",
       properties: {
@@ -132,58 +132,85 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "string",
           description: "剧集ID",
         },
-        autoGenerateImages: {
+        order: {
           type: "string",
-          description: "是否自动为分镜生成图片，值为 'true' 或 'false'，默认 'false'",
+          description: "分镜序号（整数），如不指定则自动追加到末尾",
+        },
+        shotSize: {
+          type: "string",
+          description: "景别",
+          enum: [
+            "extreme_long_shot",
+            "long_shot",
+            "full_shot",
+            "medium_shot",
+            "close_up",
+            "extreme_close_up",
+          ],
+        },
+        cameraMovement: {
+          type: "string",
+          description: "运镜方式，默认 'static'",
+          enum: [
+            "static",
+            "push_in",
+            "pull_out",
+            "pan_left",
+            "pan_right",
+            "tilt_up",
+            "tilt_down",
+            "tracking",
+            "crane_up",
+            "crane_down",
+            "orbit",
+            "zoom_in",
+            "zoom_out",
+            "handheld",
+          ],
+        },
+        duration: {
+          type: "string",
+          description: "时长（毫秒），默认3000",
+        },
+        visualDescription: {
+          type: "string",
+          description: "视觉描述（中文），描述画面内容",
+        },
+        visualPrompt: {
+          type: "string",
+          description: "图像生成提示词（英文自然语言描述）",
         },
       },
-      required: ["episodeId"],
+      required: ["episodeId", "shotSize", "visualDescription"],
     },
     category: "generation",
     needsConfirmation: true,
   },
   {
-    name: "decompose_shot",
-    description: "将一个分镜拆解成多个更细致的子分镜，用于加快节奏或增加细节",
-    displayName: "拆解分镜",
+    name: "batch_create_shots",
+    description: "批量创建多个分镜，用于一次性创建整个剧集的分镜。适用于根据剧本生成分镜脚本等场景",
+    displayName: "批量创建分镜",
     parameters: {
       type: "object",
       properties: {
-        shotId: {
+        episodeId: {
           type: "string",
-          description: "要拆解的分镜ID",
+          description: "剧集ID",
         },
-        reason: {
+        shots: {
           type: "string",
-          description: "拆解理由，帮助AI更好地拆解",
+          description: '分镜数组（JSON字符串格式），每个分镜包含 order（序号）、shotSize（景别）、visualDescription（中文描述）、visualPrompt（英文提示词，可选）、cameraMovement（运镜，可选，默认static）、duration（时长毫秒，可选，默认3000）。示例：[{"order":1,"shotSize":"medium_shot","visualDescription":"林晓站在窗前...","visualPrompt":"A young man standing..."}]',
         },
       },
-      required: ["shotId"],
+      required: ["episodeId", "shots"],
     },
     category: "generation",
     needsConfirmation: true,
   },
-  {
-    name: "batch_decompose_shots",
-    description: "批量拆解多个分镜",
-    displayName: "批量拆解分镜",
-    parameters: {
-      type: "object",
-      properties: {
-        shotIds: {
-          type: "string",
-          description: "分镜ID数组（JSON字符串格式）",
-        },
-        reason: {
-          type: "string",
-          description: "拆解理由",
-        },
-      },
-      required: ["shotIds"],
-    },
-    category: "generation",
-    needsConfirmation: true,
-  },
+
+  // ============================================
+  // 生成类工具（需要确认）
+  // ============================================
   {
     name: "generate_shot_images",
     description: "为指定的分镜生成图片",

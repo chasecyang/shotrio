@@ -5,12 +5,20 @@ import type { AgentMessage } from "@/types/agent";
 import { cn } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
 
 interface ChatMessageProps {
   message: AgentMessage;
 }
+
+// 中断标记组件
+const InterruptedBadge = () => (
+  <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 mt-2">
+    <Hand className="h-3.5 w-3.5" />
+    <span>已中断</span>
+  </div>
+);
 
 export const ChatMessage = memo(function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
@@ -59,6 +67,7 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
               isLastIteration={index === message.iterations!.length - 1}
             />
           ))}
+          {message.isInterrupted && <InterruptedBadge />}
         </div>
       ) : (
         /* AI Message - Simple Format (for simple text responses without iterations) */
@@ -98,6 +107,7 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
             {message.isStreaming && message.content && (
               <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
             )}
+            {message.isInterrupted && <InterruptedBadge />}
           </div>
         </>
       )}

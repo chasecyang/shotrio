@@ -9,7 +9,7 @@ import { TaskStatusCard } from "./task-status-card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Send, Loader2, Trash2, Bot, Info } from "lucide-react";
+import { Send, Trash2, Bot, Info, Square } from "lucide-react";
 import { toast } from "sonner";
 import { confirmAndExecuteAction, cancelAction } from "@/lib/actions/agent";
 import { useTaskTracking } from "./use-task-tracking";
@@ -41,6 +41,7 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -48,6 +49,27 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [agent.state.messages, isProcessing]);
+
+  // 处理流式请求错误的辅助函数
+  const handleStreamError = useCallback((error: unknown, tempMsgId: string, errorContext: string) => {
+    // 检查是否是用户中断
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log("用户中断了 AI 生成");
+      agent.updateMessage(tempMsgId, {
+        content: agent.state.messages.find(m => m.id === tempMsgId)?.content || "",
+        isStreaming: false,
+        isInterrupted: true,
+      });
+      toast.info("已停止 AI 生成");
+    } else {
+      console.error(`${errorContext}:`, error);
+      toast.error(errorContext === "流式处理失败" ? "发送失败" : "继续执行失败");
+      agent.updateMessage(tempMsgId, {
+        content: `抱歉，出错了：${error instanceof Error ? error.message : "未知错误"}`,
+        isStreaming: false,
+      });
+    }
+  }, [agent]);
 
   // 处理流式响应的通用函数
   const processStreamingResponse = useCallback(async (
@@ -212,6 +234,9 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       iterations: [],
     });
 
+    // 创建新的 AbortController
+    abortControllerRef.current = new AbortController();
+
     try {
       // 调用流式 API
       const response = await fetch("/api/agent/chat-stream", {
@@ -224,6 +249,7 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
           context: agent.currentContext,
           history: agent.state.messages.slice(0, -1), // 不包含刚创建的临时消息
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -237,16 +263,12 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
 
       await processStreamingResponse(reader, tempMsgId);
     } catch (error) {
-      console.error("流式处理失败:", error);
-      toast.error("发送失败");
-      agent.updateMessage(tempMsgId, {
-        content: `抱歉，出错了：${error instanceof Error ? error.message : "未知错误"}`,
-        isStreaming: false,
-      });
+      handleStreamError(error, tempMsgId, "流式处理失败");
     } finally {
       setIsProcessing(false);
+      abortControllerRef.current = null;
     }
-  }, [input, isProcessing, agent, processStreamingResponse]);
+  }, [input, isProcessing, agent, processStreamingResponse, handleStreamError]);
 
   // 恢复对话（用户确认操作后）
   const resumeConversation = useCallback(async (
@@ -271,6 +293,9 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       iterations: [],
     });
 
+    // 创建新的 AbortController
+    abortControllerRef.current = new AbortController();
+
     try {
       // 调用恢复对话 API
       const response = await fetch("/api/agent/resume-stream", {
@@ -283,6 +308,7 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
           executionResults,
           context: agent.currentContext,
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -296,16 +322,12 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
 
       await processStreamingResponse(reader, tempMsgId);
     } catch (error) {
-      console.error("恢复对话失败:", error);
-      toast.error("继续执行失败");
-      agent.updateMessage(tempMsgId, {
-        content: `继续执行时出错：${error instanceof Error ? error.message : "未知错误"}`,
-        isStreaming: false,
-      });
+      handleStreamError(error, tempMsgId, "恢复对话失败");
     } finally {
       setIsProcessing(false);
+      abortControllerRef.current = null;
     }
-  }, [agent, processStreamingResponse]);
+  }, [agent, processStreamingResponse, handleStreamError]);
 
   // 确认操作
   const handleConfirmAction = useCallback(async (actionId: string) => {
@@ -360,6 +382,14 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       toast.error("执行失败");
     }
   }, [agent, resumeConversation]);
+
+  // 停止 AI 生成
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
 
   // 取消操作
   const handleCancelAction = useCallback(async (actionId: string) => {
@@ -476,20 +506,22 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
             disabled={isProcessing}
           />
           <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isProcessing}
+            onClick={isProcessing ? handleStop : handleSend}
+            disabled={!isProcessing && !input.trim()}
             size="icon"
+            variant={isProcessing ? "destructive" : "default"}
             className="h-[60px] w-[60px] shrink-0"
+            title={isProcessing ? "停止生成" : "发送消息"}
           >
             {isProcessing ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Square className="h-5 w-5" />
             ) : (
               <Send className="h-5 w-5" />
             )}
           </Button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Enter 发送 · Shift+Enter 换行
+          {isProcessing ? "点击停止按钮中断生成" : "Enter 发送 · Shift+Enter 换行"}
         </p>
       </div>
     </div>

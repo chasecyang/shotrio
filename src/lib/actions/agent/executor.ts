@@ -14,11 +14,9 @@ import { episode, shot } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
-import { startStoryboardGeneration } from "../storyboard";
-import { createShotDecompositionJob } from "../storyboard/decompose-shot";
 import { batchGenerateShotImages } from "../project";
 import { batchGenerateShotVideos } from "../video/generate";
-import { deleteShot, updateShot, reorderShots } from "../project/shot";
+import { createShot, deleteShot, updateShot, reorderShots } from "../project/shot";
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
 import { refreshEpisodeShots } from "../project/refresh";
@@ -174,77 +172,88 @@ export async function executeFunction(
       }
 
       // ============================================
-      // 生成类
+      // 创建类
       // ============================================
-      case "generate_storyboard": {
-        const storyboardResult = await startStoryboardGeneration(
-          parameters.episodeId as string
-        );
-        result = {
-          functionCallId: functionCall.id,
-          success: storyboardResult.success,
-          jobId: storyboardResult.jobId,
-          error: storyboardResult.error,
-        };
-        break;
-      }
-
-      case "decompose_shot": {
-        // 需要episodeId，尝试从分镜获取
-        const shotData = await db.query.shot.findFirst({
-          where: eq(shot.id, parameters.shotId as string),
-        });
-
-        if (!shotData) {
-          return {
-            functionCallId: functionCall.id,
-            success: false,
-            error: "分镜不存在",
-          };
+      case "create_shot": {
+        // 获取当前剧集的分镜数量以确定 order
+        let order = parameters.order ? parseInt(parameters.order as string) : undefined;
+        
+        if (order === undefined) {
+          const existingShots = await db.query.shot.findMany({
+            where: eq(shot.episodeId, parameters.episodeId as string),
+          });
+          order = existingShots.length + 1;
         }
 
-        const decomposeResult = await createShotDecompositionJob({
-          shotId: parameters.shotId as string,
-          episodeId: shotData.episodeId,
+        const createResult = await createShot({
+          episodeId: parameters.episodeId as string,
+          order,
+          shotSize: parameters.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
+          cameraMovement: (parameters.cameraMovement as string) || "static",
+          duration: parameters.duration ? parseInt(parameters.duration as string) : 3000,
+          visualDescription: parameters.visualDescription as string,
+          visualPrompt: parameters.visualPrompt as string | undefined,
         });
 
         result = {
           functionCallId: functionCall.id,
-          success: decomposeResult.success,
-          jobId: decomposeResult.jobId,
-          error: decomposeResult.error,
+          success: createResult.success,
+          data: createResult.data,
+          error: createResult.error,
         };
         break;
       }
 
-      case "batch_decompose_shots": {
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
-        const jobs = [];
+      case "batch_create_shots": {
+        const shotsData = JSON.parse(parameters.shots as string) as Array<{
+          order: number;
+          shotSize: string;
+          visualDescription: string;
+          visualPrompt?: string;
+          cameraMovement?: string;
+          duration?: number;
+        }>;
 
-        for (const shotId of shotIds) {
-          const shotData = await db.query.shot.findFirst({
-            where: eq(shot.id, shotId),
+        const createdShots: string[] = [];
+        const errors: string[] = [];
+
+        for (const shotData of shotsData) {
+          const createResult = await createShot({
+            episodeId: parameters.episodeId as string,
+            order: shotData.order,
+            shotSize: shotData.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
+            cameraMovement: shotData.cameraMovement || "static",
+            duration: shotData.duration || 3000,
+            visualDescription: shotData.visualDescription,
+            visualPrompt: shotData.visualPrompt,
           });
 
-          if (shotData) {
-            const jobResult = await createShotDecompositionJob({
-              shotId,
-              episodeId: shotData.episodeId,
-            });
-            if (jobResult.jobId) {
-              jobs.push(jobResult.jobId);
-            }
+          if (createResult.success && createResult.data) {
+            createdShots.push(createResult.data.id);
+          } else {
+            errors.push(`分镜 #${shotData.order} 创建失败: ${createResult.error || "未知错误"}`);
           }
         }
 
         result = {
           functionCallId: functionCall.id,
-          success: true,
-          data: { jobIds: jobs, count: jobs.length },
+          success: createdShots.length > 0,
+          data: {
+            createdShotIds: createdShots,
+            createdCount: createdShots.length,
+            totalCount: shotsData.length,
+            errors: errors.length > 0 ? errors : undefined,
+          },
+          error: errors.length > 0 && createdShots.length === 0 
+            ? `所有分镜创建失败: ${errors.join("; ")}` 
+            : undefined,
         };
         break;
       }
 
+      // ============================================
+      // 生成类
+      // ============================================
       case "generate_shot_images": {
         const shotIds = JSON.parse(parameters.shotIds as string) as string[];
         const imageResult = await batchGenerateShotImages(shotIds);
