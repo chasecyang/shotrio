@@ -1,0 +1,165 @@
+"use server";
+
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import type { AgentContext } from "@/types/agent";
+import { getProjectDetail } from "@/lib/actions/project/base";
+import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
+import { queryAssets } from "@/lib/actions/asset/queries";
+import type { AssetWithTags } from "@/types/asset";
+
+/**
+ * 收集 Agent 上下文信息
+ * 将当前编辑器状态转换为文本描述，供 AI 理解
+ */
+export async function collectContext(context: AgentContext): Promise<string> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return "用户未登录";
+  }
+
+  const parts: string[] = [];
+
+  try {
+    // 1. 项目基础信息
+    const project = await getProjectDetail(context.projectId);
+    if (project) {
+      parts.push(`# 项目信息`);
+      parts.push(`项目ID: ${context.projectId}`);  // ✅ 添加项目 ID
+      parts.push(`项目名称: ${project.title}`);
+      if (project.description) {
+        parts.push(`项目描述: ${project.description}`);
+      }
+      if (project.stylePrompt) {
+        parts.push(`艺术风格: ${project.stylePrompt}`);
+      }
+      parts.push(`剧集数量: ${project.episodes.length}`);
+      parts.push("");
+    }
+
+    // 2. 当前选中的剧集
+    if (context.selectedEpisodeId && project) {
+      const episode = project.episodes.find((ep) => ep.id === context.selectedEpisodeId);
+      if (episode) {
+        parts.push(`# 当前剧集`);
+        parts.push(`剧集ID: ${context.selectedEpisodeId}`);  // ✅ 添加剧集 ID
+        parts.push(`剧集: ${episode.title}`);
+        if (episode.summary) {
+          parts.push(`梗概: ${episode.summary}`);
+        }
+        
+        // 剧本内容摘要（前 800 字）
+        if (episode.scriptContent && episode.scriptContent.trim()) {
+          const scriptPreview = episode.scriptContent.slice(0, 800);
+          parts.push(`\n剧本内容（前800字）:\n${scriptPreview}${episode.scriptContent.length > 800 ? "..." : ""}`);
+        } else {
+          parts.push(`剧本内容: 暂无`);
+        }
+        parts.push("");
+      }
+    }
+
+    // 3. 选中的分镜
+    if (context.selectedShotIds.length > 0 && context.selectedEpisodeId) {
+      parts.push(`# 选中的分镜`);
+      parts.push(`已选中 ${context.selectedShotIds.length} 个分镜`);
+      
+      const result = await refreshEpisodeShots(context.selectedEpisodeId);
+      if (result.success && result.shots) {
+        const selectedShots = result.shots.filter((s) =>
+          context.selectedShotIds.includes(s.id)
+        );
+        
+        // 只显示前 5 个分镜的详情
+        const shotsToShow = selectedShots.slice(0, 5);
+        parts.push(`\n分镜详情（前${shotsToShow.length}个）:`);
+        shotsToShow.forEach((shot) => {
+          parts.push(`- 分镜 #${shot.order}: ${shot.visualDescription || "无描述"}`);
+          parts.push(`  景别: ${shot.shotSize}, 运镜: ${shot.cameraMovement}, 时长: ${shot.duration}ms`);
+          if (shot.imageUrl) {
+            parts.push(`  状态: 已生成图片`);
+          }
+          if (shot.videoUrl) {
+            parts.push(`  状态: 已生成视频`);
+          }
+        });
+        
+        if (selectedShots.length > 5) {
+          parts.push(`...还有 ${selectedShots.length - 5} 个分镜`);
+        }
+      }
+      parts.push("");
+    }
+
+    // 4. 选中的资源（如素材）
+    if (context.selectedResource) {
+      parts.push(`# 当前选中资源`);
+      parts.push(`类型: ${context.selectedResource.type}`);
+      parts.push(`ID: ${context.selectedResource.id}`);
+      parts.push("");
+    }
+
+    // 5. 项目素材统计
+    if (project) {
+      const assetsResult = await queryAssets({
+        projectId: context.projectId,
+        limit: 100,
+      });
+      
+      if (assetsResult.assets && assetsResult.assets.length > 0) {
+        parts.push(`# 项目素材`);
+        parts.push(`总素材数: ${assetsResult.total || assetsResult.assets.length}`);
+        
+        // 统计各类素材
+        const byType: Record<string, number> = {};
+        assetsResult.assets.forEach((asset: AssetWithTags) => {
+          const tags = asset.tags.map((t: { tagValue: string }) => t.tagValue);
+          if (tags.includes("character")) byType.character = (byType.character || 0) + 1;
+          else if (tags.includes("scene")) byType.scene = (byType.scene || 0) + 1;
+          else if (tags.includes("prop")) byType.prop = (byType.prop || 0) + 1;
+          else byType.other = (byType.other || 0) + 1;
+        });
+        
+        if (byType.character) parts.push(`- 角色: ${byType.character} 个`);
+        if (byType.scene) parts.push(`- 场景: ${byType.scene} 个`);
+        if (byType.prop) parts.push(`- 道具: ${byType.prop} 个`);
+        if (byType.other) parts.push(`- 其他: ${byType.other} 个`);
+        
+        // 统计没有图片的素材
+        const noImage = assetsResult.assets.filter((a: AssetWithTags) => !a.imageUrl).length;
+        if (noImage > 0) {
+          parts.push(`- 待生成图片: ${noImage} 个`);
+        }
+        parts.push("");
+      }
+    }
+
+    // 6. 最近的任务
+    if (context.recentJobs.length > 0) {
+      parts.push(`# 最近任务`);
+      const recentJobsInfo = context.recentJobs
+        .slice(0, 5)
+        .map((job) => {
+          const status = 
+            job.status === "completed" ? "✅ 已完成" :
+            job.status === "processing" ? "⏳ 进行中" :
+            job.status === "failed" ? "❌ 失败" :
+            job.status === "pending" ? "⏸️ 等待中" :
+            "❓ 未知";
+          return `- ${status} ${job.type} ${job.progressMessage ? `(${job.progressMessage})` : ""}`;
+        });
+      parts.push(recentJobsInfo.join("\n"));
+      parts.push("");
+    }
+
+  } catch (error) {
+    console.error("收集上下文失败:", error);
+    parts.push(`收集上下文时出错: ${error instanceof Error ? error.message : "未知错误"}`);
+  }
+
+  return parts.join("\n");
+}
+

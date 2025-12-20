@@ -18,8 +18,19 @@ function getOpenAIClient() {
 }
 
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "function" | "tool";
   content: string;
+  reasoning_content?: string; // DeepSeek 思考模式的思维链内容
+  name?: string; // for function role (deprecated)
+  tool_call_id?: string; // for tool role (new format)
+  tool_calls?: Array<{  // for assistant role with tool calls (new format)
+    id: string;
+    type: "function";
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }>;
 }
 
 export interface ChatCompletionOptions {
@@ -29,6 +40,29 @@ export interface ChatCompletionOptions {
   stream?: boolean;
   jsonMode?: boolean;
   useReasoning?: boolean; // 是否使用 reasoning 模式（自动选择 OPENAI_REASONING_MODEL）
+  functions?: Array<{
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  }>; // Function calling 定义
+  function_call?: "auto" | "none" | { name: string }; // Function calling 模式
+}
+
+/**
+ * Function Call 结果
+ */
+export interface FunctionCallResult {
+  name: string;
+  arguments: string; // JSON 字符串
+}
+
+/**
+ * Chat Completion 响应
+ */
+export interface ChatCompletionResult {
+  content: string | null;
+  functionCall?: FunctionCallResult;
+  reasoning?: string; // DeepSeek reasoner 的思考过程
 }
 
 /**
@@ -202,4 +236,247 @@ export function buildChatContext(
   }
 
   return messages;
+}
+
+/**
+ * 调用 OpenAI Function Calling
+ * @param messages 对话历史消息
+ * @param functions 可用的 functions
+ * @param options 配置选项
+ * @returns Chat completion 结果（可能包含 function call）
+ */
+export async function getChatCompletionWithFunctions(
+  messages: ChatMessage[],
+  functions: Array<{
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  }>,
+  options: Omit<ChatCompletionOptions, "functions"> = {},
+): Promise<ChatCompletionResult> {
+  const {
+    model: explicitModel,
+    temperature = 0.7,
+    maxTokens = 4096,
+    jsonMode = false,
+    useReasoning = false,
+    function_call = "auto",
+  } = options;
+
+  // 模型选择（优先使用 chat 模型，因为 reasoner 模型对 function calling 支持有限）
+  const model = explicitModel || process.env.OPENAI_CHAT_MODEL || "deepseek-chat";
+
+  try {
+    const openai = getOpenAIClient();
+    
+    // 构建请求参数
+    const requestParams: Record<string, unknown> = {
+      model,
+      messages,
+      max_tokens: maxTokens,
+      temperature,
+      functions,
+      function_call,
+    };
+
+    // JSON 模式
+    if (jsonMode) {
+      requestParams.response_format = { type: "json_object" };
+    }
+
+    // Reasoning 模式（但 function calling 可能不支持）
+    if (useReasoning) {
+      requestParams.thinking = { type: "enabled" };
+      if (maxTokens < 32000) {
+        requestParams.max_tokens = 32000;
+      }
+    }
+
+    console.log("OpenAI Function Calling 请求:", {
+      model,
+      functionsCount: functions.length,
+      maxTokens: requestParams.max_tokens,
+    });
+    
+    const response = await openai.chat.completions.create(requestParams as any);
+    
+    console.log("OpenAI Function Calling 响应:", {
+      id: response.id,
+      model: response.model,
+      finish_reason: response.choices[0]?.finish_reason,
+      hasFunctionCall: !!response.choices[0]?.message?.function_call,
+    });
+
+    const message = response.choices[0]?.message;
+    
+    if (!message) {
+      throw new Error("OpenAI 返回了空消息");
+    }
+
+    const result: ChatCompletionResult = {
+      content: message.content,
+    };
+
+    // 提取 function call
+    if (message.function_call) {
+      result.functionCall = {
+        name: message.function_call.name || "",
+        arguments: message.function_call.arguments || "{}",
+      };
+    }
+
+    // 提取 reasoning（如果有）
+    // @ts-expect-error - DeepSeek specific field
+    if (message.reasoning_content) {
+      // @ts-expect-error - DeepSeek specific field
+      result.reasoning = message.reasoning_content;
+    }
+
+    return result;
+  } catch (error: unknown) {
+    console.error("OpenAI Function Calling 失败:", error);
+    const message = error instanceof Error ? error.message : "未知错误";
+    throw new Error(`AI Function Calling 失败: ${message}`);
+  }
+}
+
+/**
+ * 流式事件类型
+ */
+export interface StreamChunk {
+  type: 'reasoning' | 'content' | 'function_call_name' | 'function_call_arguments' | 'function_call_id' | 'done';
+  data: string;
+}
+
+/**
+ * 流式调用 OpenAI Function Calling
+ * @param messages 对话历史消息
+ * @param functions 可用的 functions
+ * @param options 配置选项
+ * @returns AsyncGenerator，逐步 yield 流式数据块
+ */
+export async function* getChatCompletionWithFunctionsStream(
+  messages: ChatMessage[],
+  functions: Array<{
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  }>,
+  options: Omit<ChatCompletionOptions, "functions"> = {},
+): AsyncGenerator<StreamChunk> {
+  const {
+    model: explicitModel,
+    temperature = 0.7,
+    maxTokens = 4096,
+    jsonMode = false,
+    useReasoning = false,
+    function_call = "auto",
+  } = options;
+
+  // 模型选择（优先使用 chat 模型，因为 reasoner 模型对 function calling 支持有限）
+  const model = explicitModel || process.env.OPENAI_CHAT_MODEL || "deepseek-chat";
+
+  try {
+    const openai = getOpenAIClient();
+    
+    // 将 functions 转换为 tools 格式（新的 OpenAI API 格式，DeepSeek 思考模式需要）
+    const tools = functions.map(func => ({
+      type: "function" as const,
+      function: {
+        name: func.name,
+        description: func.description,
+        parameters: func.parameters,
+      }
+    }));
+    
+    // 构建请求参数
+    const requestParams: Record<string, unknown> = {
+      model,
+      messages,
+      max_tokens: maxTokens,
+      temperature,
+      tools,  // 使用 tools 而不是 functions
+      tool_choice: function_call,  // 使用 tool_choice 而不是 function_call
+      stream: true, // 启用流式
+    };
+
+    // JSON 模式
+    if (jsonMode) {
+      requestParams.response_format = { type: "json_object" };
+    }
+
+    // Reasoning 模式
+    if (useReasoning) {
+      requestParams.thinking = { type: "enabled" };
+      if (maxTokens < 32000) {
+        requestParams.max_tokens = 32000;
+      }
+    }
+
+    console.log("OpenAI Function Calling Stream 请求:", {
+      model,
+      toolsCount: tools.length,
+      maxTokens: requestParams.max_tokens,
+      useReasoning,
+    });
+    
+    const stream = await openai.chat.completions.create(requestParams as any);
+    
+    // 逐块处理流式响应
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      
+      if (!delta) continue;
+
+      // 处理 reasoning_content (DeepSeek 特有)
+      // @ts-expect-error - DeepSeek specific field
+      if (delta.reasoning_content) {
+        // @ts-expect-error - DeepSeek specific field
+        yield { type: 'reasoning', data: delta.reasoning_content };
+      }
+
+      // 处理普通 content
+      if (delta.content) {
+        yield { type: 'content', data: delta.content };
+      }
+
+      // 处理 tool_calls (新的 OpenAI API 格式，DeepSeek 思考模式使用)
+      // @ts-expect-error - tool_calls is a valid field
+      if (delta.tool_calls && Array.isArray(delta.tool_calls)) {
+        // @ts-expect-error - tool_calls is a valid field
+        for (const toolCall of delta.tool_calls) {
+          // tool call ID
+          if (toolCall.id) {
+            yield { 
+              type: 'function_call_id', 
+              data: toolCall.id 
+            };
+          }
+          
+          if (toolCall.function) {
+            if (toolCall.function.name) {
+              yield { 
+                type: 'function_call_name', 
+                data: toolCall.function.name 
+              };
+            }
+            if (toolCall.function.arguments) {
+              yield { 
+                type: 'function_call_arguments', 
+                data: toolCall.function.arguments 
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // 流结束
+    yield { type: 'done', data: '' };
+
+  } catch (error: unknown) {
+    console.error("OpenAI Function Calling Stream 失败:", error);
+    const message = error instanceof Error ? error.message : "未知错误";
+    throw new Error(`AI Function Calling Stream 失败: ${message}`);
+  }
 }
