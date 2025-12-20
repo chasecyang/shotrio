@@ -301,7 +301,6 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
             projectId,
             userId: state.project?.userId || '',
             assetName: `ref_${Date.now()}`,
-            assetType: 'reference',
             file: img.file,
           });
           
@@ -325,11 +324,10 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
           numImages,
         });
       } else {
-        // 文生图模式
+        // 文生图模式（AI 会自动分析 prompt 生成 name 和 tags）
         result = await generateAssetImage({
           projectId,
           prompt: prompt.trim(),
-          assetType: "reference",
           aspectRatio,
           resolution,
           numImages,

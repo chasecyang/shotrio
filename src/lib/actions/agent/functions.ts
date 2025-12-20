@@ -208,9 +208,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "generate_asset_image",
-    description: "为素材生成图片（文生图或图生图）",
-    displayName: "生成素材图片",
+    name: "generate_asset",
+    description: "生成素材图片并创建素材记录。可选提供名称和标签（推荐），否则由AI自动分析。支持引用其他素材作为参考图（图生图）。",
+    displayName: "生成素材",
     parameters: {
       type: "object",
       properties: {
@@ -220,65 +220,34 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         prompt: {
           type: "string",
-          description: "生成提示词（英文）",
+          description: "图像生成提示词（英文自然语言描述，不要使用逗号分隔的短词，而是用完整的句子描述画面内容、人物、场景、光线、氛围等）",
         },
-        assetType: {
+        name: {
           type: "string",
-          description: "素材类型",
-          enum: ["character", "scene", "prop", "reference"],
+          description: "素材名称（可选，建议提供）",
+        },
+        tags: {
+          type: "string",
+          description: '标签数组（JSON字符串格式），包含类型标签如"角色"、"场景"、"道具"、"分镜"等，例如 \'["角色", "男性", "张三"]\'',
         },
         numImages: {
           type: "string",
           description: "生成数量，默认1",
         },
-        mode: {
-          type: "string",
-          description: "生成模式",
-          enum: ["text-to-image", "image-to-image"],
-        },
         sourceAssetIds: {
           type: "string",
-          description: "源素材ID数组（图生图模式，JSON字符串格式）",
+          description: "参考素材ID数组（JSON字符串格式），用于图生图模式。先用 query_assets 查询获取素材ID",
         },
       },
-      required: ["projectId", "prompt", "assetType"],
+      required: ["projectId", "prompt"],
     },
     category: "generation",
     needsConfirmation: true,
   },
   {
-    name: "create_asset",
-    description: "创建新的素材记录（不生成图片）",
-    displayName: "创建素材",
-    parameters: {
-      type: "object",
-      properties: {
-        projectId: {
-          type: "string",
-          description: "项目ID",
-        },
-        name: {
-          type: "string",
-          description: "素材名称",
-        },
-        prompt: {
-          type: "string",
-          description: "生成提示词",
-        },
-        tags: {
-          type: "string",
-          description: "标签数组（JSON字符串格式）",
-        },
-      },
-      required: ["projectId", "name"],
-    },
-    category: "generation",
-    needsConfirmation: true,
-  },
-  {
-    name: "batch_create_assets",
-    description: "批量创建多个素材记录（不生成图片），适用于一次性创建多个角色、场景等素材",
-    displayName: "批量创建素材",
+    name: "batch_generate_assets",
+    description: "批量生成多个素材图片并创建记录。适用于一次性创建多个角色、场景等素材。每个素材会创建独立的生成任务并行处理。",
+    displayName: "批量生成素材",
     parameters: {
       type: "object",
       properties: {
@@ -288,7 +257,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         assets: {
           type: "string",
-          description: "素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（生成提示词）、tags（标签数组）、description（描述）",
+          description: '素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（英文自然语言描述，用完整句子描述画面）、tags（标签数组，如["角色","男性"]）、sourceAssetIds（可选，参考素材ID数组）',
         },
       },
       required: ["projectId", "assets"],
@@ -353,7 +322,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         visualPrompt: {
           type: "string",
-          description: "生成提示词（英文）",
+          description: "图像生成提示词（英文自然语言描述，用完整句子描述画面内容）",
         },
       },
       required: ["shotId"],

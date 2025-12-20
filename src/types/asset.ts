@@ -200,8 +200,7 @@ export interface AssetWithDerivations extends Asset {
  */
 export interface AssetQueryFilter {
   projectId: string;
-  tagFilters?: string[];  // 标签值数组，简化为只有值
-  assetTypes?: AssetType[];
+  tagFilters?: string[];  // 标签值数组，用于类型筛选如 ["角色", "场景"]
   search?: string;
   sourceAssetId?: string;
   limit?: number;

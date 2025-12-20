@@ -13,8 +13,6 @@ import type {
   AssetImageGenerationResult,
 } from "@/types/job";
 import type { AspectRatio } from "@/lib/services/fal.service";
-import type { AssetType } from "@/types/asset";
-import { ASSET_TYPE_TO_TAG_MAP } from "@/lib/constants/asset-tags";
 import { asset } from "@/lib/db/schemas/project";
 import { inArray } from "drizzle-orm";
 
@@ -32,7 +30,8 @@ export async function processAssetImageGeneration(
   const {
     projectId,
     prompt,
-    assetType,
+    name: providedName,
+    tags: providedTags,
     aspectRatio = "16:9",
     resolution = "2K",
     numImages = 1,
@@ -48,47 +47,63 @@ export async function processAssetImageGeneration(
     }
   }
 
-  // 步骤1: AI分析（10%）
-  await updateJobProgress(
-    {
-      jobId: jobData.id,
-      progress: 5,
-      progressMessage: "AI正在分析prompt...",
-    },
-    workerToken
-  );
-
-  let baseAnalysis;
+  // 步骤1: 获取 name/tags（优先使用传入的，否则 AI 分析）
+  let finalTags: string[] = [];
   let names: string[] = [];
-  
-  try {
-    const analysisResult = await analyzePromptForBatch(
-      prompt,
-      numImages
+
+  if (providedName && providedTags && providedTags.length > 0) {
+    // Agent 提供了完整的元数据，直接使用
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 10,
+        progressMessage: "使用提供的元数据，准备生成图片...",
+      },
+      workerToken
     );
-    baseAnalysis = analysisResult.baseAnalysis;
-    names = analysisResult.names;
-  } catch (error) {
-    console.error("AI分析失败，使用fallback:", error);
-    // 使用fallback名称和标签
-    const timestamp = Date.now();
-    baseAnalysis = {
-      name: `AI生成-${timestamp}`,
-      tags: ["AI生成"],
-    };
-    names = Array.from({ length: numImages }, (_, i) => 
-      numImages > 1 ? `${baseAnalysis.name}-${String(i + 1).padStart(2, "0")}` : baseAnalysis.name
+
+    finalTags = providedTags;
+    names = Array.from({ length: numImages }, (_, i) =>
+      numImages > 1 ? `${providedName}-${String(i + 1).padStart(2, "0")}` : providedName
+    );
+  } else {
+    // 没有提供完整元数据，需要 AI 分析
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 5,
+        progressMessage: "AI正在分析prompt...",
+      },
+      workerToken
+    );
+
+    try {
+      const analysisResult = await analyzePromptForBatch(prompt, numImages);
+      finalTags = providedTags?.length ? providedTags : analysisResult.baseAnalysis.tags;
+      names = providedName
+        ? Array.from({ length: numImages }, (_, i) =>
+            numImages > 1 ? `${providedName}-${String(i + 1).padStart(2, "0")}` : providedName
+          )
+        : analysisResult.names;
+    } catch (error) {
+      console.error("AI分析失败，使用fallback:", error);
+      const timestamp = Date.now();
+      const fallbackName = providedName || `AI生成-${timestamp}`;
+      finalTags = providedTags?.length ? providedTags : ["AI生成"];
+      names = Array.from({ length: numImages }, (_, i) =>
+        numImages > 1 ? `${fallbackName}-${String(i + 1).padStart(2, "0")}` : fallbackName
+      );
+    }
+
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 10,
+        progressMessage: "分析完成，准备生成图片...",
+      },
+      workerToken
     );
   }
-
-  await updateJobProgress(
-    {
-      jobId: jobData.id,
-      progress: 10,
-      progressMessage: "AI分析完成，准备生成图片...",
-    },
-    workerToken
-  );
 
   // 步骤2: 生成图片（50%）
   await updateJobProgress(
@@ -102,7 +117,8 @@ export async function processAssetImageGeneration(
 
   let generatedImages: Array<{ url: string; width?: number; height?: number }> = [];
 
-  if (mode === "image-to-image" && sourceAssetIds.length > 0) {
+  // 有参考图时自动使用 image-to-image 模式
+  if (sourceAssetIds.length > 0) {
     // 图生图模式：获取源素材的图片URL
     const sourceAssets = await db.query.asset.findMany({
       where: inArray(asset.id, sourceAssetIds),
@@ -195,6 +211,9 @@ export async function processAssetImageGeneration(
         continue;
       }
 
+      // 确定生成模式
+      const actualMode = sourceAssetIds.length > 0 ? "image-to-image" : (mode || "text-to-image");
+
       // 创建素材记录
       const createResult = await createAssetInternal({
         projectId,
@@ -205,8 +224,8 @@ export async function processAssetImageGeneration(
         prompt: prompt.trim(),
         modelUsed: "nano-banana",
         sourceAssetId: sourceAssetIds.length > 0 ? sourceAssetIds[0] : undefined,
-        derivationType: mode === "image-to-image" ? "img2img" : "generate",
-        tags: baseAnalysis.tags,
+        derivationType: actualMode === "image-to-image" ? "img2img" : "generate",
+        tags: finalTags,
       });
 
       if (createResult.success && createResult.asset) {
@@ -215,7 +234,7 @@ export async function processAssetImageGeneration(
           name: createResult.asset.name,
           imageUrl: createResult.asset.imageUrl,
           thumbnailUrl: createResult.asset.thumbnailUrl || undefined,
-          tags: baseAnalysis.tags,
+          tags: finalTags,
         });
       } else {
         errors.push(`保存第 ${i + 1} 张图片失败: ${createResult.error}`);

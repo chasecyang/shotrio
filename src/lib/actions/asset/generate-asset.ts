@@ -3,17 +3,17 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createJob } from "@/lib/actions/job";
-import type { ImageResolution, AssetType } from "@/types/asset";
+import type { ImageResolution } from "@/types/asset";
 import type { AssetImageGenerationInput } from "@/types/job";
 import type { AspectRatio } from "@/lib/services/fal.service";
 
 /**
  * 生成素材图片的输入参数（文生图）
+ * 用户 UI 调用时不需要提供 name/tags，由 AI 自动分析
  */
 export interface GenerateAssetImageInput {
   projectId: string;
   prompt: string;
-  assetType: AssetType;
   aspectRatio?: AspectRatio;
   resolution?: ImageResolution;
   numImages?: number;
@@ -21,6 +21,7 @@ export interface GenerateAssetImageInput {
 
 /**
  * 编辑素材图片的输入参数（图生图）
+ * 用户 UI 调用时不需要提供 name/tags，由 AI 自动分析
  */
 export interface EditAssetImageInput {
   projectId: string;
@@ -58,7 +59,6 @@ export async function generateAssetImage(
     const {
       projectId,
       prompt,
-      assetType,
       aspectRatio = "16:9",
       resolution = "2K",
       numImages = 1,
@@ -69,15 +69,13 @@ export async function generateAssetImage(
       return { success: false, error: "请输入提示词" };
     }
 
-    // 创建后台任务
+    // 创建后台任务（不提供 name/tags，让 AI 自动分析）
     const jobInput: AssetImageGenerationInput = {
       projectId,
       prompt: prompt.trim(),
-      assetType,
       aspectRatio,
       resolution: resolution as ImageResolution,
       numImages,
-      mode: "text-to-image",
     };
 
     const jobResult = await createJob({
@@ -144,16 +142,14 @@ export async function editAssetImage(
       return { success: false, error: "请输入编辑提示词" };
     }
 
-    // 创建后台任务
+    // 创建后台任务（不提供 name/tags，让 AI 自动分析）
     const jobInput: AssetImageGenerationInput = {
       projectId,
       prompt: editPrompt.trim(),
-      assetType: "reference", // 图生图默认为参考类型
       aspectRatio,
       resolution: resolution as ImageResolution,
       numImages,
       sourceAssetIds,
-      mode: "image-to-image",
     };
 
     const jobResult = await createJob({

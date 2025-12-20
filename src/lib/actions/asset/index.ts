@@ -15,7 +15,7 @@ export {
 export {
   queryAssets,
   getProjectAssets,
-  getAssetsByTagType,
+  getAssetsByTag,
   getAssetDerivations,
 } from "./queries";
 
@@ -24,7 +24,7 @@ export {
   addAssetTag,
   addAssetTags,
   removeAssetTag,
-  removeAssetTagsByType,
+  removeAssetTagsByValue,
   replaceAssetTags,
 } from "./tags";
 

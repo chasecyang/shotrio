@@ -2,14 +2,12 @@
 
 import { uploadImageToR2, AssetCategory } from "@/lib/storage/r2.service";
 import { createAsset } from "@/lib/actions/asset";
-import { AssetType } from "@/types/asset";
-import { ASSET_TYPE_TO_TAG_MAP } from "@/lib/constants/asset-tags";
 
 interface UploadAssetParams {
   projectId: string;
   userId: string;
   assetName: string;
-  assetType: AssetType;
+  tags?: string[];  // 可选标签
   file: File;
 }
 
@@ -17,7 +15,7 @@ export async function uploadAsset({
   projectId,
   userId,
   assetName,
-  assetType,
+  tags = [],  // 可选标签，不提供时由用户后续添加
   file,
 }: UploadAssetParams): Promise<{
   success: boolean;
@@ -41,7 +39,6 @@ export async function uploadAsset({
       category: AssetCategory.PROJECTS,
       metadata: {
         projectId,
-        assetType,
       },
     });
 
@@ -55,7 +52,7 @@ export async function uploadAsset({
       name: assetName.trim(),
       imageUrl: uploadResult.url,
       thumbnailUrl: uploadResult.url,
-      tags: [ASSET_TYPE_TO_TAG_MAP[assetType] || assetType],
+      tags,
     });
 
     if (!createResult.success) {

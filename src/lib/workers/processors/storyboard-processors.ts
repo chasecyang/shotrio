@@ -237,7 +237,7 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
       "cameraMovement": "static",
       "duration": 5000,
       "visualDescription": "李明站在办公室门口，身体微微前倾，双手紧握成拳垂在身侧。他的眉头紧锁，眼神凌厉而坚定，直视前方，嘴唇紧抿成一条线，下颌肌肉微微绷紧，透露出压抑的愤怒。背景是现代化的玻璃门，冷色调的光线从侧面打来。",
-      "visualPrompt": "Chinese man Li Ming in business suit standing at modern office glass door, body slightly leaning forward, fists clenched at sides, furrowed brows, sharp determined gaze looking straight ahead, lips pressed tightly, jaw tensed with suppressed anger, cold side lighting, cinematic",
+      "visualPrompt": "Li Ming, a Chinese man in a sharp business suit, stands at the threshold of a modern glass office door. His body leans slightly forward with tension, both fists clenched tightly at his sides. His brows are deeply furrowed, and his eyes burn with a sharp, determined gaze as he stares straight ahead. His lips are pressed into a thin line, jaw muscles visibly tensed with barely contained anger. Cold side lighting from the office casts dramatic shadows across his face, creating a cinematic atmosphere.",
       "audioPrompt": "轻微的脚步声，远处的车流声，办公室环境音",
       "sceneName": "公司办公室",
       "characters": [
@@ -262,7 +262,7 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
       "cameraMovement": "push_in",
       "duration": 4000,
       "visualDescription": "李明的面部特写，镜头缓缓推近。他的眉心深深皱起，眼眶微微泛红但强忍泪水，瞳孔中映射着窗外的光芒。鼻翼微微翕动，嘴角向下撇着，牙关紧咬使得腮帮鼓起。汗珠从额角滑落。",
-      "visualPrompt": "Close-up of Chinese man's face, camera slowly pushing in, deeply furrowed brow, slightly reddened eyes holding back tears, light reflecting in pupils, nostrils flaring slightly, corners of mouth turned down, jaw clenched with cheeks tensed, sweat droplet on temple, dramatic lighting, shallow depth of field, cinematic, high quality",
+      "visualPrompt": "An intense close-up shot of a Chinese man's face as the camera slowly pushes in. His brow is deeply furrowed with visible stress lines, and his eyes are slightly reddened as he fights back tears, with light reflecting in his pupils. His nostrils flare gently with each breath, while the corners of his mouth turn downward in anguish. His jaw is tightly clenched, causing his cheeks to tense visibly. A single bead of sweat trails down from his temple. The dramatic lighting creates a shallow depth of field, focusing entirely on his emotional expression in this cinematic moment.",
       "audioPrompt": "紧张的背景音乐渐强，沉重的呼吸声",
       "sceneName": "公司办公室",
       "characters": [
@@ -283,7 +283,7 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
 - cameraMovement: 运镜方式（必须是上面列出的英文值之一）
 - duration: 时长（数字，毫秒为单位，建议 3000-8000）
 - visualDescription: 中文画面描述（必须详细描述动作姿态、情绪状态、面部表情细节）
-- visualPrompt: 英文 AI 绘图提示词（必须包含动作、表情、情绪的具体描写，以及环境、光影、画质）
+- visualPrompt: 英文 AI 绘图提示词（使用完整的自然语言句子描述画面，不要使用逗号分隔的短词列表。必须包含动作、表情、情绪的具体描写，以及环境、光影、氛围）
 - audioPrompt: 音效和背景音乐描述（可选，没有则为 null）
 - sceneName: 场景名称（简洁，如"咖啡厅"、"办公室"、"街道"）
 - characters: 角色数组（没有角色则为空数组 []）
@@ -301,7 +301,7 @@ export async function processStoryboardBasicExtraction(jobData: Job, workerToken
 2. **字段名精确匹配**：dialogues中用"text"不是"dialogueText"，用"emotion"不是"emotionTag"
 3. **枚举值准确**：shotSize和cameraMovement必须使用上面列出的精确值
 4. **数组可为空**：没有角色或对话时，使用空数组[]而不是null
-5. **visualPrompt质量**：英文提示词要详细，必须包含角色的动作姿态、面部表情、情绪氛围
+5. **visualPrompt质量**：英文提示词要用自然语言完整句子描述，不要使用逗号分隔的短词，必须包含角色的动作姿态、面部表情、情绪氛围
 6. **sceneName简洁**：场景名称要简短且具有识别性，方便后续匹配
 7. **动作表情必填**：每个角色的action字段必须同时描述动作和表情，不能只写简单的"站立"或"说话"
 8. **情绪递进**：注意角色在不同镜头间的情绪变化和递进关系`;
@@ -319,7 +319,7 @@ ${episodeData.scriptContent}
 1. 仔细分析剧本，将其拆分为合理的镜头序列
 2. 每个重要情节点、对话、动作都应该有对应的镜头
 3. 注意镜头景别的多样性和切换的合理性
-4. visualPrompt 必须用英文，包含足够的视觉细节
+4. visualPrompt 必须用英文自然语言句子描述，不要使用短词列表，包含足够的视觉细节
 5. 保持角色名称的一致性
 6. 严格按照 JSON 格式输出，确保可解析
 7. 对话内容要准确引用剧本原文

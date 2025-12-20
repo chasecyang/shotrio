@@ -6,12 +6,15 @@
  */
 
 /**
- * 预设标签列表
+ * 预设标签列表（类型标签）
  */
 export const PRESET_TAGS = [
   "角色",
   "场景", 
   "道具",
+  "分镜",
+  "特效",
+  "参考",
 ] as const;
 
 /**
@@ -24,24 +27,5 @@ export type PresetTag = typeof PRESET_TAGS[number];
  */
 export function isPresetTag(tag: string): tag is PresetTag {
   return PRESET_TAGS.includes(tag as PresetTag);
-}
-
-/**
- * 资产类型到预设标签的映射（用于自动添加标签）
- */
-export const ASSET_TYPE_TO_TAG_MAP: Record<string, string> = {
-  character: "角色",
-  scene: "场景",
-  prop: "道具",
-  storyboard: "分镜",
-  effect: "特效",
-  reference: "参考",
-};
-
-/**
- * 根据资产类型获取建议的标签
- */
-export function getSuggestedTagForAssetType(assetType: string): string | undefined {
-  return ASSET_TYPE_TO_TAG_MAP[assetType];
 }
 

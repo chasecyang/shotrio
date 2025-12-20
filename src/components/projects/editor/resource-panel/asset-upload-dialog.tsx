@@ -23,7 +23,6 @@ import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { uploadAsset } from "@/lib/actions/asset";
-import { AssetType } from "@/types/asset";
 import Image from "next/image";
 
 interface AssetUploadDialogProps {
@@ -44,7 +43,7 @@ export function AssetUploadDialog({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [assetName, setAssetName] = useState("");
-  const [assetType, setAssetType] = useState<AssetType>("reference");
+  const [selectedTag, setSelectedTag] = useState("参考");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,7 +132,7 @@ export function AssetUploadDialog({
         projectId,
         userId,
         assetName: assetName.trim(),
-        assetType,
+        tags: [selectedTag],
         file: selectedFile,
       });
 
@@ -148,7 +147,7 @@ export function AssetUploadDialog({
 
       // 重置状态
       handleRemoveFile();
-      setAssetType("reference");
+      setSelectedTag("参考");
       onOpenChange(false);
 
       // 触发素材列表刷新事件
@@ -167,13 +166,13 @@ export function AssetUploadDialog({
     }
   };
 
-  const assetTypeOptions = [
-    { value: "character", label: "角色" },
-    { value: "scene", label: "场景" },
-    { value: "prop", label: "道具" },
-    { value: "storyboard", label: "分镜" },
-    { value: "effect", label: "特效" },
-    { value: "reference", label: "参考" },
+  const tagOptions = [
+    { value: "角色", label: "角色" },
+    { value: "场景", label: "场景" },
+    { value: "道具", label: "道具" },
+    { value: "分镜", label: "分镜" },
+    { value: "特效", label: "特效" },
+    { value: "参考", label: "参考" },
   ];
 
   return (
@@ -257,17 +256,17 @@ export function AssetUploadDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="asset-type">素材类型</Label>
+                <Label htmlFor="asset-tag">素材类型</Label>
                 <Select
-                  value={assetType}
-                  onValueChange={(value) => setAssetType(value as AssetType)}
+                  value={selectedTag}
+                  onValueChange={setSelectedTag}
                   disabled={isUploading}
                 >
-                  <SelectTrigger id="asset-type">
+                  <SelectTrigger id="asset-tag">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {assetTypeOptions.map((option) => (
+                    {tagOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>

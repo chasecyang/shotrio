@@ -19,7 +19,7 @@ import { createShotDecompositionJob } from "../storyboard/decompose-shot";
 import { batchGenerateShotImages } from "../project";
 import { batchGenerateShotVideos } from "../video/generate";
 import { deleteShot, updateShot, reorderShots } from "../project/shot";
-import { createAsset, updateAsset, deleteAsset } from "../asset/crud";
+import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
 import { refreshEpisodeShots } from "../project/refresh";
 import { createJob } from "../job";
@@ -271,15 +271,23 @@ export async function executeFunction(
         break;
       }
 
-      case "generate_asset_image": {
+      case "generate_asset": {
+        // 构建素材生成输入
         const input: AssetImageGenerationInput = {
           projectId: parameters.projectId as string,
           prompt: parameters.prompt as string,
-          assetType: parameters.assetType as "character" | "scene" | "prop" | "reference",
-          mode: (parameters.mode as "text-to-image" | "image-to-image") || "text-to-image",
           numImages: parameters.numImages ? parseInt(parameters.numImages as string) : 1,
         };
 
+        // 可选：Agent 提供的元数据
+        if (parameters.name) {
+          input.name = parameters.name as string;
+        }
+        if (parameters.tags) {
+          input.tags = JSON.parse(parameters.tags as string);
+        }
+
+        // 可选：参考图（图生图模式）
         if (parameters.sourceAssetIds) {
           input.sourceAssetIds = JSON.parse(parameters.sourceAssetIds as string);
         }
@@ -300,62 +308,54 @@ export async function executeFunction(
         break;
       }
 
-      case "create_asset": {
-        const tags = parameters.tags ? JSON.parse(parameters.tags as string) : [];
-        const createResult = await createAsset({
-          projectId: parameters.projectId as string,
-          name: parameters.name as string,
-          imageUrl: "",
-          prompt: parameters.prompt as string,
-          tags,
-        });
-
-        result = {
-          functionCallId: functionCall.id,
-          success: createResult.success,
-          data: createResult.asset,
-          error: createResult.error,
-        };
-        break;
-      }
-
-      case "batch_create_assets": {
+      case "batch_generate_assets": {
         const assetsData = JSON.parse(parameters.assets as string) as Array<{
-          name: string;
-          prompt?: string;
+          name?: string;
+          prompt: string;
           tags?: string[];
-          description?: string;
+          sourceAssetIds?: string[];
         }>;
 
-        const createdAssets = [];
+        const jobIds: string[] = [];
         const errors: string[] = [];
 
+        // 为每个素材创建独立的生成任务
         for (const assetData of assetsData) {
-          const createResult = await createAsset({
+          const input: AssetImageGenerationInput = {
             projectId: parameters.projectId as string,
+            prompt: assetData.prompt,
             name: assetData.name,
-            imageUrl: "",
-            prompt: assetData.prompt || "",
-            tags: assetData.tags || [],
-            meta: assetData.description ? { custom: { description: assetData.description } } : undefined,
+            tags: assetData.tags,
+            sourceAssetIds: assetData.sourceAssetIds,
+            numImages: 1,
+          };
+
+          const jobResult = await createJob({
+            userId: session.user.id,
+            projectId: parameters.projectId as string,
+            type: "asset_image_generation",
+            inputData: input,
           });
 
-          if (createResult.success && createResult.asset) {
-            createdAssets.push(createResult.asset);
+          if (jobResult.success && jobResult.jobId) {
+            jobIds.push(jobResult.jobId);
           } else {
-            errors.push(`创建 "${assetData.name}" 失败: ${createResult.error || "未知错误"}`);
+            errors.push(`创建 "${assetData.name || 'unnamed'}" 任务失败: ${jobResult.error || "未知错误"}`);
           }
         }
 
         result = {
           functionCallId: functionCall.id,
-          success: errors.length === 0,
+          success: jobIds.length > 0,
           data: {
-            createdCount: createdAssets.length,
-            assets: createdAssets,
+            jobIds,
+            createdCount: jobIds.length,
+            totalCount: assetsData.length,
             errors: errors.length > 0 ? errors : undefined,
           },
-          error: errors.length > 0 ? `部分素材创建失败: ${errors.join("; ")}` : undefined,
+          error: errors.length > 0 && jobIds.length === 0 
+            ? `所有任务创建失败: ${errors.join("; ")}` 
+            : undefined,
         };
         break;
       }
