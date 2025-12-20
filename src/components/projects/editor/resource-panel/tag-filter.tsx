@@ -74,7 +74,7 @@ export function TagFilter({
             )}
           >
             <Filter className="h-3.5 w-3.5" />
-            筛选
+            {selectedTags.length === 0 ? "按类型筛选" : "筛选"}
             {selectedTags.length > 0 && (
               <Badge variant="secondary" className="ml-1 px-1.5 text-xs">
                 {selectedTags.length}
@@ -84,7 +84,10 @@ export function TagFilter({
         </PopoverTrigger>
         <PopoverContent className="w-72 p-0" align="start">
           <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h4 className="text-sm font-medium">标签筛选</h4>
+            <div>
+              <h4 className="text-sm font-medium">按类型筛选</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">角色 / 场景 / 道具</p>
+            </div>
             {selectedTags.length > 0 && (
               <Button
                 variant="ghost"
@@ -99,8 +102,11 @@ export function TagFilter({
           <ScrollArea className="max-h-[400px]">
             <div className="p-2">
               {availableTags.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  暂无可用标签
+                <div className="py-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-1">暂无可用标签</p>
+                  <p className="text-xs text-muted-foreground">
+                    创建素材时可以添加角色、场景、道具等标签
+                  </p>
                 </div>
               ) : (
                 <>
@@ -108,7 +114,7 @@ export function TagFilter({
                   {presetTagsData.length > 0 && (
                     <div className="mb-4">
                       <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-2">
-                        预设标签
+                        类型标签（角色 / 场景 / 道具）
                       </h5>
                       <div className="space-y-1">
                         {presetTagsData.map((tag) => (

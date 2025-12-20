@@ -134,22 +134,7 @@ export async function getChatCompletion(
       requestParams.temperature = temperature;
     }
 
-    console.log("OpenAI请求:", {
-      model,
-      jsonMode,
-      maxTokens: requestParams.max_tokens,
-      useReasoning: useReasoning || isReasonerModel,
-    });
-    
     const response = await openai.chat.completions.create(requestParams);
-    
-    console.log("OpenAI响应:", {
-      id: response.id,
-      model: response.model,
-      finish_reason: response.choices[0]?.finish_reason,
-      contentLength: response.choices[0]?.message?.content?.length || 0,
-    });
-
     const content = response.choices[0]?.message?.content;
     
     if (!content) {
@@ -292,21 +277,7 @@ export async function getChatCompletionWithFunctions(
       }
     }
 
-    console.log("OpenAI Function Calling 请求:", {
-      model,
-      functionsCount: functions.length,
-      maxTokens: requestParams.max_tokens,
-    });
-    
     const response = await openai.chat.completions.create(requestParams as any);
-    
-    console.log("OpenAI Function Calling 响应:", {
-      id: response.id,
-      model: response.model,
-      finish_reason: response.choices[0]?.finish_reason,
-      hasFunctionCall: !!response.choices[0]?.message?.function_call,
-    });
-
     const message = response.choices[0]?.message;
     
     if (!message) {
@@ -393,8 +364,8 @@ export async function* getChatCompletionWithFunctionsStream(
     const requestParams: Record<string, unknown> = {
       model,
       messages,
-      max_tokens: maxTokens,
-      temperature,
+      max_tokens: useReasoning ? Math.max(maxTokens, 32000) : maxTokens,
+      temperature: useReasoning ? undefined : temperature, // thinking 模式不支持 temperature
       tools,  // 使用 tools 而不是 functions
       tool_choice: function_call,  // 使用 tool_choice 而不是 function_call
       stream: true, // 启用流式
@@ -405,21 +376,14 @@ export async function* getChatCompletionWithFunctionsStream(
       requestParams.response_format = { type: "json_object" };
     }
 
-    // Reasoning 模式
+    // Reasoning/Thinking 模式 - 直接在请求参数中添加 thinking 字段
+    // DeepSeek API 会识别这个字段
     if (useReasoning) {
       requestParams.thinking = { type: "enabled" };
-      if (maxTokens < 32000) {
-        requestParams.max_tokens = 32000;
-      }
     }
 
-    console.log("OpenAI Function Calling Stream 请求:", {
-      model,
-      toolsCount: tools.length,
-      maxTokens: requestParams.max_tokens,
-      useReasoning,
-    });
-    
+    // 直接传递请求参数，使用 as any 绕过类型检查
+    // OpenAI SDK 会将未知字段（如 thinking）透传给 API
     const stream = await openai.chat.completions.create(requestParams as any);
     
     // 逐块处理流式响应

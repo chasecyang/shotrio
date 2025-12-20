@@ -33,6 +33,9 @@ import {
   X,
   Send,
   AlertCircle,
+  User,
+  MapPin,
+  Package,
 } from "lucide-react";
 import { generateAssetImage, editAssetImage } from "@/lib/actions/asset/generate-asset";
 import type { ImageResolution } from "@/types/asset";
@@ -365,9 +368,44 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">AI 素材生成</h2>
+            <h2 className="text-lg font-semibold">AI 创作素材</h2>
           </div>
           <Badge variant="outline" className="text-xs">Nano Banana</Badge>
+        </div>
+
+        {/* 引导区域 */}
+        <div className="rounded-lg border bg-gradient-to-br from-primary/5 via-primary/3 to-transparent p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium mb-2">你可以创作：</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <User className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium">角色</span>
+                    <span className="text-muted-foreground"> - 为剧本中的人物设计形象</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium">场景</span>
+                    <span className="text-muted-foreground"> - 创建故事发生的环境和地点</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Package className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium">道具</span>
+                    <span className="text-muted-foreground"> - 生成剧情所需的物品和元素</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 主卡片 */}
@@ -412,7 +450,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                       拖拽图片到此处，或点击上传
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      也可以从左侧素材库拖拽素材作为参考
+                      也可以从左侧创作素材库拖拽素材作为参考
                     </p>
                   </div>
                 </div>
@@ -441,7 +479,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                           <X className="w-4 h-4" />
                         </button>
                         <div className="absolute bottom-1 left-1 right-1 bg-primary/90 text-primary-foreground text-[10px] px-1 py-0.5 rounded truncate">
-                          素材库
+                          创作素材库
                         </div>
                       </div>
                     ))}

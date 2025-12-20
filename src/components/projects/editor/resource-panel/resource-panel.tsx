@@ -31,7 +31,7 @@ export function ResourcePanel() {
             </TabsTrigger>
             <TabsTrigger value="assets" className="text-xs gap-1">
               <Images className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">素材</span>
+              <span className="hidden sm:inline">创作素材</span>
             </TabsTrigger>
           </TabsList>
         </div>

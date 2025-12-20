@@ -82,6 +82,27 @@ export interface FunctionCall {
 }
 
 /**
+ * 对话状态（用于恢复对话）
+ */
+export interface ConversationState {
+  messages: Array<{
+    role: "system" | "user" | "assistant" | "tool";
+    content: string;
+    reasoning_content?: string;
+    tool_call_id?: string;
+    tool_calls?: Array<{
+      id: string;
+      type: "function";
+      function: {
+        name: string;
+        arguments: string;
+      };
+    }>;
+  }>;
+  toolCallId: string;
+}
+
+/**
  * 待确认的操作
  */
 export interface PendingAction {
@@ -89,6 +110,7 @@ export interface PendingAction {
   functionCalls: FunctionCall[];
   message: string;
   createdAt: Date;
+  conversationState?: ConversationState; // 用于恢复对话
 }
 
 /**
@@ -171,6 +193,15 @@ export interface ConfirmActionInput {
   approved: boolean;
   // 用户修改后的参数（如果支持修改）
   modifiedParameters?: Record<string, unknown>;
+}
+
+/**
+ * 恢复对话的输入
+ */
+export interface ResumeConversationInput {
+  conversationState: ConversationState;
+  executionResults: FunctionExecutionResult[];
+  context: AgentContext;
 }
 
 /**

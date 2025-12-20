@@ -88,8 +88,14 @@ export async function executeFunction(
 
         result = {
           functionCallId: functionCall.id,
-          success: queryResult.assets.length > 0,
-          data: queryResult.assets,
+          success: true, // 查询成功执行，即使结果为空也算成功
+          data: {
+            assets: queryResult.assets,
+            total: queryResult.total,
+            message: queryResult.assets.length === 0 
+              ? "素材库为空，没有找到任何素材" 
+              : `找到 ${queryResult.total} 个素材`,
+          },
         };
         break;
       }

@@ -184,15 +184,21 @@
       "addShot": "添加分镜"
     },
     "assets": {
-      "title": "素材",
+      "title": "创作素材",
       "empty": {
-        "title": "还没有素材",
-        "description": "上传图片素材来构建您的素材库",
-        "action": "上传素材"
+        "title": "开始创建你的创作素材库",
+        "description": "创作素材包括角色、场景、道具等图片，用于构建你的故事世界",
+        "categories": {
+          "character": "角色图片 - 主角、配角的形象设计",
+          "scene": "场景图片 - 故事发生的地点和环境",
+          "prop": "道具图片 - 剧情中的重要物品"
+        },
+        "action": "上传图片",
+        "actionAI": "AI 创作"
       },
-      "loading": "加载素材中...",
+      "loading": "加载创作素材中...",
       "upload": {
-        "title": "上传素材",
+        "title": "上传创作素材",
         "button": "上传",
         "dragHint": "点击或拖拽文件到此处上传",
         "fileInfo": "支持 JPG、PNG、WebP、GIF，最大 10MB",
@@ -201,7 +207,7 @@
         "type": "素材类型",
         "uploading": "上传中...",
         "progress": "上传进度",
-        "success": "素材上传成功",
+        "success": "创作素材上传成功",
         "error": "上传失败"
       },
       "types": {
@@ -213,7 +219,7 @@
         "reference": "参考"
       },
       "detail": {
-        "title": "素材详情",
+        "title": "创作素材详情",
         "basicInfo": "基本信息",
         "type": "类型",
         "usageCount": "使用次数",
@@ -238,7 +244,7 @@
         "tagRemoved": "标签已删除"
       },
       "derive": {
-        "title": "派生新素材",
+        "title": "派生新创作素材",
         "sourceAsset": "源素材",
         "type": "派生类型",
         "types": {
@@ -259,7 +265,7 @@
             "description": "混合多个图片元素"
           }
         },
-        "name": "派生素材名称",
+        "name": "派生创作素材名称",
         "prompt": "提示词",
         "promptPlaceholder": "描述你想要的图片内容...",
         "promptHint": "基于源素材的提示词修改，或者输入全新的提示词",
@@ -267,7 +273,7 @@
         "strengthMin": "保持原图 (0.1)",
         "strengthMax": "完全重绘 (1.0)",
         "strengthHint": "较低的值会保留更多原图特征，较高的值会生成更多变化",
-        "hint": "派生功能将使用 AI 生成服务创建新的素材变体。生成过程可能需要一些时间，请在任务中心查看进度。",
+        "hint": "派生功能将使用 AI 生成服务创建新的创作素材变体。生成过程可能需要一些时间，请在任务中心查看进度。",
         "button": "开始派生",
         "processing": "处理中...",
         "success": "派生请求已提交",
@@ -276,6 +282,7 @@
       "filter": {
         "button": "筛选",
         "title": "标签筛选",
+        "placeholder": "按类型筛选（角色/场景/道具）",
         "clearAll": "清除全部",
         "noTags": "暂无可用标签",
         "tagTypes": {
@@ -292,16 +299,16 @@
       },
       "delete": {
         "title": "确认删除",
-        "description": "确定要删除素材「{name}」吗？此操作无法撤销。",
-        "warning": "警告：此素材已被使用 {count} 次，删除后相关引用将失效。",
+        "description": "确定要删除创作素材「{name}」吗？此操作无法撤销。",
+        "warning": "警告：此创作素材已被使用 {count} 次，删除后相关引用将失效。",
         "confirm": "确认删除",
         "cancel": "取消",
         "deleting": "删除中...",
-        "success": "素材已删除",
+        "success": "创作素材已删除",
         "error": "删除失败"
       },
       "actions": {
-        "applied": "素材已应用到分镜",
+        "applied": "创作素材已应用到分镜",
         "applyError": "应用失败"
       },
       "viewMode": {
@@ -309,13 +316,19 @@
         "list": "列表视图"
       },
       "generation": {
-        "title": "AI 素材生成",
-        "subtitle": "使用 AI 从描述创作素材图片",
+        "title": "AI 创作素材",
+        "subtitle": "使用 AI 创作角色、场景、道具等图片素材",
+        "guide": {
+          "title": "你可以创作：",
+          "character": "角色 - 为剧本中的人物设计形象",
+          "scene": "场景 - 创建故事发生的环境和地点",
+          "prop": "道具 - 生成剧情所需的物品和元素"
+        },
         "form": {
           "assetName": "素材名称",
           "assetNamePlaceholder": "输入素材名称...",
           "prompt": "描述你想要创作的内容",
-          "promptPlaceholderDefault": "详细描述你想要创作的内容，例如：\n\n一位30岁的亚洲女性，短发，现代职业装，自信的微笑，工作室灯光，高清摄影，电影级质感，专业人像摄影风格...",
+          "promptPlaceholderDefault": "详细描述你想要创作的内容，例如：\n\n【角色】一位30岁的亚洲女性，短发，现代职业装，自信的微笑，工作室灯光，高清摄影，电影级质感，专业人像摄影风格\n\n【场景】现代办公室，落地窗，城市天际线，下午温暖的阳光洒进室内，简约现代的装修风格，电影级质感\n\n【道具】精致的咖啡杯，白色陶瓷材质，极简设计，木质桌面背景，柔和的自然光，产品摄影风格",
           "promptPlaceholderWithReference": "基于参考图进行创作，例如：\n\n调整为温暖的日落色调，保持人物姿势和表情不变，添加柔和的背光效果，增强画面氛围感...",
           "promptHint": "详细的描述能帮助AI生成更准确的图片。包含：主体、风格、光线、构图等细节。",
           "parameters": "高级参数",
@@ -325,9 +338,9 @@
           "referenceAssets": "参考图片",
           "referenceAssetsCount": "({count}/14)",
           "referenceAssetsOptional": "可选",
-          "referenceAssetsHint": "从左侧素材库选择参考图片，AI将基于这些图片进行创作",
+          "referenceAssetsHint": "从左侧创作素材库选择参考图片，AI将基于这些图片进行创作",
           "noReferenceSelected": "尚未选择参考图片",
-          "noReferenceHint": "从左侧素材库中选择，或直接开始创作",
+          "noReferenceHint": "从左侧创作素材库中选择，或直接开始创作",
           "referenceSelectedCount": "已选择 {count} 张参考图"
         },
         "resolutions": {
@@ -343,18 +356,18 @@
         },
         "results": {
           "title": "创作成功",
-          "savedToLibrary": "图片已自动保存到素材库，可在左侧素材面板中查看",
+          "savedToLibrary": "图片已自动保存到创作素材库，可在左侧创作素材面板中查看",
           "count": "{count} 张"
         },
         "errors": {
           "promptRequired": "请输入提示词",
           "nameRequired": "请输入素材名称",
-          "noReferenceSelected": "请先选择参考素材",
+          "noReferenceSelected": "请先选择参考创作素材",
           "generationFailed": "创作失败",
           "saveFailed": "保存失败"
         },
         "success": {
-          "generated": "成功创作 {count} 张图片并保存到素材库"
+          "generated": "成功创作 {count} 张图片并保存到创作素材库"
         }
       }
     }

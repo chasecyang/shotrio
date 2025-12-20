@@ -19,6 +19,18 @@ interface AgentPanelProps {
   projectId: string;
 }
 
+// 辅助函数：创建新的 iterations 数组（确保触发 React 重新渲染）
+// 放在组件外部避免每次渲染创建新函数
+function updateIterations(
+  iterations: IterationStep[],
+  index: number,
+  updates: Partial<IterationStep>
+): IterationStep[] {
+  return iterations.map((iter, i) =>
+    i === index ? { ...iter, ...updates } : iter
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
   const agent = useAgent();
@@ -36,6 +48,147 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [agent.state.messages, isProcessing]);
+
+  // 处理流式响应的通用函数
+  const processStreamingResponse = useCallback(async (
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    tempMsgId: string
+  ) => {
+    const decoder = new TextDecoder();
+    let iterations: IterationStep[] = [];
+    let currentIterationIndex = -1;
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      // 解码并添加到缓冲区
+      buffer += decoder.decode(value, { stream: true });
+
+      // 按行分割
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // 保留最后一个不完整的行
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        try {
+          const event = JSON.parse(line);
+
+          switch (event.type) {
+            case "status":
+              // Status events are handled by the typing indicator
+              break;
+
+            case "iteration_start":
+              // 创建新的迭代步骤
+              iterations = [...iterations, {
+                id: `iter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                iterationNumber: event.data.iterationNumber,
+                timestamp: new Date(),
+              }];
+              currentIterationIndex = iterations.length - 1;
+              agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+              break;
+
+            case "thinking":
+              if (currentIterationIndex >= 0) {
+                iterations = updateIterations(iterations, currentIterationIndex, {
+                  thinkingProcess: event.data.content,
+                });
+                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+              }
+              break;
+
+            case "content":
+              if (currentIterationIndex >= 0) {
+                iterations = updateIterations(iterations, currentIterationIndex, {
+                  content: event.data.content,
+                });
+                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+              }
+              break;
+
+            case "function_start":
+              toast.info(`正在执行：${event.data.displayName || event.data.description || event.data.name}`);
+              if (currentIterationIndex >= 0) {
+                iterations = updateIterations(iterations, currentIterationIndex, {
+                  functionCall: {
+                    id: `fc-${Date.now()}`,
+                    name: event.data.name,
+                    description: event.data.description,
+                    displayName: event.data.displayName,
+                    category: event.data.category as FunctionCategory,
+                    status: "executing",
+                  },
+                });
+                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+              }
+              break;
+
+            case "function_result":
+              if (currentIterationIndex >= 0 && iterations[currentIterationIndex]?.functionCall) {
+                const fc = iterations[currentIterationIndex].functionCall!;
+                iterations = updateIterations(iterations, currentIterationIndex, {
+                  functionCall: {
+                    ...fc,
+                    status: event.data.success ? "completed" : "failed",
+                    result: event.data.success ? "执行成功" : undefined,
+                    error: event.data.success ? undefined : event.data.error,
+                  },
+                });
+                if (event.data.success && event.data.jobId) {
+                  agent.addTask({
+                    functionCallId: event.data.functionCallId,
+                    functionName: fc.name,
+                    jobId: event.data.jobId,
+                    status: "running",
+                  });
+                }
+                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+              }
+              break;
+
+            case "pending_action":
+              // 添加待确认操作
+              const actionData = event.data;
+              agent.addPendingAction({
+                functionCalls: [actionData.functionCall],
+                message: actionData.message,
+                conversationState: actionData.conversationState,
+              });
+              break;
+
+            case "complete":
+              // 流结束
+              break;
+
+            case "error":
+              toast.error(event.data);
+              if (currentIterationIndex >= 0) {
+                const currentContent = iterations[currentIterationIndex]?.content || "";
+                iterations = updateIterations(iterations, currentIterationIndex, {
+                  content: currentContent + `\n\n错误：${event.data}`,
+                });
+                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+              }
+              break;
+          }
+        } catch (parseError) {
+          console.error("解析事件失败:", line, parseError);
+        }
+      }
+    }
+
+    // 最终更新消息，标记流式完成
+    const finalContent = iterations.map((iter) => iter.content).filter(Boolean).join("\n\n");
+    agent.updateMessage(tempMsgId, {
+      content: finalContent || "完成",
+      iterations,
+      isStreaming: false,
+    });
+  }, [agent]);
 
   // 发送消息（流式版本）
   const handleSend = useCallback(async () => {
@@ -82,154 +235,7 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
         throw new Error("无法获取响应流");
       }
 
-      const decoder = new TextDecoder();
-      const iterations: IterationStep[] = [];
-      let currentIteration: IterationStep | null = null;
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        // 解码并添加到缓冲区
-        buffer += decoder.decode(value, { stream: true });
-
-        // 按行分割
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // 保留最后一个不完整的行
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          try {
-            const event = JSON.parse(line);
-
-            switch (event.type) {
-              case "status":
-                // Status events are handled by the typing indicator
-                break;
-
-              case "iteration_start":
-                // 创建新的迭代步骤
-                currentIteration = {
-                  id: `iter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  iterationNumber: event.data.iterationNumber,
-                  timestamp: new Date(),
-                };
-                iterations.push(currentIteration);
-                agent.updateMessage(tempMsgId, {
-                  iterations: [...iterations],
-                  isStreaming: true,
-                });
-                break;
-
-              case "thinking":
-                if (currentIteration) {
-                  currentIteration.thinkingProcess = event.data.content;
-                  agent.updateMessage(tempMsgId, {
-                    iterations: [...iterations],
-                    isStreaming: true,
-                  });
-                }
-                break;
-
-              case "content":
-                if (currentIteration) {
-                  // event.data.content 已经是该轮的完整累积内容
-                  currentIteration.content = event.data.content;
-                  agent.updateMessage(tempMsgId, {
-                    iterations: [...iterations],
-                    isStreaming: true,
-                  });
-                }
-                break;
-
-              case "function_start":
-                // 显示正在执行的工具
-                toast.info(`正在执行：${event.data.displayName || event.data.description || event.data.name}`);
-                if (currentIteration) {
-                  currentIteration.functionCall = {
-                    id: `fc-${Date.now()}`,
-                    name: event.data.name,
-                    description: event.data.description,
-                    displayName: event.data.displayName,
-                    category: event.data.category as FunctionCategory,
-                    status: "executing",
-                  };
-                  agent.updateMessage(tempMsgId, {
-                    iterations: [...iterations],
-                    isStreaming: true,
-                  });
-                }
-                break;
-
-              case "function_result":
-                if (currentIteration?.functionCall) {
-                  if (event.data.success) {
-                    currentIteration.functionCall.status = "completed";
-                    currentIteration.functionCall.result = "执行成功";
-                    if (event.data.jobId) {
-                      // 如果创建了 Job，添加任务追踪
-                      agent.addTask({
-                        functionCallId: event.data.functionCallId,
-                        functionName: currentIteration.functionCall.name,
-                        jobId: event.data.jobId,
-                        status: "running",
-                      });
-                    }
-                  } else {
-                    currentIteration.functionCall.status = "failed";
-                    currentIteration.functionCall.error = event.data.error;
-                  }
-                  agent.updateMessage(tempMsgId, {
-                    iterations: [...iterations],
-                    isStreaming: true,
-                  });
-                }
-                break;
-
-              case "pending_action":
-                // 添加待确认操作
-                const actionData = event.data;
-                agent.addPendingAction({
-                  functionCalls: [actionData.functionCall],
-                  message: actionData.message,
-                });
-                break;
-
-              case "complete":
-                // 流结束
-                break;
-
-              case "error":
-                toast.error(event.data);
-                if (currentIteration) {
-                  currentIteration.content = (currentIteration.content || "") + `\n\n错误：${event.data}`;
-                }
-                agent.updateMessage(tempMsgId, {
-                  iterations: [...iterations],
-                  isStreaming: true,
-                });
-                break;
-            }
-          } catch (parseError) {
-            console.error("解析事件失败:", line, parseError);
-          }
-        }
-      }
-
-      // 最终更新消息，标记流式完成
-      // 合并所有迭代的content作为完整内容
-      const finalContent = iterations
-        .map((iter) => iter.content)
-        .filter(Boolean)
-        .join("\n\n");
-      
-      agent.updateMessage(tempMsgId, {
-        content: finalContent || "完成",
-        iterations: [...iterations],
-        isStreaming: false,
-      });
+      await processStreamingResponse(reader, tempMsgId);
     } catch (error) {
       console.error("流式处理失败:", error);
       toast.error("发送失败");
@@ -240,7 +246,66 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
     } finally {
       setIsProcessing(false);
     }
-  }, [input, isProcessing, agent]);
+  }, [input, isProcessing, agent, processStreamingResponse]);
+
+  // 恢复对话（用户确认操作后）
+  const resumeConversation = useCallback(async (
+    action: typeof agent.state.pendingActions[0], 
+    executionResults: Array<{
+      functionCallId: string;
+      success: boolean;
+      data?: unknown;
+      error?: string;
+      jobId?: string;
+    }> | undefined
+  ) => {
+    if (!action.conversationState || !executionResults) return;
+
+    setIsProcessing(true);
+
+    // 创建新的 AI 消息用于继续对话
+    const tempMsgId = agent.addMessage({
+      role: "assistant",
+      content: "",
+      isStreaming: true,
+      iterations: [],
+    });
+
+    try {
+      // 调用恢复对话 API
+      const response = await fetch("/api/agent/resume-stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversationState: action.conversationState,
+          executionResults,
+          context: agent.currentContext,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("无法获取响应流");
+      }
+
+      await processStreamingResponse(reader, tempMsgId);
+    } catch (error) {
+      console.error("恢复对话失败:", error);
+      toast.error("继续执行失败");
+      agent.updateMessage(tempMsgId, {
+        content: `继续执行时出错：${error instanceof Error ? error.message : "未知错误"}`,
+        isStreaming: false,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [agent, processStreamingResponse]);
 
   // 确认操作
   const handleConfirmAction = useCallback(async (actionId: string) => {
@@ -255,12 +320,6 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
 
       if (response.success) {
         toast.success(response.message || "执行成功");
-
-        // 添加结果消息
-        agent.addMessage({
-          role: "assistant",
-          content: response.message || "操作已完成",
-        });
 
         // 移除 pending action
         agent.removePendingAction(action.id);
@@ -278,6 +337,17 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
             }
           });
         }
+
+        // 如果有对话状态，恢复对话让 Agent 继续
+        if (action.conversationState) {
+          await resumeConversation(action, response.executedResults);
+        } else {
+          // 没有对话状态时，添加结果消息（向后兼容）
+          agent.addMessage({
+            role: "assistant",
+            content: response.message || "操作已完成",
+          });
+        }
       } else {
         toast.error(response.error || "执行失败");
         agent.addMessage({
@@ -289,7 +359,7 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       console.error("执行操作失败:", error);
       toast.error("执行失败");
     }
-  }, [agent]);
+  }, [agent, resumeConversation]);
 
   // 取消操作
   const handleCancelAction = useCallback(async (actionId: string) => {

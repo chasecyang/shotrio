@@ -4,19 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Grid3x3, List, Upload, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TagFilter } from "./tag-filter";
-import { TagType } from "@/types/asset";
-
-interface TagFilterItem {
-  tagType: TagType;
-  tagValue: string;
-}
 
 interface AssetToolbarProps {
   viewMode: "grid" | "list";
   onViewModeChange: (mode: "grid" | "list") => void;
-  selectedTags: TagFilterItem[];
-  onTagsChange: (tags: TagFilterItem[]) => void;
-  availableTags: { tagType: TagType; tagValue: string; count: number }[];
+  selectedTags: string[];
+  onTagsChange: (tags: string[]) => void;
+  availableTags: { tagValue: string; count: number }[];
   onUpload: () => void;
   onOpenAssetGeneration: () => void;
 }
