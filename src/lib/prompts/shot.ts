@@ -43,7 +43,7 @@ const CAMERA_MOVEMENT_DESCRIPTIONS: Record<string, string> = {
 export function buildShotImagePrompt(params: {
   shotSize: string;
   cameraMovement: string;
-  visualDescription: string;
+  description: string;
   sceneName?: string;
   sceneDescription?: string;
   characters: Array<{
@@ -56,7 +56,7 @@ export function buildShotImagePrompt(params: {
   const {
     shotSize,
     cameraMovement,
-    visualDescription,
+    description,
     sceneName,
     sceneDescription,
     characters,
@@ -111,9 +111,9 @@ export function buildShotImagePrompt(params: {
     parts.push(`Scene: ${sceneInfo}.`);
   }
 
-  // 4. 画面描述（来自分镜脚本的 visualDescription）
-  if (visualDescription) {
-    parts.push(visualDescription);
+  // 4. 画面描述（来自分镜的 description）
+  if (description) {
+    parts.push(description);
   }
 
 
@@ -126,15 +126,15 @@ export function buildShotImagePrompt(params: {
 export function buildSimpleShotPrompt(params: {
   shotSize: string;
   cameraMovement: string;
-  visualDescription: string;
+  description: string;
 }): string {
-  const { shotSize, cameraMovement, visualDescription } = params;
+  const { shotSize, cameraMovement, description } = params;
 
   const shotSizeDesc = SHOT_SIZE_DESCRIPTIONS[shotSize] || "medium shot";
   const cameraMovementDesc =
     CAMERA_MOVEMENT_DESCRIPTIONS[cameraMovement] || "static camera";
 
-  return `${shotSizeDesc}, ${cameraMovementDesc}. ${visualDescription} Professional film storyboard quality.`;
+  return `${shotSizeDesc}, ${cameraMovementDesc}. ${description} Professional film storyboard quality.`;
 }
 
 /**
@@ -173,132 +173,5 @@ export function getCameraMovementName(movement: CameraMovement): string {
     handheld: "手持",
   };
   return names[movement] || movement;
-}
-
-/**
- * 构建分镜拆解的AI Prompt
- * 使用DeepSeek AI分析分镜内容，识别自然的拆分点
- */
-export function buildShotDecompositionPrompt(params: {
-  shotSize: string;
-  cameraMovement: string;
-  visualDescription: string;
-  duration: number;
-  characters: Array<{ 
-    id: string;
-    name: string; 
-    appearance?: string;
-  }>;
-  dialogues: Array<{ 
-    characterId?: string;
-    characterName?: string; 
-    text: string; 
-    order: number;
-  }>;
-  sceneName?: string;
-  sceneDescription?: string;
-  sceneId?: string;
-}): string {
-  const {
-    shotSize,
-    cameraMovement,
-    visualDescription,
-    duration,
-    characters,
-    dialogues,
-    sceneName,
-    sceneDescription,
-    sceneId,
-  } = params;
-
-  const shotSizeDesc = SHOT_SIZE_DESCRIPTIONS[shotSize] || shotSize;
-  const cameraMovementDesc = CAMERA_MOVEMENT_DESCRIPTIONS[cameraMovement] || cameraMovement;
-
-  // 构建角色信息
-  const characterInfo = characters.map(char => 
-    `- ${char.name} (ID: ${char.id})${char.appearance ? `: ${char.appearance}` : ''}`
-  ).join('\n');
-
-  // 构建对话信息
-  const dialogueInfo = dialogues.map((d, idx) => 
-    `${idx + 1}. ${d.characterName || '旁白'}: "${d.text}"`
-  ).join('\n');
-
-  return `你是一位专业的电影分镜师，需要将一个包含多个对话或动作的复杂分镜拆解成多个独立的小分镜，使每个分镜更加聚焦和易于制作。
-
-## 原分镜信息
-
-**景别**: ${getShotSizeName(shotSize as ShotSize)} (${shotSizeDesc})
-**运镜**: ${getCameraMovementName(cameraMovement as CameraMovement)} (${cameraMovementDesc})
-**时长**: ${duration}ms (${(duration / 1000).toFixed(1)}秒)
-**场景**: ${sceneName || '未指定'}${sceneId ? ` (ID: ${sceneId})` : ''}
-${sceneDescription ? `**场景描述**: ${sceneDescription}` : ''}
-**视觉描述**: ${visualDescription}
-
-**角色列表**:
-${characterInfo || '无角色'}
-
-**对话内容** (共${dialogues.length}句):
-${dialogueInfo || '无对话'}
-
-## 拆解任务
-
-请分析这个分镜，识别自然的拆分点，将其拆解为多个子分镜。拆分时考虑以下因素：
-
-1. **对话主体变化**: 不同角色说话时，可以考虑使用正反打镜头（交替的中景或特写）
-2. **情绪转折**: 对话中的情绪变化（如平静→愤怒）可能需要景别调整
-3. **动作变化**: 视觉描述中提到的显著动作变化（如坐→站）
-4. **时间跨度**: 描述中暗示的时间流逝
-5. **镜头语言**: 根据对话内容推荐合适的景别和运镜方式
-
-## 输出要求
-
-请以JSON格式返回拆解方案，包含以下字段：
-
-\`\`\`json
-{
-  "reasoning": "你的拆解思路和理由（2-3句话说明为什么这样拆分）",
-  "decomposedShots": [
-    {
-      "order": 1,
-      "shotSize": "medium_shot",
-      "cameraMovement": "static",
-      "duration": 3000,
-      "visualDescription": "这个子分镜的视觉描述",
-      "visualPrompt": "英文的图像生成prompt",
-      "audioPrompt": "音效提示（可选）",
-      "characters": [
-        {
-          "characterId": "角色ID",
-          "position": "center|left|right|foreground|background",
-          "action": "该角色在此分镜中的动作"
-        }
-      ],
-      "dialogues": [
-        {
-          "characterId": "角色ID（旁白可为null）",
-          "dialogueText": "对话内容",
-          "emotionTag": "neutral|happy|sad|angry|surprised|fearful",
-          "order": 1
-        }
-      ]
-    }
-  ]
-}
-\`\`\`
-
-**重要规则**:
-- 每个子分镜应该有明确的视觉焦点
-- 对话场景建议使用中景(medium_shot)或特写(close_up)
-- 人物切换时考虑使用正反打
-- 动作幅度大的场景使用全景(full_shot)或远景(long_shot)
-- 情绪高潮使用特写(close_up)或大特写(extreme_close_up)
-- 每个对话的时长根据文字内容估算（约每秒3-4个汉字）
-- 继承原分镜的场景ID（sceneId: ${sceneId || 'null'}）
-- visualPrompt必须是英文
-- 确保所有对话都被分配到子分镜中
-- 子分镜的总时长应该接近或略大于原分镜时长
-
-请返回纯JSON，不要包含markdown代码块标记。`;
 }
 

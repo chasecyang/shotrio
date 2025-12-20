@@ -13,13 +13,12 @@ import { TimelineContainer } from "./timeline/timeline-container";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
-import { createShot, deleteShot, batchGenerateShotImages } from "@/lib/actions/project";
+import { createShot, deleteShot } from "@/lib/actions/project";
 import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { getExportableShots } from "@/lib/actions/video/export";
 import { toast } from "sonner";
 import { FileText, Eye, Film, Bot } from "lucide-react";
-import { ShotDecompositionDialog } from "./preview-panel/shot-decomposition-dialog";
 import { AgentPanel, AgentProvider } from "./agent-panel";
 import JSZip from "jszip";
 
@@ -36,33 +35,19 @@ function EditorLayoutInner({
   resourcePanel,
   previewPanel,
 }: EditorLayoutProps) {
-  const { state, dispatch, closeShotDecompositionDialog, jobs } = useEditor();
+  const { state, dispatch, jobs } = useEditor();
 
   // 注册键盘快捷键
   useEditorKeyboard();
 
   // 批量生成的 loading 状态
-  const [isBatchGeneratingImages, setIsBatchGeneratingImages] = useState(false);
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
   const [isExportingVideos, setIsExportingVideos] = useState(false);
-
-  // 检查是否有活跃的批量生成任务
-  const hasBatchImageJob = jobs.some(job => 
-    job.type === 'batch_shot_image_generation' && 
-    (job.status === 'pending' || job.status === 'processing')
-  );
 
   const hasBatchVideoJob = jobs.some(job => 
     job.type === 'batch_video_generation' && 
     (job.status === 'pending' || job.status === 'processing')
   );
-
-  // 当检测到 Job 时，重置本地 loading 状态
-  useEffect(() => {
-    if (hasBatchImageJob) {
-      setIsBatchGeneratingImages(false);
-    }
-  }, [hasBatchImageJob]);
 
   useEffect(() => {
     if (hasBatchVideoJob) {
@@ -149,30 +134,6 @@ function EditorLayoutInner({
     } catch (error) {
       console.error(error);
       toast.error("删除分镜失败");
-    }
-  };
-
-  // 批量生成图片
-  const handleGenerateImages = async () => {
-    if (state.selectedShotIds.length === 0) {
-      toast.error("请先选择要生成图片的分镜");
-      return;
-    }
-
-    setIsBatchGeneratingImages(true);
-    try {
-      const result = await batchGenerateShotImages(state.selectedShotIds);
-      if (result.success) {
-        toast.success(`已启动 ${state.selectedShotIds.length} 个分镜的图片生成任务`);
-        // 不在这里重置状态，等待 Job 被检测到后再重置
-      } else {
-        toast.error(result.error || "启动失败");
-        setIsBatchGeneratingImages(false); // 失败时才重置
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("启动批量生成失败");
-      setIsBatchGeneratingImages(false); // 出错时才重置
     }
   };
 
@@ -364,10 +325,8 @@ function EditorLayoutInner({
               <TimelineContainer 
                 onAddShot={handleAddShot}
                 onDeleteShots={handleDeleteShots}
-                onGenerateImages={handleGenerateImages}
                 onGenerateVideos={handleGenerateVideos}
                 onExportVideos={handleExportVideos}
-                isBatchGeneratingImages={isBatchGeneratingImages || hasBatchImageJob}
                 isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
                 isExportingVideos={isExportingVideos}
               />
@@ -431,10 +390,8 @@ function EditorLayoutInner({
                 <TimelineContainer 
                   onAddShot={handleAddShot}
                   onDeleteShots={handleDeleteShots}
-                  onGenerateImages={handleGenerateImages}
                   onGenerateVideos={handleGenerateVideos}
                   onExportVideos={handleExportVideos}
-                  isBatchGeneratingImages={isBatchGeneratingImages || hasBatchImageJob}
                   isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
                   isExportingVideos={isExportingVideos}
                 />
@@ -443,29 +400,6 @@ function EditorLayoutInner({
           </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
-
-      {/* 分镜拆解对话框 */}
-      {state.shotDecompositionDialog.open && state.shotDecompositionDialog.jobId && (
-        <ShotDecompositionDialog
-          shotId={state.shotDecompositionDialog.shotId || ""}
-          jobId={state.shotDecompositionDialog.jobId}
-          open={state.shotDecompositionDialog.open}
-          onOpenChange={(open) => {
-            if (!open) {
-              closeShotDecompositionDialog();
-            }
-          }}
-          onImportSuccess={async () => {
-            // 刷新分镜列表
-            if (state.selectedEpisodeId) {
-              const result = await refreshEpisodeShots(state.selectedEpisodeId);
-              if (result.success && result.shots) {
-                dispatch({ type: "SET_SHOTS", payload: result.shots });
-              }
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

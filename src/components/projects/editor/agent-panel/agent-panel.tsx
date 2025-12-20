@@ -19,6 +19,13 @@ interface AgentPanelProps {
   projectId: string;
 }
 
+// 分镜相关操作，执行成功后需要刷新时间轴
+const SHOT_RELATED_FUNCTIONS = [
+  'create_shot', 'batch_create_shots',
+  'update_shot', 'batch_update_shot_duration',
+  'delete_shots', 'reorder_shots'
+];
+
 // 辅助函数：创建新的 iterations 数组（确保触发 React 重新渲染）
 // 放在组件外部避免每次渲染创建新函数
 function updateIterations(
@@ -167,6 +174,10 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
                     jobId: event.data.jobId,
                     status: "running",
                   });
+                }
+                // 如果是分镜相关操作执行成功，触发时间轴刷新
+                if (event.data.success && SHOT_RELATED_FUNCTIONS.includes(fc.name)) {
+                  window.dispatchEvent(new CustomEvent("shots-changed"));
                 }
                 agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
               }
@@ -345,6 +356,12 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
 
         // 移除 pending action
         agent.removePendingAction(action.id);
+
+        // 如果是分镜相关操作，触发时间轴刷新
+        const functionName = action.functionCalls[0]?.name;
+        if (functionName && SHOT_RELATED_FUNCTIONS.includes(functionName)) {
+          window.dispatchEvent(new CustomEvent("shots-changed"));
+        }
 
         // 如果有任务 ID，创建任务追踪
         if (response.executedResults) {

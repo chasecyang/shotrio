@@ -1,30 +1,4 @@
-import { CameraMovement, EmotionTag } from "@/types/project";
-
-/**
- * 情绪标签的中文描述映射（用于视频生成）
- */
-const emotionDescriptionsCN: Record<EmotionTag, string> = {
-  neutral: "平静地",
-  happy: "开心地",
-  sad: "悲伤地",
-  angry: "愤怒地",
-  surprised: "惊讶地",
-  fearful: "恐惧地",
-  disgusted: "厌恶地",
-};
-
-/**
- * 情绪标签的英文描述映射（备用）
- */
-const emotionDescriptionsEN: Record<EmotionTag, string> = {
-  neutral: "calmly",
-  happy: "happily",
-  sad: "sadly",
-  angry: "angrily",
-  surprised: "in surprise",
-  fearful: "fearfully",
-  disgusted: "disgustedly",
-};
+import { CameraMovement } from "@/types/project";
 
 /**
  * 运镜类型的中文描述映射
@@ -89,81 +63,29 @@ export function getKlingDuration(durationMs: number): "5" | "10" {
 
 /**
  * 生成完整的视频生成prompt
- * 优化版本：更适合Kling视频生成，支持音频合成
+ * 优化版本：更适合Kling视频生成
  */
 export function buildVideoPrompt(params: {
-  visualDescription?: string;  // 画面描述（中文）
+  description?: string;  // 描述（中文）
   visualPrompt?: string;       // 视觉提示词（英文）
   cameraMovement: CameraMovement | null;
-  dialogues?: Array<{          // 对话内容
-    characterName?: string;
-    dialogueText: string;
-    emotionTag?: EmotionTag | null;  // 情绪标签
-  }>;
 }): string {
-  const { visualDescription, visualPrompt, cameraMovement, dialogues } = params;
+  const { description, visualPrompt, cameraMovement } = params;
   
   const parts: string[] = [];
   
   // 判断是使用中文还是英文prompt
-  const isChinesePrompt = !!visualDescription;
+  const isChinesePrompt = !!description;
   
   // 1. 运镜描述（根据语言调整）
   const motionPrompt = generateMotionPrompt(cameraMovement, isChinesePrompt);
   parts.push(motionPrompt);
   
   // 2. 画面描述（优先使用中文描述，其次是英文prompt）
-  
-  if (visualDescription) {
-    parts.push(visualDescription);
+  if (description) {
+    parts.push(description);
   } else if (visualPrompt) {
     parts.push(visualPrompt);
-  }
-  
-  // 3. 对话内容（根据画面描述语言调整格式）
-  if (dialogues && dialogues.length > 0) {
-    const dialogueParts = dialogues.map((d) => {
-      if (isChinesePrompt) {
-        // 中文格式：更自然的中文表达，适合音频生成
-        const emotion = d.emotionTag ? emotionDescriptionsCN[d.emotionTag] : null;
-        
-        if (d.characterName) {
-          // 有角色名
-          if (emotion && d.emotionTag !== "neutral") {
-            return `${d.characterName}${emotion}说："${d.dialogueText}"`;
-          }
-          return `${d.characterName}说："${d.dialogueText}"`;
-        }
-        
-        // 旁白
-        if (emotion && d.emotionTag !== "neutral") {
-          return `旁白${emotion}："${d.dialogueText}"`;
-        }
-        return `旁白："${d.dialogueText}"`;
-      } else {
-        // 英文格式
-        const emotion = d.emotionTag ? emotionDescriptionsEN[d.emotionTag] : null;
-        
-        if (d.characterName) {
-          if (emotion && d.emotionTag !== "neutral") {
-            return `${d.characterName} says ${emotion}, "${d.dialogueText}"`;
-          }
-          return `${d.characterName} says, "${d.dialogueText}"`;
-        }
-        
-        if (emotion && d.emotionTag !== "neutral") {
-          return `Narration ${emotion}, "${d.dialogueText}"`;
-        }
-        return `Narration, "${d.dialogueText}"`;
-      }
-    });
-    
-    // 多个对话时，分号分隔更清晰
-    const dialogueText = dialogueParts.length > 1 
-      ? dialogueParts.join("；") 
-      : dialogueParts[0];
-    
-    parts.push(dialogueText);
   }
   
   // 使用句号或逗号连接各部分

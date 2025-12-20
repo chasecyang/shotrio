@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback } from "react";
+import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect } from "react";
 import { ProjectDetail, ShotDetail, Episode } from "@/types/project";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import { useTaskRefresh } from "@/hooks/use-task-refresh";
@@ -75,13 +75,6 @@ export interface EditorState {
     jobId: string | null;
   };
 
-  // 分镜拆解对话框状态
-  shotDecompositionDialog: {
-    open: boolean;
-    shotId: string | null;
-    jobId: string | null;
-  };
-
   // 素材生成状态
   assetGeneration: AssetGenerationState;
 }
@@ -105,8 +98,6 @@ type EditorAction =
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "OPEN_STORYBOARD_EXTRACTION_DIALOG"; payload: { episodeId: string; jobId: string } }
   | { type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" }
-  | { type: "OPEN_SHOT_DECOMPOSITION_DIALOG"; payload: { shotId: string; jobId: string } }
-  | { type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" }
   | { type: "START_PLAYBACK" }
   | { type: "STOP_PLAYBACK" }
   | { type: "SET_PLAYBACK_SHOT_INDEX"; payload: number }
@@ -138,11 +129,6 @@ const initialState: EditorState = {
   storyboardExtractionDialog: {
     open: false,
     episodeId: null,
-    jobId: null,
-  },
-  shotDecompositionDialog: {
-    open: false,
-    shotId: null,
     jobId: null,
   },
   assetGeneration: {
@@ -325,26 +311,6 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         },
       };
 
-    case "OPEN_SHOT_DECOMPOSITION_DIALOG":
-      return {
-        ...state,
-        shotDecompositionDialog: {
-          open: true,
-          shotId: action.payload.shotId,
-          jobId: action.payload.jobId,
-        },
-      };
-
-    case "CLOSE_SHOT_DECOMPOSITION_DIALOG":
-      return {
-        ...state,
-        shotDecompositionDialog: {
-          open: false,
-          shotId: null,
-          jobId: null,
-        },
-      };
-
     case "START_PLAYBACK":
       return {
         ...state,
@@ -444,8 +410,6 @@ interface EditorContextType {
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
   openStoryboardExtractionDialog: (episodeId: string, jobId: string) => void;
   closeStoryboardExtractionDialog: () => void;
-  openShotDecompositionDialog: (shotId: string, jobId: string) => void;
-  closeShotDecompositionDialog: () => void;
   // 播放控制方法
   startPlayback: () => void;
   stopPlayback: () => void;
@@ -526,6 +490,21 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     }, []),
   });
 
+  // 监听 shots-changed 事件，用于 Agent 分镜操作后刷新时间轴
+  useEffect(() => {
+    const handleShotsChanged = async () => {
+      if (state.selectedEpisodeId) {
+        const result = await refreshEpisodeShots(state.selectedEpisodeId);
+        if (result.success && result.shots) {
+          dispatch({ type: "SET_SHOTS", payload: result.shots });
+        }
+      }
+    };
+
+    window.addEventListener("shots-changed", handleShotsChanged);
+    return () => window.removeEventListener("shots-changed", handleShotsChanged);
+  }, [state.selectedEpisodeId]);
+
   // 便捷方法
   const selectEpisode = useCallback((episodeId: string | null) => {
     dispatch({ type: "SELECT_EPISODE", payload: episodeId });
@@ -577,14 +556,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
 
   const closeStoryboardExtractionDialog = useCallback(() => {
     dispatch({ type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" });
-  }, []);
-
-  const openShotDecompositionDialog = useCallback((shotId: string, jobId: string) => {
-    dispatch({ type: "OPEN_SHOT_DECOMPOSITION_DIALOG", payload: { shotId, jobId } });
-  }, []);
-
-  const closeShotDecompositionDialog = useCallback(() => {
-    dispatch({ type: "CLOSE_SHOT_DECOMPOSITION_DIALOG" });
   }, []);
 
   // 播放控制方法
@@ -667,8 +638,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       updateProject,
       openStoryboardExtractionDialog,
       closeStoryboardExtractionDialog,
-      openShotDecompositionDialog,
-      closeShotDecompositionDialog,
       startPlayback,
       stopPlayback,
       nextShot,
@@ -699,8 +668,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       updateProject,
       openStoryboardExtractionDialog,
       closeStoryboardExtractionDialog,
-      openShotDecompositionDialog,
-      closeShotDecompositionDialog,
       startPlayback,
       stopPlayback,
       nextShot,

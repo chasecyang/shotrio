@@ -51,20 +51,12 @@ export const TASK_TYPE_LABELS: Record<JobType, TaskTypeConfig> = {
     label: "角色场景匹配",
     iconName: "Users",
   },
-  shot_decomposition: {
-    label: "分镜拆解",
-    iconName: "Film",
-  },
   batch_image_generation: {
     label: "批量图像生成",
     iconName: "Images",
   },
   shot_image_generation: {
     label: "分镜图生成",
-    iconName: "Images",
-  },
-  batch_shot_image_generation: {
-    label: "批量分镜图生成",
     iconName: "Images",
   },
   asset_image_generation: {
@@ -137,7 +129,6 @@ export const VIEWABLE_TASK_TYPES: JobType[] = [
   "storyboard_generation",
   "character_extraction",
   "scene_extraction",
-  "shot_decomposition",
 ];
 
 /**

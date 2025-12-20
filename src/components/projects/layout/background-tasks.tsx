@@ -168,25 +168,6 @@ export function BackgroundTasks() {
           break;
         }
         
-        case "shot_decomposition": {
-          // 分镜拆解任务：获取完整任务数据并打开预览对话框
-          const result = await getJobDetail(jobId);
-          if (!result.success || !result.job?.inputData) {
-            toast.error("无法获取任务数据");
-            return;
-          }
-          const decompositionInputData = JSON.parse(result.job.inputData);
-          const shotId = decompositionInputData.shotId;
-          
-          if (!shotId) {
-            toast.error("无法获取分镜信息");
-            return;
-          }
-
-          openShotDecompositionDialog(shotId, jobId);
-          break;
-        }
-        
         case "character_extraction":
         case "scene_extraction": {
           // 角色/场景提取任务：TODO 可以添加类似的对话框
@@ -335,14 +316,10 @@ function TaskNodeItem({
   
   // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
   // 注意：character_extraction 和 scene_extraction 在资源面板中显示横幅，不需要在这里查看
-  // 对于分镜拆解任务，即使已导入也可以查看结果
-  // 对于其他提取类任务，导入后就不再显示"查看结果"按钮
-  const canViewEvenIfImported = job.type === "shot_decomposition";
-  
   const canView = job.status === "completed" && 
                   job.type && 
                   VIEWABLE_TASK_TYPES.includes(job.type as any) &&
-                  (canViewEvenIfImported || !job.isImported);
+                  !job.isImported;
 
   const isCompleted = job.status === "completed" || job.status === "failed" || job.status === "cancelled";
 

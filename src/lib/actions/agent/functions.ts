@@ -123,7 +123,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "create_shot",
-    description: "创建一个新的分镜。需要指定景别和视觉描述，其他参数可选",
+    description: "创建一个新的分镜。需要指定景别和描述，其他参数可选",
     displayName: "创建分镜",
     parameters: {
       type: "object",
@@ -172,16 +172,16 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "string",
           description: "时长（毫秒），默认3000",
         },
-        visualDescription: {
+        description: {
           type: "string",
-          description: "视觉描述（中文），描述画面内容",
+          description: "描述（中文），包含画面内容、对话、动作、表情情绪等",
         },
         visualPrompt: {
           type: "string",
           description: "图像生成提示词（英文自然语言描述）",
         },
       },
-      required: ["episodeId", "shotSize", "visualDescription"],
+      required: ["episodeId", "shotSize", "description"],
     },
     category: "generation",
     needsConfirmation: true,
@@ -199,7 +199,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         shots: {
           type: "string",
-          description: '分镜数组（JSON字符串格式），每个分镜包含 order（序号）、shotSize（景别）、visualDescription（中文描述）、visualPrompt（英文提示词，可选）、cameraMovement（运镜，可选，默认static）、duration（时长毫秒，可选，默认3000）。示例：[{"order":1,"shotSize":"medium_shot","visualDescription":"林晓站在窗前...","visualPrompt":"A young man standing..."}]',
+          description: '分镜数组（JSON字符串格式），每个分镜包含 order（序号）、shotSize（景别）、description（描述，包含画面内容、对话、动作、表情情绪等）、visualPrompt（英文提示词，可选）、cameraMovement（运镜，可选，默认static）、duration（时长毫秒，可选，默认3000）。示例：[{"order":1,"shotSize":"medium_shot","description":"林晓站在窗前...","visualPrompt":"A young man standing..."}]',
         },
       },
       required: ["episodeId", "shots"],
@@ -211,23 +211,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   // 生成类工具（需要确认）
   // ============================================
-  {
-    name: "generate_shot_images",
-    description: "为指定的分镜生成图片",
-    displayName: "生成分镜图片",
-    parameters: {
-      type: "object",
-      properties: {
-        shotIds: {
-          type: "string",
-          description: "分镜ID数组（JSON字符串格式）",
-        },
-      },
-      required: ["shotIds"],
-    },
-    category: "generation",
-    needsConfirmation: true,
-  },
   {
     name: "generate_shot_videos",
     description: "为指定的分镜生成视频（需要分镜已有图片）",
@@ -309,7 +292,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "update_shot",
-    description: "修改分镜的属性（如时长、景别、运镜等）",
+    description: "修改分镜的属性（如时长、景别、运镜、描述等）",
     displayName: "修改分镜",
     parameters: {
       type: "object",
@@ -354,9 +337,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
             "handheld",
           ],
         },
-        visualDescription: {
+        description: {
           type: "string",
-          description: "视觉描述（中文）",
+          description: "描述（中文），包含画面内容、对话、动作、表情情绪等",
         },
         visualPrompt: {
           type: "string",

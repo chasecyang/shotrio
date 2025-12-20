@@ -10,9 +10,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Maximize2 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 
 interface AssetCardProps {
   asset: AssetWithTags;
@@ -31,6 +32,7 @@ export function AssetCard({
 }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -45,9 +47,22 @@ export function AssetCard({
     setIsDragging(false);
   };
 
+  // 共用的 Lightbox 组件
+  const lightbox = (
+    <ImageLightbox
+      open={lightboxOpen}
+      onOpenChange={setLightboxOpen}
+      src={asset.imageUrl}
+      alt={asset.name}
+      downloadFilename={`${asset.name}.png`}
+    />
+  );
+
   if (viewMode === "grid") {
     return (
-      <div
+      <>
+        {lightbox}
+        <div
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -75,6 +90,18 @@ export function AssetCard({
           {/* 悬停遮罩 */}
           {isHovered && (
             <div className="absolute inset-0 animate-in fade-in duration-200">
+              {/* 左上角放大按钮 */}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="absolute top-2 left-2 h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxOpen(true);
+                }}
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
               {/* 右上角删除按钮 */}
               <Button
                 size="sm"
@@ -153,13 +180,16 @@ export function AssetCard({
             )
           )}
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
   // 列表视图
   return (
-    <div
+    <>
+      {lightbox}
+      <div
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -174,7 +204,13 @@ export function AssetCard({
       onClick={() => onClick(asset)}
     >
       {/* 缩略图 */}
-      <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted/30 shrink-0">
+      <div 
+        className="relative w-12 h-12 rounded-md overflow-hidden bg-muted/30 shrink-0 group/thumb"
+        onClick={(e) => {
+          e.stopPropagation();
+          setLightboxOpen(true);
+        }}
+      >
         <Image
           src={asset.thumbnailUrl || asset.imageUrl}
           alt={asset.name}
@@ -182,8 +218,10 @@ export function AssetCard({
           className="object-cover"
           sizes="48px"
         />
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+          <Maximize2 className="h-4 w-4 text-white" />
+        </div>
       </div>
-
       {/* 信息 */}
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-medium truncate">{asset.name}</h4>
@@ -256,7 +294,8 @@ export function AssetCard({
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

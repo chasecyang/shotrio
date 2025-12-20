@@ -222,9 +222,9 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
               )}
             </div>
           </div>
-          {shot.visualDescription && (
+          {shot.description && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {shot.visualDescription}
+              {shot.description}
             </p>
           )}
         </div>

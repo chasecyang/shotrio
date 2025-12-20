@@ -87,7 +87,7 @@ export async function collectContext(context: AgentContext): Promise<string> {
         const shotsToShow = selectedShots.slice(0, 5);
         parts.push(`\n分镜详情（前${shotsToShow.length}个）:`);
         shotsToShow.forEach((shot) => {
-          parts.push(`- 分镜 #${shot.order}: ${shot.visualDescription || "无描述"}`);
+          parts.push(`- 分镜 #${shot.order}: ${shot.description || "无描述"}`);
           parts.push(`  景别: ${shot.shotSize}, 运镜: ${shot.cameraMovement}, 时长: ${shot.duration}ms`);
           if (shot.imageUrl) {
             parts.push(`  状态: 已生成图片`);

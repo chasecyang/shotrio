@@ -36,10 +36,6 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
     type: "episode",
     refreshOn: ["completed"],
   },
-  batch_shot_image_generation: {
-    type: "episode",
-    refreshOn: ["completed"],
-  },
 
   // 素材生成
   asset_image_generation: {
@@ -64,11 +60,6 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
   },
   storyboard_basic_extraction: {
     type: "episode",
-    refreshOn: ["completed"],
-  },
-  // storyboard_matching 已废弃
-  shot_decomposition: {
-    type: "shot",
     refreshOn: ["completed"],
   },
   character_extraction: {

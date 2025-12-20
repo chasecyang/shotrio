@@ -9,11 +9,6 @@ import {
   processStoryboardGeneration,
   processStoryboardBasicExtraction,
 } from "./processors/storyboard-processors";
-import { processShotDecomposition } from "./processors/shot-decomposition";
-import {
-  processShotImageGeneration,
-  processBatchShotImageGeneration,
-} from "./processors/shot-image-generation";
 import {
   processVideoGeneration,
   processShotVideoGeneration,
@@ -30,9 +25,6 @@ export function registerAllProcessors(): void {
   registry.registerAll({
     storyboard_generation: processStoryboardGeneration,
     storyboard_basic_extraction: processStoryboardBasicExtraction,
-    shot_decomposition: processShotDecomposition,
-    shot_image_generation: processShotImageGeneration,
-    batch_shot_image_generation: processBatchShotImageGeneration,
     asset_image_generation: processAssetImageGeneration,
     video_generation: processVideoGeneration,
     shot_video_generation: processShotVideoGeneration,

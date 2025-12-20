@@ -146,7 +146,7 @@ export function ShotPlaybackPlayer({
         {contentType === "text" && (
           <div className="max-w-2xl px-8 text-center">
             <p className="text-white text-2xl leading-relaxed">
-              {currentShot.visualDescription || "无画面描述"}
+              {currentShot.description || "无画面描述"}
             </p>
           </div>
         )}

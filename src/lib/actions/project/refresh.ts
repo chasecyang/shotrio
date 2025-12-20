@@ -27,9 +27,6 @@ export async function refreshShot(shotId: string): Promise<{
       where: eq(shot.id, shotId),
       with: {
         imageAsset: true,
-        dialogues: {
-          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
-        },
       },
     });
 
@@ -71,9 +68,6 @@ export async function refreshEpisodeShots(episodeId: string): Promise<{
       orderBy: [asc(shot.order)],
       with: {
         imageAsset: true,
-        dialogues: {
-          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
-        },
       },
     });
 

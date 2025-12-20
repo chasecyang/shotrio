@@ -49,7 +49,9 @@ import {
   Plus,
   Check,
   ChevronsUpDown,
+  Maximize2,
 } from "lucide-react";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { AssetWithTags, hasAssetTag, parseAssetMeta } from "@/types/asset";
 import { updateAsset, deleteAsset } from "@/lib/actions/asset";
 import { addAssetTag, removeAssetTag } from "@/lib/actions/asset";
@@ -84,6 +86,7 @@ export function AssetDetailDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [newTagValue, setNewTagValue] = useState("");
   const [tagComboOpen, setTagComboOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (asset) {
@@ -280,7 +283,10 @@ export function AssetDetailDialog({
           <ScrollArea className="flex-1 px-6">
             <div className="space-y-6 py-4">
               {/* 图片预览 */}
-              <div className="relative aspect-video rounded-xl overflow-hidden border bg-muted">
+              <div 
+                className="relative aspect-video rounded-xl overflow-hidden border bg-muted group cursor-pointer"
+                onClick={() => setLightboxOpen(true)}
+              >
                 <Image
                   src={asset.imageUrl}
                   alt={asset.name}
@@ -288,7 +294,22 @@ export function AssetDetailDialog({
                   className="object-contain"
                   sizes="(max-width: 700px) 100vw, 700px"
                 />
+                {/* 悬停遮罩 */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-white">
+                    <Maximize2 className="h-5 w-5" />
+                    <span className="text-sm font-medium">查看大图</span>
+                  </div>
+                </div>
               </div>
+              {/* Lightbox */}
+              <ImageLightbox
+                open={lightboxOpen}
+                onOpenChange={setLightboxOpen}
+                src={asset.imageUrl}
+                alt={asset.name}
+                downloadFilename={`${asset.name}.png`}
+              />
 
               {/* 基本信息 */}
               <div className="space-y-3">

@@ -28,13 +28,4 @@ export {
   deleteShot,
   reorderShots,
   importExtractedShots,
-  // 对话管理
-  addDialogueToShot,
-  updateShotDialogue,
-  deleteShotDialogue,
-  reorderShotDialogues,
-  // 图片生成
-  generateShotImage,
-  batchGenerateShotImages,
-  copyShotImage,
 } from "./shot";

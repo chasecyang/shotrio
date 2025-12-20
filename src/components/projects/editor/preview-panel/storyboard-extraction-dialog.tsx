@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Film, CheckCircle2, AlertCircle, Users, MapPin, MessageSquare, Trash2 } from "lucide-react";
+import { Loader2, Film, CheckCircle2, AlertCircle, Users, MapPin, Trash2 } from "lucide-react";
 import { importExtractedShots } from "@/lib/actions/project";
 import { getJobStatus } from "@/lib/actions/job";
 import { markJobAsImported } from "@/lib/actions/job/user-operations";
@@ -53,7 +53,6 @@ export function StoryboardExtractionDialog({
   const [importResult, setImportResult] = useState<{
     totalShots: number;
     totalCharacters: number;
-    totalDialogues: number;
   } | null>(null);
 
   const shotSizeOptions = getShotSizeOptions();
@@ -177,7 +176,6 @@ export function StoryboardExtractionDialog({
       setImportResult({
         totalShots: selectedShotList.length,
         totalCharacters: selectedShotList.reduce((sum, shot) => sum + (shot.characters?.length || 0), 0),
-        totalDialogues: selectedShotList.reduce((sum, shot) => sum + (shot.dialogues?.length || 0), 0),
       });
       setStep("success");
 
@@ -237,20 +235,6 @@ export function StoryboardExtractionDialog({
     setExtractedShots(newShots);
   };
 
-  const updateDialogue = (shotIndex: number, dialogueIndex: number, updates: Partial<ExtractedShot["dialogues"][0]>) => {
-    const newShots = [...extractedShots];
-    const newDialogues = [...newShots[shotIndex].dialogues];
-    newDialogues[dialogueIndex] = { ...newDialogues[dialogueIndex], ...updates };
-    newShots[shotIndex] = { ...newShots[shotIndex], dialogues: newDialogues };
-    setExtractedShots(newShots);
-  };
-
-  const deleteDialogue = (shotIndex: number, dialogueIndex: number) => {
-    const newShots = [...extractedShots];
-    const newDialogues = newShots[shotIndex].dialogues.filter((_, idx) => idx !== dialogueIndex);
-    newShots[shotIndex] = { ...newShots[shotIndex], dialogues: newDialogues };
-    setExtractedShots(newShots);
-  };
 
   const selectedCount = selectedShots.size;
   const currentShot = extractedShots[selectedShotIndex];
@@ -331,7 +315,6 @@ export function StoryboardExtractionDialog({
                     <div className="p-2 space-y-1.5">
                       {extractedShots.map((shot, index) => {
                         const hasCharacters = shot.characters && shot.characters.length > 0;
-                        const hasDialogues = shot.dialogues && shot.dialogues.length > 0;
                         const matchedScene = scenes.find(s => s.id === shot.sceneId);
                         const sceneMatchConfidence = shot.sceneMatchConfidence || 0;
 
@@ -360,7 +343,7 @@ export function StoryboardExtractionDialog({
                                   </Badge>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground line-clamp-2">
-                                  {shot.visualDescription}
+                                  {shot.description}
                                 </p>
                                 {/* 场景信息显示 */}
                                 {matchedScene && (
@@ -381,12 +364,6 @@ export function StoryboardExtractionDialog({
                                     <Badge variant="secondary" className="text-[9px] h-4 px-1">
                                       <Users className="w-2.5 h-2.5 mr-0.5" />
                                       {shot.characters.length}
-                                    </Badge>
-                                  )}
-                                  {hasDialogues && (
-                                    <Badge variant="secondary" className="text-[9px] h-4 px-1">
-                                      <MessageSquare className="w-2.5 h-2.5 mr-0.5" />
-                                      {shot.dialogues.length}
                                     </Badge>
                                   )}
                                 </div>
@@ -498,11 +475,11 @@ export function StoryboardExtractionDialog({
                             </div>
 
                             <div>
-                              <Label>画面描述（中文）</Label>
+                              <Label>描述</Label>
                               <Textarea
-                                value={currentShot.visualDescription}
+                                value={currentShot.description}
                                 onChange={(e) =>
-                                  updateShot(selectedShotIndex, { visualDescription: e.target.value })
+                                  updateShot(selectedShotIndex, { description: e.target.value })
                                 }
                                 rows={3}
                               />
@@ -661,84 +638,6 @@ export function StoryboardExtractionDialog({
                           </div>
 
                           <Separator />
-
-                          {/* 对话列表 */}
-                          <div className="space-y-4 pb-6">
-                            <h3 className="font-semibold text-lg flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4" />
-                              对话列表
-                              <Badge variant="secondary" className="text-xs">
-                                {currentShot.dialogues?.length || 0}
-                              </Badge>
-                            </h3>
-
-                            {currentShot.dialogues && currentShot.dialogues.length > 0 ? (
-                              <div className="space-y-3">
-                                {currentShot.dialogues.map((dialogue, dialogueIdx) => (
-                                  <Card key={dialogueIdx} className="p-4">
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Label>对话 #{dialogue.order}</Label>
-                                          {dialogue.characterName && (
-                                            <span className="text-xs text-muted-foreground">
-                                              {dialogue.characterName}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => deleteDialogue(selectedShotIndex, dialogueIdx)}
-                                        >
-                                          <Trash2 className="w-4 h-4 text-destructive" />
-                                        </Button>
-                                      </div>
-
-                                      <div>
-                                        <Label className="text-xs">对话内容</Label>
-                                        <Textarea
-                                          value={dialogue.dialogueText}
-                                          onChange={(e) =>
-                                            updateDialogue(selectedShotIndex, dialogueIdx, { 
-                                              dialogueText: e.target.value 
-                                            })
-                                          }
-                                          rows={2}
-                                          className="text-xs"
-                                        />
-                                      </div>
-
-                                      <div>
-                                        <Label className="text-xs">情绪</Label>
-                                        <Select
-                                          value={dialogue.emotionTag || "neutral"}
-                                          onValueChange={(value) =>
-                                            updateDialogue(selectedShotIndex, dialogueIdx, { 
-                                              emotionTag: value as EmotionTag 
-                                            })
-                                          }
-                                        >
-                                          <SelectTrigger className="h-8 text-xs">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {emotionOptions.map((option) => (
-                                              <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    </div>
-                                  </Card>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">此分镜没有对话</p>
-                            )}
-                          </div>
                         </>
                       )}
                     </div>
@@ -803,13 +702,6 @@ export function StoryboardExtractionDialog({
                     <Users className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">角色:</span>
                     <span className="font-semibold">{importResult.totalCharacters}</span>
-                  </div>
-                )}
-                {importResult.totalDialogues > 0 && (
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-primary" />
-                    <span className="text-muted-foreground">对话:</span>
-                    <span className="font-semibold">{importResult.totalDialogues}</span>
                   </div>
                 )}
               </div>

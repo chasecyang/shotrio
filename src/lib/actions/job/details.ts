@@ -8,7 +8,6 @@ import type {
   StoryboardGenerationInput,
   StoryboardBasicExtractionInput,
   StoryboardMatchingInput,
-  ShotDecompositionResult,
 } from "@/types/job";
 import { getTaskTypeLabelText } from "@/lib/constants/task-labels";
 
@@ -68,23 +67,6 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
       // @deprecated - storyboard_matching 功能已废弃
       case "storyboard_matching": {
         baseDetails.displaySubtitle = "已废弃的任务类型";
-        break;
-      }
-
-      case "shot_decomposition": {
-        // 如果任务已完成，显示拆解结果
-        if (job.status === "completed" && job.resultData) {
-          try {
-            const resultData = JSON.parse(job.resultData) as ShotDecompositionResult;
-            const decomposedCount = resultData.decomposedCount || resultData.decomposedShots?.length || 0;
-            baseDetails.displayTitle = "分镜拆解";
-            baseDetails.displaySubtitle = `已拆解为 ${decomposedCount} 个子分镜`;
-          } catch {
-            baseDetails.displaySubtitle = "分镜拆解完成";
-          }
-        } else {
-          baseDetails.displaySubtitle = "AI 分析中...";
-        }
         break;
       }
     }

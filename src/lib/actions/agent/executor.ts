@@ -14,7 +14,6 @@ import { episode, shot } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
-import { batchGenerateShotImages } from "../project";
 import { batchGenerateShotVideos } from "../video/generate";
 import { createShot, deleteShot, updateShot, reorderShots } from "../project/shot";
 import { updateAsset, deleteAsset } from "../asset/crud";
@@ -114,9 +113,6 @@ export async function executeFunction(
       case "query_shot_details": {
         const shotData = await db.query.shot.findFirst({
           where: eq(shot.id, parameters.shotId as string),
-          with: {
-            dialogues: true,
-          },
         });
 
         if (!shotData) {
@@ -191,7 +187,7 @@ export async function executeFunction(
           shotSize: parameters.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
           cameraMovement: (parameters.cameraMovement as string) || "static",
           duration: parameters.duration ? parseInt(parameters.duration as string) : 3000,
-          visualDescription: parameters.visualDescription as string,
+          description: parameters.description as string,
           visualPrompt: parameters.visualPrompt as string | undefined,
         });
 
@@ -208,7 +204,7 @@ export async function executeFunction(
         const shotsData = JSON.parse(parameters.shots as string) as Array<{
           order: number;
           shotSize: string;
-          visualDescription: string;
+          description: string;
           visualPrompt?: string;
           cameraMovement?: string;
           duration?: number;
@@ -224,7 +220,7 @@ export async function executeFunction(
             shotSize: shotData.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
             cameraMovement: shotData.cameraMovement || "static",
             duration: shotData.duration || 3000,
-            visualDescription: shotData.visualDescription,
+            description: shotData.description,
             visualPrompt: shotData.visualPrompt,
           });
 
@@ -254,19 +250,6 @@ export async function executeFunction(
       // ============================================
       // 生成类
       // ============================================
-      case "generate_shot_images": {
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
-        const imageResult = await batchGenerateShotImages(shotIds);
-
-        result = {
-          functionCallId: functionCall.id,
-          success: imageResult.success,
-          jobId: imageResult.jobId,
-          error: imageResult.error,
-        };
-        break;
-      }
-
       case "generate_shot_videos": {
         const shotIds = JSON.parse(parameters.shotIds as string) as string[];
         const videoResult = await batchGenerateShotVideos(shotIds);
@@ -394,7 +377,7 @@ export async function executeFunction(
         if (parameters.duration) updates.duration = parseInt(parameters.duration as string);
         if (parameters.shotSize) updates.shotSize = parameters.shotSize;
         if (parameters.cameraMovement) updates.cameraMovement = parameters.cameraMovement;
-        if (parameters.visualDescription) updates.visualDescription = parameters.visualDescription;
+        if (parameters.description) updates.description = parameters.description;
         if (parameters.visualPrompt) updates.visualPrompt = parameters.visualPrompt;
 
         const updateResult = await updateShot(parameters.shotId as string, updates);

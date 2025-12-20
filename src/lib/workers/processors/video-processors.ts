@@ -159,17 +159,9 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
       }
     }
 
-    // 获取所有分镜信息（包含对话）
+    // 获取所有分镜信息
     const shots = await db.query.shot.findMany({
       where: inArray(shot.id, shotIds),
-      with: {
-        dialogues: {
-          orderBy: (dialogues, { asc }) => [asc(dialogues.order)],
-          with: {
-            character: true,
-          },
-        },
-      },
     });
 
     if (shots.length === 0) {
@@ -205,16 +197,11 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
           continue;
         }
 
-        // 创建子任务（包含画面描述和对话）
+        // 创建子任务（包含画面描述）
         const videoPrompt = buildVideoPrompt({
-          visualDescription: shotData.visualDescription || undefined,
+          description: shotData.description || undefined,
           visualPrompt: shotData.visualPrompt || undefined,
           cameraMovement: shotData.cameraMovement,
-          dialogues: shotData.dialogues?.map(d => ({
-            characterName: d.character?.name,
-            dialogueText: d.dialogueText,
-            emotionTag: d.emotionTag,
-          })),
         });
 
         const childJobResult = await createJob({

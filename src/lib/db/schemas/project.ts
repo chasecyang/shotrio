@@ -44,9 +44,6 @@ export const cameraMovementEnum = pgEnum("camera_movement", [
 export const jobTypeEnum = pgEnum("job_type", [
   "storyboard_generation", // 剧本自动分镜（触发入口）
   "storyboard_basic_extraction", // 基础分镜提取（第一步）
-  "shot_decomposition", // 分镜拆解
-  "shot_image_generation", // 单个分镜图片生成
-  "batch_shot_image_generation", // 批量分镜图片生成
   "batch_image_generation", // 批量图像生成
   "asset_image_generation", // 素材图片生成
   "script_element_extraction", // 剧本元素提取
@@ -208,8 +205,8 @@ export const shot = pgTable("shot", {
   cameraMovement: cameraMovementEnum("camera_movement").default("static"), // 运镜方式
   duration: integer("duration").default(3000), // 预估时长 (毫秒)
 
-  // 视觉内容 (Visuals)
-  visualDescription: text("visual_description"), // 中文描述 (给人类看)
+  // 内容描述
+  description: text("description"), // 描述 (包含画面、对话、动作等)
   visualPrompt: text("visual_prompt"), // 英文 Prompt (给 AI 看)
 
   // 听觉内容 (Audio)
@@ -223,35 +220,6 @@ export const shot = pgTable("shot", {
   // 关联资产（可选，关联到asset表）
   imageAssetId: text("image_asset_id").references(() => asset.id, { onDelete: "set null" }),
 
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-// 4.1 镜头对话表 (Shot Dialogue) - 记录镜头中的对话序列
-export const shotDialogue = pgTable("shot_dialogue", {
-  id: text("id").primaryKey(),
-  shotId: text("shot_id")
-    .notNull()
-    .references(() => shot.id, { onDelete: "cascade" }),
-  
-  // 说话人名称（纯文本，可以为null表示旁白/画外音）
-  speakerName: text("speaker_name"),
-  
-  // 对话内容
-  dialogueText: text("dialogue_text").notNull(),
-  order: integer("order").notNull(), // 说话顺序
-  
-  // 时间轴（可选，用于精确控制）
-  startTime: integer("start_time"), // 相对于镜头开始的时间(ms)
-  duration: integer("duration"), // 这句话的持续时间(ms)
-  
-  // AI生成
-  emotionTag: text("emotion_tag"), // 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'fearful' | 'disgusted'
-  audioUrl: text("audio_url"), // TTS生成的单句音频
-  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -358,7 +326,7 @@ export const episodeRelations = relations(episode, ({ one, many }) => ({
   shots: many(shot),
 }));
 
-export const shotRelations = relations(shot, ({ one, many }) => ({
+export const shotRelations = relations(shot, ({ one }) => ({
   episode: one(episode, {
     fields: [shot.episodeId],
     references: [episode.id],
@@ -368,8 +336,6 @@ export const shotRelations = relations(shot, ({ one, many }) => ({
     fields: [shot.imageAssetId],
     references: [asset.id],
   }),
-  // 镜头中的对话列表
-  dialogues: many(shotDialogue),
 }));
 
 export const jobRelations = relations(job, ({ one, many }) => ({
@@ -388,13 +354,6 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   }),
   childJobs: many(job, {
     relationName: "jobHierarchy",
-  }),
-}));
-
-export const shotDialogueRelations = relations(shotDialogue, ({ one }) => ({
-  shot: one(shot, {
-    fields: [shotDialogue.shotId],
-    references: [shot.id],
   }),
 }));
 

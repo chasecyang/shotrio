@@ -33,7 +33,7 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   duration: "时长",
   shotSize: "景别",
   cameraMovement: "运镜方式",
-  visualDescription: "视觉描述",
+  description: "描述",
   visualPrompt: "视觉提示词",
   shotOrders: "分镜顺序",
 

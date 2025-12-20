@@ -1,4 +1,4 @@
-import { project, episode, shot, shotDialogue, asset } from "@/lib/db/schemas/project";
+import { project, episode, shot, asset } from "@/lib/db/schemas/project";
 import type { ArtStyle } from "./art-style";
 import type { Asset as AssetType, AssetWithTags } from "./asset";
 
@@ -11,9 +11,6 @@ export type NewEpisode = typeof episode.$inferInsert;
 
 export type Shot = typeof shot.$inferSelect;
 export type NewShot = typeof shot.$inferInsert;
-
-export type ShotDialogue = typeof shotDialogue.$inferSelect;
-export type NewShotDialogue = typeof shotDialogue.$inferInsert;
 
 // 重新导出Asset类型
 export type { AssetType, AssetWithTags };
@@ -44,14 +41,8 @@ export interface ScriptDetail extends Episode {
 
 // 分镜相关类型
 export interface ShotDetail extends Shot {
-  dialogues: (ShotDialogue & {
-    shot?: Shot;
-  })[];
   imageAsset?: AssetType | null;
 }
-
-// 情绪标签类型
-export type EmotionTag = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'fearful' | 'disgusted';
 
 // 景别类型
 export type ShotSize =
@@ -86,22 +77,14 @@ export function isEpisodeComplete(episode: Episode): boolean {
 }
 
 // 分镜提取相关类型
-export interface ExtractedShotDialogue {
-  speakerName?: string; // 说话人名称
-  dialogueText: string; // 对话内容
-  emotionTag?: EmotionTag; // 情绪标签
-  order: number; // 对话顺序
-}
-
 export interface ExtractedShot {
   order: number; // 分镜序号
   shotSize: ShotSize; // 景别
   cameraMovement: CameraMovement; // 运镜方式
   duration: number; // 预估时长（毫秒）
-  visualDescription: string; // 中文画面描述
+  description: string; // 描述（包含画面、对话、动作等）
   visualPrompt: string; // 英文AI绘图prompt
   audioPrompt?: string; // 音效/BGM描述
-  dialogues: ExtractedShotDialogue[]; // 对话列表
 }
 
 export interface ShotExtractionResult {

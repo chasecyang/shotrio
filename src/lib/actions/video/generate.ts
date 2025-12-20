@@ -24,17 +24,11 @@ export async function generateShotVideo(shotId: string): Promise<{
   }
 
   try {
-    // 获取分镜信息以验证权限和数据（包含对话）
+    // 获取分镜信息以验证权限和数据
     const shotData = await db.query.shot.findFirst({
       where: eq(shot.id, shotId),
       with: {
         episode: true,
-        dialogues: {
-          orderBy: (shotDialogue, { asc }) => [asc(shotDialogue.order)],
-          with: {
-            character: true,
-          },
-        },
       },
     });
 
@@ -47,16 +41,11 @@ export async function generateShotVideo(shotId: string): Promise<{
       return { success: false, error: "该分镜没有图片，请先生成图片" };
     }
 
-    // 自动生成视频参数（包含画面描述和对话）
+    // 自动生成视频参数（包含画面描述）
     const videoPrompt = buildVideoPrompt({
-      visualDescription: shotData.visualDescription || undefined,
+      description: shotData.description || undefined,
       visualPrompt: shotData.visualPrompt || undefined,
       cameraMovement: shotData.cameraMovement,
-      dialogues: shotData.dialogues?.map(d => ({
-        characterName: d.character?.name,
-        dialogueText: d.dialogueText,
-        emotionTag: d.emotionTag,
-      })),
     });
 
     const duration = getKlingDuration(shotData.duration || 3000);
