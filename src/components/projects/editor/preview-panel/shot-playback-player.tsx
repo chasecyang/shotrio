@@ -41,7 +41,7 @@ export function ShotPlaybackPlayer({
   // 根据分镜内容确定类型
   const contentType = currentShot?.videoUrl 
     ? "video" 
-    : currentShot?.imageUrl 
+    : currentShot?.imageAsset?.imageUrl 
     ? "image" 
     : "text";
 
@@ -132,10 +132,10 @@ export function ShotPlaybackPlayer({
           />
         )}
 
-        {contentType === "image" && currentShot.imageUrl && (
+        {contentType === "image" && currentShot.imageAsset?.imageUrl && (
           <div className="relative w-full h-full">
             <Image
-              src={currentShot.imageUrl}
+              src={currentShot.imageAsset.imageUrl}
               alt={`分镜 ${currentShot.order}`}
               fill
               className="object-contain"

@@ -159,9 +159,12 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
       }
     }
 
-    // 获取所有分镜信息
+    // 获取所有分镜信息（需要关联 imageAsset）
     const shots = await db.query.shot.findMany({
       where: inArray(shot.id, shotIds),
+      with: {
+        imageAsset: true,
+      },
     });
 
     if (shots.length === 0) {
@@ -187,11 +190,11 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
       );
 
       try {
-        if (!shotData.imageUrl) {
+        if (!shotData.imageAsset?.imageUrl) {
           results.push({
             shotId: shotData.id,
             success: false,
-            error: "分镜没有图片",
+            error: "分镜没有关联图片",
           });
           failedCount++;
           continue;
@@ -210,7 +213,7 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
           type: "shot_video_generation",
           inputData: {
             shotId: shotData.id,
-            imageUrl: shotData.imageUrl,
+            imageUrl: shotData.imageAsset.imageUrl,
             prompt: videoPrompt,
             duration: getKlingDuration(shotData.duration || 3000),
           } as ShotVideoGenerationInput,

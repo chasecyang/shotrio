@@ -90,7 +90,6 @@ export async function createShot(data: {
       visualPrompt: data.visualPrompt || null,
       audioPrompt: data.audioPrompt || null,
       imageAssetId: data.imageAssetId || null,
-      imageUrl: null,
       videoUrl: null,
       finalAudioUrl: null,
     };
@@ -272,7 +271,6 @@ export async function importExtractedShots(
           visualPrompt: extractedShot.visualPrompt || null,
           audioPrompt: extractedShot.audioPrompt || null,
           imageAssetId: null,
-          imageUrl: null,
           videoUrl: null,
           finalAudioUrl: null,
         };

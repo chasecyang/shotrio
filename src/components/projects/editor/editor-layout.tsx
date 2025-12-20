@@ -146,7 +146,7 @@ function EditorLayoutInner({
 
     // 检查选中的分镜是否都有图片
     const shotsWithoutImages = state.shots.filter(
-      s => state.selectedShotIds.includes(s.id) && !s.imageUrl
+      s => state.selectedShotIds.includes(s.id) && !s.imageAsset?.imageUrl
     );
 
     if (shotsWithoutImages.length > 0) {

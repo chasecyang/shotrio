@@ -174,10 +174,10 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
 
           {/* 缩略图 */}
           <div className="w-12 h-full rounded bg-muted/50 flex items-center justify-center overflow-hidden relative">
-            {shot.imageUrl ? (
+            {shot.imageAsset?.imageUrl ? (
               <>
                 <Image
-                  src={shot.imageUrl}
+                  src={shot.imageAsset.imageUrl}
                   alt={`#${shot.order}`}
                   fill
                   className="object-cover"
@@ -214,10 +214,10 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
               {shot.videoUrl && (
                 <Video className="w-3 h-3 text-primary" />
               )}
-              {!shot.videoUrl && shot.imageUrl && (
+              {!shot.videoUrl && shot.imageAsset?.imageUrl && (
                 <ImageIcon className="w-3 h-3 text-blue-500" />
               )}
-              {!shot.videoUrl && !shot.imageUrl && (
+              {!shot.videoUrl && !shot.imageAsset?.imageUrl && (
                 <FileText className="w-3 h-3 text-muted-foreground/50" />
               )}
             </div>

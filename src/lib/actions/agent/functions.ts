@@ -292,7 +292,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "update_shot",
-    description: "修改分镜的属性（如时长、景别、运镜、描述等）",
+    description: "修改分镜的属性（如时长、景别、运镜、描述等），也可以用来关联素材图片到分镜",
     displayName: "修改分镜",
     parameters: {
       type: "object",
@@ -344,6 +344,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         visualPrompt: {
           type: "string",
           description: "图像生成提示词（英文自然语言描述，用完整句子描述画面内容）",
+        },
+        imageAssetId: {
+          type: "string",
+          description: "关联的素材ID，用于将素材图片关联到分镜。先用 generate_asset 生成素材获取 assetId，再用此参数关联到分镜",
         },
       },
       required: ["shotId"],

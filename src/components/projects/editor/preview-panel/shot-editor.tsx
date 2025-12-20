@@ -184,7 +184,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
 
   // 处理生成视频
   const handleGenerateVideo = async () => {
-    if (!shot.imageUrl) {
+    if (!shot.imageAsset?.imageUrl) {
       toast.error("请先生成分镜图片");
       return;
     }
@@ -245,11 +245,11 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           {/* 大图预览 */}
           <div className="w-full lg:w-80 shrink-0">
             <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative">
-              {shot.imageUrl ? (
+              {shot.imageAsset?.imageUrl ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={shot.imageUrl}
+                    src={shot.imageAsset.imageUrl}
                     alt={`分镜 ${shot.order}`}
                     className="w-full h-full object-contain"
                   />
@@ -295,7 +295,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                   <Progress value={videoGenerationProgress} className="w-full max-w-[200px] mx-auto" />
                   <p className="text-xs text-muted-foreground mt-2">{videoGenerationProgress}%</p>
                 </div>
-              ) : shot.imageUrl ? (
+              ) : shot.imageAsset?.imageUrl ? (
                 <Button
                   variant="outline"
                   size="sm"

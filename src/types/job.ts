@@ -141,7 +141,7 @@ export interface AssetImageGenerationResult {
 // 单镜视频生成输入
 export interface ShotVideoGenerationInput {
   shotId: string;
-  imageUrl: string; // 分镜图URL
+  imageUrl: string; // 图片URL（从关联的 imageAsset 获取）
   prompt: string; // 运动提示词
   duration: "5" | "10"; // 视频时长
   regenerate?: boolean; // 是否重新生成

@@ -379,6 +379,7 @@ export async function executeFunction(
         if (parameters.cameraMovement) updates.cameraMovement = parameters.cameraMovement;
         if (parameters.description) updates.description = parameters.description;
         if (parameters.visualPrompt) updates.visualPrompt = parameters.visualPrompt;
+        if (parameters.imageAssetId) updates.imageAssetId = parameters.imageAssetId;
 
         const updateResult = await updateShot(parameters.shotId as string, updates);
 

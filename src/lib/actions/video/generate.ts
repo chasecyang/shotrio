@@ -24,11 +24,12 @@ export async function generateShotVideo(shotId: string): Promise<{
   }
 
   try {
-    // 获取分镜信息以验证权限和数据
+    // 获取分镜信息以验证权限和数据（需要关联 imageAsset）
     const shotData = await db.query.shot.findFirst({
       where: eq(shot.id, shotId),
       with: {
         episode: true,
+        imageAsset: true,
       },
     });
 
@@ -36,8 +37,8 @@ export async function generateShotVideo(shotId: string): Promise<{
       return { success: false, error: "分镜不存在" };
     }
 
-    // 检查是否有图片
-    if (!shotData.imageUrl) {
+    // 检查是否有关联的图片
+    if (!shotData.imageAsset?.imageUrl) {
       return { success: false, error: "该分镜没有图片，请先生成图片" };
     }
 
@@ -59,7 +60,7 @@ export async function generateShotVideo(shotId: string): Promise<{
       type: "shot_video_generation",
       inputData: {
         shotId,
-        imageUrl: shotData.imageUrl,
+        imageUrl: shotData.imageAsset.imageUrl,
         prompt: videoPrompt,
         duration,
         regenerate: false,

@@ -213,11 +213,10 @@ export const shot = pgTable("shot", {
   audioPrompt: text("audio_prompt"), // 音效/BGM 提示
 
   // 生成结果 (Media)
-  imageUrl: text("image_url"), // 生成的分镜图
   videoUrl: text("video_url"), // 生成的视频片段
   finalAudioUrl: text("final_audio_url"), // 混音后的完整音频
 
-  // 关联资产（可选，关联到asset表）
+  // 关联资产（关联到asset表获取图片）
   imageAssetId: text("image_asset_id").references(() => asset.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
