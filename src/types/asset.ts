@@ -279,3 +279,22 @@ export function hasAssetTag(asset: AssetWithTags, tagValue: string): boolean {
  */
 export type ImageResolution = "1K" | "2K" | "4K";
 
+/**
+ * 生成历史记录项
+ */
+export interface GenerationHistoryItem {
+  id: string;
+  prompt: string;
+  assetType: AssetType;
+  mode: "text-to-image" | "image-to-image";
+  parameters: {
+    aspectRatio?: AspectRatio;
+    resolution?: ImageResolution;
+    numImages?: number;
+    sourceAssetIds?: string[];
+  };
+  timestamp: Date;
+  resultAssetIds: string[];
+  jobId?: string;
+}
+

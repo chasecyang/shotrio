@@ -111,23 +111,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // 生成类工具（需要确认）
   // ============================================
   {
-    name: "extract_script_elements",
-    description: "使用AI从剧本中提取角色、道具、场景、服装等元素，并创建为项目素材",
-    displayName: "提取剧本元素",
-    parameters: {
-      type: "object",
-      properties: {
-        episodeId: {
-          type: "string",
-          description: "剧集ID",
-        },
-      },
-      required: ["episodeId"],
-    },
-    category: "generation",
-    needsConfirmation: true,
-  },
-  {
     name: "generate_storyboard",
     description: "根据剧本自动生成分镜脚本（包括景别、运镜、对话等）",
     displayName: "生成分镜脚本",
@@ -288,6 +271,27 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
       },
       required: ["projectId", "name"],
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
+  {
+    name: "batch_create_assets",
+    description: "批量创建多个素材记录（不生成图片），适用于一次性创建多个角色、场景等素材",
+    displayName: "批量创建素材",
+    parameters: {
+      type: "object",
+      properties: {
+        projectId: {
+          type: "string",
+          description: "项目ID",
+        },
+        assets: {
+          type: "string",
+          description: "素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（生成提示词）、tags（标签数组）、description（描述）",
+        },
+      },
+      required: ["projectId", "assets"],
     },
     category: "generation",
     needsConfirmation: true,

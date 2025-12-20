@@ -71,10 +71,6 @@ export const TASK_TYPE_LABELS: Record<JobType, TaskTypeConfig> = {
     label: "素材图片生成",
     iconName: "Sparkles",
   },
-  script_element_extraction: {
-    label: "智能提取素材",
-    iconName: "Sparkles",
-  },
   video_generation: {
     label: "视频生成",
     iconName: "Video",
@@ -142,7 +138,6 @@ export const VIEWABLE_TASK_TYPES: JobType[] = [
   "character_extraction",
   "scene_extraction",
   "shot_decomposition",
-  "script_element_extraction",
 ];
 
 /**

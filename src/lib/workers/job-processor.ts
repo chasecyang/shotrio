@@ -21,7 +21,6 @@ import {
   processFinalVideoExport,
 } from "./processors/video-processors";
 import { processAssetImageGeneration } from "./processors/asset-image-generation";
-import { processScriptElementExtraction } from "./processors/script-extraction-processor";
 
 /**
  * 注册所有处理器
@@ -35,7 +34,6 @@ export function registerAllProcessors(): void {
     shot_image_generation: processShotImageGeneration,
     batch_shot_image_generation: processBatchShotImageGeneration,
     asset_image_generation: processAssetImageGeneration,
-    script_element_extraction: processScriptElementExtraction,
     video_generation: processVideoGeneration,
     shot_video_generation: processShotVideoGeneration,
     batch_video_generation: processBatchVideoGeneration,

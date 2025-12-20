@@ -10,11 +10,10 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
-import { episode, shot, asset } from "@/lib/db/schemas/project";
+import { episode, shot } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
-import { startScriptExtraction } from "../script-extraction";
 import { startStoryboardGeneration } from "../storyboard";
 import { createShotDecompositionJob } from "../storyboard/decompose-shot";
 import { batchGenerateShotImages } from "../project";
@@ -177,17 +176,6 @@ export async function executeFunction(
       // ============================================
       // 生成类
       // ============================================
-      case "extract_script_elements": {
-        const extractResult = await startScriptExtraction(parameters.episodeId as string);
-        result = {
-          functionCallId: functionCall.id,
-          success: extractResult.success,
-          jobId: extractResult.jobId,
-          error: extractResult.error,
-        };
-        break;
-      }
-
       case "generate_storyboard": {
         const storyboardResult = await startStoryboardGeneration(
           parameters.episodeId as string
@@ -327,6 +315,47 @@ export async function executeFunction(
           success: createResult.success,
           data: createResult.asset,
           error: createResult.error,
+        };
+        break;
+      }
+
+      case "batch_create_assets": {
+        const assetsData = JSON.parse(parameters.assets as string) as Array<{
+          name: string;
+          prompt?: string;
+          tags?: string[];
+          description?: string;
+        }>;
+
+        const createdAssets = [];
+        const errors: string[] = [];
+
+        for (const assetData of assetsData) {
+          const createResult = await createAsset({
+            projectId: parameters.projectId as string,
+            name: assetData.name,
+            imageUrl: "",
+            prompt: assetData.prompt || "",
+            tags: assetData.tags || [],
+            meta: assetData.description ? { custom: { description: assetData.description } } : undefined,
+          });
+
+          if (createResult.success && createResult.asset) {
+            createdAssets.push(createResult.asset);
+          } else {
+            errors.push(`创建 "${assetData.name}" 失败: ${createResult.error || "未知错误"}`);
+          }
+        }
+
+        result = {
+          functionCallId: functionCall.id,
+          success: errors.length === 0,
+          data: {
+            createdCount: createdAssets.length,
+            assets: createdAssets,
+            errors: errors.length > 0 ? errors : undefined,
+          },
+          error: errors.length > 0 ? `部分素材创建失败: ${errors.join("; ")}` : undefined,
         };
         break;
       }
