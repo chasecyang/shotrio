@@ -49,6 +49,7 @@ export const jobTypeEnum = pgEnum("job_type", [
   "batch_shot_image_generation", // 批量分镜图片生成
   "batch_image_generation", // 批量图像生成
   "asset_image_generation", // 素材图片生成
+  "script_element_extraction", // 剧本元素提取
   "video_generation", // 视频生成
   "shot_video_generation", // 单镜视频生成
   "batch_video_generation", // 批量视频生成

@@ -24,7 +24,11 @@ import {
 import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
 import { StoryboardExtractionBanner } from "./storyboard-extraction-banner";
 import { StoryboardExtractionDialog } from "./storyboard-extraction-dialog";
+import { ScriptExtractionDialog } from "./script-extraction-dialog";
 import { useEditor } from "../editor-context";
+import { useTaskPolling } from "@/hooks/use-task-polling";
+import { startScriptExtraction, batchCreateAssetsFromExtraction } from "@/lib/actions/script-extraction";
+import type { ScriptElementExtractionResult, Job } from "@/types/job";
 
 interface EpisodeEditorProps {
   episode: Episode;
@@ -57,8 +61,91 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   const dialogJobId = state.storyboardExtractionDialog.jobId || localJobId;
   const dialogEpisodeId = state.storyboardExtractionDialog.episodeId || episode.id;
 
+  // 素材提取状态
+  const [scriptExtractionJobId, setScriptExtractionJobId] = useState<string | null>(null);
+  const [isExtractingScript, setIsExtractingScript] = useState(false);
+  const [scriptExtractionDialogOpen, setScriptExtractionDialogOpen] = useState(false);
+  const [extractionResult, setExtractionResult] = useState<ScriptElementExtractionResult | null>(null);
+
+  // 任务轮询
+  const { jobs } = useTaskPolling();
+
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // 监听提取任务完成
+  useEffect(() => {
+    if (!scriptExtractionJobId) return;
+
+    const currentJob = jobs.find(j => j.id === scriptExtractionJobId) as Job | undefined;
+    if (!currentJob) return;
+
+    if (currentJob.status === "completed" && currentJob.resultData) {
+      try {
+        const result = JSON.parse(currentJob.resultData) as ScriptElementExtractionResult;
+        setExtractionResult(result);
+        setIsExtractingScript(false);
+        setScriptExtractionDialogOpen(true);
+      } catch (error) {
+        console.error("解析提取结果失败:", error);
+        toast.error("提取结果解析失败");
+        setIsExtractingScript(false);
+      }
+    } else if (currentJob.status === "failed") {
+      toast.error(currentJob.errorMessage || "提取失败");
+      setIsExtractingScript(false);
+      setScriptExtractionJobId(null);
+    }
+  }, [jobs, scriptExtractionJobId]);
+
+  // 启动素材提取
+  const handleStartScriptExtraction = async () => {
+    if (!formData.scriptContent || !formData.scriptContent.trim()) {
+      toast.error("请先编写剧本内容");
+      return;
+    }
+
+    setIsExtractingScript(true);
+    const result = await startScriptExtraction(episode.id);
+
+    if (result.success && result.jobId) {
+      setScriptExtractionJobId(result.jobId);
+      toast.success("已启动素材提取任务");
+    } else {
+      toast.error(result.error || "启动失败");
+      setIsExtractingScript(false);
+    }
+  };
+
+  // 确认创建素材
+  const handleConfirmExtraction = async (elements: ScriptElementExtractionResult["elements"]) => {
+    if (!state.project) {
+      toast.error("项目信息不存在");
+      return;
+    }
+
+    const result = await batchCreateAssetsFromExtraction({
+      projectId: state.project.id,
+      episodeId: episode.id,
+      elements: elements.map(el => ({
+        id: el.id,
+        type: el.type,
+        name: el.name,
+        description: el.description,
+        prompt: el.prompt,
+        tags: el.tags,
+        shouldGenerate: (el as typeof el & { shouldGenerate?: boolean }).shouldGenerate || false,
+      })),
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "创建素材失败");
+    }
+
+    // 清理状态
+    setScriptExtractionJobId(null);
+    setExtractionResult(null);
+  };
 
   // 启动分镜提取
   const handleStartExtraction = async () => {
@@ -242,6 +329,20 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     <>
       <ScrollArea className="h-full">
         <div className="p-6 max-w-3xl mx-auto space-y-6">
+          {/* 智能素材提取按钮 */}
+          <div className="flex items-center justify-between">
+            <Button
+              onClick={handleStartScriptExtraction}
+              disabled={isExtractingScript}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              {isExtractingScript ? "提取中..." : "AI提取素材"}
+            </Button>
+          </div>
+
           {/* 分镜提取横幅 */}
           <StoryboardExtractionBanner
             episodeId={episode.id}
@@ -400,6 +501,15 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
           onImportSuccess={handleImportSuccess}
         />
       )}
+
+      {/* 素材提取对话框 */}
+      <ScriptExtractionDialog
+        open={scriptExtractionDialogOpen}
+        onOpenChange={setScriptExtractionDialogOpen}
+        extractionResult={extractionResult}
+        isLoading={isExtractingScript}
+        onConfirm={handleConfirmExtraction}
+      />
     </>
   );
 }

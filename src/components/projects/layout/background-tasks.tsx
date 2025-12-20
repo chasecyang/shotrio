@@ -24,123 +24,20 @@ import { useEditor } from "../editor/editor-context";
 import {
   Activity,
   Loader2,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Ban,
   RotateCcw,
   X as XIcon,
-  Users,
-  Sparkles,
-  Film,
-  Images,
-  Video,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
 import type { Job } from "@/types/job";
 import { buildTaskTree, getNodeOverallStatus, type TaskNode } from "@/lib/utils/task-tree";
-
-const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-  character_extraction: {
-    label: "角色提取",
-    icon: <Users className="w-3.5 h-3.5" />,
-  },
-  scene_extraction: {
-    label: "场景提取",
-    icon: <Film className="w-3.5 h-3.5" />,
-  },
-  character_image_generation: {
-    label: "角色造型生成",
-    icon: <Sparkles className="w-3.5 h-3.5" />,
-  },
-  scene_image_generation: {
-    label: "场景图生成",
-    icon: <Sparkles className="w-3.5 h-3.5" />,
-  },
-  storyboard_generation: {
-    label: "分镜提取",
-    icon: <Film className="w-3.5 h-3.5" />,
-  },
-  storyboard_basic_extraction: {
-    label: "基础分镜提取",
-    icon: <Film className="w-3.5 h-3.5" />,
-  },
-  storyboard_matching: {
-    label: "角色场景匹配",
-    icon: <Users className="w-3.5 h-3.5" />,
-  },
-  shot_decomposition: {
-    label: "分镜拆解",
-    icon: <Film className="w-3.5 h-3.5" />,
-  },
-  batch_image_generation: {
-    label: "批量图像生成",
-    icon: <Images className="w-3.5 h-3.5" />,
-  },
-  shot_image_generation: {
-    label: "分镜图生成",
-    icon: <Images className="w-3.5 h-3.5" />,
-  },
-  batch_shot_image_generation: {
-    label: "批量分镜图生成",
-    icon: <Images className="w-3.5 h-3.5" />,
-  },
-  video_generation: {
-    label: "视频生成",
-    icon: <Video className="w-3.5 h-3.5" />,
-  },
-  shot_video_generation: {
-    label: "单镜视频生成",
-    icon: <Video className="w-3.5 h-3.5" />,
-  },
-  batch_video_generation: {
-    label: "批量视频生成",
-    icon: <Video className="w-3.5 h-3.5" />,
-  },
-  shot_tts_generation: {
-    label: "语音合成",
-    icon: <Sparkles className="w-3.5 h-3.5" />,
-  },
-  final_video_export: {
-    label: "最终成片导出",
-    icon: <Film className="w-3.5 h-3.5" />,
-  },
-};
-
-const statusConfig: Record<
-  string,
-  { label: string; icon: React.ReactNode; color: string }
-> = {
-  pending: {
-    label: "等待中",
-    icon: <Clock className="w-3.5 h-3.5" />,
-    color: "text-yellow-600 dark:text-yellow-400",
-  },
-  processing: {
-    label: "处理中",
-    icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-    color: "text-blue-600 dark:text-blue-400",
-  },
-  completed: {
-    label: "已完成",
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-    color: "text-green-600 dark:text-green-400",
-  },
-  failed: {
-    label: "失败",
-    icon: <XCircle className="w-3.5 h-3.5" />,
-    color: "text-red-600 dark:text-red-400",
-  },
-  cancelled: {
-    label: "已取消",
-    icon: <Ban className="w-3.5 h-3.5" />,
-    color: "text-gray-600 dark:text-gray-400",
-  },
-};
+import { 
+  getTaskTypeLabel, 
+  getTaskStatusConfig, 
+  VIEWABLE_TASK_TYPES,
+  formatTaskTime
+} from "@/lib/constants/task-labels";
 
 export function BackgroundTasks() {
   const { jobs: activeJobs, openStoryboardExtractionDialog, openShotDecompositionDialog } = useEditor();
@@ -427,8 +324,8 @@ function TaskNodeItem({
 }: TaskNodeItemProps) {
   const job = node.job;
   const hasChildren = node.children.length > 0;
-  const taskType = taskTypeLabels[job.type || ""];
-  const status = statusConfig[job.status || "pending"];
+  const taskType = getTaskTypeLabel(job.type || "", "sm");
+  const status = getTaskStatusConfig(job.status || "pending", "sm");
   
   // 获取节点整体状态（考虑子任务）
   const overallStatus = hasChildren ? getNodeOverallStatus(node) : null;
@@ -438,44 +335,23 @@ function TaskNodeItem({
   
   // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
   // 注意：character_extraction 和 scene_extraction 在资源面板中显示横幅，不需要在这里查看
-  const viewableTaskTypes = [
-    "storyboard_generation",
-    "character_extraction",
-    "scene_extraction",
-    "shot_decomposition",
-  ];
-  
   // 对于分镜拆解任务，即使已导入也可以查看结果
   // 对于其他提取类任务，导入后就不再显示"查看结果"按钮
   const canViewEvenIfImported = job.type === "shot_decomposition";
   
   const canView = job.status === "completed" && 
                   job.type && 
-                  viewableTaskTypes.includes(job.type) &&
+                  VIEWABLE_TASK_TYPES.includes(job.type as any) &&
                   (canViewEvenIfImported || !job.isImported);
-
-  const getTimeText = () => {
-    if (!job.createdAt) return "";
-
-    try {
-      return formatDistanceToNow(new Date(job.createdAt), {
-        addSuffix: true,
-        locale: zhCN,
-      });
-    } catch {
-      return "";
-    }
-  };
 
   const isCompleted = job.status === "completed" || job.status === "failed" || job.status === "cancelled";
 
   // 使用详细信息或回退到默认标签
-  const taskTypeLabel = taskTypeLabels[job.type || ""]?.label || "未知任务";
-  const displayTitle = details?.displayTitle || taskTypeLabel;
+  const displayTitle = details?.displayTitle || taskType.label;
   const displaySubtitle = details?.displaySubtitle;
   
   // 如果有详细信息，显示任务类型作为标签
-  const showTypeLabel = details && details.displayTitle !== taskTypeLabel;
+  const showTypeLabel = details && details.displayTitle !== taskType.label;
 
   return (
     <div className="space-y-1">
@@ -505,7 +381,7 @@ function TaskNodeItem({
               <div className="w-4" /> /* 占位符，保持对齐 */
             )}
             
-            {taskType?.icon}
+            {taskType.icon}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <h5 className="font-medium text-xs truncate">
@@ -513,7 +389,7 @@ function TaskNodeItem({
                 </h5>
                 {showTypeLabel && (
                   <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
-                    {taskTypeLabel}
+                    {taskType.label}
                   </span>
                 )}
                 {/* 显示子任务数量和进度 */}
@@ -542,7 +418,7 @@ function TaskNodeItem({
                   {displaySubtitle}
                 </p>
               )}
-              <p className="text-[10px] text-muted-foreground">{getTimeText()}</p>
+              <p className="text-[10px] text-muted-foreground">{formatTaskTime(job.createdAt)}</p>
             </div>
           </div>
 

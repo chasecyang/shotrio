@@ -10,6 +10,7 @@ import type {
   StoryboardMatchingInput,
   ShotDecompositionResult,
 } from "@/types/job";
+import { getTaskTypeLabelText } from "@/lib/constants/task-labels";
 
 export interface JobDetails {
   id: string;
@@ -25,7 +26,7 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
   const baseDetails: JobDetails = {
     id: job.id!,
     type: job.type!,
-    displayTitle: getTaskTypeLabel(job.type!),
+    displayTitle: getTaskTypeLabelText(job.type!),
   };
 
   if (!job.inputData) {
@@ -110,22 +111,4 @@ export async function getJobsDetails(jobs: Partial<Job>[]): Promise<Map<string, 
   );
 
   return detailsMap;
-}
-
-function getTaskTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    storyboard_generation: "分镜提取",
-    storyboard_basic_extraction: "基础分镜提取",
-    storyboard_matching: "角色场景匹配",
-    shot_decomposition: "分镜拆解",
-    batch_image_generation: "批量图像生成",
-    shot_image_generation: "分镜图生成",
-    batch_shot_image_generation: "批量分镜图生成",
-    video_generation: "视频生成",
-    shot_video_generation: "单镜视频生成",
-    batch_video_generation: "批量视频生成",
-    shot_tts_generation: "语音合成",
-    final_video_export: "最终成片导出",
-  };
-  return labels[type] || "未知任务";
 }

@@ -8,6 +8,7 @@ export type JobType =
   | "batch_shot_image_generation" // 批量分镜图片生成
   | "batch_image_generation" // 批量图像生成
   | "asset_image_generation" // 素材图片生成
+  | "script_element_extraction" // 剧本元素提取
   | "video_generation" // 视频生成
   | "shot_video_generation" // 单镜视频生成
   | "batch_video_generation" // 批量视频生成
@@ -101,6 +102,12 @@ export interface AssetImageGenerationInput {
   // 参考图（用于图生图）
   sourceAssetIds?: string[];
   mode: "text-to-image" | "image-to-image";
+}
+
+// 剧本元素提取输入
+export interface ScriptElementExtractionInput {
+  episodeId: string;
+  scriptContent: string;
 }
 
 // 任务结果数据类型
@@ -212,6 +219,25 @@ export interface AssetImageGenerationResult {
   successCount: number;
   failedCount: number;
   errors?: string[];
+}
+
+// 剧本元素提取结果
+export interface ScriptElementExtractionResult {
+  elements: Array<{
+    id: string; // 临时ID
+    type: "character" | "scene" | "prop" | "costume" | "effect";
+    name: string;
+    description: string; // 中文描述
+    prompt: string; // 英文生成prompt
+    tags: string[]; // 预设标签
+    appearance?: string; // 角色外貌特征
+    context?: string; // 出现场景/用途
+  }>;
+  characterCount: number;
+  sceneCount: number;
+  propCount: number;
+  costumeCount: number;
+  effectCount: number;
 }
 
 // 单镜视频生成输入

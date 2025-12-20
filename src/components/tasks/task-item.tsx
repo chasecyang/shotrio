@@ -5,26 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "./task-progress-bar";
-import {
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Clock,
-  Ban,
-  RotateCcw,
-  X as XIcon,
-  Users,
-  Sparkles,
-  Film,
-  Images,
-  Video,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
+import { RotateCcw, X as XIcon, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
 import type { Job } from "@/types/job";
+import { 
+  getTaskTypeLabel, 
+  getTaskStatusConfig, 
+  VIEWABLE_TASK_TYPES,
+  formatTaskTime 
+} from "@/lib/constants/task-labels";
 
 interface TaskItemProps {
   job: Partial<Job>;
@@ -34,104 +23,6 @@ interface TaskItemProps {
   onView?: (jobId: string) => void;
   depth?: number; // 嵌套深度
 }
-
-const taskTypeLabels: Record<string, { label: string; icon: React.ReactNode }> = {
-  character_extraction: {
-    label: "角色提取",
-    icon: <Users className="w-4 h-4" />,
-  },
-  scene_extraction: {
-    label: "场景提取",
-    icon: <Film className="w-4 h-4" />,
-  },
-  character_image_generation: {
-    label: "角色造型生成",
-    icon: <Sparkles className="w-4 h-4" />,
-  },
-  scene_image_generation: {
-    label: "场景图生成",
-    icon: <Sparkles className="w-4 h-4" />,
-  },
-  storyboard_generation: {
-    label: "分镜提取",
-    icon: <Film className="w-4 h-4" />,
-  },
-  storyboard_basic_extraction: {
-    label: "基础分镜提取",
-    icon: <Film className="w-4 h-4" />,
-  },
-  storyboard_matching: {
-    label: "角色场景匹配",
-    icon: <Users className="w-4 h-4" />,
-  },
-  shot_decomposition: {
-    label: "分镜拆解",
-    icon: <Film className="w-4 h-4" />,
-  },
-  batch_image_generation: {
-    label: "批量图像生成",
-    icon: <Images className="w-4 h-4" />,
-  },
-  shot_image_generation: {
-    label: "分镜图生成",
-    icon: <Images className="w-4 h-4" />,
-  },
-  batch_shot_image_generation: {
-    label: "批量分镜图生成",
-    icon: <Images className="w-4 h-4" />,
-  },
-  video_generation: {
-    label: "视频生成",
-    icon: <Video className="w-4 h-4" />,
-  },
-  shot_video_generation: {
-    label: "单镜视频生成",
-    icon: <Video className="w-4 h-4" />,
-  },
-  batch_video_generation: {
-    label: "批量视频生成",
-    icon: <Video className="w-4 h-4" />,
-  },
-  shot_tts_generation: {
-    label: "语音合成",
-    icon: <Sparkles className="w-4 h-4" />,
-  },
-  final_video_export: {
-    label: "最终成片导出",
-    icon: <Film className="w-4 h-4" />,
-  },
-};
-
-const statusConfig: Record<
-  string,
-  { label: string; icon: React.ReactNode; color: string }
-> = {
-  pending: {
-    label: "等待中",
-    icon: <Clock className="w-4 h-4" />,
-    color: "text-yellow-600 dark:text-yellow-400",
-  },
-  processing: {
-    label: "处理中",
-    icon: <Loader2 className="w-4 h-4 animate-spin" />,
-    color: "text-blue-600 dark:text-blue-400",
-  },
-  completed: {
-    label: "已完成",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    color: "text-green-600 dark:text-green-400",
-  },
-  failed: {
-    label: "失败",
-    icon: <XCircle className="w-4 h-4" />,
-    color: "text-red-600 dark:text-red-400",
-  },
-  cancelled: {
-    label: "已取消",
-    icon: <Ban className="w-4 h-4" />,
-    color: "text-gray-600 dark:text-gray-400",
-  },
-};
 
 export function TaskItem({ 
   job, 
@@ -144,36 +35,17 @@ export function TaskItem({
   const [isExpanded, setIsExpanded] = useState(false);
   const hasChildren = children.length > 0;
   
-  const taskType = taskTypeLabels[job.type || ""];
-  const status = statusConfig[job.status || "pending"];
+  const taskType = getTaskTypeLabel(job.type || "", "md");
+  const status = getTaskStatusConfig(job.status || "pending", "md");
 
   const canCancel = job.status === "pending" || job.status === "processing";
   const canRetry = job.status === "failed" || job.status === "cancelled";
   
   // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
-  const viewableTaskTypes = [
-    "storyboard_generation",
-    "character_extraction",
-    "scene_extraction",
-    "shot_decomposition",
-  ];
   const canView = job.status === "completed" && 
                   job.type && 
-                  viewableTaskTypes.includes(job.type) &&
+                  VIEWABLE_TASK_TYPES.includes(job.type as any) &&
                   !job.isImported; // 已导入的任务不再显示查看按钮
-
-  const getTimeText = () => {
-    if (!job.createdAt) return "";
-    
-    try {
-      return formatDistanceToNow(new Date(job.createdAt), {
-        addSuffix: true,
-        locale: zhCN,
-      });
-    } catch {
-      return "";
-    }
-  };
 
   // 计算子任务统计
   const childStats = hasChildren
@@ -214,10 +86,10 @@ export function TaskItem({
               <div className="w-6" /> /* 占位符，保持对齐 */
             )}
             
-            {taskType?.icon}
+            {taskType.icon}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-medium text-sm truncate">{taskType?.label || "未知任务"}</h4>
+                <h4 className="font-medium text-sm truncate">{taskType.label}</h4>
                 {/* 显示子任务统计 */}
                 {childStats && (
                   <div className="flex items-center gap-1">
@@ -239,7 +111,7 @@ export function TaskItem({
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">{getTimeText()}</p>
+              <p className="text-xs text-muted-foreground">{formatTaskTime(job.createdAt)}</p>
             </div>
           </div>
           
