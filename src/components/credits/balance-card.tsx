@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wallet, TrendingUp, TrendingDown } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import type { CreditAccount } from "@/types/payment";
@@ -22,7 +22,7 @@ export function BalanceCard({ balance }: BalanceCardProps) {
       <Card className="relative overflow-hidden">
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
+            <Sparkles className="h-5 w-5" />
             {t("title")}
           </CardTitle>
         </CardHeader>

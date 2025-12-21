@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
-import { Wallet, Plus } from "lucide-react";
+import { Sparkles, Plus } from "lucide-react";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { useCreditsInfo } from "@/hooks/use-credits-info";
 
@@ -16,18 +17,27 @@ export function EditorCreditsButton() {
 
   return (
     <>
-      <div className="flex items-center gap-1">
-        {/* Balance display */}
-        <div className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground">
-          <Wallet className="h-3.5 w-3.5" />
-          <span className="font-medium tabular-nums">{balance.toLocaleString()}</span>
-        </div>
+      <div className="flex items-center gap-0 border rounded-md overflow-hidden">
+        {/* Balance display - clickable to go to credits page */}
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="rounded-none border-r gap-2 h-8 px-3 hover:bg-accent"
+        >
+          <Link href="/credits">
+            <Sparkles className="h-4 w-4" />
+            <span className="font-medium tabular-nums">
+              {balance.toLocaleString()}
+            </span>
+          </Link>
+        </Button>
 
         {/* Add credits button */}
         <Button
           variant="ghost"
-          size="icon"
-          className="h-8 w-8 hover:text-primary"
+          size="sm"
+          className="rounded-none h-8 px-2 hover:bg-accent hover:text-primary"
           onClick={() => setPurchaseDialogOpen(true)}
         >
           <Plus className="h-4 w-4" />

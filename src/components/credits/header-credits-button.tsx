@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
-import { Wallet, Plus } from "lucide-react";
+import { Sparkles, Plus } from "lucide-react";
 import { PurchaseDialog } from "./purchase-dialog";
 import { useCreditsInfo } from "@/hooks/use-credits-info";
 
@@ -26,7 +26,7 @@ export function HeaderCreditsButton() {
           className="rounded-none border-r gap-2 h-9 px-3 hover:bg-accent"
         >
           <Link href="/credits">
-            <Wallet className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline font-medium">
               {balance.toLocaleString()}
             </span>

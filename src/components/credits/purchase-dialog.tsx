@@ -139,8 +139,8 @@ export function PurchaseDialog({
                       {/* Value description */}
                       <p className="text-xs text-center text-muted-foreground">
                         {t("packages.value", {
-                          images: Math.floor(totalCredits / 2),
-                          seconds: Math.floor(totalCredits / 3),
+                          images: Math.floor(totalCredits / 8),
+                          seconds: Math.floor(totalCredits / 20),
                         })}
                       </p>
                     </CardContent>

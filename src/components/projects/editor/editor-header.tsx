@@ -9,8 +9,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
-  Play,
-  Pause,
   Settings,
   MoreVertical,
 } from "lucide-react";
@@ -39,8 +37,7 @@ export function EditorHeader({
   user,
 }: EditorHeaderProps) {
   const router = useRouter();
-  const { state, setPlaying, dispatch } = useEditor();
-  const { timeline } = state;
+  const { dispatch } = useEditor();
   const isMobile = useIsMobile();
 
   const handleSettingsClick = () => {
@@ -118,24 +115,8 @@ export function EditorHeader({
 
       <div className="flex-1" />
 
-      {/* 右侧：播放控制 + 积分 + 后台任务 + 设置 + 用户菜单 */}
+      {/* 右侧：积分 + 后台任务 + 设置 + 用户菜单 */}
       <div className="flex items-center gap-2">
-        {/* 播放/暂停 */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setPlaying(!timeline.isPlaying)}
-        >
-          {timeline.isPlaying ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </Button>
-
-        <Separator orientation="vertical" className="h-6" />
-
         {/* 积分显示 */}
         <EditorCreditsButton />
 
