@@ -33,7 +33,7 @@ export function StyleBadge({ project }: StyleBadgeProps) {
         size="sm"
         variant="ghost"
         className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        onClick={() => router.push(`/projects/${project.id}/settings#style`)}
+        onClick={() => router.push(`/projects/${project.id}/editor?view=settings`)}
       >
         <Settings className="w-3 h-3 mr-1" />
         设置

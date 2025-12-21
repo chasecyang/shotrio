@@ -21,12 +21,11 @@
 - 集成了剧本编辑、分镜管理、视频预览等功能
 
 ### `settings/` - 设置相关
-- `project-settings-form.tsx` - 项目设置表单
+- `project-settings-form.tsx` - 项目设置表单（在编辑器预览区中使用）
 - `style-selector.tsx` - 风格选择器
 
 ### `layout/` - 布局组件
-- `project-selector.tsx` - 项目选择器
-- `project-sidebar.tsx` - 项目侧边栏
+- `project-selector.tsx` - 项目选择器（集成在编辑器 Header 中）
 - `background-tasks.tsx` - 后台任务管理
 
 ### `shared/` - 共享组件
@@ -39,8 +38,13 @@
 - `shots-section.tsx` - 旧版分镜管理
 - `image-generation-panel.tsx` - 未使用的图像生成面板
 - `scripts/` 目录 - 旧版剧本管理页面，已集成到编辑器中
+- `project-sidebar.tsx` - 项目侧边栏，功能已整合到编辑器 Header 中
+- `project-header.tsx` - 项目头部，不再需要
+- `app/[lang]/projects/[id]/settings/page.tsx` - 独立设置页面，已整合到编辑器预览区
 
 ## 📝 更新记录
+- 2024-12-21: 整合设置页面到编辑器预览区，通过 URL 参数 (?view=settings) 控制显示
+- 2024-12-21: 移除 Sidebar，所有功能整合到编辑器 Header（Logo、项目切换、用户菜单）
 - 2024-12-12: 删除旧版成片页面和相关组件，所有功能已整合到编辑器中
 - 2024-12-12: 删除独立的分镜页面，功能已完全集成到编辑器中
 - 2024-12-12: 删除独立的剧本页面，功能已集成到编辑器中

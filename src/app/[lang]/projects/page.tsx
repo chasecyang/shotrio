@@ -144,7 +144,7 @@ export default function ProjectsPage() {
 
           {/* Hint */}
           <p className="text-xs text-muted-foreground/60 pt-4">
-            💡 提示：你也可以点击左侧边栏的项目选择器来创建新项目
+            💡 提示：创建项目后，你可以通过顶部的项目切换器随时切换和创建新项目
           </p>
         </div>
       </div>

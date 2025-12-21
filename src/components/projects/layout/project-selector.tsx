@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useParams } from "next/navigation";
-import { Check, ChevronsUpDown, Plus, Film, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Loader2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,11 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,9 +28,10 @@ interface Project {
 interface ProjectSelectorProps {
   projects: Project[];
   currentProjectId?: string;
+  variant?: "compact" | "full";
 }
 
-export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorProps) {
+export function ProjectSelector({ projects, currentProjectId, variant = "full" }: ProjectSelectorProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const router = useRouter();
@@ -85,115 +81,102 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
     }
   };
 
-  return (
-    <>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  {currentProject ? (
-                    <span className="text-lg font-semibold">
-                      {currentProject.title.charAt(0).toUpperCase()}
-                    </span>
-                  ) : (
-                    <Film className="size-4" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">
-                    {currentProject ? currentProject.title : "选择项目"}
-                  </span>
-                  {currentProject?.description && (
-                    <span className="text-xs truncate">{currentProject.description}</span>
-                  )}
-                </div>
-                <ChevronsUpDown className="ml-auto" />
-              </SidebarMenuButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
-              align="start"
+  // Compact variant for header
+  if (variant === "compact") {
+    return (
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="h-10 gap-2 px-3 hover:bg-accent"
             >
-              {projects.map((project) => (
-                <DropdownMenuItem
-                  key={project.id}
-                  onSelect={() => handleSelectProject(project.id)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center w-full">
-                    <span className="flex-1 truncate">{project.title}</span>
-                    {activeProjectId === project.id && (
-                      <Check className="ml-2 h-4 w-4" />
-                    )}
-                  </div>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
+              <Box className="h-4 w-4 opacity-70 shrink-0" />
+              <span className="text-xs text-muted-foreground">项目</span>
+              <span className="font-medium truncate max-w-[200px]">
+                {currentProject ? currentProject.title : "选择项目"}
+              </span>
+              <ChevronsUpDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[240px]">
+            {projects.map((project) => (
               <DropdownMenuItem
-                onSelect={() => setDialogOpen(true)}
+                key={project.id}
+                onSelect={() => handleSelectProject(project.id)}
                 className="cursor-pointer"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                新建项目
+                <div className="flex items-center w-full">
+                  <span className="flex-1 truncate">{project.title}</span>
+                  {activeProjectId === project.id && (
+                    <Check className="ml-2 h-4 w-4" />
+                  )}
+                </div>
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </SidebarMenuItem>
-      </SidebarMenu>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>创建新项目</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">项目名称 *</Label>
-              <Input
-                id="title"
-                placeholder="例如：霸道总裁爱上我"
-                value={newProject.title}
-                onChange={(e) =>
-                  setNewProject({ ...newProject, title: e.target.value })
-                }
-                disabled={creating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">项目简介</Label>
-              <Textarea
-                id="description"
-                placeholder="简单描述这个项目..."
-                value={newProject.description}
-                onChange={(e) =>
-                  setNewProject({ ...newProject, description: e.target.value })
-                }
-                disabled={creating}
-                rows={3}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={creating}
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => setDialogOpen(true)}
+              className="cursor-pointer"
             >
-              取消
-            </Button>
-            <Button onClick={handleCreateProject} disabled={creating}>
-              {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              创建
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+              <Plus className="mr-2 h-4 w-4" />
+              新建项目
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>创建新项目</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">项目名称 *</Label>
+                <Input
+                  id="title"
+                  placeholder="例如：霸道总裁爱上我"
+                  value={newProject.title}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, title: e.target.value })
+                  }
+                  disabled={creating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">项目简介</Label>
+                <Textarea
+                  id="description"
+                  placeholder="简单描述这个项目..."
+                  value={newProject.description}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, description: e.target.value })
+                  }
+                  disabled={creating}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={creating}
+              >
+                取消
+              </Button>
+              <Button onClick={handleCreateProject} disabled={creating}>
+                {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                创建
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Full variant (legacy, kept for compatibility but not used)
+  return null;
 }
 

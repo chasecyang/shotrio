@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { getProjectDetail } from "@/lib/actions/project";
+import { getProjectDetail, getUserProjects } from "@/lib/actions/project";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
 import { EditorLayout } from "@/components/projects/editor/editor-layout";
 import { ResourcePanel } from "@/components/projects/editor/resource-panel/resource-panel";
@@ -9,19 +9,21 @@ import { EditorSkeleton } from "./loading";
 
 interface EditorPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }
 
-export default async function EditorPage({ params }: EditorPageProps) {
+export default async function EditorPage({ params, searchParams }: EditorPageProps) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
   }
 
   const { id: projectId } = await params;
+  const { view } = await searchParams;
 
   return (
     <Suspense fallback={<EditorSkeleton />}>
-      <EditorWrapper projectId={projectId} userId={user.id} />
+      <EditorWrapper projectId={projectId} userId={user.id} initialView={view} />
     </Suspense>
   );
 }
@@ -29,20 +31,43 @@ export default async function EditorPage({ params }: EditorPageProps) {
 async function EditorWrapper({
   projectId,
   userId,
+  initialView,
 }: {
   projectId: string;
   userId: string;
+  initialView?: string;
 }) {
-  const project = await getProjectDetail(projectId);
+  const [project, projects, user] = await Promise.all([
+    getProjectDetail(projectId),
+    getUserProjects(),
+    getCurrentUser(),
+  ]);
 
   if (!project) {
     notFound();
+  }
+
+  if (!user) {
+    redirect("/login");
   }
 
   return (
     <EditorLayout
       project={project}
       userId={userId}
+      initialView={initialView}
+      projects={projects.map((p) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+      }))}
+      user={{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: user.role,
+      }}
       resourcePanel={<ResourcePanel />}
       previewPanel={<PreviewPanel />}
     />

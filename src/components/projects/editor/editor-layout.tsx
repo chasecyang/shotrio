@@ -21,24 +21,41 @@ import { toast } from "sonner";
 import { FileText, Eye, Film, Bot } from "lucide-react";
 import { AgentPanel, AgentProvider } from "./agent-panel";
 import JSZip from "jszip";
+import type { EditorProject, EditorUser } from "./editor-types";
 
 interface EditorLayoutProps {
   project: ProjectDetail;
   userId: string;
+  projects: EditorProject[];
+  user: EditorUser;
   resourcePanel: ReactNode;
   previewPanel: ReactNode;
+  initialView?: string;
 }
 
 function EditorLayoutInner({
   project,
   userId,
+  projects,
+  user,
   resourcePanel,
   previewPanel,
+  initialView,
 }: EditorLayoutProps) {
   const { state, dispatch, jobs } = useEditor();
 
   // 注册键盘快捷键
   useEditorKeyboard();
+
+  // 处理 URL 参数 - 初始化 settings 视图
+  useEffect(() => {
+    if (initialView === "settings") {
+      dispatch({
+        type: "SELECT_RESOURCE",
+        payload: { type: "settings", id: project.id },
+      });
+    }
+  }, [initialView, project.id, dispatch]);
 
   // 批量生成的 loading 状态
   const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
@@ -281,6 +298,8 @@ function EditorLayoutInner({
           projectId={project.id}
           projectTitle={project.title}
           userId={userId}
+          projects={projects}
+          user={user}
         />
 
         {/* 移动端使用 Tabs 切换 */}
@@ -345,6 +364,8 @@ function EditorLayoutInner({
         projectId={project.id}
         projectTitle={project.title}
         userId={userId}
+        projects={projects}
+        user={user}
       />
 
       {/* 主内容区：横向分割 - AI助手 | 主编辑区 */}

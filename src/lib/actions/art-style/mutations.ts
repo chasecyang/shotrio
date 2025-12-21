@@ -40,7 +40,7 @@ export async function createUserArtStyle(data: {
       usageCount: 0,
     });
 
-    revalidatePath("/projects/[id]/settings", "page");
+    revalidatePath("/projects/[id]/editor", "page");
     
     return { success: true, styleId };
   } catch (error) {
@@ -94,7 +94,7 @@ export async function updateUserArtStyle(
       })
       .where(eq(artStyle.id, styleId));
 
-    revalidatePath("/projects/[id]/settings", "page");
+    revalidatePath("/projects/[id]/editor", "page");
     
     return { success: true };
   } catch (error) {
@@ -136,7 +136,7 @@ export async function deleteUserArtStyle(
 
     await db.delete(artStyle).where(eq(artStyle.id, styleId));
 
-    revalidatePath("/projects/[id]/settings", "page");
+    revalidatePath("/projects/[id]/editor", "page");
     
     return { success: true };
   } catch (error) {

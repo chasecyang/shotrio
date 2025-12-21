@@ -7,6 +7,7 @@ import { EmptyPreview } from "./empty-preview";
 import { ShotPlaybackPlayer } from "./shot-playback-player";
 import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
+import { ProjectSettingsEditor } from "./project-settings-editor";
 
 export function PreviewPanel() {
   const { 
@@ -64,6 +65,9 @@ export function PreviewPanel() {
         return <AssetDetailEditor assetId={selectedResource.id} />;
       }
       break;
+
+    case "settings":
+      return <ProjectSettingsEditor />;
   }
 
   return <EmptyPreview />;
