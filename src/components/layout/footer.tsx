@@ -21,6 +21,13 @@ export function Footer() {
             {/* Links */}
             <div className="flex flex-wrap justify-center items-center gap-6 text-sm">
               <Link 
+                href="/pricing" 
+                className="hover:text-white transition-colors"
+              >
+                {t('footer.pricing')}
+              </Link>
+              <Separator orientation="vertical" className="h-4 bg-neutral-700" />
+              <Link 
                 href="/privacy" 
                 className="hover:text-white transition-colors"
               >

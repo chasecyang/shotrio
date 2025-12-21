@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/routing";
 import { AuthButton } from "@/components/auth/auth-button";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { HeaderCreditsButton } from "@/components/credits/header-credits-button";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
@@ -22,12 +23,15 @@ export async function Header() {
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           {user && (
-            <Button asChild>
-              <Link href="/projects" className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">{t("createProject")}</span>
-              </Link>
-            </Button>
+            <>
+              <HeaderCreditsButton />
+              <Button asChild>
+                <Link href="/projects" className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t("createProject")}</span>
+                </Link>
+              </Button>
+            </>
           )}
           <LanguageSwitcher />
           <AuthButton initialUser={user} />

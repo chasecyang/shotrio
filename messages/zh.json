@@ -41,11 +41,9 @@
     "myProjects": "我的项目",
     "createProject": "开始创作",
     "logout": "退出登录",
-    "profile": "个人资料"
-  },
-  "admin": {
-    "title": "管理后台",
-    "settings": "设置"
+    "profile": "个人资料",
+    "credits": "积分中心",
+    "pricing": "定价"
   },
   "auth": {
     "title": "欢迎回来",
@@ -153,6 +151,8 @@
     "discover": "控制台"
   },
   "projects": {
+    "defaultProjectTitle": "我的第一个项目",
+    "defaultProjectDescription": "开始我的微短剧创作之旅",
     "nav": {
       "scripts": "剧本",
       "storyboard": "分镜",
@@ -375,8 +375,217 @@
   "footer": {
     "privacy": "隐私政策",
     "terms": "用户协议",
+    "pricing": "定价",
     "copyright": "保留所有权利"
   },
   "tools": {
+  },
+  "pricing": {
+    "title": "定价方案",
+    "subtitle": "选择适合您的积分包，开始创作之旅",
+    "viewPricing": "查看定价",
+    "loginToPurchase": "登录后购买",
+    "features": {
+      "title": "使用积分创作精彩内容",
+      "imageGeneration": {
+        "title": "AI 图片生成",
+        "description": "使用 AI 生成高质量的角色、场景、道具图片",
+        "feature1": "8 积分/张",
+        "feature2": "多种分辨率可选",
+        "feature3": "支持参考图创作"
+      },
+      "videoGeneration": {
+        "title": "AI 视频生成",
+        "description": "将分镜脚本转换为精彩的视频内容",
+        "feature1": "20 积分/秒（带音频）",
+        "feature2": "最长 10 秒视频",
+        "feature3": "无音频仅需 12 积分/秒"
+      }
+    },
+    "faq": {
+      "title": "常见问题",
+      "q1": {
+        "question": "积分可以用来做什么？",
+        "answer": "积分用于生成 AI 图片和视频。图片生成消耗 8 积分/张，视频生成消耗 20 积分/秒（带音频）或 12 积分/秒（无音频）。"
+      },
+      "q2": {
+        "question": "积分有有效期吗？",
+        "answer": "积分永久有效，不会过期。您可以随时使用。"
+      },
+      "q3": {
+        "question": "购买赠送是什么？",
+        "answer": "购买积分包时，根据套餐不同可获得 5%-20% 的额外积分赠送。购买越多，赠送比例越高。例如购买专业包（12000积分）可额外获得15%赠送，总共获得13800积分。"
+      },
+      "q4": {
+        "question": "支持哪些支付方式？",
+        "answer": "我们支持信用卡、借记卡等多种支付方式，由 Creem 安全处理。"
+      },
+      "q5": {
+        "question": "可以退款吗？",
+        "answer": "由于积分的数字性质，一旦购买成功无法退款。但如果遇到技术问题导致生成失败，我们会自动退还消耗的积分。"
+      }
+    }
+  },
+  "credits": {
+    "title": "积分中心",
+    "description": "购买积分用于生成图片和视频",
+    "purchase": "购买积分",
+    "addCredits": "充值",
+    "insufficientTitle": "积分不足",
+    "insufficientDescription": "您的积分不足以完成此操作，请充值后继续",
+    "currency": "美元",
+    "creditsUnit": "积分",
+    "bonusLabel": "额外赠送 {percent}%",
+    "balance": {
+      "title": "积分余额",
+      "current": "当前可用积分",
+      "totalEarned": "累计获得",
+      "totalSpent": "累计消费"
+    },
+    "packages": {
+      "title": "选择积分包",
+      "bonusHint": "购买越多，赠送越多！",
+      "starter": "体验包",
+      "basic": "基础包",
+      "standard": "标准包",
+      "pro": "专业包",
+      "ultimate": "旗舰包",
+      "popular": "热门",
+      "bonus5": "5% OFF",
+      "bonus10": "10% OFF",
+      "bonus15": "15% OFF",
+      "bonus20": "20% OFF",
+      "baseCredits": "基础积分",
+      "bonusCredits": "额外赠送",
+      "agentChatFree": "Agent规划与聊天，免费",
+      "total": "您将获得",
+      "valuePerDollar": "性价比",
+      "creditsPerDollar": "积分/$1",
+      "buyNow": "立即购买",
+      "processing": "处理中...",
+      "description": {
+        "starter": "适合初次体验",
+        "basic": "适合轻度使用",
+        "standard": "适合日常创作",
+        "pro": "适合专业创作者",
+        "ultimate": "适合团队和重度使用"
+      },
+      "value": "可生成约 {images} 张图片或 {seconds} 秒视频"
+    },
+    "redeem": {
+      "title": "兑换码",
+      "button": "兑换码",
+      "dialogTitle": "使用兑换码",
+      "dialogDescription": "输入兑换码以获取积分奖励",
+      "placeholder": "请输入兑换码",
+      "submit": "立即兑换",
+      "submitting": "兑换中...",
+      "success": "兑换成功！获得 {credits} 积分",
+      "errors": {
+        "empty": "请输入兑换码",
+        "invalid": "兑换码不存在",
+        "used": "您已经使用过该兑换码",
+        "disabled": "兑换码已被禁用",
+        "expired": "兑换码已过期",
+        "maxUsed": "兑换码已达到最大使用次数"
+      }
+    },
+    "transactions": {
+      "title": "交易记录",
+      "empty": "暂无交易记录",
+      "type": "类型",
+      "description": "描述",
+      "amount": "金额",
+      "balance": "余额",
+      "time": "时间",
+      "types": {
+        "purchase": "充值",
+        "spend": "消费",
+        "refund": "退款",
+        "bonus": "奖励",
+        "redeem": "兑换"
+      }
+    },
+    "orders": {
+      "title": "订单记录",
+      "empty": "暂无订单记录",
+      "status": {
+        "pending": "处理中",
+        "completed": "已完成",
+        "failed": "失败",
+        "refunded": "已退款"
+      },
+      "firstPurchase": "首购"
+    },
+    "costs": {
+      "imageGeneration": "图片生成：{credits} 积分/张",
+      "videoGeneration": "视频生成：{credits} 积分/秒"
+    },
+    "errors": {
+      "insufficientCredits": "积分不足",
+      "loadBalanceFailed": "无法加载余额信息",
+      "loadTransactionsFailed": "无法加载交易记录",
+      "loadOrdersFailed": "无法加载订单记录",
+      "checkoutFailed": "创建支付会话失败，请稍后重试"
+    },
+    "success": {
+      "paymentSuccessTitle": "支付成功！",
+      "paymentSuccessDescription": "您的积分已经到账，可以开始使用了",
+      "viewBalance": "查看积分余额",
+      "startCreating": "开始创作"
+    }
+  },
+  "admin": {
+    "title": "管理后台",
+    "settings": "设置",
+    "redeemCodes": {
+      "title": "兑换码管理",
+      "description": "创建和管理积分兑换码",
+      "generate": "生成兑换码",
+      "table": {
+        "code": "兑换码",
+        "credits": "积分",
+        "usage": "使用情况",
+        "status": "状态",
+        "expires": "有效期",
+        "description": "备注",
+        "createdAt": "创建时间",
+        "actions": "操作"
+      },
+      "status": {
+        "active": "可用",
+        "expired": "已过期",
+        "used": "已用完",
+        "disabled": "已禁用"
+      },
+      "generator": {
+        "title": "生成兑换码",
+        "description": "创建新的积分兑换码",
+        "batchMode": "批量生成",
+        "credits": "积分数量 *",
+        "maxUses": "最大使用次数 *",
+        "count": "生成数量 (1-1000)",
+        "customCode": "自定义兑换码（可选）",
+        "customCodeHint": "留空自动生成",
+        "expiresInDays": "有效期（天数，可选）",
+        "expiresInDaysHint": "留空为永久有效",
+        "description": "备注（可选）",
+        "descriptionPlaceholder": "添加备注信息...",
+        "generate": "生成兑换码",
+        "generating": "生成中...",
+        "generated": "生成的兑换码",
+        "copyAll": "复制全部",
+        "copied": "已复制",
+        "done": "完成",
+        "continueGenerate": "继续生成",
+        "success": "兑换码生成成功",
+        "batchSuccess": "成功生成 {count} 个兑换码"
+      },
+      "empty": "暂无兑换码",
+      "actions": {
+        "enable": "已启用",
+        "disable": "已禁用"
+      }
+    }
   }
 }

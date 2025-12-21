@@ -41,7 +41,9 @@
     "myProjects": "My Projects",
     "createProject": "Start Creating",
     "logout": "Logout",
-    "profile": "Profile"
+    "profile": "Profile",
+    "pricing": "Pricing",
+    "credits": "Credits"
   },
   "admin": {
     "title": "Admin",
@@ -153,6 +155,8 @@
     "discover": "Dashboard"
   },
   "projects": {
+    "defaultProjectTitle": "My First Project",
+    "defaultProjectDescription": "Start my micro-drama creation journey",
     "nav": {
       "scripts": "Scripts",
       "storyboard": "Storyboard",
@@ -362,7 +366,163 @@
   "footer": {
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "pricing": "Pricing",
     "copyright": "All rights reserved"
+  },
+  "pricing": {
+    "title": "Pricing Plans",
+    "subtitle": "Choose the credit package that suits you and start creating",
+    "viewPricing": "View Pricing",
+    "loginToPurchase": "Login to Purchase",
+    "features": {
+      "title": "Create Amazing Content with Credits",
+      "imageGeneration": {
+        "title": "AI Image Generation",
+        "description": "Generate high-quality character, scene, and prop images with AI",
+        "feature1": "8 credits per image",
+        "feature2": "Multiple resolutions available",
+        "feature3": "Support for reference images"
+      },
+      "videoGeneration": {
+        "title": "AI Video Generation",
+        "description": "Transform storyboard scripts into amazing video content",
+        "feature1": "20 credits/sec (with audio)",
+        "feature2": "Up to 10 seconds per video",
+        "feature3": "No audio: only 12 credits/sec"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "question": "What can I use credits for?",
+        "answer": "Credits are used to generate AI images and videos. Image generation costs 8 credits per image, video generation costs 20 credits per second (with audio) or 12 credits per second (no audio)."
+      },
+      "q2": {
+        "question": "Do credits expire?",
+        "answer": "Credits are valid forever and never expire. You can use them anytime."
+      },
+      "q3": {
+        "question": "What is the purchase bonus?",
+        "answer": "When purchasing credit packages, you get 5%-20% extra credits based on the package tier. Buy more, get more bonus. For example, purchasing the Pro package (12000 credits) gets you an extra 15% bonus, totaling 13800 credits."
+      },
+      "q4": {
+        "question": "What payment methods are supported?",
+        "answer": "We support credit cards, debit cards, and other payment methods, securely processed by Creem."
+      },
+      "q5": {
+        "question": "Can I get a refund?",
+        "answer": "Due to the digital nature of credits, purchases cannot be refunded once completed. However, if generation fails due to technical issues, we will automatically refund the consumed credits."
+      }
+    }
+  },
+  "credits": {
+    "title": "Credit Center",
+    "description": "Purchase credits for generating images and videos",
+    "purchase": "Purchase Credits",
+    "addCredits": "Add Credits",
+    "insufficientTitle": "Insufficient Credits",
+    "insufficientDescription": "You don't have enough credits to complete this action. Please add credits to continue",
+    "currency": "USD",
+    "creditsUnit": "Credits",
+    "bonusLabel": "{percent}% extra bonus",
+    "balance": {
+      "title": "Credit Balance",
+      "current": "Current Available Credits",
+      "totalEarned": "Total Earned",
+      "totalSpent": "Total Spent"
+    },
+    "packages": {
+      "title": "Select Credit Package",
+      "bonusHint": "Buy more, get more bonus!",
+      "starter": "Starter",
+      "basic": "Basic",
+      "standard": "Standard",
+      "pro": "Pro",
+      "ultimate": "Ultimate",
+      "popular": "Popular",
+      "bonus5": "5% OFF",
+      "bonus10": "10% OFF",
+      "bonus15": "15% OFF",
+      "bonus20": "20% OFF",
+      "baseCredits": "Base Credits",
+      "bonusCredits": "Extra Bonus",
+      "agentChatFree": "Agent Planning & Chat, Free",
+      "total": "You'll Get",
+      "valuePerDollar": "Value",
+      "creditsPerDollar": "credits/$1",
+      "buyNow": "Buy Now",
+      "processing": "Processing...",
+      "description": {
+        "starter": "Perfect for first-time users",
+        "basic": "Great for light usage",
+        "standard": "Ideal for daily creation",
+        "pro": "Best for professional creators",
+        "ultimate": "Perfect for teams and heavy users"
+      },
+      "value": "Generate approx. {images} images or {seconds} seconds of video"
+    },
+    "redeem": {
+      "title": "Redeem Code",
+      "button": "Redeem",
+      "dialogTitle": "Use Redeem Code",
+      "dialogDescription": "Enter a redeem code to get credit rewards",
+      "placeholder": "Enter redeem code",
+      "submit": "Redeem Now",
+      "submitting": "Redeeming...",
+      "success": "Redeemed successfully! Got {credits} credits",
+      "errors": {
+        "empty": "Please enter redeem code",
+        "invalid": "Redeem code does not exist",
+        "used": "You have already used this redeem code",
+        "disabled": "Redeem code has been disabled",
+        "expired": "Redeem code has expired",
+        "maxUsed": "Redeem code has reached maximum usage limit"
+      }
+    },
+    "transactions": {
+      "title": "Transaction History",
+      "empty": "No transactions yet",
+      "type": "Type",
+      "description": "Description",
+      "amount": "Amount",
+      "balance": "Balance",
+      "time": "Time",
+      "types": {
+        "purchase": "Purchase",
+        "spend": "Spend",
+        "refund": "Refund",
+        "bonus": "Bonus",
+        "redeem": "Redeem"
+      }
+    },
+    "orders": {
+      "title": "Order History",
+      "empty": "No orders yet",
+      "status": {
+        "pending": "Pending",
+        "completed": "Completed",
+        "failed": "Failed",
+        "refunded": "Refunded"
+      },
+      "firstPurchase": "First Purchase"
+    },
+    "costs": {
+      "imageGeneration": "Image generation: {credits} credits/image",
+      "videoGeneration": "Video generation: {credits} credits/second"
+    },
+    "errors": {
+      "insufficientCredits": "Insufficient credits",
+      "loadBalanceFailed": "Failed to load balance information",
+      "loadTransactionsFailed": "Failed to load transaction history",
+      "loadOrdersFailed": "Failed to load order history",
+      "checkoutFailed": "Failed to create checkout session, please try again later"
+    },
+    "success": {
+      "paymentSuccessTitle": "Payment Successful!",
+      "paymentSuccessDescription": "Your credits have been added and are ready to use",
+      "viewBalance": "View Balance",
+      "startCreating": "Start Creating"
+    }
   },
   "tools": {
   }

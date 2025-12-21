@@ -7,6 +7,8 @@ import { generateImageToVideo } from "@/lib/services/fal.service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob, createJob } from "@/lib/actions/job";
 import { buildVideoPrompt, getKlingDuration } from "@/lib/utils/motion-prompt";
+import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
+import { CREDIT_COSTS } from "@/types/payment";
 import type {
   Job,
   ShotVideoGenerationInput,
@@ -61,6 +63,38 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
       throw new Error("分镜图片不存在");
     }
 
+    // 计算积分消费
+    const videoDuration = parseInt(duration || "5");
+    const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
+    
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 15,
+        progressMessage: `检查积分余额（需要 ${creditsNeeded} 积分）...`,
+      },
+      workerToken
+    );
+
+    // 扣除积分
+    const spendResult = await spendCredits({
+      amount: creditsNeeded,
+      description: `生成 ${videoDuration}秒 视频`,
+      metadata: {
+        jobId: jobData.id,
+        shotId,
+        projectId: jobData.projectId,
+        duration: videoDuration,
+        costPerSecond: CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND,
+      },
+    });
+
+    if (!spendResult.success) {
+      throw new Error(spendResult.error || "积分不足");
+    }
+
+    const transactionId = spendResult.transactionId;
+
     await updateJobProgress(
       {
         jobId: jobData.id,
@@ -73,12 +107,32 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
     // 调用Kling Video API
     console.log(`[Worker] 调用Kling API: ${imageUrl}`);
     console.log(`[Worker] Prompt: ${prompt || "camera movement, cinematic"}`);
-    const videoResult = await generateImageToVideo({
-      prompt: prompt || "camera movement, cinematic",
-      image_url: imageUrl,
-      duration: duration || "5",
-      generate_audio: true,
-    });
+    
+    let videoResult;
+    try {
+      videoResult = await generateImageToVideo({
+        prompt: prompt || "camera movement, cinematic",
+        image_url: imageUrl,
+        duration: duration || "5",
+        generate_audio: true,
+      });
+    } catch (error) {
+      // 生成失败，退还积分
+      if (transactionId) {
+        await refundCredits({
+          userId: jobData.userId,
+          amount: creditsNeeded,
+          description: `视频生成失败，退还积分`,
+          metadata: {
+            jobId: jobData.id,
+            shotId,
+            originalTransactionId: transactionId,
+            reason: "generation_failed",
+          },
+        });
+      }
+      throw error;
+    }
 
     if (!videoResult.video?.url) {
       throw new Error("视频生成失败：未返回视频URL");

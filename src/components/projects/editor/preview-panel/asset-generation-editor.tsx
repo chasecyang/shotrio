@@ -47,6 +47,10 @@ import { getAsset } from "@/lib/actions/asset";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import type { Job, AssetImageGenerationResult } from "@/types/job";
 import type { AssetWithTags } from "@/types/asset";
+import { hasEnoughCredits } from "@/lib/actions/credits/balance";
+import { PurchaseDialog } from "@/components/credits/purchase-dialog";
+import { CREDIT_COSTS } from "@/types/payment";
+import { useTranslations } from "next-intl";
 
 interface AssetGenerationEditorProps {
   projectId: string;
@@ -71,6 +75,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   } = useEditor();
 
   const { assetGeneration } = state;
+  const t = useTranslations("credits");
 
   // 使用任务轮询
   const { jobs, refresh: refreshJobs } = useTaskPolling();
@@ -98,6 +103,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // 任务状态
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [generatedAssets, setGeneratedAssets] = useState<AssetImageGenerationResult["assets"]>([]);
+
+  // 积分相关状态
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
 
   // 当前正在执行的任务
   const currentJob = useMemo(() => {
@@ -283,6 +291,17 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast.error("请输入提示词");
+      return;
+    }
+
+    // 检查积分是否充足
+    const requiredCredits = CREDIT_COSTS.IMAGE_GENERATION * numImages;
+    const creditCheck = await hasEnoughCredits(requiredCredits);
+    
+    if (!creditCheck.success || !creditCheck.hasEnough) {
+      // 积分不足，打开购买弹窗
+      toast.error(t("insufficientTitle"));
+      setPurchaseDialogOpen(true);
       return;
     }
 
@@ -718,6 +737,13 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
           </Card>
         )}
       </div>
+
+      {/* 积分不足购买弹窗 */}
+      <PurchaseDialog
+        open={purchaseDialogOpen}
+        onOpenChange={setPurchaseDialogOpen}
+        highlightPackage="starter"
+      />
     </ScrollArea>
   );
 }

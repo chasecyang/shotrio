@@ -7,6 +7,8 @@ import { analyzePromptForBatch } from "@/lib/services/ai-tagging.service";
 import { generateImage, editImage } from "@/lib/services/fal.service";
 import { uploadImageToR2, AssetCategory } from "@/lib/storage/r2.service";
 import { createAssetInternal } from "@/lib/actions/asset/crud";
+import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
+import { CREDIT_COSTS } from "@/types/payment";
 import type {
   Job,
   AssetImageGenerationInput,
@@ -105,7 +107,36 @@ export async function processAssetImageGeneration(
     );
   }
 
-  // 步骤2: 生成图片（50%）
+  // 步骤2: 扣除积分
+  const totalCreditsNeeded = CREDIT_COSTS.IMAGE_GENERATION * numImages;
+  
+  await updateJobProgress(
+    {
+      jobId: jobData.id,
+      progress: 15,
+      progressMessage: `检查积分余额（需要 ${totalCreditsNeeded} 积分）...`,
+    },
+    workerToken
+  );
+
+  const spendResult = await spendCredits({
+    amount: totalCreditsNeeded,
+    description: `生成 ${numImages} 张图片`,
+    metadata: {
+      jobId: jobData.id,
+      projectId,
+      numImages,
+      costPerImage: CREDIT_COSTS.IMAGE_GENERATION,
+    },
+  });
+
+  if (!spendResult.success) {
+    throw new Error(spendResult.error || "积分不足");
+  }
+
+  const transactionId = spendResult.transactionId;
+
+  // 步骤3: 生成图片（50%）
   await updateJobProgress(
     {
       jobId: jobData.id,
@@ -117,8 +148,9 @@ export async function processAssetImageGeneration(
 
   let generatedImages: Array<{ url: string; width?: number; height?: number }> = [];
 
-  // 有参考图时自动使用 image-to-image 模式
-  if (sourceAssetIds.length > 0) {
+  try {
+    // 有参考图时自动使用 image-to-image 模式
+    if (sourceAssetIds.length > 0) {
     // 图生图模式：获取源素材的图片URL
     const sourceAssets = await db.query.asset.findMany({
       where: inArray(asset.id, sourceAssetIds),
@@ -164,6 +196,25 @@ export async function processAssetImageGeneration(
 
     generatedImages = generateResult.images;
   }
+  } catch (error) {
+    console.error("[Worker] 图片生成失败:", error);
+    
+    // 生成失败，退还积分
+    if (transactionId) {
+      await refundCredits({
+        userId: jobData.userId,
+        amount: totalCreditsNeeded,
+        description: `图片生成失败，退还积分`,
+        metadata: {
+          jobId: jobData.id,
+          originalTransactionId: transactionId,
+          reason: "generation_failed",
+        },
+      });
+    }
+    
+    throw error;
+  }
 
   await updateJobProgress(
     {
@@ -174,7 +225,7 @@ export async function processAssetImageGeneration(
     workerToken
   );
 
-  // 步骤3: 上传并保存（80%-95%）
+  // 步骤4: 上传并保存（80%-95%）
   const createdAssets: Array<{
     id: string;
     name: string;
@@ -256,7 +307,7 @@ export async function processAssetImageGeneration(
     workerToken
   );
 
-  // 步骤4: 完成任务（100%）
+  // 步骤5: 完成任务（100%）
   if (createdAssets.length === 0) {
     throw new Error(`所有图片生成失败: ${errors.join("; ")}`);
   }

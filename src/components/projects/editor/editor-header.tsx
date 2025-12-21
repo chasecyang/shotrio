@@ -21,6 +21,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BackgroundTasks } from "../layout/background-tasks";
 import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
+import { EditorCreditsButton } from "./editor-credits-button";
 import type { EditorProject, EditorUser } from "./editor-types";
 
 interface EditorHeaderProps {
@@ -70,7 +71,6 @@ export function EditorHeader({
         <ProjectSelector 
           projects={projects}
           currentProjectId={projectId}
-          variant="compact"
         />
 
         <div className="flex-1" />
@@ -113,13 +113,12 @@ export function EditorHeader({
         <ProjectSelector 
           projects={projects}
           currentProjectId={projectId}
-          variant="compact"
         />
       </div>
 
       <div className="flex-1" />
 
-      {/* 右侧：播放控制 + 后台任务 + 设置 + 用户菜单 */}
+      {/* 右侧：播放控制 + 积分 + 后台任务 + 设置 + 用户菜单 */}
       <div className="flex items-center gap-2">
         {/* 播放/暂停 */}
         <Button
@@ -134,6 +133,11 @@ export function EditorHeader({
             <Play className="h-4 w-4" />
           )}
         </Button>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        {/* 积分显示 */}
+        <EditorCreditsButton />
 
         <Separator orientation="vertical" className="h-6" />
 

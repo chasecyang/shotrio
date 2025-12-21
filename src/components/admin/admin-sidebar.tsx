@@ -5,6 +5,7 @@ import {
   Palette, 
   LayoutDashboard,
   Home,
+  Ticket,
   // Users,
   // Settings,
   // FileText,
@@ -41,6 +42,11 @@ const navItems: NavItem[] = [
     title: "美术风格",
     href: "/admin/art-styles",
     icon: Palette,
+  },
+  {
+    title: "兑换码管理",
+    href: "/admin/redeem-codes",
+    icon: Ticket,
   },
   // 未来可以添加更多管理功能
   // {
