@@ -1,8 +1,6 @@
 // 任务类型定义
 
 export type JobType =
-  | "storyboard_generation" // 剧本自动分镜（触发入口）
-  | "storyboard_basic_extraction" // 基础分镜提取（第一步）
   | "batch_image_generation" // 批量图像生成
   | "asset_image_generation" // 素材图片生成
   | "video_generation" // 视频生成
@@ -40,23 +38,6 @@ export interface Job {
 }
 
 // 各种任务的输入数据类型
-export interface StoryboardGenerationInput {
-  episodeId: string;
-  autoGenerateImages?: boolean;
-}
-
-// 基础分镜提取输入（第一步）
-export interface StoryboardBasicExtractionInput {
-  episodeId: string;
-  parentJobId?: string; // 父任务ID，用于追溯
-}
-
-// @deprecated 已废弃 - 角色场景匹配功能已移除
-export interface StoryboardMatchingInput {
-  episodeId: string;
-  basicExtractionJobId: string;
-  parentJobId?: string;
-}
 
 export interface BatchImageGenerationInput {
   prompts: Array<{
@@ -87,27 +68,6 @@ export interface AssetImageGenerationInput {
   sourceAssetIds?: string[];
   // 生成模式（可选，有 sourceAssetIds 时自动使用 image-to-image）
   mode?: "text-to-image" | "image-to-image";
-}
-
-export interface StoryboardGenerationResult {
-  childJobIds?: string[]; // 子任务ID列表
-  basicExtractionJobId?: string; // 第一步任务ID
-  matchingJobId?: string; // 第二步任务ID
-  message?: string;
-}
-
-// 基础分镜提取结果（第一步）
-export interface StoryboardBasicExtractionResult {
-  shots: Array<{
-    order: number;
-    shotSize: string;
-    cameraMovement: string;
-    duration: number;
-    description: string;
-    visualPrompt: string;
-    audioPrompt?: string;
-  }>;
-  shotCount: number;
 }
 
 export interface BatchImageGenerationResult {

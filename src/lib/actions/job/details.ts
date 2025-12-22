@@ -5,9 +5,6 @@ import { episode } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import type { 
   Job,
-  StoryboardGenerationInput,
-  StoryboardBasicExtractionInput,
-  StoryboardMatchingInput,
 } from "@/types/job";
 import { getTaskTypeLabelText } from "@/lib/constants/task-labels";
 
@@ -35,40 +32,10 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
   try {
     const inputData = JSON.parse(job.inputData);
 
+    // 根据任务类型添加额外信息（如需要）
     switch (job.type) {
-      case "storyboard_generation": {
-        const input = inputData as StoryboardGenerationInput;
-        
-        // 查询剧集信息
-        const episodeRecord = await db.query.episode.findFirst({
-          where: eq(episode.id, input.episodeId),
-        });
-
-        if (episodeRecord) {
-          baseDetails.displaySubtitle = `剧集: ${episodeRecord.title}`;
-        }
+      default:
         break;
-      }
-
-      case "storyboard_basic_extraction": {
-        const input = inputData as StoryboardBasicExtractionInput;
-        
-        // 查询剧集信息
-        const episodeRecord = await db.query.episode.findFirst({
-          where: eq(episode.id, input.episodeId),
-        });
-
-        if (episodeRecord) {
-          baseDetails.displaySubtitle = `剧集: ${episodeRecord.title}`;
-        }
-        break;
-      }
-
-      // @deprecated - storyboard_matching 功能已废弃
-      case "storyboard_matching": {
-        baseDetails.displaySubtitle = "已废弃的任务类型";
-        break;
-      }
     }
   } catch (error) {
     console.error("解析任务详情失败:", error);

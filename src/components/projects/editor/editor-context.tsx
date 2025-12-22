@@ -67,13 +67,6 @@ export interface EditorState {
   
   // 加载状态
   isLoading: boolean;
-  
-  // 分镜提取对话框状态
-  storyboardExtractionDialog: {
-    open: boolean;
-    episodeId: string | null;
-    jobId: string | null;
-  };
 
   // 素材生成状态
   assetGeneration: AssetGenerationState;
@@ -96,8 +89,6 @@ type EditorAction =
   | { type: "SET_PLAYING"; payload: boolean }
   | { type: "SET_SCROLL_POSITION"; payload: number }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "OPEN_STORYBOARD_EXTRACTION_DIALOG"; payload: { episodeId: string; jobId: string } }
-  | { type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" }
   | { type: "START_PLAYBACK" }
   | { type: "STOP_PLAYBACK" }
   | { type: "SET_PLAYBACK_SHOT_INDEX"; payload: number }
@@ -126,11 +117,6 @@ const initialState: EditorState = {
   shots: [],
   selectedShotIds: [],
   isLoading: true,
-  storyboardExtractionDialog: {
-    open: false,
-    episodeId: null,
-    jobId: null,
-  },
   assetGeneration: {
     mode: "text-to-image",
     selectedSourceAssets: [],
@@ -282,35 +268,6 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         isLoading: action.payload,
       };
 
-    case "OPEN_STORYBOARD_EXTRACTION_DIALOG":
-      return {
-        ...state,
-        storyboardExtractionDialog: {
-          open: true,
-          episodeId: action.payload.episodeId,
-          jobId: action.payload.jobId,
-        },
-        // 同时切换到对应的剧集
-        selectedEpisodeId: action.payload.episodeId,
-        selectedResource: { type: "episode", id: action.payload.episodeId },
-        // 退出播放模式
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "CLOSE_STORYBOARD_EXTRACTION_DIALOG":
-      return {
-        ...state,
-        storyboardExtractionDialog: {
-          open: false,
-          episodeId: null,
-          jobId: null,
-        },
-      };
-
     case "START_PLAYBACK":
       return {
         ...state,
@@ -408,8 +365,6 @@ interface EditorContextType {
   setPlayhead: (position: number) => void;
   setPlaying: (playing: boolean) => void;
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
-  openStoryboardExtractionDialog: (episodeId: string, jobId: string) => void;
-  closeStoryboardExtractionDialog: () => void;
   // 播放控制方法
   startPlayback: () => void;
   stopPlayback: () => void;
@@ -550,14 +505,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "UPDATE_PROJECT", payload: project });
   }, []);
 
-  const openStoryboardExtractionDialog = useCallback((episodeId: string, jobId: string) => {
-    dispatch({ type: "OPEN_STORYBOARD_EXTRACTION_DIALOG", payload: { episodeId, jobId } });
-  }, []);
-
-  const closeStoryboardExtractionDialog = useCallback(() => {
-    dispatch({ type: "CLOSE_STORYBOARD_EXTRACTION_DIALOG" });
-  }, []);
-
   // 播放控制方法
   const startPlayback = useCallback(() => {
     dispatch({ type: "START_PLAYBACK" });
@@ -636,8 +583,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setPlayhead,
       setPlaying,
       updateProject,
-      openStoryboardExtractionDialog,
-      closeStoryboardExtractionDialog,
       startPlayback,
       stopPlayback,
       nextShot,
@@ -666,8 +611,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setPlayhead,
       setPlaying,
       updateProject,
-      openStoryboardExtractionDialog,
-      closeStoryboardExtractionDialog,
       startPlayback,
       stopPlayback,
       nextShot,

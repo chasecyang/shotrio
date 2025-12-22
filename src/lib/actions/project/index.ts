@@ -27,5 +27,4 @@ export {
   updateShot,
   deleteShot,
   reorderShots,
-  importExtractedShots,
 } from "./shot";

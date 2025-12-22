@@ -42,8 +42,6 @@ export const cameraMovementEnum = pgEnum("camera_movement", [
 
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
-  "storyboard_generation", // 剧本自动分镜（触发入口）
-  "storyboard_basic_extraction", // 基础分镜提取（第一步）
   "batch_image_generation", // 批量图像生成
   "asset_image_generation", // 素材图片生成
   "script_element_extraction", // 剧本元素提取

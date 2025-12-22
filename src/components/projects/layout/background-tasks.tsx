@@ -40,7 +40,7 @@ import {
 } from "@/lib/constants/task-labels";
 
 export function BackgroundTasks() {
-  const { jobs: activeJobs, openStoryboardExtractionDialog, openShotDecompositionDialog } = useEditor();
+  const { jobs: activeJobs, openShotDecompositionDialog } = useEditor();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -150,24 +150,6 @@ export function BackgroundTasks() {
     // 根据任务类型处理
     try {
       switch (job.type) {
-        case "storyboard_generation": {
-          // 分镜提取任务：获取完整任务数据并打开预览对话框
-          const result = await getJobDetail(jobId);
-          if (!result.success || !result.job?.inputData) {
-            toast.error("无法获取任务数据");
-            return;
-          }
-          const inputData = JSON.parse(result.job.inputData);
-          const episodeId = inputData.episodeId;
-          
-          if (episodeId) {
-            openStoryboardExtractionDialog(episodeId, jobId);
-          } else {
-            toast.error("无法获取剧集信息");
-          }
-          break;
-        }
-        
         case "character_extraction":
         case "scene_extraction": {
           // 角色/场景提取任务：TODO 可以添加类似的对话框

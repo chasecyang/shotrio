@@ -200,53 +200,6 @@ export async function executeFunction(
         break;
       }
 
-      case "batch_create_shots": {
-        const shotsData = JSON.parse(parameters.shots as string) as Array<{
-          order: number;
-          shotSize: string;
-          description: string;
-          visualPrompt?: string;
-          cameraMovement?: string;
-          duration?: number;
-        }>;
-
-        const createdShots: string[] = [];
-        const errors: string[] = [];
-
-        for (const shotData of shotsData) {
-          const createResult = await createShot({
-            episodeId: parameters.episodeId as string,
-            order: shotData.order,
-            shotSize: shotData.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
-            cameraMovement: shotData.cameraMovement || "static",
-            duration: shotData.duration || 3000,
-            description: shotData.description,
-            visualPrompt: shotData.visualPrompt,
-          });
-
-          if (createResult.success && createResult.data) {
-            createdShots.push(createResult.data.id);
-          } else {
-            errors.push(`分镜 #${shotData.order} 创建失败: ${createResult.error || "未知错误"}`);
-          }
-        }
-
-        result = {
-          functionCallId: functionCall.id,
-          success: createdShots.length > 0,
-          data: {
-            createdShotIds: createdShots,
-            createdCount: createdShots.length,
-            totalCount: shotsData.length,
-            errors: errors.length > 0 ? errors : undefined,
-          },
-          error: errors.length > 0 && createdShots.length === 0 
-            ? `所有分镜创建失败: ${errors.join("; ")}` 
-            : undefined,
-        };
-        break;
-      }
-
       // ============================================
       // 生成类
       // ============================================

@@ -11,7 +11,6 @@ import {
   type ShotDetail,
   type ShotSize,
   type CameraMovement,
-  type ExtractedShot,
 } from "@/types/project";
 
 /**
@@ -223,78 +222,6 @@ export async function reorderShots(
     return {
       success: false,
       error: error instanceof Error ? error.message : "重新排序失败",
-    };
-  }
-}
-
-// ==================== 分镜提取导入 Actions ====================
-
-/**
- * 批量导入AI提取的分镜数据
- */
-export async function importExtractedShots(
-  episodeId: string,
-  extractedShots: ExtractedShot[]
-) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    throw new Error("未登录");
-  }
-
-  try {
-    // 验证剧集存在
-    const episodeData = await db.query.episode.findFirst({
-      where: eq(episode.id, episodeId),
-    });
-
-    if (!episodeData) {
-      throw new Error("剧集不存在");
-    }
-
-    // 使用事务批量插入
-    const result = await db.transaction(async (tx) => {
-      const insertedShots: string[] = [];
-
-      for (const extractedShot of extractedShots) {
-        // 创建分镜记录
-        const shotId = randomUUID();
-        const newShot: NewShot = {
-          id: shotId,
-          episodeId,
-          order: extractedShot.order,
-          shotSize: extractedShot.shotSize,
-          cameraMovement: extractedShot.cameraMovement,
-          duration: extractedShot.duration,
-          description: extractedShot.description || null,
-          visualPrompt: extractedShot.visualPrompt || null,
-          audioPrompt: extractedShot.audioPrompt || null,
-          imageAssetId: null,
-          videoUrl: null,
-          finalAudioUrl: null,
-        };
-
-        await tx.insert(shot).values(newShot);
-        insertedShots.push(shotId);
-      }
-
-      return {
-        insertedShots,
-      };
-    });
-
-    return {
-      success: true,
-      imported: {
-        newShots: result.insertedShots.length,
-      },
-    };
-  } catch (error) {
-    console.error("导入分镜失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "导入失败",
     };
   }
 }

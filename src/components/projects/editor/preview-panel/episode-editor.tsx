@@ -12,9 +12,7 @@ import {
   Zap,
   ScrollText,
   Sparkles,
-  Film,
 } from "lucide-react";
-// Note: Sparkles is still used for the storyboard extraction button
 import {
   EditableField,
   EditableInput,
@@ -23,16 +21,12 @@ import {
   SaveStatus,
 } from "@/components/ui/inline-editable-field";
 import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
-import { StoryboardExtractionBanner } from "./storyboard-extraction-banner";
-import { StoryboardExtractionDialog } from "./storyboard-extraction-dialog";
-import { useEditor } from "../editor-context";
 
 interface EpisodeEditorProps {
   episode: Episode;
 }
 
 export function EpisodeEditor({ episode }: EpisodeEditorProps) {
-  const { state, closeStoryboardExtractionDialog } = useEditor();
   const [formData, setFormData] = useState({
     title: episode.title,
     summary: episode.summary || "",
@@ -49,56 +43,8 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
 
-  // 本地对话框状态（用于手动打开）
-  const [localDialogOpen, setLocalDialogOpen] = useState(false);
-  const [localJobId, setLocalJobId] = useState<string | null>(null);
-
-  // 合并 context 和本地的对话框状态
-  const isDialogOpen = state.storyboardExtractionDialog.open || localDialogOpen;
-  const dialogJobId = state.storyboardExtractionDialog.jobId || localJobId;
-  const dialogEpisodeId = state.storyboardExtractionDialog.episodeId || episode.id;
-
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-
-  // 启动分镜提取
-  const handleStartExtraction = async () => {
-    if (!formData.scriptContent || !formData.scriptContent.trim()) {
-      toast.error("请先编写剧本内容");
-      return;
-    }
-
-    const { startStoryboardGeneration } = await import("@/lib/actions/storyboard");
-    const result = await startStoryboardGeneration(episode.id);
-
-    if (result.success && result.jobId) {
-      toast.success("已启动分镜提取任务");
-    } else {
-      toast.error(result.error || "启动失败");
-    }
-  };
-
-  // 打开预览对话框（从横幅触发）
-  const handleOpenPreview = (jobId: string) => {
-    setLocalJobId(jobId);
-    setLocalDialogOpen(true);
-  };
-
-  // 关闭对话框
-  const handleCloseDialog = () => {
-    // 清除 context 状态
-    if (state.storyboardExtractionDialog.open) {
-      closeStoryboardExtractionDialog();
-    }
-    // 清除本地状态
-    setLocalDialogOpen(false);
-    setLocalJobId(null);
-  };
-
-  // 导入成功回调
-  const handleImportSuccess = () => {
-    // 任务已在数据库中标记为已导入，无需额外操作
-  };
 
   // 同步 episode 更新
   useEffect(() => {
@@ -243,28 +189,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     <>
       <ScrollArea className="h-full">
         <div className="p-6 max-w-3xl mx-auto space-y-6">
-          {/* 分镜提取横幅 */}
-          <StoryboardExtractionBanner
-            episodeId={episode.id}
-            onOpenPreview={handleOpenPreview}
-          />
-
-          {/* 快速操作按钮 */}
-          {formData.scriptContent && formData.scriptContent.trim() && (
-            <div className="flex gap-2">
-              <Button
-                onClick={handleStartExtraction}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Film className="w-4 h-4" />
-                <Sparkles className="w-3 h-3" />
-                自动拆分分镜
-              </Button>
-            </div>
-          )}
-
           {/* 标题栏 */}
         <div className="flex items-center gap-3 pb-4 border-b">
           <Badge variant="outline" className="font-mono text-sm">
@@ -384,23 +308,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
         </div>
         </div>
       </ScrollArea>
-
-      {/* 分镜提取对话框 */}
-      {dialogJobId && (
-        <StoryboardExtractionDialog
-          episodeId={dialogEpisodeId}
-          jobId={dialogJobId}
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              handleCloseDialog();
-            }
-          }}
-          scenes={[]}
-          characters={[]}
-          onImportSuccess={handleImportSuccess}
-        />
-      )}
     </>
   );
 }

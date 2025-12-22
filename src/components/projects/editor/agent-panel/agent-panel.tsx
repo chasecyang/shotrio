@@ -30,7 +30,7 @@ function updateIterations(
 // 判断是否为分镜相关操作
 function isShotRelatedFunction(functionName: string): boolean {
   const shotRelatedFunctions = [
-    'create_shot', 'batch_create_shots',
+    'create_shot',
     'update_shot', 'batch_update_shot_duration',
     'delete_shots', 'reorder_shots'
   ];

@@ -67,11 +67,6 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         return parts.join(" - ");
       }
 
-      case "batch_create_shots": {
-        const count = parseArrayLength(parameters.shots);
-        return count > 0 ? `批量创建 ${count} 个分镜` : "批量创建分镜";
-      }
-
       // ============================================
       // 生成类操作
       // ============================================

@@ -24,7 +24,6 @@ import {
   ImageIcon,
   Video,
   Sparkles,
-  Film,
   X,
   Play,
   Download,
@@ -32,7 +31,6 @@ import {
 import { useEditor } from "../editor-context";
 import { formatDurationMMSS } from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
-import { startStoryboardGeneration } from "@/lib/actions/storyboard";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -208,29 +206,7 @@ function DefaultActionsBar({
   onAddShot?: () => void;
 }) {
   const { state } = useEditor();
-  const { shots, project, selectedEpisodeId } = state;
-  const isMobile = useIsMobile();
-
-  const selectedEpisode = project?.episodes.find((ep) => ep.id === selectedEpisodeId);
-  const hasScriptContent = selectedEpisode?.scriptContent && selectedEpisode.scriptContent.trim();
-
-  const handleStartExtraction = async () => {
-    if (!selectedEpisodeId) {
-      toast.error("请先选择剧集");
-      return;
-    }
-    if (!hasScriptContent) {
-      toast.error("请先编写剧本内容");
-      return;
-    }
-
-    const result = await startStoryboardGeneration(selectedEpisodeId);
-    if (result.success) {
-      toast.success("已启动分镜提取任务");
-    } else {
-      toast.error(result.error || "启动失败");
-    }
-  };
+  const { shots, selectedEpisodeId } = state;
 
   return (
     <motion.div
@@ -248,22 +224,6 @@ function DefaultActionsBar({
       </div>
 
       <Separator orientation="vertical" className="h-4 bg-border/50" />
-
-      {/* AI 自动拆分 */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleStartExtraction}
-        className={cn(
-          "h-7 text-xs border-blue-200 dark:border-blue-800/50",
-          "hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-950/30 dark:hover:border-blue-700"
-        )}
-        disabled={!selectedEpisodeId || !hasScriptContent}
-      >
-        <Film className="h-3.5 w-3.5 mr-1" />
-        <Sparkles className="h-3 w-3 mr-1" />
-        {!isMobile && "AI "}自动拆分
-      </Button>
 
       {/* 手动添加 */}
       <Button

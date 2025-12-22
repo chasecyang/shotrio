@@ -54,14 +54,6 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
   },
 
   // 提取任务
-  storyboard_generation: {
-    type: "episode",
-    refreshOn: ["completed"],
-  },
-  storyboard_basic_extraction: {
-    type: "episode",
-    refreshOn: ["completed"],
-  },
   character_extraction: {
     type: "project",
     refreshOn: ["completed"],

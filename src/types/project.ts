@@ -75,24 +75,3 @@ export type CameraMovement =
 export function isEpisodeComplete(episode: Episode): boolean {
   return !!(episode.summary && episode.hook && episode.scriptContent);
 }
-
-// 分镜提取相关类型
-export interface ExtractedShot {
-  order: number; // 分镜序号
-  shotSize: ShotSize; // 景别
-  cameraMovement: CameraMovement; // 运镜方式
-  duration: number; // 预估时长（毫秒）
-  description: string; // 描述（包含画面、对话、动作等）
-  visualPrompt: string; // 英文AI绘图prompt
-  audioPrompt?: string; // 音效/BGM描述
-}
-
-export interface ShotExtractionResult {
-  shots: ExtractedShot[];
-  shotCount: number;
-}
-
-// 导入分镜时的数据结构
-export interface ShotToImport extends ExtractedShot {
-  selected: boolean; // 是否选中要导入
-}

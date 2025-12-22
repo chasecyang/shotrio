@@ -39,18 +39,6 @@ export const TASK_TYPE_LABELS: Record<JobType, TaskTypeConfig> = {
     label: "场景图生成",
     iconName: "Sparkles",
   },
-  storyboard_generation: {
-    label: "分镜提取",
-    iconName: "Film",
-  },
-  storyboard_basic_extraction: {
-    label: "基础分镜提取",
-    iconName: "Film",
-  },
-  storyboard_matching: {
-    label: "角色场景匹配",
-    iconName: "Users",
-  },
   batch_image_generation: {
     label: "批量图像生成",
     iconName: "Images",
@@ -126,7 +114,6 @@ export const TASK_STATUS_CONFIG: Record<JobStatus, TaskStatusConfig> = {
  * 支持"查看结果"的任务类型列表
  */
 export const VIEWABLE_TASK_TYPES: JobType[] = [
-  "storyboard_generation",
   "character_extraction",
   "scene_extraction",
 ];
