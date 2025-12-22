@@ -9,6 +9,8 @@ import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
 import { ProjectSettingsEditor } from "./project-settings-editor";
 import { AgentPanel } from "../agent-panel";
+import { ChatPanel } from "../agent-panel/chat-panel";
+import { AgentErrorBoundary } from "../agent-panel/agent-error-boundary";
 
 export function PreviewPanel() {
   const { 
@@ -72,7 +74,21 @@ export function PreviewPanel() {
 
     case "agent":
       if (selectedResource.id) {
-        return <AgentPanel projectId={selectedResource.id} />;
+        return (
+          <AgentErrorBoundary>
+            <AgentPanel projectId={selectedResource.id} />
+          </AgentErrorBoundary>
+        );
+      }
+      break;
+
+    case "conversation":
+      if (selectedResource.id) {
+        return (
+          <AgentErrorBoundary>
+            <ChatPanel conversationId={selectedResource.id} />
+          </AgentErrorBoundary>
+        );
       }
       break;
   }

@@ -13,12 +13,14 @@ import type {
   FunctionCall,
 } from "@/types/agent";
 import { executeFunction } from "./executor";
+import { updateMessage, updateConversationStatus } from "../conversation/crud";
 
 /**
  * 确认并执行待处理的操作
  */
 export async function confirmAndExecuteAction(input: {
-  actionId: string;
+  conversationId: string;
+  messageId: string;
   functionCalls: FunctionCall[];
 }): Promise<AgentChatResponse> {
   const session = await auth.api.getSession({
@@ -64,6 +66,16 @@ export async function confirmAndExecuteAction(input: {
       message = `⚠️ 执行完成：${successCount} 个成功，${failCount} 个失败`;
     }
 
+    // 更新数据库中的消息状态（将 pendingAction 标记为已接受）
+    // 这里我们需要重新读取消息，修改 pendingAction 状态后保存
+    // 简化方案：直接将 pendingAction 设置为 null（表示已处理）
+    await updateMessage(input.messageId, {
+      pendingAction: null,
+    });
+
+    // 更新对话状态为 active（准备继续）
+    await updateConversationStatus(input.conversationId, "active");
+
     return {
       success: true,
       message,
@@ -77,12 +89,3 @@ export async function confirmAndExecuteAction(input: {
     };
   }
 }
-
-/**
- * 取消待处理的操作
- */
-export async function cancelAction(actionId: string): Promise<{ success: boolean }> {
-  // 只是移除 pending action，无需其他操作
-  return { success: true };
-}
-

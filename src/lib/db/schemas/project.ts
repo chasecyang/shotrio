@@ -61,6 +61,20 @@ export const jobStatusEnum = pgEnum("job_status", [
   "cancelled", // 已取消
 ]);
 
+// 对话状态
+export const conversationStatusEnum = pgEnum("conversation_status", [
+  "active", // 活跃中（AI正在执行或等待用户输入）
+  "awaiting_approval", // 等待批准（有操作需要用户确认）
+  "completed", // 已完成（对话已结束）
+]);
+
+// 消息角色
+export const messageRoleEnum = pgEnum("message_role", [
+  "user",
+  "assistant",
+  "system",
+]);
+
 // --- 表定义 ---
 
 // 0. 美术风格表 (ArtStyle) - 系统预设和用户自定义风格
@@ -286,6 +300,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   assets: many(asset),
   episodes: many(episode),
   jobs: many(job),
+  conversations: many(conversation),
 }));
 
 export const assetRelations = relations(asset, ({ one, many }) => ({
@@ -410,6 +425,71 @@ export const shotTransitionRelations = relations(shotTransition, ({ one }) => ({
   }),
 }));
 
+// 7. 对话表 (Conversation) - AI 助手对话会话
+export const conversation = pgTable("conversation", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => project.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  
+  // 基本信息
+  title: text("title").notNull(), // 对话标题（自动生成或用户设置）
+  status: conversationStatusEnum("status").default("active").notNull(),
+  
+  // 时间戳
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(), // 最后活动时间
+});
 
+// 8. 对话消息表 (Conversation Message) - 对话中的消息
+export const conversationMessage = pgTable("conversation_message", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id")
+    .notNull()
+    .references(() => conversation.id, { onDelete: "cascade" }),
+  
+  // 消息内容
+  role: messageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  
+  // AI 思考过程和迭代步骤
+  thinkingProcess: text("thinking_process"),
+  iterations: text("iterations"), // JSON string of IterationStep[]
+  
+  // 待确认操作（内联存储）
+  pendingAction: text("pending_action"), // JSON string of PendingAction
+  
+  // 状态标记
+  isStreaming: boolean("is_streaming").default(false),
+  isInterrupted: boolean("is_interrupted").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const conversationRelations = relations(conversation, ({ one, many }) => ({
+  project: one(project, {
+    fields: [conversation.projectId],
+    references: [project.id],
+  }),
+  user: one(user, {
+    fields: [conversation.userId],
+    references: [user.id],
+  }),
+  messages: many(conversationMessage),
+}));
+
+export const conversationMessageRelations = relations(conversationMessage, ({ one }) => ({
+  conversation: one(conversation, {
+    fields: [conversationMessage.conversationId],
+    references: [conversation.id],
+  }),
+}));
 
 

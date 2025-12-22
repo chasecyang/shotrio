@@ -133,7 +133,7 @@ export default async function Home() {
                   </Link>
                   <Link href="/pricing">
                     <Button variant="outline" size="lg" className="h-14 px-8 text-lg rounded-full border-primary/20 hover:bg-primary/5">
-                      {t("nav.pricing")}
+                      {t("pricing.viewPricing")}
                     </Button>
                   </Link>
                 </div>

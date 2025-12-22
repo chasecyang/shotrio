@@ -99,6 +99,10 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
   const { jobs } = callbacks;
   const processedJobsRef = useRef<Set<string>>(new Set());
   const refreshTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
+  // 使用 ref 存储 callbacks，避免 callbacks 对象引用变化导致 effect 重复执行
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
 
   useEffect(() => {
     const processJobs = async () => {
@@ -140,14 +144,14 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
           }
 
           const timer = setTimeout(async () => {
-            await executeRefresh(strategy.type, inputData, callbacks, job);
+            await executeRefresh(strategy.type, inputData, callbacksRef.current, job);
             refreshTimersRef.current.delete(refreshKey);
           }, strategy.debounce);
 
           refreshTimersRef.current.set(refreshKey, timer);
         } else {
           // 立即执行刷新
-          await executeRefresh(strategy.type, inputData, callbacks, job);
+          await executeRefresh(strategy.type, inputData, callbacksRef.current, job);
         }
       }
     };
@@ -160,7 +164,7 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
       timers.forEach((timer) => clearTimeout(timer));
       timers.clear();
     };
-  }, [jobs, callbacks]);
+  }, [jobs]);
 
   // 清理已处理任务的记录（避免内存泄漏）
   useEffect(() => {

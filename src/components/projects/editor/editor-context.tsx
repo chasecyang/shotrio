@@ -13,7 +13,7 @@ import {
 import type { GenerationHistoryItem } from "@/types/asset";
 
 // 选中资源类型
-export type SelectedResourceType = "episode" | "shot" | "asset-generation" | "asset" | "settings" | "agent" | null;
+export type SelectedResourceType = "episode" | "shot" | "asset-generation" | "asset" | "settings" | "agent" | "conversation" | null;
 
 export interface SelectedResource {
   type: SelectedResourceType;

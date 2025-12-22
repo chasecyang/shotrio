@@ -10,11 +10,6 @@ import type { CreditCost } from "@/lib/utils/credit-calculator";
 export type AgentMessageRole = "user" | "assistant" | "system";
 
 /**
- * Function 调用状态
- */
-export type FunctionCallStatus = "pending" | "executing" | "completed" | "failed" | "cancelled";
-
-/**
  * Function 分类
  */
 export type FunctionCategory = "read" | "generation" | "modification" | "deletion";
@@ -123,40 +118,11 @@ export interface PendingAction {
 }
 
 /**
- * 任务执行状态
- */
-export interface TaskExecution {
-  id: string;
-  functionCallId: string;
-  functionName: string;
-  jobId?: string;
-  status: "pending" | "running" | "completed" | "failed";
-  progress?: number;
-  progressMessage?: string;
-  result?: unknown;
-  error?: string;
-  startedAt: Date;
-  completedAt?: Date;
-}
-
-/**
- * Agent 聊天输入
- */
-export interface AgentChatInput {
-  message: string;
-  context: AgentContext;
-  history: AgentMessage[];
-}
-
-/**
  * Agent 聊天响应（用于确认操作等非流式场景）
  */
 export interface AgentChatResponse {
   success: boolean;
   message?: string;
-  messageId?: string;
-  // 需要确认的操作
-  pendingActions?: PendingAction[];
   // 已执行的只读操作结果
   executedResults?: FunctionExecutionResult[];
   error?: string;
@@ -193,32 +159,3 @@ export interface FunctionDefinition {
   category: FunctionCategory;
   needsConfirmation: boolean;
 }
-
-/**
- * 确认操作的输入
- */
-export interface ConfirmActionInput {
-  actionId: string;
-  approved: boolean;
-  // 用户修改后的参数（如果支持修改）
-  modifiedParameters?: Record<string, unknown>;
-}
-
-/**
- * 恢复对话的输入
- */
-export interface ResumeConversationInput {
-  conversationState: ConversationState;
-  executionResults: FunctionExecutionResult[];
-  context: AgentContext;
-}
-
-/**
- * Agent 状态（用于持久化）
- */
-export interface AgentState {
-  projectId: string;
-  messages: AgentMessage[];
-  lastUpdated: Date;
-}
-

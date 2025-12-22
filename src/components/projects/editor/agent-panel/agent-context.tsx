@@ -1,11 +1,28 @@
 "use client";
 
-import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect } from "react";
+import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect, useRef } from "react";
 import type {
   AgentMessage,
   AgentContext as AgentContextType,
 } from "@/types/agent";
 import { useEditor } from "../editor-context";
+import {
+  listConversations,
+  getConversation,
+  createConversation,
+  deleteConversation,
+} from "@/lib/actions/conversation/crud";
+import { toast } from "sonner";
+
+/**
+ * 对话信息
+ */
+export interface Conversation {
+  id: string;
+  title: string;
+  status: "active" | "awaiting_approval" | "completed";
+  lastActivityAt: Date;
+}
 
 /**
  * Agent 状态
@@ -16,6 +33,18 @@ export interface AgentState {
   
   // 是否正在与 AI 通信
   isLoading: boolean;
+
+  // 当前对话ID
+  currentConversationId: string | null;
+
+  // 对话列表
+  conversations: Conversation[];
+
+  // 是否正在加载对话列表
+  isLoadingConversations: boolean;
+
+  // 是否处于"新对话"模式（懒创建）
+  isNewConversation: boolean;
 }
 
 /**
@@ -26,7 +55,12 @@ type AgentAction =
   | { type: "UPDATE_MESSAGE"; payload: { id: string; updates: Partial<AgentMessage> } }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "CLEAR_MESSAGES" }
-  | { type: "LOAD_HISTORY"; payload: AgentMessage[] };
+  | { type: "LOAD_HISTORY"; payload: AgentMessage[] }
+  | { type: "SET_CURRENT_CONVERSATION"; payload: string | null }
+  | { type: "SET_CONVERSATIONS"; payload: Conversation[] }
+  | { type: "SET_LOADING_CONVERSATIONS"; payload: boolean }
+  | { type: "SET_NEW_CONVERSATION"; payload: boolean }
+  | { type: "UPDATE_CONVERSATION_TITLE"; payload: { conversationId: string; title: string } };
 
 /**
  * 初始状态
@@ -34,6 +68,10 @@ type AgentAction =
 const initialState: AgentState = {
   messages: [],
   isLoading: false,
+  currentConversationId: null,
+  conversations: [],
+  isLoadingConversations: false,
+  isNewConversation: false,
 };
 
 /**
@@ -73,6 +111,40 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
         messages: action.payload,
       };
 
+    case "SET_CURRENT_CONVERSATION":
+      return {
+        ...state,
+        currentConversationId: action.payload,
+      };
+
+    case "SET_CONVERSATIONS":
+      return {
+        ...state,
+        conversations: action.payload,
+      };
+
+    case "SET_LOADING_CONVERSATIONS":
+      return {
+        ...state,
+        isLoadingConversations: action.payload,
+      };
+
+    case "SET_NEW_CONVERSATION":
+      return {
+        ...state,
+        isNewConversation: action.payload,
+      };
+
+    case "UPDATE_CONVERSATION_TITLE":
+      return {
+        ...state,
+        conversations: state.conversations.map((conv) =>
+          conv.id === action.payload.conversationId
+            ? { ...conv, title: action.payload.title }
+            : conv
+        ),
+      };
+
     default:
       return state;
   }
@@ -89,6 +161,11 @@ interface AgentContextValue {
   updateMessage: (id: string, updates: Partial<AgentMessage>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
+  // 对话管理方法
+  loadConversation: (conversationId: string) => Promise<void>;
+  createNewConversation: () => Promise<void>;
+  deleteConversationById: (conversationId: string) => Promise<void>;
+  refreshConversations: () => Promise<void>;
   // 当前上下文（从 EditorContext 获取）
   currentContext: AgentContextType;
 }
@@ -107,47 +184,126 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   const [state, dispatch] = useReducer(agentReducer, initialState);
   const editorContext = useEditor();
 
-  // 从 localStorage 加载历史记录
-  useEffect(() => {
-    const storageKey = `agent-history-${projectId}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const history = JSON.parse(stored);
-        dispatch({ type: "LOAD_HISTORY", payload: history });
-      } catch (error) {
-        console.error("加载 Agent 历史记录失败:", error);
+  // 使用 useRef 存储最新 state 和 editorContext，避免频繁重新创建 context value
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  
+  const editorContextRef = useRef(editorContext);
+  editorContextRef.current = editorContext;
+
+  // 防抖：跟踪刷新状态，避免并发刷新
+  const isRefreshingRef = useRef(false);
+  const lastRefreshTimeRef = useRef(0);
+
+  // 加载对话列表（带防抖）
+  const refreshConversations = useCallback(async () => {
+    // 防止并发刷新
+    if (isRefreshingRef.current) {
+      console.log("[Agent] 跳过并发刷新请求");
+      return;
+    }
+
+    // 防抖：1秒内不重复刷新
+    const now = Date.now();
+    if (now - lastRefreshTimeRef.current < 1000) {
+      console.log("[Agent] 防抖：跳过过于频繁的刷新");
+      return;
+    }
+
+    isRefreshingRef.current = true;
+    lastRefreshTimeRef.current = now;
+
+    dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: true });
+    try {
+      const result = await listConversations(projectId);
+      if (result.success && result.conversations) {
+        // 优化：只在数据真正变化时更新
+        const newConversations = result.conversations.map((conv) => ({
+          id: conv.id,
+          title: conv.title,
+          status: conv.status as "active" | "awaiting_approval" | "completed",
+          lastActivityAt: new Date(conv.lastActivityAt),
+        }));
+
+        // 简单比较：如果数量和第一个对话的标题都相同，可能没有变化
+        const currentConvs = stateRef.current.conversations;
+        const hasChanged =
+          currentConvs.length !== newConversations.length ||
+          (newConversations.length > 0 &&
+            (currentConvs.length === 0 ||
+              currentConvs[0].title !== newConversations[0].title ||
+              currentConvs[0].status !== newConversations[0].status));
+
+        if (hasChanged) {
+          dispatch({
+            type: "SET_CONVERSATIONS",
+            payload: newConversations,
+          });
+        }
       }
+    } catch (error) {
+      console.error("加载对话列表失败:", error);
+      toast.error("加载对话列表失败");
+    } finally {
+      dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: false });
+      isRefreshingRef.current = false;
     }
   }, [projectId]);
 
-  // 保存历史记录到 localStorage
+  // 初始加载对话列表（只依赖 projectId，避免循环）
   useEffect(() => {
-    if (state.messages.length > 0) {
-      const storageKey = `agent-history-${projectId}`;
-      // 只保存最近 50 条消息
-      const recentMessages = state.messages.slice(-50);
-      localStorage.setItem(storageKey, JSON.stringify(recentMessages));
-    }
-  }, [state.messages, projectId]);
+    refreshConversations();
+  }, [projectId]); // 移除 refreshConversations 依赖
 
-  // 构建当前上下文
-  const currentContext: AgentContextType = useMemo(
-    () => ({
-      projectId,
-      selectedEpisodeId: editorContext.state.selectedEpisodeId,
-      selectedShotIds: editorContext.state.selectedShotIds,
-      selectedResource: editorContext.state.selectedResource,
-      recentJobs: editorContext.jobs.slice(0, 10), // 最近 10 个任务
-    }),
-    [
-      projectId,
-      editorContext.state.selectedEpisodeId,
-      editorContext.state.selectedShotIds,
-      editorContext.state.selectedResource,
-      editorContext.jobs,
-    ]
-  );
+  // 加载指定对话
+  const loadConversation = useCallback(async (conversationId: string) => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const result = await getConversation(conversationId);
+      if (result.success && result.messages) {
+        dispatch({ type: "LOAD_HISTORY", payload: result.messages });
+        dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
+      } else {
+        toast.error(result.error || "加载对话失败");
+      }
+    } catch (error) {
+      console.error("加载对话失败:", error);
+      toast.error("加载对话失败");
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  }, []);
+
+  // 创建新对话（懒创建模式：只设置UI状态，不调用API）
+  const createNewConversation = useCallback(async () => {
+    // 清空消息历史
+    dispatch({ type: "CLEAR_MESSAGES" });
+    // 设置为新对话模式
+    dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
+    // 清空当前对话ID
+    dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
+  }, []);
+
+  // 删除对话
+  const deleteConversationById = useCallback(async (conversationId: string) => {
+    try {
+      const result = await deleteConversation(conversationId);
+      if (result.success) {
+        // 如果删除的是当前对话，清空消息
+        if (state.currentConversationId === conversationId) {
+          dispatch({ type: "CLEAR_MESSAGES" });
+          dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
+        }
+        await refreshConversations();
+        toast.success("已删除对话");
+      } else {
+        toast.error(result.error || "删除对话失败");
+      }
+    } catch (error) {
+      console.error("删除对话失败:", error);
+      toast.error("删除对话失败");
+    }
+  }, [state.currentConversationId, refreshConversations]);
 
   // 便捷方法
   const addMessage = useCallback((message: Omit<AgentMessage, "id" | "timestamp">) => {
@@ -169,31 +325,89 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
 
   const clearMessages = useCallback(() => {
     dispatch({ type: "CLEAR_MESSAGES" });
-    // 清除 localStorage
-    const storageKey = `agent-history-${projectId}`;
-    localStorage.removeItem(storageKey);
-  }, [projectId]);
+  }, []);
 
   const setLoading = useCallback((loading: boolean) => {
     dispatch({ type: "SET_LOADING", payload: loading });
   }, []);
 
+  // 使用 useRef 存储回调函数的最新版本，避免因为 currentContext 变化导致整个 value 重新创建
+  const callbacksRef = useRef({
+    loadConversation,
+    createNewConversation,
+    deleteConversationById,
+    refreshConversations,
+  });
+  callbacksRef.current = {
+    loadConversation,
+    createNewConversation,
+    deleteConversationById,
+    refreshConversations,
+  };
+
+  // 创建稳定的回调函数包装器
+  const stableLoadConversation = useCallback((conversationId: string) => {
+    return callbacksRef.current.loadConversation(conversationId);
+  }, []);
+
+  const stableCreateNewConversation = useCallback(() => {
+    return callbacksRef.current.createNewConversation();
+  }, []);
+
+  const stableDeleteConversationById = useCallback((conversationId: string) => {
+    return callbacksRef.current.deleteConversationById(conversationId);
+  }, []);
+
+  const stableRefreshConversations = useCallback(() => {
+    return callbacksRef.current.refreshConversations();
+  }, []);
+
+  // 创建稳定的 currentContext（使用 useMemo 缓存，避免每次都创建新对象）
+  const currentContext = useMemo((): AgentContextType => {
+    const ctx = editorContextRef.current;
+    return {
+      projectId,
+      selectedEpisodeId: ctx.state.selectedEpisodeId,
+      selectedShotIds: [...ctx.state.selectedShotIds], // 创建新数组，但由 useMemo 缓存
+      selectedResource: ctx.state.selectedResource,
+      recentJobs: ctx.jobs.slice(0, 10),
+    };
+  }, [
+    projectId,
+    editorContextRef.current.state.selectedEpisodeId,
+    editorContextRef.current.state.selectedShotIds.length, // 只依赖长度，减少重建
+    editorContextRef.current.state.selectedResource?.id,   // 只依赖 id
+    editorContextRef.current.jobs.length,                  // 只依赖长度
+  ]);
+
+  // 关键优化：value 不依赖 state，使用 getter 访问最新 state
   const value = useMemo(
     () => ({
-      state,
+      get state() {
+        return stateRef.current; // 通过 getter 访问最新 state
+      },
       dispatch,
       addMessage,
       updateMessage,
       clearMessages,
       setLoading,
-      currentContext,
+      loadConversation: stableLoadConversation,
+      createNewConversation: stableCreateNewConversation,
+      deleteConversationById: stableDeleteConversationById,
+      refreshConversations: stableRefreshConversations,
+      currentContext, // 直接使用 memoized 值，而非 getter
     }),
     [
-      state,
+      // 移除 state 依赖
+      dispatch,
       addMessage,
       updateMessage,
       clearMessages,
       setLoading,
+      stableLoadConversation,
+      stableCreateNewConversation,
+      stableDeleteConversationById,
+      stableRefreshConversations,
       currentContext,
     ]
   );
@@ -211,4 +425,3 @@ export function useAgent() {
   }
   return context;
 }
-

@@ -2,20 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAgent } from "./agent-context";
-import { ConversationList } from "./conversation-list";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Bot, Info, Square, Menu } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Send, Bot, Info, Square } from "lucide-react";
 import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
-import { createConversation } from "@/lib/actions/conversation/crud";
 import type { IterationStep, FunctionCategory } from "@/types/agent";
 
-interface AgentPanelProps {
-  projectId: string;
+interface ChatPanelProps {
+  conversationId: string;
 }
 
 // 辅助函数：创建新的 iterations 数组（确保触发 React 重新渲染）
@@ -40,13 +37,12 @@ function isShotRelatedFunction(functionName: string): boolean {
   return shotRelatedFunctions.includes(functionName);
 }
 
-export function AgentPanel({ projectId }: AgentPanelProps) {
+export function ChatPanel({ conversationId }: ChatPanelProps) {
   const agent = useAgent();
   
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -64,6 +60,13 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     }
     fetchBalance();
   }, []);
+
+  // 加载对话（当 conversationId 变化时）
+  useEffect(() => {
+    if (conversationId && conversationId !== agent.state.currentConversationId) {
+      agent.loadConversation(conversationId);
+    }
+  }, [conversationId, agent]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -211,27 +214,13 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
                 pendingAction,
                 isStreaming: false 
               });
-              // 移除立即刷新：不需要在待确认时刷新
-              break;
-
-            case "title_updated":
-              // 标题已更新，更新对话列表中的标题（乐观更新，不触发刷新）
-              if (event.data.conversationId && event.data.title) {
-                agent.dispatch({
-                  type: "UPDATE_CONVERSATION_TITLE",
-                  payload: {
-                    conversationId: event.data.conversationId,
-                    title: event.data.title,
-                  },
-                });
-              }
+              // 刷新对话列表（状态可能变为 awaiting_approval）
+              agent.refreshConversations();
               break;
 
             case "complete":
-              // 流结束，延迟刷新对话列表（防抖会自动处理）
-              setTimeout(() => {
-                agent.refreshConversations();
-              }, 100);
+              // 流结束，刷新对话列表
+              agent.refreshConversations();
               break;
 
             case "error":
@@ -264,53 +253,34 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const handleSend = useCallback(async () => {
     if (!input.trim() || isProcessing) return;
 
+    // 检查是否有选中的对话
+    if (!conversationId) {
+      toast.error("请先选择或创建一个对话");
+      return;
+    }
+
     const userMessage = input.trim();
     setInput("");
     setIsProcessing(true);
 
+    // 添加用户消息到本地状态（临时显示）
+    agent.addMessage({
+      role: "user",
+      content: userMessage,
+    });
+
+    // 创建临时 AI 消息，标记为流式中
+    const tempMsgId = agent.addMessage({
+      role: "assistant",
+      content: "",
+      isStreaming: true,
+      iterations: [],
+    });
+
+    // 创建新的 AbortController
+    abortControllerRef.current = new AbortController();
+
     try {
-      let conversationId = agent.state.currentConversationId;
-
-      // 如果是新对话模式，先创建对话
-      if (agent.state.isNewConversation || !conversationId) {
-        const result = await createConversation({ 
-          projectId,
-          title: "新对话" // 临时标题，稍后会被AI生成的标题替换
-        });
-        
-        if (!result.success || !result.conversationId) {
-          toast.error(result.error || "创建对话失败");
-          setIsProcessing(false);
-          return;
-        }
-        
-        conversationId = result.conversationId;
-        
-        // 批量更新状态（React 18 会自动批处理）
-        agent.dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
-        agent.dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
-        
-        // 异步刷新对话列表（不阻塞消息发送）
-        agent.refreshConversations();
-      }
-
-      // 添加用户消息到本地状态（临时显示）
-      agent.addMessage({
-        role: "user",
-        content: userMessage,
-      });
-
-      // 创建临时 AI 消息，标记为流式中
-      const tempMsgId = agent.addMessage({
-        role: "assistant",
-        content: "",
-        isStreaming: true,
-        iterations: [],
-      });
-
-      // 创建新的 AbortController
-      abortControllerRef.current = new AbortController();
-
       // 调用流式 API（使用 conversationId）
       const response = await fetch("/api/agent/chat-stream", {
         method: "POST",
@@ -318,7 +288,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          conversationId,
+          conversationId: conversationId,
           message: userMessage,
           context: agent.currentContext,
         }),
@@ -336,12 +306,12 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
       await processStreamingResponse(reader, tempMsgId);
     } catch (error) {
-      handleStreamError(error, "", "发送消息失败");
+      handleStreamError(error, tempMsgId, "流式处理失败");
     } finally {
       setIsProcessing(false);
       abortControllerRef.current = null;
     }
-  }, [input, isProcessing, agent, projectId, processStreamingResponse, handleStreamError]);
+  }, [input, isProcessing, conversationId, agent, processStreamingResponse, handleStreamError]);
 
   // 停止 AI 生成
   const handleStop = useCallback(() => {
@@ -362,125 +332,81 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     [handleSend]
   );
 
-  // 对话列表组件
-  const conversationListComponent = (
-    <ConversationList
-      projectId={projectId}
-      currentConversationId={agent.state.currentConversationId}
-      onSelectConversation={agent.loadConversation}
-      onCreateConversation={agent.createNewConversation}
-      onDeleteConversation={agent.deleteConversationById}
-      conversations={agent.state.conversations}
-      isLoading={agent.state.isLoadingConversations}
-    />
-  );
+  // 获取当前对话标题
+  const currentConversation = agent.state.conversations.find(c => c.id === conversationId);
 
   return (
-    <div className="flex h-full">
-      {/* Desktop: 左侧对话列表 (30%) */}
-      <div className="hidden md:block w-[30%] min-w-[250px] max-w-[400px]">
-        {conversationListComponent}
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <Bot className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <h3 className="text-sm font-semibold">
+            {currentConversation?.title || "AI 助手"}
+          </h3>
+        </div>
       </div>
 
-      {/* Mobile: 对话列表在 Sheet 中 */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-[80%] max-w-[350px]">
-          {conversationListComponent}
-        </SheetContent>
-      </Sheet>
-
-      {/* 右侧消息面板 (70%) */}
-      <div className="flex flex-col flex-1 bg-background">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden h-8 w-8"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Bot className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <h3 className="text-sm font-semibold">
-              {agent.state.isNewConversation 
-                ? "新对话" 
-                : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || "AI 助手"}
-            </h3>
+      {/* Messages - with proper overflow handling */}
+      <div className="flex-1 overflow-hidden">
+        <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden">
+          <div className="py-2">
+            {agent.state.messages.length === 0 && !isProcessing ? (
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+                <Info className="mb-4 h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  向 AI 助手描述你想要做什么
+                </p>
+              </div>
+            ) : (
+              <>
+                {agent.state.messages.map((message) => (
+                  <ChatMessage 
+                    key={message.id} 
+                    message={message} 
+                    currentBalance={creditBalance}
+                  />
+                ))}
+                {isProcessing && <TypingIndicator />}
+              </>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Messages - with proper overflow handling */}
-        <div className="flex-1 overflow-hidden">
-          <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden">
-            <div className="py-2">
-              {!agent.state.currentConversationId && !agent.state.isNewConversation ? (
-                <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                  <Info className="mb-4 h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    请先选择或创建一个对话
-                  </p>
-                </div>
-              ) : agent.state.isNewConversation || (agent.state.messages.length === 0 && !isProcessing) ? (
-                <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                  <Bot className="mb-4 h-12 w-12 text-muted-foreground" />
-                  <p className="text-lg font-medium mb-2">
-                    {agent.state.isNewConversation ? "开始新对话" : "开始对话"}
-                  </p>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {agent.state.messages.map((message) => (
-                    <ChatMessage 
-                      key={message.id} 
-                      message={message} 
-                      currentBalance={creditBalance}
-                    />
-                  ))}
-                  {isProcessing && <TypingIndicator />}
-                </>
-              )}
-            </div>
-          </div>
+      {/* Input */}
+      <div className="border-t border-border p-4 shrink-0">
+        <div className="flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="描述你想要做什么..."
+            className="min-h-[60px] max-h-[120px] resize-none"
+            disabled={isProcessing}
+          />
+          <Button
+            onClick={isProcessing ? handleStop : handleSend}
+            disabled={!isProcessing && !input.trim()}
+            size="icon"
+            variant={isProcessing ? "destructive" : "default"}
+            className="h-[60px] w-[60px] shrink-0"
+            title={isProcessing ? "停止生成" : "发送消息"}
+          >
+            {isProcessing ? (
+              <Square className="h-5 w-5" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </Button>
         </div>
-
-        {/* Input */}
-        <div className="border-t border-border p-4 shrink-0">
-          <div className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={agent.state.currentConversationId ? "描述你想要做什么..." : "请先选择对话"}
-              className="min-h-[60px] max-h-[120px] resize-none"
-              disabled={isProcessing || !agent.state.currentConversationId}
-            />
-            <Button
-              onClick={isProcessing ? handleStop : handleSend}
-              disabled={(!isProcessing && !input.trim()) || !agent.state.currentConversationId}
-              size="icon"
-              variant={isProcessing ? "destructive" : "default"}
-              className="h-[60px] w-[60px] shrink-0"
-              title={isProcessing ? "停止生成" : "发送消息"}
-            >
-              {isProcessing ? (
-                <Square className="h-5 w-5" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {isProcessing ? "点击停止按钮中断生成" : "Enter 发送 · Shift+Enter 换行"}
-          </p>
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {isProcessing ? "点击停止按钮中断生成" : "Enter 发送 · Shift+Enter 换行"}
+        </p>
       </div>
     </div>
   );
 }
+

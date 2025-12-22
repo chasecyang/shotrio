@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import type { AgentChatInput } from "@/types/agent";
 import { collectContext } from "@/lib/actions/agent/context-collector";
 import { runAgentLoop } from "@/lib/services/agent-loop";
+import { getConversation, saveMessage, updateConversationStatus, updateConversationTitle } from "@/lib/actions/conversation/crud";
+import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
+import type { AgentContext } from "@/types/agent";
 
 // Next.js 路由配置：禁用缓冲以支持真正的流式输出
 export const runtime = 'nodejs';
@@ -54,18 +56,8 @@ function buildAgentSystemPrompt(): string {
 }
 
 /**
- * 格式化历史消息
- */
-function formatHistory(history: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
-  return history.map((msg) => ({
-    role: msg.role,
-    content: msg.content,
-  }));
-}
-
-/**
  * POST /api/agent/chat-stream
- * 流式 Agent 聊天接口
+ * 流式 Agent 聊天接口（支持数据库持久化）
  */
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({
@@ -80,27 +72,91 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const input: AgentChatInput = await request.json();
+    const input: {
+      conversationId: string;
+      message: string;
+      context: AgentContext;
+    } = await request.json();
+
     const encoder = new TextEncoder();
 
     // 创建流式响应
     const stream = new ReadableStream({
       async start(controller) {
+        let userMessageId: string | undefined;
+        let assistantMessageId: string | undefined;
+
         try {
-          // 1. 发送状态：正在收集上下文
+          // 1. 从数据库加载对话历史
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({ type: "status", data: "loading_history" }) + "\n"
+            )
+          );
+
+          const convResult = await getConversation(input.conversationId);
+          if (!convResult.success || !convResult.messages) {
+            throw new Error(convResult.error || "无法加载对话历史");
+          }
+
+          // 2. 收集上下文信息
           controller.enqueue(
             encoder.encode(
               JSON.stringify({ type: "status", data: "collecting_context" }) + "\n"
             )
           );
 
-          // 2. 收集上下文信息
           const contextText = await collectContext(input.context);
 
-          // 3. 构建用户消息
-          const userMessageWithContext = `# 当前上下文\n\n${contextText}\n\n# 用户请求\n\n${input.message}`;
+          // 3. 保存用户消息到数据库
+          const userMessageContent = `# 当前上下文\n\n${contextText}\n\n# 用户请求\n\n${input.message}`;
+          const userMsgResult = await saveMessage(input.conversationId, {
+            role: "user",
+            content: input.message, // 只保存用户原始消息，不包含上下文
+          });
 
-          // 4. 构建对话历史
+          if (!userMsgResult.success) {
+            throw new Error("保存用户消息失败");
+          }
+          userMessageId = userMsgResult.messageId;
+
+          // 发送用户消息ID给前端
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({ type: "user_message_id", data: userMessageId }) + "\n"
+            )
+          );
+
+          // 3.5. 如果是第一条消息，生成对话标题
+          const isFirstMessage = convResult.messages.length === 0;
+          if (isFirstMessage) {
+            // 异步生成标题，不阻塞主流程
+            generateConversationTitle(input.message).then(async (title) => {
+              try {
+                // 更新数据库中的对话标题
+                await updateConversationTitle(input.conversationId, title);
+                
+                // 通知前端标题已更新
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({
+                      type: "title_updated",
+                      data: {
+                        conversationId: input.conversationId,
+                        title,
+                      },
+                    }) + "\n"
+                  )
+                );
+              } catch (error) {
+                console.error("[ChatStream] 更新对话标题失败:", error);
+              }
+            }).catch((error) => {
+              console.error("[ChatStream] 生成对话标题失败:", error);
+            });
+          }
+
+          // 4. 构建对话历史（用于AI）
           const currentMessages: Array<{
             role: "system" | "user" | "assistant" | "tool";
             content: string;
@@ -116,15 +172,58 @@ export async function POST(request: NextRequest) {
             }>;
           }> = [
             { role: "system", content: buildAgentSystemPrompt() },
-            ...formatHistory(input.history).map((m) => ({
-              role: m.role as "system" | "user" | "assistant",
-              content: m.content,
-            })),
-            { role: "user", content: userMessageWithContext },
           ];
 
-          // 5. 运行 Agent Loop
-          await runAgentLoop(currentMessages, controller, encoder);
+          // 添加历史消息（简化版，只包含 role 和 content）
+          for (const msg of convResult.messages) {
+            if (msg.role !== "system") {
+              currentMessages.push({
+                role: msg.role as "user" | "assistant",
+                content: msg.content,
+              });
+            }
+          }
+
+          // 添加当前用户消息（带上下文）
+          currentMessages.push({
+            role: "user",
+            content: userMessageContent,
+          });
+
+          // 5. 创建 assistant 消息占位
+          const assistantMsgResult = await saveMessage(input.conversationId, {
+            role: "assistant",
+            content: "",
+            isStreaming: true,
+          });
+
+          if (!assistantMsgResult.success) {
+            throw new Error("创建 assistant 消息失败");
+          }
+          assistantMessageId = assistantMsgResult.messageId;
+
+          // 发送 assistant 消息ID给前端
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({ type: "assistant_message_id", data: assistantMessageId }) + "\n"
+            )
+          );
+
+          // 6. 更新对话状态为 active
+          await updateConversationStatus(input.conversationId, "active");
+
+          // 7. 运行 Agent Loop（传递 conversationId 和 assistantMessageId）
+          await runAgentLoop(
+            currentMessages,
+            controller,
+            encoder,
+            5,
+            input.conversationId,
+            assistantMessageId
+          );
+
+          // 8. 流完成，更新对话状态为 completed
+          await updateConversationStatus(input.conversationId, "completed");
 
           controller.close();
         } catch (error) {

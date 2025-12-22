@@ -8,7 +8,8 @@ import { getChatCompletionWithFunctionsStream } from "./openai.service";
 import { AGENT_FUNCTIONS, toOpenAIFunctionFormat, getFunctionDefinition } from "../actions/agent/functions";
 import { executeFunction } from "../actions/agent/executor";
 import { estimateActionCredits } from "../actions/credits/estimate";
-import type { FunctionCall } from "@/types/agent";
+import { updateMessage, updateConversationStatus } from "../actions/conversation/crud";
+import type { FunctionCall, IterationStep } from "@/types/agent";
 
 type Message = {
   role: "system" | "user" | "assistant" | "tool";
@@ -32,14 +33,19 @@ type Message = {
  * @param controller - 流式响应控制器
  * @param encoder - 文本编码器
  * @param maxIterations - 最大迭代次数
+ * @param conversationId - 可选的对话ID（用于数据库持久化）
+ * @param assistantMessageId - 可选的助手消息ID（用于实时更新）
  */
 export async function runAgentLoop(
   currentMessages: Message[],
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder,
-  maxIterations: number = 5
+  maxIterations: number = 5,
+  conversationId?: string,
+  assistantMessageId?: string
 ): Promise<void> {
   const functions = toOpenAIFunctionFormat(AGENT_FUNCTIONS);
+  const iterations: IterationStep[] = [];
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     const iterationNumber = iteration + 1;
@@ -61,6 +67,14 @@ export async function runAgentLoop(
     let functionCallName = '';
     let functionCallArguments = '';
     let hasFunctionCall = false;
+    
+    // 创建当前迭代步骤
+    const currentIteration: IterationStep = {
+      id: `iter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      iterationNumber,
+      timestamp: new Date(),
+    };
+    iterations.push(currentIteration);
 
     try {
       for await (const chunk of getChatCompletionWithFunctionsStream(
@@ -76,6 +90,8 @@ export async function runAgentLoop(
           case 'reasoning':
             // 累积思考过程并实时推送
             accumulatedReasoning += chunk.data;
+            currentIteration.thinkingProcess = accumulatedReasoning;
+            
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({
@@ -87,11 +103,21 @@ export async function runAgentLoop(
                 }) + "\n"
               )
             );
+            
+            // 实时更新数据库
+            if (assistantMessageId) {
+              await updateMessage(assistantMessageId, {
+                thinkingProcess: accumulatedReasoning,
+                iterations: JSON.stringify(iterations),
+              });
+            }
             break;
 
           case 'content':
             // 累积回复内容并实时推送
             accumulatedContent += chunk.data;
+            currentIteration.content = accumulatedContent;
+            
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({
@@ -103,6 +129,14 @@ export async function runAgentLoop(
                 }) + "\n"
               )
             );
+            
+            // 实时更新数据库
+            if (assistantMessageId) {
+              await updateMessage(assistantMessageId, {
+                content: accumulatedContent,
+                iterations: JSON.stringify(iterations),
+              });
+            }
             break;
 
           case 'function_call_id':
@@ -160,6 +194,15 @@ export async function runAgentLoop(
 
     // 如果没有 function call，任务完成
     if (!hasFunctionCall) {
+      // 更新数据库中的消息状态
+      if (assistantMessageId) {
+        await updateMessage(assistantMessageId, {
+          content: accumulatedContent || "完成",
+          isStreaming: false,
+          iterations: JSON.stringify(iterations),
+        });
+      }
+      
       controller.enqueue(
         encoder.encode(
           JSON.stringify({
@@ -223,23 +266,44 @@ export async function runAgentLoop(
         // 即使计算失败也继续，只是不显示积分信息
       }
 
+      const pendingAction = {
+        id: `action-${Date.now()}`,
+        functionCalls: [functionCall],
+        message: accumulatedContent || `准备执行: ${functionCall.name}`,
+        conversationState: {
+          messages: currentMessages,
+          toolCallId: functionCallId,
+        },
+        createdAt: new Date(),
+        creditCost,
+        status: "pending" as const,
+      };
+
       controller.enqueue(
         encoder.encode(
           JSON.stringify({
             type: "pending_action",
             data: {
-              id: `action-${Date.now()}`,
+              id: pendingAction.id,
               functionCall,
-              message: accumulatedContent || `准备执行: ${functionCall.name}`,
-              conversationState: {
-                messages: currentMessages,
-                toolCallId: functionCallId,
-              },
+              message: pendingAction.message,
+              conversationState: pendingAction.conversationState,
               creditCost,
             },
           }) + "\n"
         )
       );
+      
+      // 更新数据库中的消息和对话状态
+      if (assistantMessageId && conversationId) {
+        await updateMessage(assistantMessageId, {
+          pendingAction: JSON.stringify(pendingAction),
+          isStreaming: false,
+          iterations: JSON.stringify(iterations),
+        });
+        await updateConversationStatus(conversationId, "awaiting_approval");
+      }
+      
       controller.enqueue(
         encoder.encode(
           JSON.stringify({

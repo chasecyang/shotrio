@@ -446,24 +446,3 @@ export async function executeFunction(
   }
 }
 
-/**
- * 批量执行多个 function calls
- */
-export async function executeFunctions(
-  functionCalls: FunctionCall[]
-): Promise<FunctionExecutionResult[]> {
-  const results: FunctionExecutionResult[] = [];
-
-  for (const functionCall of functionCalls) {
-    const result = await executeFunction(functionCall);
-    results.push(result);
-
-    // 如果有任何失败，停止后续执行
-    if (!result.success) {
-      break;
-    }
-  }
-
-  return results;
-}
-

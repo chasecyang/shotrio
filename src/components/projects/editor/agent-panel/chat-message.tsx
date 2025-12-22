@@ -9,7 +9,7 @@ import { ChevronDown, Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
 import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
-import { confirmAndExecuteAction, cancelAction } from "@/lib/actions/agent";
+import { confirmAndExecuteAction } from "@/lib/actions/agent";
 import { toast } from "sonner";
 
 interface ChatMessageProps {
@@ -32,17 +32,24 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
 
   // Handle pending action confirmation
-  const handleConfirmAction = async (actionId: string) => {
+  const handleConfirmAction = async () => {
+    if (!message.pendingAction || !agent.state.currentConversationId) return;
+
     try {
-      const result = await confirmAndExecuteAction(actionId, agent.currentContext);
+      const result = await confirmAndExecuteAction({
+        conversationId: agent.state.currentConversationId,
+        messageId: message.id,
+        functionCalls: message.pendingAction.functionCalls,
+      });
+      
       if (result.success) {
         toast.success("操作已确认，正在执行...");
         // Update pendingAction status to accepted (keep the action in history)
-        if (message.pendingAction) {
-          agent.updateMessage(message.id, { 
-            pendingAction: { ...message.pendingAction, status: "accepted" }
-          });
-        }
+        agent.updateMessage(message.id, { 
+          pendingAction: { ...message.pendingAction, status: "accepted" }
+        });
+        // Refresh conversations to update status
+        agent.refreshConversations();
       } else {
         toast.error(result.error || "确认失败");
       }
@@ -52,23 +59,13 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     }
   };
 
-  const handleCancelAction = async (actionId: string) => {
-    try {
-      const result = await cancelAction(actionId);
-      if (result.success) {
-        toast.info("操作已取消");
-        // Update pendingAction status to rejected (keep the action in history)
-        if (message.pendingAction) {
-          agent.updateMessage(message.id, { 
-            pendingAction: { ...message.pendingAction, status: "rejected" }
-          });
-        }
-      } else {
-        toast.error(result.error || "取消失败");
-      }
-    } catch (error) {
-      console.error("取消操作失败:", error);
-      toast.error("取消操作失败");
+  const handleCancelAction = async () => {
+    // No server call needed, just update local state
+    toast.info("操作已取消");
+    if (message.pendingAction) {
+      agent.updateMessage(message.id, { 
+        pendingAction: { ...message.pendingAction, status: "rejected" }
+      });
     }
   };
 

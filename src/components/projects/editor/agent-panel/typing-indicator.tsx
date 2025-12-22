@@ -1,11 +1,13 @@
 "use client";
 
+import { memo } from "react";
+
 /**
  * TypingIndicator Component
  * 
  * Displays an animated "thinking..." indicator when AI is processing
  */
-export function TypingIndicator() {
+export const TypingIndicator = memo(function TypingIndicator() {
   return (
     <div className="w-full px-4 py-2">
       {/* Typing Animation */}
@@ -19,5 +21,5 @@ export function TypingIndicator() {
       </div>
     </div>
   );
-}
+});
 
