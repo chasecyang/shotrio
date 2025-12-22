@@ -7,9 +7,14 @@ import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
+import { PendingActionMessage } from "./pending-action-message";
+import { useAgent } from "./agent-context";
+import { confirmAndExecuteAction, cancelAction } from "@/lib/actions/agent";
+import { toast } from "sonner";
 
 interface ChatMessageProps {
   message: AgentMessage;
+  currentBalance?: number;
 }
 
 // 中断标记组件
@@ -20,10 +25,52 @@ const InterruptedBadge = () => (
   </div>
 );
 
-export const ChatMessage = memo(function ChatMessage({ message }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({ message, currentBalance }: ChatMessageProps) {
   const isUser = message.role === "user";
+  const agent = useAgent();
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
+
+  // Handle pending action confirmation
+  const handleConfirmAction = async (actionId: string) => {
+    try {
+      const result = await confirmAndExecuteAction(actionId, agent.currentContext);
+      if (result.success) {
+        toast.success("操作已确认，正在执行...");
+        // Update pendingAction status to accepted (keep the action in history)
+        if (message.pendingAction) {
+          agent.updateMessage(message.id, { 
+            pendingAction: { ...message.pendingAction, status: "accepted" }
+          });
+        }
+      } else {
+        toast.error(result.error || "确认失败");
+      }
+    } catch (error) {
+      console.error("确认操作失败:", error);
+      toast.error("确认操作失败");
+    }
+  };
+
+  const handleCancelAction = async (actionId: string) => {
+    try {
+      const result = await cancelAction(actionId);
+      if (result.success) {
+        toast.info("操作已取消");
+        // Update pendingAction status to rejected (keep the action in history)
+        if (message.pendingAction) {
+          agent.updateMessage(message.id, { 
+            pendingAction: { ...message.pendingAction, status: "rejected" }
+          });
+        }
+      } else {
+        toast.error(result.error || "取消失败");
+      }
+    } catch (error) {
+      console.error("取消操作失败:", error);
+      toast.error("取消操作失败");
+    }
+  };
 
   // Auto-expand thinking process when streaming, auto-collapse when done (for backward compatibility)
   useEffect(() => {
@@ -38,6 +85,7 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
 
   // Check if this message uses the new iterations format
   const hasIterations = message.iterations && message.iterations.length > 0;
+  const hasPendingAction = message.pendingAction !== undefined;
 
   return (
     <div className="w-full px-4 py-2">
@@ -51,7 +99,15 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
         </span>
       </div>
 
-      {isUser ? (
+      {hasPendingAction ? (
+        /* Pending Action Message */
+        <PendingActionMessage
+          action={message.pendingAction!}
+          onConfirm={handleConfirmAction}
+          onCancel={handleCancelAction}
+          currentBalance={currentBalance}
+        />
+      ) : isUser ? (
         /* User Message */
         <div className="rounded-lg bg-accent/50 backdrop-blur-sm border border-border/50 px-3 py-2 break-words w-full">
           <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>

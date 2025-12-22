@@ -19,6 +19,15 @@ import { asset } from "@/lib/db/schemas/project";
 import { inArray } from "drizzle-orm";
 
 /**
+ * 生成资产名称数组（带编号）
+ */
+function generateAssetNames(baseName: string, count: number): string[] {
+  return Array.from({ length: count }, (_, i) =>
+    count > 1 ? `${baseName}-${String(i + 1).padStart(2, "0")}` : baseName
+  );
+}
+
+/**
  * 处理素材图片生成任务
  */
 export async function processAssetImageGeneration(
@@ -65,9 +74,7 @@ export async function processAssetImageGeneration(
     );
 
     finalTags = providedTags;
-    names = Array.from({ length: numImages }, (_, i) =>
-      numImages > 1 ? `${providedName}-${String(i + 1).padStart(2, "0")}` : providedName
-    );
+    names = generateAssetNames(providedName, numImages);
   } else {
     // 没有提供完整元数据，需要 AI 分析
     await updateJobProgress(
@@ -82,19 +89,13 @@ export async function processAssetImageGeneration(
     try {
       const analysisResult = await analyzePromptForBatch(prompt, numImages);
       finalTags = providedTags?.length ? providedTags : analysisResult.baseAnalysis.tags;
-      names = providedName
-        ? Array.from({ length: numImages }, (_, i) =>
-            numImages > 1 ? `${providedName}-${String(i + 1).padStart(2, "0")}` : providedName
-          )
-        : analysisResult.names;
+      names = providedName ? generateAssetNames(providedName, numImages) : analysisResult.names;
     } catch (error) {
       console.error("AI分析失败，使用fallback:", error);
       const timestamp = Date.now();
       const fallbackName = providedName || `AI生成-${timestamp}`;
       finalTags = providedTags?.length ? providedTags : ["AI生成"];
-      names = Array.from({ length: numImages }, (_, i) =>
-        numImages > 1 ? `${fallbackName}-${String(i + 1).padStart(2, "0")}` : fallbackName
-      );
+      names = generateAssetNames(fallbackName, numImages);
     }
 
     await updateJobProgress(
@@ -120,6 +121,7 @@ export async function processAssetImageGeneration(
   );
 
   const spendResult = await spendCredits({
+    userId: jobData.userId, // 在 worker 环境中直接传入 userId
     amount: totalCreditsNeeded,
     description: `生成 ${numImages} 张图片`,
     metadata: {

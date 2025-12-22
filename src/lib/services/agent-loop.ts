@@ -7,6 +7,7 @@
 import { getChatCompletionWithFunctionsStream } from "./openai.service";
 import { AGENT_FUNCTIONS, toOpenAIFunctionFormat, getFunctionDefinition } from "../actions/agent/functions";
 import { executeFunction } from "../actions/agent/executor";
+import { estimateActionCredits } from "../actions/credits/estimate";
 import type { FunctionCall } from "@/types/agent";
 
 type Message = {
@@ -210,6 +211,18 @@ export async function runAgentLoop(
 
     // 如果需要确认，发送待确认操作并结束
     if (functionCall.needsConfirmation) {
+      // 计算积分消耗
+      let creditCost;
+      try {
+        const estimateResult = await estimateActionCredits([functionCall]);
+        if (estimateResult.success && estimateResult.creditCost) {
+          creditCost = estimateResult.creditCost;
+        }
+      } catch (error) {
+        console.error("[Agent Loop] 计算积分失败:", error);
+        // 即使计算失败也继续，只是不显示积分信息
+      }
+
       controller.enqueue(
         encoder.encode(
           JSON.stringify({
@@ -222,6 +235,7 @@ export async function runAgentLoop(
                 messages: currentMessages,
                 toolCallId: functionCallId,
               },
+              creditCost,
             },
           }) + "\n"
         )

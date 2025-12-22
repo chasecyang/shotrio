@@ -78,6 +78,7 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
 
     // 扣除积分
     const spendResult = await spendCredits({
+      userId: jobData.userId, // 在 worker 环境中直接传入 userId
       amount: creditsNeeded,
       description: `生成 ${videoDuration}秒 视频`,
       metadata: {
@@ -398,6 +399,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       order: shot.order,
       videoUrl: shot.videoUrl!,
       duration: shot.duration || 3000,
+      dialogues: [], // TODO: 从数据库加载对话数据
     }));
 
     await updateJobProgress(
@@ -414,8 +416,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       videoUrl: "", // 暂时返回空，实际应该是合成后的视频URL
       duration: totalDuration,
       fileSize: 0, // 暂时返回0
-      // 返回视频列表供前端使用
-      videoList: videoList as Array<{ shotId: string; videoUrl: string; duration: number }>,
+      videoList,
     };
 
     await completeJob(

@@ -22,6 +22,7 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   tags: "标签",
   reason: "原因",
   description: "描述",
+  visualPrompt: "视觉提示词",
 
   // 生成参数
   numImages: "生成数量",
@@ -33,8 +34,6 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   duration: "时长",
   shotSize: "景别",
   cameraMovement: "运镜方式",
-  description: "描述",
-  visualPrompt: "视觉提示词",
   shotOrders: "分镜顺序",
 
   // 其他
@@ -44,7 +43,7 @@ const PARAM_KEY_LABELS: Record<string, string> = {
 /**
  * 枚举值中文映射
  */
-const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = {
+export const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = {
   // 素材类型
   assetType: {
     character: "角色",
@@ -227,5 +226,178 @@ export function expandArrayValue(value: unknown): string[] {
   }
 
   return value.map((item) => String(item));
+}
+
+/**
+ * 技术性ID参数（在确认卡片中应该隐藏）
+ */
+const TECHNICAL_ID_PARAMS = new Set([
+  "episodeId",
+  "projectId",
+  "shotId",
+  "assetId",
+  "styleId",
+]);
+
+/**
+ * 用户可理解的关键参数（优先显示）
+ */
+const KEY_PARAMS_PRIORITY = [
+  "name",
+  "description",
+  "prompt",
+  "tags",
+  "shotSize",
+  "cameraMovement",
+  "duration",
+  "numImages",
+  "reason",
+];
+
+/**
+ * 判断参数是否应该在确认卡片中显示
+ */
+function shouldShowParameter(key: string): boolean {
+  // 隐藏技术性ID
+  if (TECHNICAL_ID_PARAMS.has(key)) {
+    return false;
+  }
+  
+  // 显示关键参数
+  return true;
+}
+
+/**
+ * 截断长文本
+ */
+function truncateText(text: string, maxLength: number = 50): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.slice(0, maxLength) + "...";
+}
+
+/**
+ * 格式化参数值（用于确认卡片，更简洁）
+ */
+function formatParameterValueForConfirmation(key: string, value: unknown): string {
+  // null/undefined
+  if (value === null || value === undefined) {
+    return "-";
+  }
+
+  // 布尔值
+  if (typeof value === "boolean") {
+    return value ? "是" : "否";
+  }
+
+  // 数字
+  if (typeof value === "number") {
+    // 时长特殊处理（毫秒转秒）
+    if (key === "duration") {
+      const seconds = value / 1000;
+      return `${seconds}秒`;
+    }
+    return String(value);
+  }
+
+  // 字符串
+  if (typeof value === "string") {
+    // 尝试解析 JSON 字符串
+    try {
+      const parsed = JSON.parse(value);
+      
+      // 数组：只显示数量
+      if (Array.isArray(parsed)) {
+        // 特殊处理：如果是分镜或素材数组，尝试提取更多信息
+        if (key === "shots" && parsed.length > 0 && typeof parsed[0] === "object") {
+          return `${parsed.length}个分镜`;
+        }
+        if (key === "assets" && parsed.length > 0 && typeof parsed[0] === "object") {
+          return `${parsed.length}个素材`;
+        }
+        if (key === "shotIds" || key === "assetIds") {
+          return `${parsed.length}项`;
+        }
+        return `${parsed.length}项`;
+      }
+      
+      // 对象：显示属性数量
+      if (typeof parsed === "object" && parsed !== null) {
+        const count = Object.keys(parsed).length;
+        return `${count}个属性`;
+      }
+    } catch {
+      // 不是 JSON，继续作为字符串处理
+    }
+
+    // 枚举值翻译
+    if (ENUM_VALUE_LABELS[key]?.[value]) {
+      return ENUM_VALUE_LABELS[key][value];
+    }
+
+    // 截断长文本
+    if (key === "prompt" || key === "description" || key === "visualPrompt") {
+      return truncateText(value, 50);
+    }
+
+    return value;
+  }
+
+  // 数组：显示数量
+  if (Array.isArray(value)) {
+    return `${value.length}项`;
+  }
+
+  // 对象：显示属性数量
+  if (typeof value === "object") {
+    const count = Object.keys(value).length;
+    return `${count}个属性`;
+  }
+
+  return String(value);
+}
+
+/**
+ * 格式化参数对象为确认卡片展示（过滤ID，只显示关键参数）
+ */
+export function formatParametersForConfirmation(
+  parameters: Record<string, unknown>
+): FormattedParameter[] {
+  // 过滤掉技术性ID参数
+  const filtered = Object.entries(parameters).filter(([key]) =>
+    shouldShowParameter(key)
+  );
+
+  // 按优先级排序
+  filtered.sort(([keyA], [keyB]) => {
+    const priorityA = KEY_PARAMS_PRIORITY.indexOf(keyA);
+    const priorityB = KEY_PARAMS_PRIORITY.indexOf(keyB);
+    
+    // 如果都在优先级列表中，按优先级排序
+    if (priorityA !== -1 && priorityB !== -1) {
+      return priorityA - priorityB;
+    }
+    
+    // 优先级列表中的参数排在前面
+    if (priorityA !== -1) return -1;
+    if (priorityB !== -1) return 1;
+    
+    // 都不在优先级列表中，保持原顺序
+    return 0;
+  });
+
+  // 格式化参数
+  return filtered.map(([key, value]) => {
+    const label = PARAM_KEY_LABELS[key] || key;
+    const formattedValue = formatParameterValueForConfirmation(key, value);
+
+    return {
+      key,
+      label,
+      value: formattedValue,
+      rawValue: value,
+    };
+  });
 }
 

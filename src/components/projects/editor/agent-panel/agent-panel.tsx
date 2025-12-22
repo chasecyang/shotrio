@@ -4,27 +4,16 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useAgent } from "./agent-context";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
-import { PendingActionCard } from "./pending-action-card";
-import { TaskStatusCard } from "./task-status-card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Send, Trash2, Bot, Info, Square } from "lucide-react";
 import { toast } from "sonner";
-import { confirmAndExecuteAction, cancelAction } from "@/lib/actions/agent";
-import { useTaskTracking } from "./use-task-tracking";
+import { getCreditBalance } from "@/lib/actions/credits/balance";
 import type { IterationStep, FunctionCategory } from "@/types/agent";
 
 interface AgentPanelProps {
   projectId: string;
 }
-
-// 分镜相关操作，执行成功后需要刷新时间轴
-const SHOT_RELATED_FUNCTIONS = [
-  'create_shot', 'batch_create_shots',
-  'update_shot', 'batch_update_shot_duration',
-  'delete_shots', 'reorder_shots'
-];
 
 // 辅助函数：创建新的 iterations 数组（确保触发 React 重新渲染）
 // 放在组件外部避免每次渲染创建新函数
@@ -38,17 +27,40 @@ function updateIterations(
   );
 }
 
+// 判断是否为分镜相关操作
+function isShotRelatedFunction(functionName: string): boolean {
+  const shotRelatedFunctions = [
+    'create_shot', 'batch_create_shots',
+    'update_shot', 'batch_update_shot_duration',
+    'delete_shots', 'reorder_shots'
+  ];
+  return shotRelatedFunctions.includes(functionName);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
   const agent = useAgent();
   
-  // 启用任务追踪
-  useTaskTracking();
-  
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 获取用户积分余额
+  useEffect(() => {
+    async function fetchBalance() {
+      try {
+        const result = await getCreditBalance();
+        if (result.success && result.balance) {
+          setCreditBalance(result.balance.balance);
+        }
+      } catch (error) {
+        console.error("获取积分余额失败:", error);
+      }
+    }
+    fetchBalance();
+  }, []);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -167,16 +179,8 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
                     error: event.data.success ? undefined : event.data.error,
                   },
                 });
-                if (event.data.success && event.data.jobId) {
-                  agent.addTask({
-                    functionCallId: event.data.functionCallId,
-                    functionName: fc.name,
-                    jobId: event.data.jobId,
-                    status: "running",
-                  });
-                }
                 // 如果是分镜相关操作执行成功，触发时间轴刷新
-                if (event.data.success && SHOT_RELATED_FUNCTIONS.includes(fc.name)) {
+                if (event.data.success && isShotRelatedFunction(fc.name)) {
                   window.dispatchEvent(new CustomEvent("shots-changed"));
                 }
                 agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
@@ -184,12 +188,21 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
               break;
 
             case "pending_action":
-              // 添加待确认操作
+              // 将待确认操作内联到当前消息
               const actionData = event.data;
-              agent.addPendingAction({
+              const pendingActionId = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const pendingAction = {
+                id: pendingActionId,
                 functionCalls: [actionData.functionCall],
                 message: actionData.message,
                 conversationState: actionData.conversationState,
+                createdAt: new Date(),
+                creditCost: actionData.creditCost,
+                status: "pending" as const,
+              };
+              agent.updateMessage(tempMsgId, { 
+                pendingAction,
+                isStreaming: false 
               });
               break;
 
@@ -230,6 +243,15 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
     const userMessage = input.trim();
     setInput("");
     setIsProcessing(true);
+
+    // 自动拒绝所有待处理的操作
+    agent.state.messages.forEach((msg) => {
+      if (msg.pendingAction && msg.pendingAction.status === "pending") {
+        agent.updateMessage(msg.id, {
+          pendingAction: { ...msg.pendingAction, status: "rejected" }
+        });
+      }
+    });
 
     // 添加用户消息
     agent.addMessage({
@@ -281,125 +303,6 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
     }
   }, [input, isProcessing, agent, processStreamingResponse, handleStreamError]);
 
-  // 恢复对话（用户确认操作后）
-  const resumeConversation = useCallback(async (
-    action: typeof agent.state.pendingActions[0], 
-    executionResults: Array<{
-      functionCallId: string;
-      success: boolean;
-      data?: unknown;
-      error?: string;
-      jobId?: string;
-    }> | undefined
-  ) => {
-    if (!action.conversationState || !executionResults) return;
-
-    setIsProcessing(true);
-
-    // 创建新的 AI 消息用于继续对话
-    const tempMsgId = agent.addMessage({
-      role: "assistant",
-      content: "",
-      isStreaming: true,
-      iterations: [],
-    });
-
-    // 创建新的 AbortController
-    abortControllerRef.current = new AbortController();
-
-    try {
-      // 调用恢复对话 API
-      const response = await fetch("/api/agent/resume-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          conversationState: action.conversationState,
-          executionResults,
-          context: agent.currentContext,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("无法获取响应流");
-      }
-
-      await processStreamingResponse(reader, tempMsgId);
-    } catch (error) {
-      handleStreamError(error, tempMsgId, "恢复对话失败");
-    } finally {
-      setIsProcessing(false);
-      abortControllerRef.current = null;
-    }
-  }, [agent, processStreamingResponse, handleStreamError]);
-
-  // 确认操作
-  const handleConfirmAction = useCallback(async (actionId: string) => {
-    const action = agent.state.pendingActions.find((a) => a.id === actionId);
-    if (!action) return;
-
-    try {
-      const response = await confirmAndExecuteAction({
-        actionId: action.id,
-        functionCalls: action.functionCalls,
-      });
-
-      if (response.success) {
-        toast.success(response.message || "执行成功");
-
-        // 移除 pending action
-        agent.removePendingAction(action.id);
-
-        // 如果是分镜相关操作，触发时间轴刷新
-        const functionName = action.functionCalls[0]?.name;
-        if (functionName && SHOT_RELATED_FUNCTIONS.includes(functionName)) {
-          window.dispatchEvent(new CustomEvent("shots-changed"));
-        }
-
-        // 如果有任务 ID，创建任务追踪
-        if (response.executedResults) {
-          response.executedResults.forEach((result) => {
-            if (result.jobId) {
-              agent.addTask({
-                functionCallId: "",
-                functionName: action.functionCalls[0].name,
-                jobId: result.jobId,
-                status: "running",
-              });
-            }
-          });
-        }
-
-        // 如果有对话状态，恢复对话让 Agent 继续
-        if (action.conversationState) {
-          await resumeConversation(action, response.executedResults);
-        } else {
-          // 没有对话状态时，添加结果消息（向后兼容）
-          agent.addMessage({
-            role: "assistant",
-            content: response.message || "操作已完成",
-          });
-        }
-      } else {
-        toast.error(response.error || "执行失败");
-        agent.addMessage({
-          role: "assistant",
-          content: `执行失败：${response.error || "未知错误"}`,
-        });
-      }
-    } catch (error) {
-      console.error("执行操作失败:", error);
-      toast.error("执行失败");
-    }
-  }, [agent, resumeConversation]);
-
   // 停止 AI 生成
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -407,13 +310,6 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
       abortControllerRef.current = null;
     }
   }, []);
-
-  // 取消操作
-  const handleCancelAction = useCallback(async (actionId: string) => {
-    await cancelAction(actionId);
-    agent.removePendingAction(actionId);
-    toast.info("已取消操作");
-  }, [agent]);
 
   // 清除历史
   const handleClearHistory = useCallback(() => {
@@ -467,7 +363,11 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
             ) : (
               <>
                 {agent.state.messages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
+                  <ChatMessage 
+                    key={message.id} 
+                    message={message} 
+                    currentBalance={creditBalance}
+                  />
                 ))}
                 {isProcessing && <TypingIndicator />}
               </>
@@ -475,41 +375,6 @@ export function AgentPanel({ projectId: _projectId }: AgentPanelProps) {
           </div>
         </div>
       </div>
-
-      {/* Pending Actions */}
-      {agent.state.pendingActions.length > 0 && (
-        <>
-          <Separator />
-          <div className="border-t border-border bg-muted/30 p-4 shrink-0">
-            <h4 className="mb-3 text-sm font-semibold">待确认操作</h4>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {agent.state.pendingActions.map((action) => (
-                <PendingActionCard
-                  key={action.id}
-                  action={action}
-                  onConfirm={handleConfirmAction}
-                  onCancel={handleCancelAction}
-                />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Running Tasks */}
-      {agent.state.runningTasks.length > 0 && (
-        <>
-          <Separator />
-          <div className="border-t border-border bg-muted/30 p-4 shrink-0">
-            <h4 className="mb-3 text-sm font-semibold">执行中的任务</h4>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {agent.state.runningTasks.map((task) => (
-                <TaskStatusCard key={task.id} task={task} />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Input */}
       <div className="border-t border-border p-4 shrink-0">

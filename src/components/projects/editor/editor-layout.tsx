@@ -18,8 +18,8 @@ import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { getExportableShots } from "@/lib/actions/video/export";
 import { toast } from "sonner";
-import { FileText, Eye, Film, Bot } from "lucide-react";
-import { AgentPanel, AgentProvider } from "./agent-panel";
+import { FileText, Eye, Film } from "lucide-react";
+import { AgentProvider } from "./agent-panel";
 import JSZip from "jszip";
 import type { EditorProject, EditorUser } from "./editor-types";
 
@@ -305,14 +305,10 @@ function EditorLayoutInner({
         {/* 移动端使用 Tabs 切换 */}
         <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex-1 flex flex-col overflow-hidden">
           <div className="px-2 pt-2 shrink-0 border-b bg-background">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="resources" className="text-xs gap-1">
                 <FileText className="h-3.5 w-3.5" />
                 资源
-              </TabsTrigger>
-              <TabsTrigger value="agent" className="text-xs gap-1">
-                <Bot className="h-3.5 w-3.5" />
-                AI
               </TabsTrigger>
               <TabsTrigger value="preview" className="text-xs gap-1">
                 <Eye className="h-3.5 w-3.5" />
@@ -327,12 +323,6 @@ function EditorLayoutInner({
 
           <TabsContent value="resources" className="flex-1 mt-0 overflow-hidden">
             <div className="h-full overflow-auto bg-card">{resourcePanel}</div>
-          </TabsContent>
-
-          <TabsContent value="agent" className="flex-1 mt-0 overflow-hidden">
-            <div className="h-full overflow-hidden bg-card">
-              <AgentPanel projectId={project.id} />
-            </div>
           </TabsContent>
 
           <TabsContent value="preview" className="flex-1 mt-0 overflow-hidden">
@@ -368,57 +358,43 @@ function EditorLayoutInner({
         user={user}
       />
 
-      {/* 主内容区：横向分割 - AI助手 | 主编辑区 */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* 最左侧：AI 助手面板 */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <div className="h-full overflow-hidden border-r bg-card">
-            <AgentPanel projectId={project.id} />
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* 右侧主体：上下分割 */}
-        <ResizablePanel defaultSize={80}>
-          <ResizablePanelGroup direction="vertical" className="h-full">
-            {/* 上半部分：资源面板 + 预览区 */}
-            <ResizablePanel defaultSize={60} minSize={30}>
-              <ResizablePanelGroup direction="horizontal" className="h-full">
-                {/* 资源面板 */}
-                <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
-                  <div className="h-full overflow-auto border-r bg-card">
-                    {resourcePanel}
-                  </div>
-                </ResizablePanel>
-
-                <ResizableHandle withHandle />
-
-                {/* 预览/编辑区 */}
-                <ResizablePanel defaultSize={75}>
-                  <div className="h-full overflow-hidden bg-background">
-                    {previewPanel}
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
+      {/* 主内容区：上下分割 */}
+      <ResizablePanelGroup direction="vertical" className="flex-1">
+        {/* 上半部分：资源面板 + 预览区 */}
+        <ResizablePanel defaultSize={60} minSize={30}>
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* 资源面板 */}
+            <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+              <div className="h-full overflow-auto border-r bg-card">
+                {resourcePanel}
+              </div>
             </ResizablePanel>
 
             <ResizableHandle withHandle />
 
-            {/* 下半部分：时间轴轨道 */}
-            <ResizablePanel defaultSize={40} minSize={20} maxSize={60}>
-              <div className="h-full overflow-hidden bg-card/50 backdrop-blur-sm">
-                <TimelineContainer 
-                  onAddShot={handleAddShot}
-                  onDeleteShots={handleDeleteShots}
-                  onGenerateVideos={handleGenerateVideos}
-                  onExportVideos={handleExportVideos}
-                  isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
-                  isExportingVideos={isExportingVideos}
-                />
+            {/* 预览/编辑区 */}
+            <ResizablePanel defaultSize={75}>
+              <div className="h-full overflow-hidden bg-background">
+                {previewPanel}
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        {/* 下半部分：时间轴轨道 */}
+        <ResizablePanel defaultSize={40} minSize={20} maxSize={60}>
+          <div className="h-full overflow-hidden bg-card/50 backdrop-blur-sm">
+            <TimelineContainer 
+              onAddShot={handleAddShot}
+              onDeleteShots={handleDeleteShots}
+              onGenerateVideos={handleGenerateVideos}
+              onExportVideos={handleExportVideos}
+              isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
+              isExportingVideos={isExportingVideos}
+            />
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

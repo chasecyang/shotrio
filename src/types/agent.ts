@@ -2,6 +2,7 @@
 
 import type { Job } from "./job";
 import type { SelectedResource } from "@/components/projects/editor/editor-context";
+import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 /**
  * Agent 消息角色
@@ -56,6 +57,8 @@ export interface AgentMessage {
   isStreaming?: boolean;
   // 标识消息是否被用户中断
   isInterrupted?: boolean;
+  // 待确认操作（用于内联显示）
+  pendingAction?: PendingAction;
 }
 
 /**
@@ -113,6 +116,10 @@ export interface PendingAction {
   message: string;
   createdAt: Date;
   conversationState?: ConversationState; // 用于恢复对话
+  // 积分消耗信息
+  creditCost?: CreditCost;
+  // 操作状态
+  status: "pending" | "accepted" | "rejected";
 }
 
 /**

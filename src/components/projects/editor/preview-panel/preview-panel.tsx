@@ -8,6 +8,7 @@ import { ShotPlaybackPlayer } from "./shot-playback-player";
 import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
 import { ProjectSettingsEditor } from "./project-settings-editor";
+import { AgentPanel } from "../agent-panel";
 
 export function PreviewPanel() {
   const { 
@@ -68,6 +69,12 @@ export function PreviewPanel() {
 
     case "settings":
       return <ProjectSettingsEditor />;
+
+    case "agent":
+      if (selectedResource.id) {
+        return <AgentPanel projectId={selectedResource.id} />;
+      }
+      break;
   }
 
   return <EmptyPreview />;

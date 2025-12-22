@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
  * 消费积分（原子操作）
  */
 export async function spendCredits(params: {
+  userId?: string; // 可选：在 worker 环境中直接传入 userId
   amount: number;
   description: string;
   metadata?: Record<string, unknown>;
@@ -20,22 +21,30 @@ export async function spendCredits(params: {
   transactionId?: string;
   error?: string;
 }> {
-  const { amount, description, metadata } = params;
+  const { userId: providedUserId, amount, description, metadata } = params;
 
   if (amount <= 0) {
     return { success: false, error: "消费金额必须大于0" };
   }
 
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    let userId: string;
 
-    if (!session?.user) {
-      return { success: false, error: "未登录" };
+    // 如果提供了 userId（worker 环境），直接使用
+    if (providedUserId) {
+      userId = providedUserId;
+    } else {
+      // 否则从 session 中获取（web 请求环境）
+      const session = await auth.api.getSession({
+        headers: await headers(),
+      });
+
+      if (!session?.user) {
+        return { success: false, error: "未登录" };
+      }
+
+      userId = session.user.id;
     }
-
-    const userId = session.user.id;
 
     // 使用事务确保原子性
     const result = await db.transaction(async (tx) => {

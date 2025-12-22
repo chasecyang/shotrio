@@ -3,12 +3,9 @@
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect } from "react";
 import type {
   AgentMessage,
-  PendingAction,
-  TaskExecution,
   AgentContext as AgentContextType,
 } from "@/types/agent";
 import { useEditor } from "../editor-context";
-import { randomUUID } from "crypto";
 
 /**
  * Agent 状态
@@ -16,12 +13,6 @@ import { randomUUID } from "crypto";
 export interface AgentState {
   // 对话历史
   messages: AgentMessage[];
-  
-  // 待确认的操作
-  pendingActions: PendingAction[];
-  
-  // 执行中的任务
-  runningTasks: TaskExecution[];
   
   // 是否正在与 AI 通信
   isLoading: boolean;
@@ -33,11 +24,6 @@ export interface AgentState {
 type AgentAction =
   | { type: "ADD_MESSAGE"; payload: AgentMessage }
   | { type: "UPDATE_MESSAGE"; payload: { id: string; updates: Partial<AgentMessage> } }
-  | { type: "ADD_PENDING_ACTION"; payload: PendingAction }
-  | { type: "REMOVE_PENDING_ACTION"; payload: string }
-  | { type: "ADD_TASK"; payload: TaskExecution }
-  | { type: "UPDATE_TASK"; payload: { id: string; updates: Partial<TaskExecution> } }
-  | { type: "REMOVE_TASK"; payload: string }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "CLEAR_MESSAGES" }
   | { type: "LOAD_HISTORY"; payload: AgentMessage[] };
@@ -47,8 +33,6 @@ type AgentAction =
  */
 const initialState: AgentState = {
   messages: [],
-  pendingActions: [],
-  runningTasks: [],
   isLoading: false,
 };
 
@@ -71,38 +55,6 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
         ),
       };
 
-    case "ADD_PENDING_ACTION":
-      return {
-        ...state,
-        pendingActions: [...state.pendingActions, action.payload],
-      };
-
-    case "REMOVE_PENDING_ACTION":
-      return {
-        ...state,
-        pendingActions: state.pendingActions.filter((a) => a.id !== action.payload),
-      };
-
-    case "ADD_TASK":
-      return {
-        ...state,
-        runningTasks: [...state.runningTasks, action.payload],
-      };
-
-    case "UPDATE_TASK":
-      return {
-        ...state,
-        runningTasks: state.runningTasks.map((task) =>
-          task.id === action.payload.id ? { ...task, ...action.payload.updates } : task
-        ),
-      };
-
-    case "REMOVE_TASK":
-      return {
-        ...state,
-        runningTasks: state.runningTasks.filter((t) => t.id !== action.payload),
-      };
-
     case "SET_LOADING":
       return {
         ...state,
@@ -113,7 +65,6 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
       return {
         ...state,
         messages: [],
-        pendingActions: [],
       };
 
     case "LOAD_HISTORY":
@@ -136,11 +87,6 @@ interface AgentContextValue {
   // 便捷方法
   addMessage: (message: Omit<AgentMessage, "id" | "timestamp">) => string;
   updateMessage: (id: string, updates: Partial<AgentMessage>) => void;
-  addPendingAction: (action: Omit<PendingAction, "id" | "createdAt">) => string;
-  removePendingAction: (id: string) => void;
-  addTask: (task: Omit<TaskExecution, "id" | "startedAt">) => string;
-  updateTask: (id: string, updates: Partial<TaskExecution>) => void;
-  removeTask: (id: string) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   // 当前上下文（从 EditorContext 获取）
@@ -221,44 +167,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     dispatch({ type: "UPDATE_MESSAGE", payload: { id, updates } });
   }, []);
 
-  const addPendingAction = useCallback((action: Omit<PendingAction, "id" | "createdAt">) => {
-    const id = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    dispatch({
-      type: "ADD_PENDING_ACTION",
-      payload: {
-        ...action,
-        id,
-        createdAt: new Date(),
-      },
-    });
-    return id;
-  }, []);
-
-  const removePendingAction = useCallback((id: string) => {
-    dispatch({ type: "REMOVE_PENDING_ACTION", payload: id });
-  }, []);
-
-  const addTask = useCallback((task: Omit<TaskExecution, "id" | "startedAt">) => {
-    const id = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    dispatch({
-      type: "ADD_TASK",
-      payload: {
-        ...task,
-        id,
-        startedAt: new Date(),
-      },
-    });
-    return id;
-  }, []);
-
-  const updateTask = useCallback((id: string, updates: Partial<TaskExecution>) => {
-    dispatch({ type: "UPDATE_TASK", payload: { id, updates } });
-  }, []);
-
-  const removeTask = useCallback((id: string) => {
-    dispatch({ type: "REMOVE_TASK", payload: id });
-  }, []);
-
   const clearMessages = useCallback(() => {
     dispatch({ type: "CLEAR_MESSAGES" });
     // 清除 localStorage
@@ -276,11 +184,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       dispatch,
       addMessage,
       updateMessage,
-      addPendingAction,
-      removePendingAction,
-      addTask,
-      updateTask,
-      removeTask,
       clearMessages,
       setLoading,
       currentContext,
@@ -289,11 +192,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       state,
       addMessage,
       updateMessage,
-      addPendingAction,
-      removePendingAction,
-      addTask,
-      updateTask,
-      removeTask,
       clearMessages,
       setLoading,
       currentContext,

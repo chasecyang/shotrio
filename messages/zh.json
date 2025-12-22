@@ -587,5 +587,40 @@
         "disable": "已禁用"
       }
     }
+  },
+  "agent": {
+    "credits": {
+      "total": "总计消耗",
+      "currentBalance": "当前余额",
+      "insufficient": "积分不足",
+      "insufficientMessage": "积分不足，还需要 {amount} 积分",
+      "recharge": "去充值",
+      "perImage": "张图片",
+      "perSecond": "秒",
+      "costPerImage": "积分/张",
+      "costPerSecond": "积分/秒",
+      "estimating": "正在计算积分...",
+      "estimateFailed": "无法估算积分消耗"
+    },
+    "action": {
+      "pending": "待确认操作",
+      "executionPlan": "执行计划",
+      "confirm": "确认执行",
+      "confirmGenerate": "确认生成",
+      "confirmDelete": "确认删除",
+      "reject": "拒绝",
+      "executing": "执行中...",
+      "viewDetails": "查看详细参数"
+    },
+    "warning": {
+      "deletion": "此操作将永久删除数据，无法撤销。",
+      "modification": "此操作将修改现有数据，请确认无误后执行。"
+    },
+    "category": {
+      "read": "读取",
+      "generation": "生成",
+      "modification": "修改",
+      "deletion": "删除"
+    }
   }
 }
