@@ -344,31 +344,11 @@ export async function executeFunction(
         break;
       }
 
-      case "batch_update_shot_duration": {
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
-        const duration = parseInt(parameters.duration as string);
-
-        for (const shotId of shotIds) {
-          await updateShot(shotId, { duration });
-        }
-
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: { updated: shotIds.length },
-        };
-        break;
-      }
-
       case "update_asset": {
         const updates: Record<string, unknown> = {};
         
         if (parameters.name) updates.name = parameters.name;
-        if (parameters.prompt) updates.prompt = parameters.prompt;
-        if (parameters.tags) {
-          // Note: updateAsset 不支持直接更新 tags，需要另外处理
-          // 这里仅做示例
-        }
+        // Note: updateAsset 不支持直接更新 tags
 
         const updateResult = await updateAsset(parameters.assetId as string, updates);
 
@@ -443,21 +423,6 @@ export async function executeFunction(
           functionCallId: functionCall.id,
           success: deleteResult.success,
           error: deleteResult.error,
-        };
-        break;
-      }
-
-      case "delete_assets": {
-        const assetIds = JSON.parse(parameters.assetIds as string) as string[];
-
-        for (const assetId of assetIds) {
-          await deleteAsset(assetId);
-        }
-
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: { deleted: assetIds.length },
         };
         break;
       }

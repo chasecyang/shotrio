@@ -31,7 +31,7 @@ function updateIterations(
 function isShotRelatedFunction(functionName: string): boolean {
   const shotRelatedFunctions = [
     'create_shot',
-    'update_shot', 'batch_update_shot_duration',
+    'update_shot',
     'delete_shots', 'reorder_shots'
   ];
   return shotRelatedFunctions.includes(functionName);

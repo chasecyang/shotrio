@@ -8,7 +8,6 @@ export { collectContext } from "./context-collector";
 export {
   AGENT_FUNCTIONS,
   getFunctionDefinition,
-  getFunctionsByCategory,
   toOpenAIFunctionFormat,
 } from "./functions";
 

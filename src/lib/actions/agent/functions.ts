@@ -335,29 +335,8 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "batch_update_shot_duration",
-    description: "批量修改分镜时长",
-    displayName: "批量修改分镜时长",
-    parameters: {
-      type: "object",
-      properties: {
-        shotIds: {
-          type: "string",
-          description: "分镜ID数组（JSON字符串格式）",
-        },
-        duration: {
-          type: "string",
-          description: "新的时长（毫秒）",
-        },
-      },
-      required: ["shotIds", "duration"],
-    },
-    category: "modification",
-    needsConfirmation: true,
-  },
-  {
     name: "update_asset",
-    description: "修改素材信息",
+    description: "修改素材信息（名称和标签）",
     displayName: "修改素材",
     parameters: {
       type: "object",
@@ -369,10 +348,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         name: {
           type: "string",
           description: "素材名称",
-        },
-        prompt: {
-          type: "string",
-          description: "生成提示词",
         },
         tags: {
           type: "string",
@@ -464,23 +439,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     category: "deletion",
     needsConfirmation: true,
   },
-  {
-    name: "delete_assets",
-    description: "批量删除素材",
-    displayName: "批量删除素材",
-    parameters: {
-      type: "object",
-      properties: {
-        assetIds: {
-          type: "string",
-          description: "素材ID数组（JSON字符串格式）",
-        },
-      },
-      required: ["assetIds"],
-    },
-    category: "deletion",
-    needsConfirmation: true,
-  },
 ];
 
 /**
@@ -488,13 +446,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
  */
 export function getFunctionDefinition(name: string): FunctionDefinition | undefined {
   return AGENT_FUNCTIONS.find((f) => f.name === name);
-}
-
-/**
- * 获取指定分类的 Functions
- */
-export function getFunctionsByCategory(category: string): FunctionDefinition[] {
-  return AGENT_FUNCTIONS.filter((f) => f.category === category);
 }
 
 /**

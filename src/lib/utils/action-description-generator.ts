@@ -120,14 +120,6 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         return parts.join(" - ");
       }
 
-      case "batch_update_shot_duration": {
-        const count = parseArrayLength(parameters.shotIds);
-        const duration = parameters.duration ? `${Number(parameters.duration) / 1000}秒` : "";
-        return count > 0 
-          ? `批量修改 ${count} 个分镜时长${duration ? ` - ${duration}` : ""}`
-          : "批量修改分镜时长";
-      }
-
       case "update_asset": {
         const parts: string[] = ["修改素材"];
         if (parameters.name) {
