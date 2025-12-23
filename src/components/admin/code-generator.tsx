@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -18,11 +19,8 @@ import { Plus, Loader2, Copy, Check } from "lucide-react";
 import { generateRedeemCode, batchGenerateRedeemCodes } from "@/lib/actions/admin/manage-codes";
 import { toast } from "sonner";
 
-interface CodeGeneratorProps {
-  onSuccess?: () => void;
-}
-
-export function CodeGenerator({ onSuccess }: CodeGeneratorProps) {
+export function CodeGenerator() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isBatch, setIsBatch] = useState(false);
@@ -75,7 +73,7 @@ export function CodeGenerator({ onSuccess }: CodeGeneratorProps) {
         if (result.success && result.codes) {
           setGeneratedCodes(result.codes);
           toast.success(`成功生成 ${result.codes.length} 个兑换码`);
-          onSuccess?.();
+          router.refresh();
         } else {
           toast.error(result.error || "生成失败");
         }
@@ -93,7 +91,7 @@ export function CodeGenerator({ onSuccess }: CodeGeneratorProps) {
         if (result.success && result.code) {
           setGeneratedCodes([result.code]);
           toast.success("兑换码生成成功");
-          onSuccess?.();
+          router.refresh();
         } else {
           toast.error(result.error || "生成失败");
         }

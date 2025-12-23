@@ -1,7 +1,7 @@
 "use client";
 
-import { memo } from "react";
-import type { AgentMessage } from "@/types/agent";
+import { memo, useState } from "react";
+import type { AgentMessage, IterationStep } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
@@ -9,6 +9,17 @@ import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
 import { confirmAndExecuteAction } from "@/lib/actions/agent";
 import { toast } from "sonner";
+
+// 辅助函数：更新迭代数组
+function updateIterations(
+  iterations: IterationStep[],
+  index: number,
+  updates: Partial<IterationStep>
+): IterationStep[] {
+  return iterations.map((iter, i) =>
+    i === index ? { ...iter, ...updates } : iter
+  );
+}
 
 interface ChatMessageProps {
   message: AgentMessage;
@@ -55,13 +66,173 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     }
   };
 
+  const [isRejecting, setIsRejecting] = useState(false);
+
   const handleCancelAction = async () => {
-    // No server call needed, just update local state
-    toast.info("操作已取消");
-    if (message.pendingAction) {
+    if (!message.pendingAction || !agent.state.currentConversationId || isRejecting) return;
+
+    setIsRejecting(true);
+    
+    try {
+      // 1. 调用服务端 action 标记为已拒绝
+      const result = await agent.rejectAction(message.id);
+      
+      if (!result.success) {
+        toast.error(result.error || "拒绝失败");
+        setIsRejecting(false);
+        return;
+      }
+
+      toast.info("操作已拒绝，Agent 正在提供替代方案...");
+
+      // 2. 更新本地消息状态（移除 pending action UI）
       agent.updateMessage(message.id, { 
         pendingAction: { ...message.pendingAction, status: "rejected" }
       });
+
+      // 3. 创建新的 assistant 消息用于流式输出
+      const tempMsgId = agent.addMessage({
+        role: "assistant",
+        content: "",
+        isStreaming: true,
+        iterations: [],
+      });
+
+      // 4. 调用 resume-stream API（带拒绝标记）
+      const response = await fetch("/api/agent/resume-stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversationId: agent.state.currentConversationId,
+          messageId: message.id,
+          isRejection: true,
+          rejectionReason: "用户拒绝了此操作",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("无法读取响应流");
+      }
+
+      // 5. 处理流式响应
+      await processResumeStream(reader, tempMsgId);
+
+      // 6. 刷新对话列表
+      agent.refreshConversations();
+    } catch (error) {
+      console.error("拒绝操作失败:", error);
+      toast.error("拒绝操作失败");
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  // 处理 resume 流式响应
+  const processResumeStream = async (
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    tempMsgId: string
+  ) => {
+    const decoder = new TextDecoder();
+    let iterations: IterationStep[] = [];
+    let currentIterationIndex = -1;
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const event = JSON.parse(line);
+
+            switch (event.type) {
+              case "iteration_start":
+                iterations = [...iterations, {
+                  id: `iter-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                  iterationNumber: event.data.iterationNumber,
+                  timestamp: new Date(),
+                }];
+                currentIterationIndex = iterations.length - 1;
+                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+                break;
+
+              case "thinking":
+                if (currentIterationIndex >= 0) {
+                  iterations = updateIterations(iterations, currentIterationIndex, {
+                    thinkingProcess: event.data.content,
+                  });
+                  agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+                }
+                break;
+
+              case "content":
+                if (currentIterationIndex >= 0) {
+                  iterations = updateIterations(iterations, currentIterationIndex, {
+                    content: event.data.content,
+                  });
+                  agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
+                }
+                break;
+
+              case "pending_action":
+                // 新的待确认操作
+                const pendingAction = event.data;
+                agent.updateMessage(tempMsgId, {
+                  pendingAction: {
+                    id: pendingAction.id,
+                    functionCalls: [pendingAction.functionCall],
+                    message: pendingAction.message,
+                    conversationState: pendingAction.conversationState,
+                    createdAt: new Date(),
+                    creditCost: pendingAction.creditCost,
+                    status: "pending",
+                  },
+                  isStreaming: false,
+                  iterations,
+                });
+                break;
+
+              case "complete":
+                agent.updateMessage(tempMsgId, {
+                  isStreaming: false,
+                  iterations,
+                });
+                break;
+
+              case "error":
+                toast.error(event.data || "执行出错");
+                agent.updateMessage(tempMsgId, {
+                  content: `错误：${event.data}`,
+                  isStreaming: false,
+                });
+                break;
+            }
+          } catch (parseError) {
+            console.error("解析事件失败:", parseError);
+          }
+        }
+      }
+    } catch (streamError) {
+      console.error("流式处理失败:", streamError);
+      agent.updateMessage(tempMsgId, {
+        content: `抱歉，出错了：${streamError instanceof Error ? streamError.message : "未知错误"}`,
+        isStreaming: false,
+      });
+      throw streamError;
     }
   };
 
@@ -82,39 +253,49 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
         </span>
       </div>
 
-      {hasPendingAction ? (
-        /* Pending Action Message */
-        <PendingActionMessage
-          action={message.pendingAction!}
-          onConfirm={handleConfirmAction}
-          onCancel={handleCancelAction}
-          currentBalance={currentBalance}
-        />
-      ) : isUser ? (
+      {isUser ? (
         /* User Message */
         <div className="rounded-lg bg-accent/50 backdrop-blur-sm border border-border/50 px-3 py-2 break-words w-full">
           <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
         </div>
-      ) : hasIterations ? (
-        /* AI Message with Iterations Timeline */
-        <div className="space-y-3">
-          {message.iterations!.map((iteration, index) => (
-            <IterationCard
-              key={iteration.id}
-              iteration={iteration}
-              isStreaming={message.isStreaming}
-              isLastIteration={index === message.iterations!.length - 1}
-            />
-          ))}
-          {message.isInterrupted && <InterruptedBadge />}
-        </div>
       ) : (
-        /* AI Message - Simple Format (for simple text responses without iterations) */
-        <div className="text-sm break-words">
-          <MarkdownRenderer content={message.content} className="inline" />
-          {message.isStreaming && message.content && (
-            <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
+        /* AI Message */
+        <div className="space-y-3">
+          {/* Iterations Timeline (思考过程) */}
+          {hasIterations && (
+            <div className="space-y-3">
+              {message.iterations!.map((iteration, index) => (
+                <IterationCard
+                  key={iteration.id}
+                  iteration={iteration}
+                  isStreaming={message.isStreaming}
+                  isLastIteration={index === message.iterations!.length - 1}
+                />
+              ))}
+            </div>
           )}
+
+          {/* Simple content (for responses without iterations) */}
+          {!hasIterations && message.content && (
+            <div className="text-sm break-words">
+              <MarkdownRenderer content={message.content} className="inline" />
+              {message.isStreaming && (
+                <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
+              )}
+            </div>
+          )}
+
+          {/* Pending Action (待确认操作) */}
+          {hasPendingAction && (
+            <PendingActionMessage
+              action={message.pendingAction!}
+              onConfirm={handleConfirmAction}
+              onCancel={handleCancelAction}
+              currentBalance={currentBalance}
+            />
+          )}
+
+          {/* Interrupted Badge */}
           {message.isInterrupted && <InterruptedBadge />}
         </div>
       )}

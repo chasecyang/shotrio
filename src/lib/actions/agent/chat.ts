@@ -89,3 +89,47 @@ export async function confirmAndExecuteAction(input: {
     };
   }
 }
+
+/**
+ * 拒绝操作并让 Agent 继续执行
+ */
+export async function rejectAndContinueAction(input: {
+  conversationId: string;
+  messageId: string;
+  rejectionReason?: string;
+}): Promise<AgentChatResponse> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    // 更新数据库中的消息状态（将 pendingAction 标记为已拒绝）
+    // 注意：我们保留 pendingAction 以便前端显示历史，但会更新其状态
+    await updateMessage(input.messageId, {
+      pendingAction: null, // 清除以便 UI 不再显示操作按钮
+    });
+
+    // 更新对话状态为 active（准备继续）
+    await updateConversationStatus(input.conversationId, "active");
+
+    console.log("[Agent] 用户拒绝操作，准备继续执行");
+
+    return {
+      success: true,
+      message: "操作已拒绝，Agent 将继续提供替代方案",
+    };
+  } catch (error) {
+    console.error("[Agent] 拒绝操作失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "拒绝操作失败",
+    };
+  }
+}

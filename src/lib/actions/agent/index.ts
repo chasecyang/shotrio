@@ -2,7 +2,7 @@
  * Agent Actions 统一导出
  */
 
-export { confirmAndExecuteAction } from "./chat";
+export { confirmAndExecuteAction, rejectAndContinueAction } from "./chat";
 export { executeFunction } from "./executor";
 export { collectContext } from "./context-collector";
 export {

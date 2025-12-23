@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
           await updateConversationStatus(input.conversationId, "active");
 
           // 7. 运行 Agent Loop（传递 conversationId 和 assistantMessageId）
-          await runAgentLoop(
+          const result = await runAgentLoop(
             currentMessages,
             controller,
             encoder,
@@ -221,12 +221,22 @@ export async function POST(request: NextRequest) {
             assistantMessageId
           );
 
-          // 8. 流完成，更新对话状态为 completed
-          await updateConversationStatus(input.conversationId, "completed");
+          // 8. 根据完成类型决定是否更新状态
+          // 如果是 pending_confirmation，保持 awaiting_approval 状态（agent-loop 内已设置）
+          // 如果是 done 或 error，更新为 completed
+          if (result.completionType === 'done' || result.completionType === 'error') {
+            await updateConversationStatus(input.conversationId, "completed");
+          }
 
           controller.close();
         } catch (error) {
           console.error("[Stream] 错误:", error);
+          
+          // 发生错误时，更新对话状态为 completed
+          if (assistantMessageId && input.conversationId) {
+            await updateConversationStatus(input.conversationId, "completed");
+          }
+          
           controller.enqueue(
             encoder.encode(
               JSON.stringify({

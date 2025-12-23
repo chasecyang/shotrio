@@ -1,10 +1,17 @@
+"use server";
+
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import db from "@/lib/db";
+import { asset, assetTag, project } from "@/lib/db/schemas/project";
+import { eq, and, sql } from "drizzle-orm";
 import type { AssetWithTags } from "@/types/asset";
 
 /**
  * 统计素材类型分布
- * 纯工具函数，不需要 "use server"
+ * 纯工具函数（改为 async 以符合 Next.js Server Actions 要求）
  */
-export function analyzeAssetsByType(assets: AssetWithTags[]) {
+export async function analyzeAssetsByType(assets: AssetWithTags[]) {
   const stats = {
     byType: {} as Record<string, number>,
     withoutImage: 0,
@@ -28,5 +35,55 @@ export function analyzeAssetsByType(assets: AssetWithTags[]) {
   });
 
   return stats;
+}
+
+/**
+ * 获取项目中最常用的标签（前10个）
+ * @param projectId 项目ID
+ * @returns 标签统计数组，按使用次数降序排列
+ */
+export async function getTopTagStats(projectId: string): Promise<Array<{
+  tagValue: string;
+  count: number;
+}>> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  
+  if (!session?.user?.id) {
+    return [];
+  }
+
+  try {
+    // 验证项目权限
+    const projectData = await db.query.project.findFirst({
+      where: and(
+        eq(project.id, projectId),
+        eq(project.userId, session.user.id)
+      ),
+    });
+
+    if (!projectData) {
+      return [];
+    }
+
+    // 查询该项目所有素材的标签统计
+    const tagStats = await db
+      .select({
+        tagValue: assetTag.tagValue,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(assetTag)
+      .innerJoin(asset, eq(assetTag.assetId, asset.id))
+      .where(eq(asset.projectId, projectId))
+      .groupBy(assetTag.tagValue)
+      .orderBy(sql`COUNT(*) DESC`)
+      .limit(10);
+
+    return tagStats;
+  } catch (error) {
+    console.error("获取标签统计失败:", error);
+    return [];
+  }
 }
 

@@ -155,12 +155,7 @@ export default async function RedeemCodesPage() {
             创建和管理积分兑换码
           </p>
         </div>
-        <CodeGenerator
-          onSuccess={() => {
-            // 刷新页面以显示新生成的兑换码
-            window.location.reload();
-          }}
-        />
+        <CodeGenerator />
       </div>
 
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>

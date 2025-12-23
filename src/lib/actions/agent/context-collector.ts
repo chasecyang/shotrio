@@ -6,7 +6,7 @@ import type { AgentContext } from "@/types/agent";
 import { getProjectDetail } from "@/lib/actions/project/base";
 import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { queryAssets } from "@/lib/actions/asset/queries";
-import { analyzeAssetsByType } from "@/lib/actions/asset/stats";
+import { analyzeAssetsByType, getTopTagStats } from "@/lib/actions/asset/stats";
 
 /**
  * 收集 Agent 上下文信息
@@ -61,10 +61,9 @@ export async function collectContext(context: AgentContext): Promise<string> {
           parts.push(`梗概: ${episode.summary}`);
         }
         
-        // 剧本内容摘要（前 800 字）
+        // 剧本状态（不显示具体内容，需要时可通过 query_script_content 查询）
         if (episode.scriptContent && episode.scriptContent.trim()) {
-          const scriptPreview = episode.scriptContent.slice(0, 800);
-          parts.push(`\n剧本内容（前800字）:\n${scriptPreview}${episode.scriptContent.length > 800 ? "..." : ""}`);
+          parts.push(`剧本内容: 已有剧本（${episode.scriptContent.length} 字）`);
         } else {
           parts.push(`剧本内容: 暂无`);
         }
@@ -124,7 +123,7 @@ export async function collectContext(context: AgentContext): Promise<string> {
         parts.push(`总素材数: ${assetsResult.total || assetsResult.assets.length}`);
         
         // 统计各类素材
-        const assetStats = analyzeAssetsByType(assetsResult.assets);
+        const assetStats = await analyzeAssetsByType(assetsResult.assets);
         
         if (assetStats.byType.character) parts.push(`- 角色: ${assetStats.byType.character} 个`);
         if (assetStats.byType.scene) parts.push(`- 场景: ${assetStats.byType.scene} 个`);
@@ -134,6 +133,16 @@ export async function collectContext(context: AgentContext): Promise<string> {
         if (assetStats.withoutImage > 0) {
           parts.push(`- 待生成图片: ${assetStats.withoutImage} 个`);
         }
+        
+        // 获取最常用的标签（前10个）
+        const topTags = await getTopTagStats(context.projectId);
+        if (topTags.length > 0) {
+          parts.push(`\n最常用的标签（前10个）:`);
+          topTags.forEach((tag) => {
+            parts.push(`- ${tag.tagValue} (使用 ${tag.count} 次)`);
+          });
+        }
+        
         parts.push("");
       }
     }

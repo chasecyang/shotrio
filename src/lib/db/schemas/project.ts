@@ -63,7 +63,7 @@ export const jobStatusEnum = pgEnum("job_status", [
 
 // 对话状态
 export const conversationStatusEnum = pgEnum("conversation_status", [
-  "active", // 活跃中（AI正在执行或等待用户输入）
+  "active", // 运行中（AI正在执行或等待用户输入）
   "awaiting_approval", // 等待批准（有操作需要用户确认）
   "completed", // 已完成（对话已结束）
 ]);

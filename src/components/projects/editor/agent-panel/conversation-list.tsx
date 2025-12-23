@@ -47,7 +47,7 @@ const statusConfig = {
   },
   active: {
     icon: Clock,
-    label: "活跃中",
+    label: "运行中",
     className: "text-blue-500",
     badgeClassName: "bg-blue-500/10 text-blue-500",
     animationClassName: "animate-pulse",

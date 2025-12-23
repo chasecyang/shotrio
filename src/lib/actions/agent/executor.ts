@@ -138,7 +138,7 @@ export async function executeFunction(
         });
 
         const assetStats = assetsResult.assets 
-          ? analyzeAssetsByType(assetsResult.assets)
+          ? await analyzeAssetsByType(assetsResult.assets)
           : { byType: {}, withoutImage: 0 };
 
         result = {

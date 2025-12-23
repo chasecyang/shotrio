@@ -34,6 +34,7 @@ type Message = {
  * @param encoder - 文本编码器
  * @param conversationId - 可选的对话ID（用于数据库持久化）
  * @param assistantMessageId - 可选的助手消息ID（用于实时更新）
+ * @returns 完成类型：done（正常完成）、pending_confirmation（等待确认）、error（错误）
  */
 export async function runAgentLoop(
   currentMessages: Message[],
@@ -41,7 +42,7 @@ export async function runAgentLoop(
   encoder: TextEncoder,
   conversationId?: string,
   assistantMessageId?: string
-): Promise<void> {
+): Promise<{ completionType: 'done' | 'pending_confirmation' | 'error' }> {
   const functions = toOpenAIFunctionFormat(AGENT_FUNCTIONS);
   const iterations: IterationStep[] = [];
 
@@ -164,7 +165,7 @@ export async function runAgentLoop(
           }) + "\n"
         )
       );
-      break;
+      return { completionType: 'error' };
     }
 
     // 将 AI 回复加入对话历史（包含 reasoning_content 和 tool_calls）
@@ -217,7 +218,7 @@ export async function runAgentLoop(
           }) + "\n"
         )
       );
-      break;
+      return { completionType: 'done' };
     }
 
     // 解析 function call
@@ -231,7 +232,7 @@ export async function runAgentLoop(
           }) + "\n"
         )
       );
-      break;
+      return { completionType: 'error' };
     }
 
     let parameters: Record<string, unknown>;
@@ -246,7 +247,7 @@ export async function runAgentLoop(
           }) + "\n"
         )
       );
-      break;
+      return { completionType: 'error' };
     }
 
     const functionCall: FunctionCall = {
@@ -318,7 +319,7 @@ export async function runAgentLoop(
           }) + "\n"
         )
       );
-      break;
+      return { completionType: 'pending_confirmation' };
     }
 
     // 发送执行状态
@@ -396,7 +397,7 @@ export async function runAgentLoop(
           }) + "\n"
         )
       );
-      break;
+      return { completionType: 'error' };
     }
   }
 }
