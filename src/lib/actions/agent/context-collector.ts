@@ -72,7 +72,7 @@ export async function collectContext(context: AgentContext): Promise<string> {
     }
 
     // 3. 选中的分镜
-    if (context.selectedShotIds.length > 0 && context.selectedEpisodeId) {
+    if (context.selectedShotIds && context.selectedShotIds.length > 0 && context.selectedEpisodeId) {
       parts.push(`# 选中的分镜`);
       parts.push(`已选中 ${context.selectedShotIds.length} 个分镜`);
       
@@ -148,7 +148,7 @@ export async function collectContext(context: AgentContext): Promise<string> {
     }
 
     // 6. 最近的任务
-    if (context.recentJobs.length > 0) {
+    if (context.recentJobs && context.recentJobs.length > 0) {
       parts.push(`# 最近任务`);
       const recentJobsInfo = context.recentJobs
         .slice(0, 5)

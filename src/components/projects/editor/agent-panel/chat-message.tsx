@@ -1,14 +1,13 @@
 "use client";
 
 import { memo, useState } from "react";
-import type { AgentMessage } from "@/types/agent";
+import type { AgentMessage, IterationStep } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
 import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
-import { useLangGraphStream } from "./use-langgraph-stream";
-import { getConversation } from "@/lib/actions/conversation/crud";
+import { useAgentStream } from "./use-agent-stream";
 import { toast } from "sonner";
 
 interface ChatMessageProps {
@@ -31,16 +30,43 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   
-  // 使用 LangGraph Stream Hook
-  const { resumeConversation } = useLangGraphStream({
+  // 判断是否为分镜相关操作
+  const isShotRelatedAction = message.pendingAction?.functionCall?.name && 
+    ['create_shot', 'update_shot', 'delete_shots', 'reorder_shots'].includes(
+      message.pendingAction.functionCall.name
+    );
+
+  // 使用 Agent Stream Hook
+  const { resumeConversation } = useAgentStream({
+    onIterationUpdate: (iterations: IterationStep[]) => {
+      // 检查是否有分镜相关操作完成
+      const lastIteration = iterations[iterations.length - 1];
+      if (lastIteration?.functionCall?.status === "completed" && 
+          lastIteration.functionCall.name &&
+          ['create_shot', 'update_shot', 'delete_shots', 'reorder_shots'].includes(
+            lastIteration.functionCall.name
+          )) {
+        // 延迟触发刷新，确保数据库操作已完成
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("shots-changed"));
+        }, 200);
+      }
+    },
     onComplete: () => {
+      // 如果是分镜相关操作，刷新时间轴
+      if (isShotRelatedAction) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("shots-changed"));
+        }, 300);
+      }
+      
       // 刷新对话列表
       setTimeout(() => {
         agent.refreshConversations();
       }, 100);
     },
     onError: (error) => {
-      console.error("LangGraph Stream 错误:", error);
+      console.error("Agent Stream 错误:", error);
       toast.error("操作失败");
     },
   });
@@ -52,20 +78,17 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     setIsConfirming(true);
 
     try {
-      // 1. 获取对话的 threadId
-      const convResult = await getConversation(agent.state.currentConversationId);
-      if (!convResult.success || !convResult.conversation?.threadId) {
-        toast.error("无法获取对话信息");
-        setIsConfirming(false);
-        return;
-      }
+      console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId);
 
-      const threadId = convResult.conversation.threadId;
+      // 立即更新UI：清除pendingAction，显示执行中状态
+      agent.updateMessage(message.id, {
+        pendingAction: undefined,
+      });
 
       toast.success("操作已确认，Agent 正在继续...");
 
-      // 2. 恢复对话，LangGraph 会自动执行已确认的 function calls
-      await resumeConversation(threadId, true);
+      // 恢复对话，Engine 会自动执行已确认的操作
+      await resumeConversation(agent.state.currentConversationId, true);
     } catch (error) {
       console.error("确认操作失败:", error);
       toast.error("确认操作失败");
@@ -80,20 +103,17 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     setIsRejecting(true);
     
     try {
-      // 1. 获取对话的 threadId
-      const convResult = await getConversation(agent.state.currentConversationId);
-      if (!convResult.success || !convResult.conversation?.threadId) {
-        toast.error("无法获取对话信息");
-        setIsRejecting(false);
-        return;
-      }
+      console.log("[Agent] 准备拒绝，conversationId:", agent.state.currentConversationId);
 
-      const threadId = convResult.conversation.threadId;
+      // 立即更新UI：清除pendingAction
+      agent.updateMessage(message.id, {
+        pendingAction: undefined,
+      });
 
       toast.info("操作已拒绝，Agent 正在提供替代方案...");
 
-      // 2. 使用 hook 恢复对话（approved: false）
-      await resumeConversation(threadId, false, "用户拒绝了此操作");
+      // 恢复对话（拒绝操作）
+      await resumeConversation(agent.state.currentConversationId, false, "用户拒绝了此操作");
     } catch (error) {
       console.error("拒绝操作失败:", error);
       toast.error("拒绝操作失败");

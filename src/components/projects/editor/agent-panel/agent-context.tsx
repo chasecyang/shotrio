@@ -156,7 +156,7 @@ interface AgentContextValue {
   state: AgentState;
   dispatch: React.Dispatch<AgentAction>;
   // 便捷方法
-  addMessage: (message: Omit<AgentMessage, "timestamp"> & { id?: string }) => string;
+  addMessage: (message: Omit<AgentMessage, "timestamp" | "id"> & { id?: string }) => string;
   updateMessage: (id: string, updates: Partial<AgentMessage>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
@@ -290,7 +290,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   }, [state.currentConversationId, refreshConversations]);
 
   // 便捷方法
-  const addMessage = useCallback((message: Omit<AgentMessage, "timestamp"> & { id?: string }) => {
+  const addMessage = useCallback((message: Omit<AgentMessage, "timestamp" | "id"> & { id?: string }) => {
     const id = message.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     dispatch({
       type: "ADD_MESSAGE",
@@ -317,12 +317,20 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
 
   // 创建稳定的 currentContext（使用 useMemo 缓存，避免每次都创建新对象）
   const currentContext = useMemo((): AgentContextType => {
+    // 将 Job 对象转换为序列化友好的格式（只保留 collectContext 需要的字段）
+    const serializableJobs = editorContext.jobs.slice(0, 10).map(job => ({
+      id: job.id,
+      type: job.type,
+      status: job.status,
+      progressMessage: job.progressMessage,
+    }));
+    
     return {
       projectId,
       selectedEpisodeId: editorContext.state.selectedEpisodeId,
       selectedShotIds: [...editorContext.state.selectedShotIds],
       selectedResource: editorContext.state.selectedResource,
-      recentJobs: editorContext.jobs.slice(0, 10),
+      recentJobs: serializableJobs,
     };
   }, [
     projectId,

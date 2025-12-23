@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Coins, Plus, Check, X } from "lucide-react";
-import type { PendingActionInfo } from "@/lib/services/langgraph/state";
+import type { PendingActionInfo } from "@/lib/services/agent-engine";
 import { formatParametersForConfirmation } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 
@@ -26,7 +26,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
 
-  // 在 LangGraph 架构中，PendingActionInfo 只在需要确认时存在
+  // 在 Agent 架构中，PendingActionInfo 只在需要确认时存在
   // 不需要 status 字段，因为它的存在本身就表示 "pending" 状态
   const borderColor = "border-primary/20";
   const bgColor = "bg-accent/30";

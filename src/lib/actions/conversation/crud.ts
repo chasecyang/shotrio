@@ -12,7 +12,7 @@ import db from "@/lib/db";
 import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq, and, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import type { AgentMessage } from "@/types/agent";
+import type { AgentMessage, AgentContext } from "@/types/agent";
 
 /**
  * 创建新对话
@@ -20,6 +20,7 @@ import type { AgentMessage } from "@/types/agent";
 export async function createConversation(input: {
   projectId: string;
   title?: string;
+  context?: AgentContext; // 可选的上下文信息
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -42,6 +43,7 @@ export async function createConversation(input: {
       userId: session.user.id,
       title,
       status: "active",
+      context: input.context ? JSON.stringify(input.context) : null,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastActivityAt: new Date(),
@@ -149,8 +151,8 @@ export async function getConversation(conversationId: string) {
         }
       }
 
-      // pendingAction, isStreaming, isInterrupted, thinkingProcess 不再从数据库读取
-      // 这些是运行时状态，应该从 LangGraph stream 事件中获取
+      // pendingAction, isStreaming, isInterrupted 是运行时状态
+      // 应该从 Agent stream 事件中获取，不从数据库读取
 
       return message;
     });
@@ -375,8 +377,7 @@ export async function saveMessage(
       role: message.role,
       content: message.content,
       iterations: message.iterations ? JSON.stringify(message.iterations) : null,
-      // pendingAction, isStreaming, isInterrupted, thinkingProcess 不再持久化
-      // 这些是运行时状态，应该从 LangGraph stream 事件中获取
+      // pendingAction, isStreaming, isInterrupted 是运行时状态，不持久化
       createdAt: new Date(),
     });
 
@@ -475,10 +476,6 @@ export async function getMessageById(messageId: string) {
       content: msg.content,
       timestamp: msg.createdAt,
     };
-
-    if (msg.thinkingProcess) {
-      message.thinkingProcess = msg.thinkingProcess;
-    }
 
     if (msg.iterations) {
       try {

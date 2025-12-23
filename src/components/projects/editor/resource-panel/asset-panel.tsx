@@ -5,9 +5,19 @@ import { useEditor } from "../editor-context";
 import { AssetList } from "./asset-list";
 import { AssetToolbar } from "./asset-toolbar";
 import { AssetUploadDialog } from "./asset-upload-dialog";
-import { queryAssets } from "@/lib/actions/asset";
+import { queryAssets, deleteAsset } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AssetPanelProps {
   userId: string;
@@ -30,6 +40,9 @@ export function AssetPanel({ userId }: AssetPanelProps) {
 
   // 对话框状态
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<AssetWithTags | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -92,12 +105,40 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     });
   };
 
-  // 处理删除 - 在编辑区域显示详情，用户可以在那里删除
+  // 处理删除 - 显示确认对话框
   const handleDelete = (asset: AssetWithTags) => {
-    selectResource({
-      type: "asset",
-      id: asset.id,
-    });
+    setAssetToDelete(asset);
+    setDeleteDialogOpen(true);
+  };
+
+  // 确认删除
+  const handleConfirmDelete = async () => {
+    if (!assetToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteAsset(assetToDelete.id);
+      if (result.success) {
+        toast.success("素材已删除");
+        
+        // 如果删除的是当前选中的素材，清除选中状态
+        if (selectedAssetId === assetToDelete.id) {
+          selectResource(null);
+        }
+        
+        // 刷新素材列表
+        await loadAssets();
+      } else {
+        toast.error(result.error || "删除失败");
+      }
+    } catch (error) {
+      console.error("删除素材失败:", error);
+      toast.error("删除失败");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setAssetToDelete(null);
+    }
   };
 
   // 处理上传成功
@@ -151,6 +192,28 @@ export function AssetPanel({ userId }: AssetPanelProps) {
         userId={userId}
         onSuccess={handleUploadSuccess}
       />
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除素材 "{assetToDelete?.name}" 吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "删除中..." : "删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

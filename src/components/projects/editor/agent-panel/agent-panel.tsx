@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-context";
-import { useLangGraphStream } from "./use-langgraph-stream";
+import { useAgentStream } from "./use-agent-stream";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { Button } from "@/components/ui/button";
@@ -37,18 +37,40 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // 使用 LangGraph Stream Hook
-  const { sendMessage, abort } = useLangGraphStream({
+  // 使用 Agent Stream Hook
+  const { sendMessage, abort } = useAgentStream({
     onIterationUpdate: (iterations: IterationStep[]) => {
       // 检查是否有分镜相关操作完成
       const lastIteration = iterations[iterations.length - 1];
       if (lastIteration?.functionCall?.status === "completed" && 
           isShotRelatedFunction(lastIteration.functionCall.name)) {
-        window.dispatchEvent(new CustomEvent("shots-changed"));
+        // 延迟触发刷新，确保数据库操作已完成
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("shots-changed"));
+        }, 200);
       }
     },
     onComplete: () => {
       setIsProcessing(false);
+      
+      // 检查当前消息的所有iterations，看是否有分镜相关操作完成
+      const currentMessage = agent.state.messages.find(
+        m => m.id === agent.state.messages[agent.state.messages.length - 1]?.id
+      );
+      if (currentMessage?.iterations) {
+        const hasShotRelatedCompleted = currentMessage.iterations.some(
+          iteration => 
+            iteration.functionCall?.status === "completed" && 
+            isShotRelatedFunction(iteration.functionCall.name)
+        );
+        if (hasShotRelatedCompleted) {
+          // 延迟触发刷新，确保数据库操作已完成
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("shots-changed"));
+          }, 300);
+        }
+      }
+      
       // 延迟刷新对话列表
       setTimeout(() => {
         agent.refreshConversations();
@@ -56,7 +78,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     },
     onError: (error) => {
       setIsProcessing(false);
-      console.error("LangGraph Stream 错误:", error);
+      console.error("Agent Stream 错误:", error);
       if (error !== "用户中断") {
         toast.error("发送失败");
       }
@@ -100,7 +122,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       if (agent.state.isNewConversation || !conversationId) {
         const result = await createConversation({ 
           projectId,
-          title: t('editor.agent.panel.newConversation') // 临时标题，稍后会被AI生成的标题替换
+          title: t('editor.agent.panel.newConversation'), // 临时标题，稍后会被AI生成的标题替换
+          context: agent.currentContext // 保存当前上下文（选中的剧集、分镜等）
         });
         
         if (!result.success || !result.conversationId) {

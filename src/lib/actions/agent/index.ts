@@ -1,7 +1,7 @@
 /**
  * Agent Actions 统一导出
  * 
- * 使用 LangGraph interrupt 机制处理 action 确认
+ * 使用 AgentEngine 的 interrupt 机制处理 action 确认
  */
 
 export { executeFunction } from "./executor";

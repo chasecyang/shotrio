@@ -1,11 +1,11 @@
 // AI Agent 系统类型定义
 // 
-// 注意：LangGraph 迁移后，IterationStep 和 PendingAction 的实际定义
-// 移到了 lib/services/langgraph/state.ts，这里仅保留必要的类型引用
+// 注意：IterationStep 和 PendingAction 的实际定义
+// 在 lib/services/agent-engine.ts 中，这里仅保留必要的类型引用
 
 import type { Job } from "./job";
 import type { SelectedResource } from "@/components/projects/editor/editor-context";
-import type { IterationInfo, PendingActionInfo } from "@/lib/services/langgraph/state";
+import type { IterationInfo, PendingActionInfo } from "@/lib/services/agent-engine";
 
 /**
  * Agent 消息角色
@@ -18,7 +18,7 @@ export type AgentMessageRole = "user" | "assistant" | "system";
 export type FunctionCategory = "read" | "generation" | "modification" | "deletion";
 
 /**
- * 迭代步骤（从 LangGraph state 导出，保持向后兼容）
+ * 迭代步骤（从 agent-engine 导出，保持向后兼容）
  */
 export type IterationStep = IterationInfo;
 
@@ -43,6 +43,16 @@ export interface AgentMessage {
 }
 
 /**
+ * 序列化友好的 Job 信息（用于 AgentContext）
+ */
+export interface SerializableJobInfo {
+  id: string;
+  type: Job["type"];
+  status: Job["status"];
+  progressMessage: string | null;
+}
+
+/**
  * Agent 上下文
  */
 export interface AgentContext {
@@ -50,7 +60,7 @@ export interface AgentContext {
   selectedEpisodeId: string | null;
   selectedShotIds: string[];
   selectedResource: SelectedResource | null;
-  recentJobs: Job[];
+  recentJobs: SerializableJobInfo[]; // 使用序列化友好的格式
 }
 
 /**
