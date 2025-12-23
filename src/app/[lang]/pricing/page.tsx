@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export const metadata = {
-  title: "定价方案 - Cineqo",
+  title: "定价方案 - Shotrio",
   description: "选择适合您的积分包，开始AI创作之旅",
 };
 

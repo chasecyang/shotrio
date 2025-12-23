@@ -63,7 +63,7 @@
     "and": "and"
   },
   "home": {
-    "title": "CineQo",
+    "title": "Shotrio",
     "subtitle": "Professional Micro-Drama Creation Tool",
     "slogan": "Make creation easier, make stories better",
     "description": "From script to final cut, an all-in-one micro-drama creation platform. AI-assisted creation to help content creators efficiently produce high-quality micro-drama works.",
@@ -129,7 +129,7 @@
     },
     "cta": {
       "title": "Start Creating Your Micro-Drama",
-      "description": "Join CineQo and experience professional creation tools that bring your stories to life",
+      "description": "Join Shotrio and experience professional creation tools that bring your stories to life",
       "button": "Start Creating for Free"
     },
     "pricing": {
@@ -528,5 +528,12 @@
     }
   },
   "tools": {
+  },
+  "editor": {
+    "mobileNotSupported": {
+      "title": "Desktop Only",
+      "description": "The Editor requires a larger screen. Please visit on a desktop device for the best experience.",
+      "backToProjects": "Back to Projects"
+    }
   }
 }

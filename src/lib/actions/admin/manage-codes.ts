@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { redeemCodes, redeemRecords } from "@/lib/db/schemas/payment";
 import { Role } from "@/lib/db/schemas/auth";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 /**
@@ -215,8 +215,8 @@ export async function getAllRedeemCodes(options?: {
       .limit(limit)
       .offset(offset);
 
-    const [{ count }] = await db
-      .select({ count: db.fn.count() })
+    const [{ total }] = await db
+      .select({ total: count() })
       .from(redeemCodes);
 
     return {
@@ -232,7 +232,7 @@ export async function getAllRedeemCodes(options?: {
         description: code.description,
         createdAt: code.createdAt,
       })),
-      total: Number(count),
+      total: Number(total),
     };
   } catch (error) {
     console.error("获取兑换码列表失败:", error);

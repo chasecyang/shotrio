@@ -23,28 +23,8 @@ export interface TaskTypeConfig {
 }
 
 export const TASK_TYPE_LABELS: Record<JobType, TaskTypeConfig> = {
-  character_extraction: {
-    label: "角色提取",
-    iconName: "Users",
-  },
-  scene_extraction: {
-    label: "场景提取",
-    iconName: "Film",
-  },
-  character_image_generation: {
-    label: "角色造型生成",
-    iconName: "Sparkles",
-  },
-  scene_image_generation: {
-    label: "场景图生成",
-    iconName: "Sparkles",
-  },
   batch_image_generation: {
     label: "批量图像生成",
-    iconName: "Images",
-  },
-  shot_image_generation: {
-    label: "分镜图生成",
     iconName: "Images",
   },
   asset_image_generation: {
@@ -113,10 +93,7 @@ export const TASK_STATUS_CONFIG: Record<JobStatus, TaskStatusConfig> = {
 /**
  * 支持"查看结果"的任务类型列表
  */
-export const VIEWABLE_TASK_TYPES: JobType[] = [
-  "character_extraction",
-  "scene_extraction",
-];
+export const VIEWABLE_TASK_TYPES: JobType[] = [];
 
 /**
  * 图标映射表

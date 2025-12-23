@@ -2,13 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAgent } from "./agent-context";
-import { ConversationList } from "./conversation-list";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Bot, Info, Square, Menu } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Send, Bot, Info, Square } from "lucide-react";
 import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation } from "@/lib/actions/conversation/crud";
@@ -46,7 +44,6 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -132,7 +129,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             case "iteration_start":
               // 创建新的迭代步骤
               iterations = [...iterations, {
-                id: `iter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: `iter-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
                 iterationNumber: event.data.iterationNumber,
                 timestamp: new Date(),
               }];
@@ -197,7 +194,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             case "pending_action":
               // 将待确认操作内联到当前消息
               const actionData = event.data;
-              const pendingActionId = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const pendingActionId = `action-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
               const pendingAction = {
                 id: pendingActionId,
                 functionCalls: [actionData.functionCall],
@@ -362,59 +359,11 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     [handleSend]
   );
 
-  // 处理新建对话（包装函数）
-  const handleCreateNewConversation = useCallback(async () => {
-    await agent.createNewConversation();
-    setMobileMenuOpen(false); // 关闭移动端菜单
-    toast.success("已创建新对话");
-  }, [agent]);
-
-  // 处理选择对话（包装函数）
-  const handleSelectConversation = useCallback(async (conversationId: string) => {
-    await agent.loadConversation(conversationId);
-    setMobileMenuOpen(false); // 关闭移动端菜单
-  }, [agent]);
-
-  // 对话列表组件
-  const conversationListComponent = (
-    <ConversationList
-      projectId={projectId}
-      currentConversationId={agent.state.currentConversationId}
-      onSelectConversation={handleSelectConversation}
-      onCreateConversation={handleCreateNewConversation}
-      onDeleteConversation={agent.deleteConversationById}
-      conversations={agent.state.conversations}
-      isLoading={agent.state.isLoadingConversations}
-    />
-  );
-
   return (
-    <div className="flex h-full">
-      {/* Desktop: 左侧对话列表 (30%) */}
-      <div className="hidden md:block w-[30%] min-w-[250px] max-w-[400px]">
-        {conversationListComponent}
-      </div>
-
-      {/* Mobile: 对话列表在 Sheet 中 */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-[80%] max-w-[350px]">
-          {conversationListComponent}
-        </SheetContent>
-      </Sheet>
-
-      {/* 右侧消息面板 (70%) */}
-      <div className="flex flex-col flex-1 bg-background">
+    <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden h-8 w-8"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Bot className="h-4 w-4 text-primary-foreground" />
             </div>
@@ -500,7 +449,6 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             {isProcessing ? "点击停止按钮中断生成" : "Enter 发送 · Shift+Enter 换行"}
           </p>
         </div>
-      </div>
     </div>
   );
 }

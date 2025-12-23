@@ -59,7 +59,7 @@
     "and": "和"
   },
   "home": {
-    "title": "CineQo",
+    "title": "Shotrio",
     "subtitle": "专业的微短剧创作工具",
     "slogan": "让创作更简单，让故事更精彩",
     "description": "从剧本到成片，一站式微短剧创作平台。AI 辅助创作，助力内容创作者高效产出优质微短剧作品。",
@@ -125,7 +125,7 @@
     },
     "cta": {
       "title": "开始创作您的微短剧",
-      "description": "加入 CineQo，体验专业的创作工具，让您的故事触动更多人",
+      "description": "加入 Shotrio，体验专业的创作工具，让您的故事触动更多人",
       "button": "免费开始创作"
     },
     "pricing": {
@@ -624,6 +624,13 @@
       "generation": "生成",
       "modification": "修改",
       "deletion": "删除"
+    }
+  },
+  "editor": {
+    "mobileNotSupported": {
+      "title": "暂不支持移动端",
+      "description": "Editor 编辑器需要更大的屏幕空间，请使用电脑访问以获得最佳体验。",
+      "backToProjects": "返回项目列表"
     }
   }
 }

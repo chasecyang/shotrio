@@ -31,7 +31,6 @@ import { useEditor } from "../editor-context";
 import { formatDurationMMSS } from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TimelineToolbarProps {
   onAddShot?: () => void;
@@ -46,7 +45,6 @@ interface TimelineToolbarProps {
 function CoreControlBar() {
   const { state, setTimelineZoom, setPlayhead, totalDuration, selectEpisode, startPlayback } = useEditor();
   const { timeline, project, selectedEpisodeId, playbackState, shots } = state;
-  const isMobile = useIsMobile();
 
   const handleZoomIn = () => {
     setTimelineZoom(timeline.zoom + 0.25);
@@ -75,15 +73,15 @@ function CoreControlBar() {
   const canPlayback = shots.length > 0 && !playbackState.isPlaybackMode;
 
   return (
-    <div className="h-10 border-b border-border flex items-center px-3 md:px-4 gap-2 md:gap-4 shrink-0 bg-muted/30">
+    <div className="h-10 border-b border-border flex items-center px-4 gap-4 shrink-0 bg-muted/30">
       {/* 左侧：剧集选择器 */}
-      <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
-        {!isMobile && <span className="text-xs text-muted-foreground">剧集</span>}
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-xs text-muted-foreground">剧集</span>
         <Select
           value={selectedEpisodeId || ""}
           onValueChange={(value) => selectEpisode(value || null)}
         >
-          <SelectTrigger className={cn("h-8 text-xs", isMobile ? "w-[120px]" : "w-[180px]")}>
+          <SelectTrigger className="h-8 text-xs w-[180px]">
             <SelectValue placeholder="选择剧集" />
           </SelectTrigger>
           <SelectContent>
@@ -99,7 +97,7 @@ function CoreControlBar() {
       <div className="flex-1" />
 
       {/* 中间：播放和时间控制 */}
-      <div className="flex items-center gap-1.5 md:gap-2">
+      <div className="flex items-center gap-2">
         {/* 播放按钮 */}
         <Button
           variant="ghost"
@@ -128,8 +126,8 @@ function CoreControlBar() {
           <SkipBack className="h-3.5 w-3.5" />
         </Button>
 
-        <div className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 py-1 rounded bg-muted">
-          {!isMobile && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-xs font-mono text-foreground">
             {formatDurationMMSS(timeline.playhead)}
           </span>
@@ -152,7 +150,7 @@ function CoreControlBar() {
       <div className="flex-1" />
 
       {/* 右侧：缩放控制 */}
-      <div className="flex items-center gap-1.5 md:gap-2">
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
@@ -163,18 +161,16 @@ function CoreControlBar() {
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
 
-        {!isMobile && (
-          <div className="w-20 md:w-24">
-            <Slider
-              value={[timeline.zoom]}
-              min={0.5}
-              max={3}
-              step={0.25}
-              onValueChange={([value]) => setTimelineZoom(value)}
-              className="[&_[data-slot=slider-track]]:bg-muted [&_[data-slot=slider-range]]:bg-primary/60 [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:h-3 [&_[data-slot=slider-thumb]]:w-3"
-            />
-          </div>
-        )}
+        <div className="w-24">
+          <Slider
+            value={[timeline.zoom]}
+            min={0.5}
+            max={3}
+            step={0.25}
+            onValueChange={([value]) => setTimelineZoom(value)}
+            className="[&_[data-slot=slider-track]]:bg-muted [&_[data-slot=slider-range]]:bg-primary/60 [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:h-3 [&_[data-slot=slider-thumb]]:w-3"
+          />
+        </div>
 
         <Button
           variant="ghost"
@@ -186,11 +182,9 @@ function CoreControlBar() {
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
 
-        {!isMobile && (
-          <span className="text-xs text-muted-foreground w-10 text-right">
-            {Math.round(timeline.zoom * 100)}%
-          </span>
-        )}
+        <span className="text-xs text-muted-foreground w-10 text-right">
+          {Math.round(timeline.zoom * 100)}%
+        </span>
       </div>
     </div>
   );
@@ -211,7 +205,7 @@ function DefaultActionsBar({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -5 }}
       transition={{ duration: 0.15 }}
-      className="h-9 border-b border-border/50 flex items-center px-3 md:px-4 gap-2 md:gap-3 shrink-0 bg-muted/10"
+      className="h-9 border-b border-border/50 flex items-center px-4 gap-3 shrink-0 bg-muted/10"
     >
       {/* 分镜信息 */}
       <div className="flex items-center gap-2">
@@ -253,7 +247,6 @@ function SelectionActionsBar({
 }) {
   const { state, clearShotSelection, jobs } = useEditor();
   const { selectedShotIds } = state;
-  const isMobile = useIsMobile();
 
   // 检查是否有活跃的批量任务
   const hasBatchVideoJob = jobs.some(job => 
@@ -267,7 +260,7 @@ function SelectionActionsBar({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -5 }}
       transition={{ duration: 0.15 }}
-      className="h-9 border-b border-border/50 flex items-center px-3 md:px-4 gap-2 md:gap-3 shrink-0 bg-blue-50/50 dark:bg-blue-950/20"
+      className="h-9 border-b border-border/50 flex items-center px-4 gap-3 shrink-0 bg-blue-50/50 dark:bg-blue-950/20"
     >
       {/* 选中信息 */}
       <div className="flex items-center gap-2">
@@ -286,7 +279,7 @@ function SelectionActionsBar({
         className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive"
       >
         <Trash2 className="h-3.5 w-3.5 mr-1" />
-        删除{!isMobile && ` (${selectedShotIds.length})`}
+        删除 ({selectedShotIds.length})
       </Button>
 
       <Separator orientation="vertical" className="h-4 bg-border/50" />
@@ -322,7 +315,7 @@ function SelectionActionsBar({
       >
         <Download className={cn("h-3.5 w-3.5 mr-1", isExportingVideos && "animate-bounce")} />
         {isExportingVideos ? "导出中..." : "导出视频"}
-        {!isMobile && !isExportingVideos && (
+        {!isExportingVideos && (
           <Badge variant="secondary" className="ml-1.5 h-4 text-[10px] px-1">
             {selectedShotIds.length}
           </Badge>
@@ -339,7 +332,7 @@ function SelectionActionsBar({
         className="h-7 text-xs text-muted-foreground hover:text-foreground"
       >
         <X className="h-3.5 w-3.5 mr-1" />
-        {!isMobile && "取消选择"}
+        取消选择
       </Button>
     </motion.div>
   );

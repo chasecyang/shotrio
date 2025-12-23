@@ -38,7 +38,7 @@ export async function generateShotVideo(shotId: string): Promise<{
     }
 
     // 检查是否有关联的图片
-    if (!shotData.imageAsset?.imageUrl) {
+    if (!(shotData.imageAsset as any)?.imageUrl) {
       return { success: false, error: "该分镜没有图片，请先生成图片" };
     }
 
@@ -60,7 +60,7 @@ export async function generateShotVideo(shotId: string): Promise<{
       type: "shot_video_generation",
       inputData: {
         shotId,
-        imageUrl: shotData.imageAsset.imageUrl,
+        imageUrl: (shotData.imageAsset as any).imageUrl,
         prompt: videoPrompt,
         duration,
         regenerate: false,

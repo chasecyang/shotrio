@@ -150,8 +150,8 @@ function formatParameterValue(key: string, value: unknown): string {
   }
 
   // 对象
-  if (typeof value === "object") {
-    return formatObjectValue(value);
+  if (typeof value === "object" && value !== null) {
+    return formatObjectValue(value as Record<string, unknown>);
   }
 
   return String(value);

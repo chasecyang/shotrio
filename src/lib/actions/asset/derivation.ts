@@ -139,7 +139,7 @@ export async function copyAssetTags(
 
     // 过滤要复制的标签
     const tagsToCopy = excludeTagValues
-      ? sourceAsset.tags.filter(tag => !excludeTagValues.includes(tag.tagValue))
+      ? sourceAsset.tags.filter((tag: { tagValue: string }) => !excludeTagValues.includes(tag.tagValue))
       : sourceAsset.tags;
 
     if (tagsToCopy.length > 0) {
@@ -154,12 +154,12 @@ export async function copyAssetTags(
 
       // 过滤出需要添加的新标签
       const newTags = tagsToCopy.filter(
-        tag => !existingTagValues.has(tag.tagValue)
+        (tag: { tagValue: string }) => !existingTagValues.has(tag.tagValue)
       );
 
       if (newTags.length > 0) {
         await db.insert(assetTag).values(
-          newTags.map(tag => ({
+          newTags.map((tag: { tagValue: string }) => ({
             id: randomUUID(),
             assetId: targetAssetId,
             tagValue: tag.tagValue,

@@ -23,18 +23,16 @@ export default async function EditorPage({ params, searchParams }: EditorPagePro
 
   return (
     <Suspense fallback={<EditorSkeleton />}>
-      <EditorWrapper projectId={projectId} userId={user.id} initialView={view} />
+      <EditorWrapper projectId={projectId} initialView={view} />
     </Suspense>
   );
 }
 
 async function EditorWrapper({
   projectId,
-  userId,
   initialView,
 }: {
   projectId: string;
-  userId: string;
   initialView?: string;
 }) {
   const [project, projects, user] = await Promise.all([
@@ -54,7 +52,6 @@ async function EditorWrapper({
   return (
     <EditorLayout
       project={project}
-      userId={userId}
       initialView={initialView}
       projects={projects.map((p) => ({
         id: p.id,

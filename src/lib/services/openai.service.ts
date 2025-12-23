@@ -100,14 +100,7 @@ export async function getChatCompletion(
     const openai = getOpenAIClient();
     
     // 构建请求参数
-    const requestParams: {
-      model: string;
-      messages: Array<{ role: string; content: string }>;
-      max_tokens?: number;
-      response_format?: { type: string };
-      temperature?: number;
-      thinking?: { type: string }; // 用于 DeepSeek reasoning 模式
-    } = {
+    const requestParams: any = {
       model,
       messages,
       max_tokens: maxTokens,
@@ -177,7 +170,7 @@ export async function getChatCompletionStream(
     const openai = getOpenAIClient();
     const stream = await openai.chat.completions.create({
       model,
-      messages,
+      messages: messages as any,
       temperature,
       max_tokens: maxTokens,
       stream: true,
@@ -384,7 +377,7 @@ export async function* getChatCompletionWithFunctionsStream(
 
     // 直接传递请求参数，使用 as any 绕过类型检查
     // OpenAI SDK 会将未知字段（如 thinking）透传给 API
-    const stream = await openai.chat.completions.create(requestParams as any);
+    const stream: any = await openai.chat.completions.create(requestParams as any);
     
     // 逐块处理流式响应
     for await (const chunk of stream) {
@@ -393,9 +386,7 @@ export async function* getChatCompletionWithFunctionsStream(
       if (!delta) continue;
 
       // 处理 reasoning_content (DeepSeek 特有)
-      // @ts-expect-error - DeepSeek specific field
       if (delta.reasoning_content) {
-        // @ts-expect-error - DeepSeek specific field
         yield { type: 'reasoning', data: delta.reasoning_content };
       }
 
@@ -405,9 +396,7 @@ export async function* getChatCompletionWithFunctionsStream(
       }
 
       // 处理 tool_calls (新的 OpenAI API 格式，DeepSeek 思考模式使用)
-      // @ts-expect-error - tool_calls is a valid field
       if (delta.tool_calls && Array.isArray(delta.tool_calls)) {
-        // @ts-expect-error - tool_calls is a valid field
         for (const toolCall of delta.tool_calls) {
           // tool call ID
           if (toolCall.id) {

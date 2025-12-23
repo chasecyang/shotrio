@@ -41,7 +41,6 @@ export function TimelineContainer({
     <div className="h-full flex flex-col">
       {/* 工具栏 */}
       <TimelineToolbar 
-        episodeTitle={selectedEpisode?.title} 
         onAddShot={onAddShot} 
         onDeleteShots={onDeleteShots}
         onGenerateVideos={onGenerateVideos}

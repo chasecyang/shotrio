@@ -5,7 +5,6 @@ alwaysApply: true
 技术栈：nextjs + taiwindcss + typescript
 drizzle + postgres
 
-* 需要考虑移动端和pc端
 * 不暴露restful api，使用server actions。
 * 大组件用server component，涉及交互的小组件用client component。
 * 使用suspense和skeletion组件优化加载体验，必要的时候可以使用loading.tsx。

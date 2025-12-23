@@ -18,6 +18,7 @@ import type {
   FinalVideoExportInput,
   FinalVideoExportResult,
 } from "@/types/job";
+import type { Asset } from "@/types/asset";
 import { verifyProjectOwnership } from "../utils/validation";
 
 /**
@@ -245,7 +246,8 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
       );
 
       try {
-        if (!shotData.imageAsset?.imageUrl) {
+        const imageAsset = shotData.imageAsset as Asset | null;
+        if (!imageAsset?.imageUrl) {
           results.push({
             shotId: shotData.id,
             success: false,
@@ -268,7 +270,7 @@ export async function processBatchVideoGeneration(jobData: Job, workerToken: str
           type: "shot_video_generation",
           inputData: {
             shotId: shotData.id,
-            imageUrl: shotData.imageAsset.imageUrl,
+            imageUrl: imageAsset.imageUrl,
             prompt: videoPrompt,
             duration: getKlingDuration(shotData.duration || 3000),
           } as ShotVideoGenerationInput,

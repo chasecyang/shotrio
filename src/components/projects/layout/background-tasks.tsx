@@ -40,7 +40,7 @@ import {
 } from "@/lib/constants/task-labels";
 
 export function BackgroundTasks() {
-  const { jobs: activeJobs, openShotDecompositionDialog } = useEditor();
+  const { jobs: activeJobs } = useEditor();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -150,13 +150,6 @@ export function BackgroundTasks() {
     // 根据任务类型处理
     try {
       switch (job.type) {
-        case "character_extraction":
-        case "scene_extraction": {
-          // 角色/场景提取任务：TODO 可以添加类似的对话框
-          toast.info("请在角色/场景页面查看提取结果");
-          break;
-        }
-        
         default:
           toast.info("该任务暂不支持查看结果");
           break;

@@ -66,7 +66,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-2 pb-6">
           <div className="mx-auto mb-2 flex justify-center">
             <span className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Cineqo
+              Shotrio
             </span>
           </div>
           <CardTitle className="text-3xl font-bold text-center text-neutral-900">{t('title')}</CardTitle>

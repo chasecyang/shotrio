@@ -185,7 +185,7 @@ export async function executeFunction(
           episodeId: parameters.episodeId as string,
           order,
           shotSize: parameters.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
-          cameraMovement: (parameters.cameraMovement as string) || "static",
+          cameraMovement: (parameters.cameraMovement as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down") || "static",
           duration: parameters.duration ? parseInt(parameters.duration as string) : 3000,
           description: parameters.description as string,
           visualPrompt: parameters.visualPrompt as string | undefined,

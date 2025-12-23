@@ -217,7 +217,6 @@ export async function POST(request: NextRequest) {
             currentMessages,
             controller,
             encoder,
-            5,
             input.conversationId,
             assistantMessageId
           );

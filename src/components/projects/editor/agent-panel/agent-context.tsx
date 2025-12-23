@@ -9,7 +9,6 @@ import { useEditor } from "../editor-context";
 import {
   listConversations,
   getConversation,
-  createConversation,
   deleteConversation,
 } from "@/lib/actions/conversation/crud";
 import { toast } from "sonner";
@@ -163,7 +162,7 @@ interface AgentContextValue {
   setLoading: (loading: boolean) => void;
   // 对话管理方法
   loadConversation: (conversationId: string) => Promise<void>;
-  createNewConversation: () => Promise<void>;
+  createNewConversation: () => void;
   deleteConversationById: (conversationId: string) => Promise<void>;
   refreshConversations: () => Promise<void>;
   // 当前上下文（从 EditorContext 获取）
@@ -257,7 +256,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   }, []);
 
   // 创建新对话（懒创建模式：只设置UI状态，不调用API）
-  const createNewConversation = useCallback(async () => {
+  const createNewConversation = useCallback(() => {
     // 清空消息历史
     dispatch({ type: "CLEAR_MESSAGES" });
     // 设置为新对话模式

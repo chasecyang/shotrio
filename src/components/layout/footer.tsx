@@ -13,7 +13,7 @@ export function Footer() {
             {/* Logo and Slogan */}
             <div className="text-center md:text-left">
               <span className="text-3xl font-bold text-white mb-2 block">
-                Cineqo
+                Shotrio
               </span>
               <p className="text-sm text-neutral-500">{t('home.slogan')}</p>
             </div>
@@ -48,7 +48,7 @@ export function Footer() {
           {/* Copyright */}
           <div className="text-center">
             <p className="text-sm text-neutral-500">
-              © {new Date().getFullYear()} Cineqo. {t('footer.copyright')}
+              © {new Date().getFullYear()} Shotrio. {t('footer.copyright')}
             </p>
           </div>
         </div>

@@ -160,18 +160,18 @@ export async function removeAssetTag(tagId: string): Promise<{
       },
     });
 
-    if (!tagData) {
+    if (!tagData || !tagData.asset) {
       return { success: false, error: "标签不存在" };
     }
 
-    if (tagData.asset.userId !== session.user.id) {
+    if ((tagData.asset as any).userId !== session.user.id) {
       return { success: false, error: "无权限" };
     }
 
     // 删除标签
     await db.delete(assetTag).where(eq(assetTag.id, tagId));
 
-    revalidatePath(`/[lang]/projects/${tagData.asset.projectId}`, "page");
+    revalidatePath(`/[lang]/projects/${(tagData.asset as any).projectId}`, "page");
 
     return { success: true };
   } catch (error) {

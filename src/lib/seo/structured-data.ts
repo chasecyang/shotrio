@@ -9,7 +9,7 @@ export function generateWebSiteSchema(lang: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Cineqo',
+    name: 'Shotrio',
     url: baseUrl,
     description: lang === 'zh' 
       ? '在解决问题中学会语言' 
@@ -35,14 +35,14 @@ export function generateOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Cineqo',
+    name: 'Shotrio',
     url: baseUrl,
     logo: `${baseUrl}/logo.png`,
     description: 'Innovative language learning through scenario challenges',
     sameAs: [
       // 可以添加社交媒体链接
-      // 'https://twitter.com/Cineqo',
-      // 'https://www.facebook.com/Cineqo',
+      // 'https://twitter.com/Shotrio',
+      // 'https://www.facebook.com/Shotrio',
     ],
   };
 }
@@ -56,7 +56,7 @@ export function generateWebApplicationSchema(lang: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Cineqo',
+    name: 'Shotrio',
     url: baseUrl,
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'Web',

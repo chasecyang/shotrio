@@ -172,8 +172,7 @@ export async function processAssetImageGeneration(
       prompt: prompt.trim(),
       image_urls: imageUrls,
       num_images: numImages,
-      aspect_ratio: aspectRatio as AspectRatio | "auto",
-      resolution: resolution as "1K" | "2K" | "4K",
+      aspect_ratio: aspectRatio === "auto" ? undefined : (aspectRatio as AspectRatio),
       output_format: "png",
     });
 
@@ -188,7 +187,6 @@ export async function processAssetImageGeneration(
       prompt: prompt.trim(),
       num_images: numImages,
       aspect_ratio: aspectRatio as AspectRatio,
-      resolution: resolution as "1K" | "2K" | "4K",
       output_format: "png",
     });
 

@@ -6,7 +6,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { EditorProvider, useEditor } from "./editor-context";
 import { EditorHeader } from "./editor-header";
 import { TimelineContainer } from "./timeline/timeline-container";
@@ -18,14 +18,52 @@ import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
 import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { getExportableShots } from "@/lib/actions/video/export";
 import { toast } from "sonner";
-import { FileText, Eye, Film } from "lucide-react";
+import { Monitor, ArrowLeft } from "lucide-react";
 import { AgentProvider } from "./agent-panel";
+import { Link } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import JSZip from "jszip";
 import type { EditorProject, EditorUser } from "./editor-types";
 
+// 移动端提示组件
+function MobileNotSupported() {
+  const t = useTranslations("editor.mobileNotSupported");
+  
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="flex flex-col items-center text-center max-w-sm">
+        {/* Logo */}
+        <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-8">
+          Shotrio
+        </span>
+        
+        {/* 图标 */}
+        <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-6">
+          <Monitor className="w-10 h-10 text-muted-foreground" />
+        </div>
+        
+        {/* 提示文案 */}
+        <h1 className="text-xl font-semibold mb-3">
+          {t("title")}
+        </h1>
+        <p className="text-muted-foreground text-sm leading-relaxed mb-8">
+          {t("description")}
+        </p>
+        
+        {/* 返回按钮 */}
+        <Button asChild variant="outline" className="gap-2">
+          <Link href="/projects">
+            <ArrowLeft className="w-4 h-4" />
+            {t("backToProjects")}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface EditorLayoutProps {
   project: ProjectDetail;
-  userId: string;
   projects: EditorProject[];
   user: EditorUser;
   resourcePanel: ReactNode;
@@ -35,7 +73,6 @@ interface EditorLayoutProps {
 
 function EditorLayoutInner({
   project,
-  userId,
   projects,
   user,
   resourcePanel,
@@ -286,74 +323,11 @@ function EditorLayoutInner({
     }
   };
 
-  const isMobile = useIsMobile();
-  const [mobileTab, setMobileTab] = useState<string>("timeline");
-
-  // 移动端布局
-  if (isMobile) {
-    return (
-      <div className="h-screen flex flex-col bg-background overflow-hidden">
-        {/* 顶部工具栏（简化版） */}
-        <EditorHeader
-          projectId={project.id}
-          projectTitle={project.title}
-          userId={userId}
-          projects={projects}
-          user={user}
-        />
-
-        {/* 移动端使用 Tabs 切换 */}
-        <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-2 pt-2 shrink-0 border-b bg-background">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="resources" className="text-xs gap-1">
-                <FileText className="h-3.5 w-3.5" />
-                资源
-              </TabsTrigger>
-              <TabsTrigger value="preview" className="text-xs gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                预览
-              </TabsTrigger>
-              <TabsTrigger value="timeline" className="text-xs gap-1">
-                <Film className="h-3.5 w-3.5" />
-                时间轴
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="resources" className="flex-1 mt-0 overflow-hidden">
-            <div className="h-full overflow-auto bg-card">{resourcePanel}</div>
-          </TabsContent>
-
-          <TabsContent value="preview" className="flex-1 mt-0 overflow-hidden">
-            <div className="h-full overflow-auto bg-background">{previewPanel}</div>
-          </TabsContent>
-
-          <TabsContent value="timeline" className="flex-1 mt-0 overflow-hidden">
-            <div className="h-full overflow-hidden bg-card/50 backdrop-blur-sm">
-              <TimelineContainer 
-                onAddShot={handleAddShot}
-                onDeleteShots={handleDeleteShots}
-                onGenerateVideos={handleGenerateVideos}
-                onExportVideos={handleExportVideos}
-                isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
-                isExportingVideos={isExportingVideos}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    );
-  }
-
-  // 桌面端布局
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* 顶部工具栏 */}
       <EditorHeader
         projectId={project.id}
-        projectTitle={project.title}
-        userId={userId}
         projects={projects}
         user={user}
       />
@@ -402,6 +376,13 @@ function EditorLayoutInner({
 }
 
 export function EditorLayout(props: EditorLayoutProps) {
+  const isMobile = useIsMobile();
+
+  // 移动端直接显示提示页面，不初始化 Editor 相关的 Provider
+  if (isMobile) {
+    return <MobileNotSupported />;
+  }
+
   return (
     <EditorProvider initialProject={props.project}>
       <AgentProvider projectId={props.project.id}>

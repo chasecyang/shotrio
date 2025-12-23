@@ -10,8 +10,6 @@ export {
   requireProjectAccess,
   requireEpisodeAccess,
   requireShotAccess,
-  requireCharacterAccess,
-  requireSceneAccess,
   requireAuthAndProject,
   requireAuthAndEpisode,
   requireAuthAndShot,

@@ -1,4 +1,4 @@
-# Cineqo - AI 微短剧创作平台
+# Shotrio - AI 微短剧创作平台
 
 一个基于 Next.js 的 AI 驱动的微短剧创作平台，支持小说自动拆分、角色提取、分镜生成等功能。
 
@@ -140,7 +140,7 @@ npm run worker:start
 ## 项目结构
 
 ```
-cineqo/
+shotrio/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   ├── [lang]/            # 多语言路由
@@ -169,7 +169,7 @@ cineqo/
 
 ### 异步任务系统
 
-Cineqo 使用 PostgreSQL 作为任务队列，通过独立的 Worker 进程处理耗时任务。
+Shotrio 使用 PostgreSQL 作为任务队列，通过独立的 Worker 进程处理耗时任务。
 
 **架构**：
 - Web 应用创建任务 → 写入数据库
@@ -240,17 +240,17 @@ npm run db:generate
 
 ```bash
 # PM2
-pm2 logs cineqo-worker
+pm2 logs shotrio-worker
 
 # systemd
-sudo journalctl -u cineqo-worker -f
+sudo journalctl -u shotrio-worker -f
 ```
 
 ### 健康检查
 
 ```bash
 # 检查 Worker 状态
-pm2 status cineqo-worker
+pm2 status shotrio-worker
 
 # 查看任务队列
 # 连接数据库执行：
@@ -299,7 +299,7 @@ SELECT status, COUNT(*) FROM job GROUP BY status;
 
 ## 联系方式
 
-- GitHub: [cineqo](https://github.com/yourusername/cineqo)
+- GitHub: [shotrio](https://github.com/yourusername/shotrio)
 - Email: your@email.com
 
 ---

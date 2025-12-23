@@ -32,7 +32,6 @@ type Message = {
  * @param currentMessages - 当前对话历史
  * @param controller - 流式响应控制器
  * @param encoder - 文本编码器
- * @param maxIterations - 最大迭代次数
  * @param conversationId - 可选的对话ID（用于数据库持久化）
  * @param assistantMessageId - 可选的助手消息ID（用于实时更新）
  */
@@ -40,25 +39,32 @@ export async function runAgentLoop(
   currentMessages: Message[],
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder,
-  maxIterations: number = 5,
   conversationId?: string,
   assistantMessageId?: string
 ): Promise<void> {
   const functions = toOpenAIFunctionFormat(AGENT_FUNCTIONS);
   const iterations: IterationStep[] = [];
 
-  for (let iteration = 0; iteration < maxIterations; iteration++) {
-    const iterationNumber = iteration + 1;
+  let iteration = 0;
+  while (true) {
+    iteration++;
     
     // 发送迭代开始事件
     controller.enqueue(
       encoder.encode(
         JSON.stringify({
           type: "iteration_start",
-          data: { iterationNumber },
+          data: { iterationNumber: iteration },
         }) + "\n"
       )
     );
+
+    // 🔵 关键节点1：迭代开始时，创建迭代记录
+    if (assistantMessageId) {
+      await updateMessage(assistantMessageId, {
+        iterations: JSON.stringify(iterations),
+      });
+    }
 
     // 使用流式调用 AI
     let accumulatedReasoning = '';
@@ -71,7 +77,7 @@ export async function runAgentLoop(
     // 创建当前迭代步骤
     const currentIteration: IterationStep = {
       id: `iter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      iterationNumber,
+      iterationNumber: iteration,
       timestamp: new Date(),
     };
     iterations.push(currentIteration);
@@ -88,55 +94,45 @@ export async function runAgentLoop(
       )) {
         switch (chunk.type) {
           case 'reasoning':
-            // 累积思考过程并实时推送
+            // 累积思考过程并实时推送给前端
             accumulatedReasoning += chunk.data;
             currentIteration.thinkingProcess = accumulatedReasoning;
             
+            // ✅ 继续实时推送给前端
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({
                   type: "thinking",
                   data: {
-                    iterationNumber,
+                    iterationNumber: iteration,
                     content: accumulatedReasoning,
                   },
                 }) + "\n"
               )
             );
             
-            // 实时更新数据库
-            if (assistantMessageId) {
-              await updateMessage(assistantMessageId, {
-                thinkingProcess: accumulatedReasoning,
-                iterations: JSON.stringify(iterations),
-              });
-            }
+            // ❌ 删除实时数据库更新 - 改为在关键节点批量更新
             break;
 
           case 'content':
-            // 累积回复内容并实时推送
+            // 累积回复内容并实时推送给前端
             accumulatedContent += chunk.data;
             currentIteration.content = accumulatedContent;
             
+            // ✅ 继续实时推送给前端
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({
                   type: "content",
                   data: {
-                    iterationNumber,
+                    iterationNumber: iteration,
                     content: accumulatedContent,
                   },
                 }) + "\n"
               )
             );
             
-            // 实时更新数据库
-            if (assistantMessageId) {
-              await updateMessage(assistantMessageId, {
-                content: accumulatedContent,
-                iterations: JSON.stringify(iterations),
-              });
-            }
+            // ❌ 删除实时数据库更新 - 改为在关键节点批量更新
             break;
 
           case 'function_call_id':
@@ -188,16 +184,26 @@ export async function runAgentLoop(
           arguments: functionCallArguments,
         },
       }];
+      
+      // 🔵 关键节点3：Function call前，保存当前状态
+      if (assistantMessageId) {
+        await updateMessage(assistantMessageId, {
+          content: accumulatedContent,
+          thinkingProcess: accumulatedReasoning,
+          iterations: JSON.stringify(iterations),
+        });
+      }
     }
 
     currentMessages.push(assistantMessage);
 
     // 如果没有 function call，任务完成
     if (!hasFunctionCall) {
-      // 更新数据库中的消息状态
+      // 🔵 关键节点2：流结束时，保存最终状态（包括thinking和content）
       if (assistantMessageId) {
         await updateMessage(assistantMessageId, {
           content: accumulatedContent || "完成",
+          thinkingProcess: accumulatedReasoning || undefined,
           isStreaming: false,
           iterations: JSON.stringify(iterations),
         });
@@ -321,7 +327,7 @@ export async function runAgentLoop(
         JSON.stringify({
           type: "function_start",
           data: {
-            iterationNumber,
+            iterationNumber: iteration,
             name: functionCall.name,
             description: funcDef.description,
             displayName: funcDef.displayName,
@@ -333,6 +339,25 @@ export async function runAgentLoop(
 
     // 执行只读操作
     const execResult = await executeFunction(functionCall);
+    
+    // 更新当前迭代的function call状态
+    currentIteration.functionCall = {
+      id: functionCall.id,
+      name: functionCall.name,
+      description: funcDef.description,
+      displayName: funcDef.displayName,
+      category: functionCall.category,
+      status: execResult.success ? "completed" : "failed",
+      result: execResult.success ? "执行成功" : undefined,
+      error: execResult.success ? undefined : execResult.error,
+    };
+
+    // 🔵 关键节点5：Function执行后，保存执行结果
+    if (assistantMessageId) {
+      await updateMessage(assistantMessageId, {
+        iterations: JSON.stringify(iterations),
+      });
+    }
 
     // 发送执行结果
     controller.enqueue(
@@ -340,7 +365,7 @@ export async function runAgentLoop(
         JSON.stringify({
           type: "function_result",
           data: {
-            iterationNumber,
+            iterationNumber: iteration,
             functionCallId: execResult.functionCallId,
             success: execResult.success,
             error: execResult.error,

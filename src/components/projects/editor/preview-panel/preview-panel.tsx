@@ -3,7 +3,6 @@
 import { useEditor } from "../editor-context";
 import { EpisodeEditor } from "./episode-editor";
 import { ShotEditor } from "./shot-editor";
-import { EmptyPreview } from "./empty-preview";
 import { ShotPlaybackPlayer } from "./shot-playback-player";
 import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
@@ -23,6 +22,16 @@ export function PreviewPanel() {
   } = useEditor();
   const { selectedResource, playbackState } = state;
 
+  // 渲染 AI Agent 的辅助函数
+  const renderAgent = () => {
+    if (!state.project?.id) return null;
+    return (
+      <AgentErrorBoundary>
+        <AgentPanel projectId={state.project.id} />
+      </AgentErrorBoundary>
+    );
+  };
+
   // 如果在播放模式，显示播放器
   if (playbackState.isPlaybackMode) {
     return (
@@ -38,9 +47,9 @@ export function PreviewPanel() {
     );
   }
 
-  // 根据选中资源类型显示对应编辑器
-  if (!selectedResource) {
-    return <EmptyPreview />;
+  // 空状态或 agent 模式默认显示 AI Agent
+  if (!selectedResource || selectedResource.type === "agent") {
+    return renderAgent();
   }
 
   switch (selectedResource.type) {
@@ -70,19 +79,9 @@ export function PreviewPanel() {
 
     case "settings":
       return <ProjectSettingsEditor />;
-
-    case "agent":
-      if (selectedResource.id) {
-        return (
-          <AgentErrorBoundary>
-            <AgentPanel projectId={selectedResource.id} />
-          </AgentErrorBoundary>
-        );
-      }
-      break;
-
   }
 
-  return <EmptyPreview />;
+  // Fallback：如果选中了资源但数据加载失败，默认显示 AI Agent
+  return renderAgent();
 }
 

@@ -33,31 +33,33 @@ interface ConversationListProps {
   isLoading?: boolean;
   // 可选的新建对话回调
   onCreateConversation?: () => void;
-  projectId?: string; // 用于未来扩展
 }
 
 // 状态图标和样式
 const statusConfig = {
+  awaiting_approval: {
+    icon: AlertCircle,
+    label: "待批准",
+    className: "text-orange-600 dark:text-orange-500",
+    badgeClassName: "bg-orange-500/20 text-orange-600 dark:text-orange-500 font-semibold",
+    animationClassName: "animate-bounce",
+    cardClassName: "border-l-2 border-l-orange-500",
+  },
   active: {
     icon: Clock,
     label: "活跃中",
     className: "text-blue-500",
     badgeClassName: "bg-blue-500/10 text-blue-500",
     animationClassName: "animate-pulse",
-  },
-  awaiting_approval: {
-    icon: AlertCircle,
-    label: "待批准",
-    className: "text-amber-500",
-    badgeClassName: "bg-amber-500/10 text-amber-500",
-    animationClassName: "animate-bounce",
+    cardClassName: "",
   },
   completed: {
     icon: CheckCircle,
     label: "已完成",
-    className: "text-green-500",
-    badgeClassName: "bg-green-500/10 text-green-500",
+    className: "text-muted-foreground",
+    badgeClassName: "bg-muted/50 text-muted-foreground",
     animationClassName: "",
+    cardClassName: "opacity-70",
   },
 };
 
@@ -150,7 +152,8 @@ export const ConversationList = memo(function ConversationList({
                     "hover:bg-accent hover:border-accent-foreground/20",
                     isActive
                       ? "bg-accent border-accent-foreground/20 shadow-sm"
-                      : "bg-card border-border"
+                      : "bg-card border-border",
+                    config.cardClassName
                   )}
                 >
                   {/* Status Icon */}

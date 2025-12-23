@@ -17,10 +17,10 @@ const remotePatterns = [
     protocol: 'https' as const,
     hostname: '**.r2.cloudflarestorage.com',
   },
-  // 添加 s3.cineqo.com 支持
+  // 添加 s3.shotrio.com 支持
   {
     protocol: 'https' as const,
-    hostname: 's3.cineqo.com',
+    hostname: 's3.shotrio.com',
   }
 ];
 

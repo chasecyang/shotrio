@@ -22,18 +22,21 @@ export function ResourcePanel() {
   const defaultTab = searchParams.get("tab") || "episodes";
 
   // Agent 对话处理函数
-  const handleSelectConversation = (conversationId: string) => {
+  const handleSelectConversation = async (conversationId: string) => {
+    if (!project) return;
+    await agent.loadConversation(conversationId);
     dispatch({
       type: "SELECT_RESOURCE",
-      payload: { type: "conversation", id: conversationId },
+      payload: { type: "agent", id: project.id },
     });
   };
 
   const handleCreateConversation = async () => {
+    if (!project) return;
     await agent.createNewConversation();
     dispatch({
       type: "SELECT_RESOURCE",
-      payload: { type: "conversation", id: "new" },
+      payload: { type: "agent", id: project.id },
     });
   };
 
@@ -84,7 +87,6 @@ export function ResourcePanel() {
               onCreateConversation={handleCreateConversation}
               conversations={agent.state.conversations}
               isLoading={agent.state.isLoadingConversations}
-              projectId={project.id}
             />
           </ScrollArea>
         </TabsContent>

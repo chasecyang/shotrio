@@ -1,5 +1,7 @@
 "use server";
 
+import type { JobType } from "@/types/job";
+
 /**
  * 创建子任务的辅助函数
  */
@@ -7,7 +9,7 @@ export async function createChildJob(
   params: {
     userId: string;
     projectId?: string;
-    type: string;
+    type: JobType;
     inputData: unknown;
     parentJobId?: string;
   }

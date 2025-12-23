@@ -317,13 +317,7 @@ export function AssetDetailDialog({
                   <ImageIcon className="h-4 w-4" />
                   基本信息
                 </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">类型:</span>
-                    <Badge variant="secondary" className="ml-2">
-                      {getTypeLabel(assetType)}
-                    </Badge>
-                  </div>
+                <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-muted-foreground flex items-center gap-1">
                       <TrendingUp className="h-3.5 w-3.5" />
@@ -331,7 +325,7 @@ export function AssetDetailDialog({
                     </span>
                     <span className="ml-2 font-medium">{asset.usageCount}</span>
                   </div>
-                  <div className="col-span-2">
+                  <div>
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
                       创建时间:

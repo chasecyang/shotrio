@@ -12,7 +12,7 @@
 module.exports = {
   apps: [
     {
-      name: "cineqo-web",
+      name: "shotrio-web",
       script: "npm",
       args: "start",
       instances: 1,
@@ -26,7 +26,7 @@ module.exports = {
       time: true,
     },
     {
-      name: "cineqo-worker",
+      name: "shotrio-worker",
       script: "./node_modules/.bin/tsx",
       args: "src/workers/standalone-worker.ts",
       instances: 1,
