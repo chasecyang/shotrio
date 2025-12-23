@@ -18,7 +18,7 @@ import { zhCN } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { Role } from "@/lib/db/schemas/payment";
+import { Role } from "@/lib/db/schemas/auth";
 import { RedeemCodeActions } from "./code-actions-client";
 
 export const metadata = {

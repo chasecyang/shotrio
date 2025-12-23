@@ -131,6 +131,9 @@
       "title": "Start Creating Your Micro-Drama",
       "description": "Join CineQo and experience professional creation tools that bring your stories to life",
       "button": "Start Creating for Free"
+    },
+    "pricing": {
+      "viewPricing": "View Pricing"
     }
   },
   "dashboard": {

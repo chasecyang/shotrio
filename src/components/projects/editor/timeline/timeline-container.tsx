@@ -9,10 +9,8 @@ import { Clapperboard } from "lucide-react";
 interface TimelineContainerProps {
   onAddShot?: () => void;
   onDeleteShots?: () => void;
-  onGenerateImages?: () => void;
   onGenerateVideos?: () => void;
   onExportVideos?: () => void;
-  isBatchGeneratingImages?: boolean;
   isBatchGeneratingVideos?: boolean;
   isExportingVideos?: boolean;
 }
@@ -20,10 +18,8 @@ interface TimelineContainerProps {
 export function TimelineContainer({ 
   onAddShot, 
   onDeleteShots,
-  onGenerateImages,
   onGenerateVideos,
   onExportVideos,
-  isBatchGeneratingImages,
   isBatchGeneratingVideos,
   isExportingVideos,
 }: TimelineContainerProps) {
@@ -48,10 +44,8 @@ export function TimelineContainer({
         episodeTitle={selectedEpisode?.title} 
         onAddShot={onAddShot} 
         onDeleteShots={onDeleteShots}
-        onGenerateImages={onGenerateImages}
         onGenerateVideos={onGenerateVideos}
         onExportVideos={onExportVideos}
-        isBatchGeneratingImages={isBatchGeneratingImages}
         isBatchGeneratingVideos={isBatchGeneratingVideos}
         isExportingVideos={isExportingVideos}
       />

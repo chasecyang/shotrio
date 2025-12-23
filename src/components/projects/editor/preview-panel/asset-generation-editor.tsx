@@ -49,7 +49,7 @@ import type { Job, AssetImageGenerationResult } from "@/types/job";
 import type { AssetWithTags } from "@/types/asset";
 import { hasEnoughCredits } from "@/lib/actions/credits/balance";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
-import { CREDIT_COSTS } from "@/types/payment";
+import { CREDIT_COSTS, PackageType } from "@/types/payment";
 import { useTranslations } from "next-intl";
 
 interface AssetGenerationEditorProps {
@@ -742,7 +742,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       <PurchaseDialog
         open={purchaseDialogOpen}
         onOpenChange={setPurchaseDialogOpen}
-        highlightPackage="starter"
+        highlightPackage={PackageType.STARTER}
       />
     </ScrollArea>
   );

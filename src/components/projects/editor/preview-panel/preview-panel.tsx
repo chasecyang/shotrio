@@ -9,7 +9,6 @@ import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
 import { ProjectSettingsEditor } from "./project-settings-editor";
 import { AgentPanel } from "../agent-panel";
-import { ChatPanel } from "../agent-panel/chat-panel";
 import { AgentErrorBoundary } from "../agent-panel/agent-error-boundary";
 
 export function PreviewPanel() {
@@ -82,15 +81,6 @@ export function PreviewPanel() {
       }
       break;
 
-    case "conversation":
-      if (selectedResource.id) {
-        return (
-          <AgentErrorBoundary>
-            <ChatPanel conversationId={selectedResource.id} />
-          </AgentErrorBoundary>
-        );
-      }
-      break;
   }
 
   return <EmptyPreview />;

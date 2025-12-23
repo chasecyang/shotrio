@@ -1,6 +1,4 @@
 export { AgentPanel } from "./agent-panel";
-export { ChatPanel } from "./chat-panel";
 export { AgentProvider, useAgent } from "./agent-context";
 export { ChatMessage } from "./chat-message";
 export { PendingActionMessage } from "./pending-action-message";
-

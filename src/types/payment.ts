@@ -1,11 +1,11 @@
-import type {
+import {
   TransactionType,
   OrderStatus,
   PackageType,
 } from "@/lib/db/schemas/payment";
 
-// Re-export types from schema
-export type { TransactionType, OrderStatus, PackageType };
+// Re-export types and enums from schema
+export { TransactionType, OrderStatus, PackageType };
 
 // 积分账户类型
 export interface CreditAccount {

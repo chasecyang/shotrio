@@ -3,7 +3,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { redeemCodes, redeemRecords, Role } from "@/lib/db/schemas/payment";
+import { redeemCodes, redeemRecords } from "@/lib/db/schemas/payment";
+import { Role } from "@/lib/db/schemas/auth";
 import { eq, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 

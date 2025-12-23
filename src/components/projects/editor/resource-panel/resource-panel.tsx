@@ -6,18 +6,40 @@ import { FileText, Images, Bot } from "lucide-react";
 import { useEditor } from "../editor-context";
 import { EpisodeList } from "./episode-list";
 import { AssetPanel } from "./asset-panel";
-import { AgentEntry } from "./agent-entry";
+import { ConversationList } from "../agent-panel/conversation-list";
+import { useAgent } from "../agent-panel/agent-context";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
 
 export function ResourcePanel() {
-  const { state } = useEditor();
+  const { state, dispatch } = useEditor();
   const { project } = state;
+  const agent = useAgent();
   const searchParams = useSearchParams();
   const { data: session } = authClient.useSession();
   
   // 从 URL 参数读取默认标签页
   const defaultTab = searchParams.get("tab") || "episodes";
+
+  // Agent 对话处理函数
+  const handleSelectConversation = (conversationId: string) => {
+    dispatch({
+      type: "SELECT_RESOURCE",
+      payload: { type: "conversation", id: conversationId },
+    });
+  };
+
+  const handleCreateConversation = async () => {
+    await agent.createNewConversation();
+    dispatch({
+      type: "SELECT_RESOURCE",
+      payload: { type: "conversation", id: "new" },
+    });
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    await agent.deleteConversationById(conversationId);
+  };
 
   if (!project || !session?.user?.id) return null;
 
@@ -55,7 +77,15 @@ export function ResourcePanel() {
 
         <TabsContent value="agent" className="flex-1 mt-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <AgentEntry projectId={project.id} />
+            <ConversationList
+              currentConversationId={agent.state.currentConversationId}
+              onSelectConversation={handleSelectConversation}
+              onDeleteConversation={handleDeleteConversation}
+              onCreateConversation={handleCreateConversation}
+              conversations={agent.state.conversations}
+              isLoading={agent.state.isLoadingConversations}
+              projectId={project.id}
+            />
           </ScrollArea>
         </TabsContent>
       </Tabs>

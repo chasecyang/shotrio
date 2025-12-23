@@ -1,11 +1,9 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo } from "react";
 import type { AgentMessage } from "@/types/agent";
-import { cn } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Hand } from "lucide-react";
+import { Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
 import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
@@ -28,8 +26,6 @@ const InterruptedBadge = () => (
 export const ChatMessage = memo(function ChatMessage({ message, currentBalance }: ChatMessageProps) {
   const isUser = message.role === "user";
   const agent = useAgent();
-  const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
-  const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
 
   // Handle pending action confirmation
   const handleConfirmAction = async () => {
@@ -69,16 +65,6 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     }
   };
 
-  // Auto-expand thinking process when streaming, auto-collapse when done (for backward compatibility)
-  useEffect(() => {
-    if (message.thinkingProcess && message.isStreaming && !hasAutoCollapsed) {
-      setIsThinkingExpanded(true);
-    } else if (message.thinkingProcess && !message.isStreaming && !hasAutoCollapsed) {
-      // Auto-collapse when streaming completes
-      setIsThinkingExpanded(false);
-      setHasAutoCollapsed(true);
-    }
-  }, [message.thinkingProcess, message.isStreaming, hasAutoCollapsed]);
 
   // Check if this message uses the new iterations format
   const hasIterations = message.iterations && message.iterations.length > 0;
@@ -124,45 +110,13 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
         </div>
       ) : (
         /* AI Message - Simple Format (for simple text responses without iterations) */
-        <>
-          {/* Thinking Process - 保留用于向后兼容，但新的流式消息都使用 iterations */}
-          {message.thinkingProcess && (
-            <Collapsible
-              className="w-full mb-2"
-              open={isThinkingExpanded}
-              onOpenChange={setIsThinkingExpanded}
-            >
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
-                <ChevronDown
-                  className={cn(
-                    "h-3 w-3 transition-transform",
-                    isThinkingExpanded && "rotate-180"
-                  )}
-                />
-                <span>思考过程</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-1.5 rounded-md bg-muted/30 px-3 py-2 text-xs text-muted-foreground max-h-60 overflow-y-auto break-words">
-                  <p className="whitespace-pre-wrap">
-                    {message.thinkingProcess}
-                    {message.isStreaming && (
-                      <span className="inline-block w-1 h-3 ml-0.5 bg-current animate-pulse align-middle" />
-                    )}
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+        <div className="text-sm break-words">
+          <MarkdownRenderer content={message.content} className="inline" />
+          {message.isStreaming && message.content && (
+            <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
           )}
-
-          {/* Main Content */}
-          <div className="text-sm break-words">
-            <MarkdownRenderer content={message.content} className="inline" />
-            {message.isStreaming && message.content && (
-              <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
-            )}
-            {message.isInterrupted && <InterruptedBadge />}
-          </div>
-        </>
+          {message.isInterrupted && <InterruptedBadge />}
+        </div>
       )}
     </div>
   );

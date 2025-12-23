@@ -127,6 +127,9 @@
       "title": "开始创作您的微短剧",
       "description": "加入 CineQo，体验专业的创作工具，让您的故事触动更多人",
       "button": "免费开始创作"
+    },
+    "pricing": {
+      "viewPricing": "查看定价"
     }
   },
   "dashboard": {

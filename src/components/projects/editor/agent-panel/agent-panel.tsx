@@ -362,13 +362,26 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     [handleSend]
   );
 
+  // 处理新建对话（包装函数）
+  const handleCreateNewConversation = useCallback(async () => {
+    await agent.createNewConversation();
+    setMobileMenuOpen(false); // 关闭移动端菜单
+    toast.success("已创建新对话");
+  }, [agent]);
+
+  // 处理选择对话（包装函数）
+  const handleSelectConversation = useCallback(async (conversationId: string) => {
+    await agent.loadConversation(conversationId);
+    setMobileMenuOpen(false); // 关闭移动端菜单
+  }, [agent]);
+
   // 对话列表组件
   const conversationListComponent = (
     <ConversationList
       projectId={projectId}
       currentConversationId={agent.state.currentConversationId}
-      onSelectConversation={agent.loadConversation}
-      onCreateConversation={agent.createNewConversation}
+      onSelectConversation={handleSelectConversation}
+      onCreateConversation={handleCreateNewConversation}
       onDeleteConversation={agent.deleteConversationById}
       conversations={agent.state.conversations}
       isLoading={agent.state.isLoadingConversations}
@@ -457,13 +470,20 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={agent.state.currentConversationId ? "描述你想要做什么..." : "请先选择对话"}
+              placeholder={
+                agent.state.currentConversationId || agent.state.isNewConversation
+                  ? "描述你想要做什么..."
+                  : "请先选择或创建对话"
+              }
               className="min-h-[60px] max-h-[120px] resize-none"
-              disabled={isProcessing || !agent.state.currentConversationId}
+              disabled={isProcessing || (!agent.state.currentConversationId && !agent.state.isNewConversation)}
             />
             <Button
               onClick={isProcessing ? handleStop : handleSend}
-              disabled={(!isProcessing && !input.trim()) || !agent.state.currentConversationId}
+              disabled={
+                (!isProcessing && !input.trim()) ||
+                (!agent.state.currentConversationId && !agent.state.isNewConversation)
+              }
               size="icon"
               variant={isProcessing ? "destructive" : "default"}
               className="h-[60px] w-[60px] shrink-0"

@@ -184,13 +184,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   const [state, dispatch] = useReducer(agentReducer, initialState);
   const editorContext = useEditor();
 
-  // 使用 useRef 存储最新 state 和 editorContext，避免频繁重新创建 context value
-  const stateRef = useRef(state);
-  stateRef.current = state;
-  
-  const editorContextRef = useRef(editorContext);
-  editorContextRef.current = editorContext;
-
   // 防抖：跟踪刷新状态，避免并发刷新
   const isRefreshingRef = useRef(false);
   const lastRefreshTimeRef = useRef(0);
@@ -217,7 +210,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     try {
       const result = await listConversations(projectId);
       if (result.success && result.conversations) {
-        // 优化：只在数据真正变化时更新
+        // 更新对话列表
         const newConversations = result.conversations.map((conv) => ({
           id: conv.id,
           title: conv.title,
@@ -225,21 +218,10 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
           lastActivityAt: new Date(conv.lastActivityAt),
         }));
 
-        // 简单比较：如果数量和第一个对话的标题都相同，可能没有变化
-        const currentConvs = stateRef.current.conversations;
-        const hasChanged =
-          currentConvs.length !== newConversations.length ||
-          (newConversations.length > 0 &&
-            (currentConvs.length === 0 ||
-              currentConvs[0].title !== newConversations[0].title ||
-              currentConvs[0].status !== newConversations[0].status));
-
-        if (hasChanged) {
-          dispatch({
-            type: "SET_CONVERSATIONS",
-            payload: newConversations,
-          });
-        }
+        dispatch({
+          type: "SET_CONVERSATIONS",
+          payload: newConversations,
+        });
       }
     } catch (error) {
       console.error("加载对话列表失败:", error);
@@ -331,83 +313,50 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     dispatch({ type: "SET_LOADING", payload: loading });
   }, []);
 
-  // 使用 useRef 存储回调函数的最新版本，避免因为 currentContext 变化导致整个 value 重新创建
-  const callbacksRef = useRef({
-    loadConversation,
-    createNewConversation,
-    deleteConversationById,
-    refreshConversations,
-  });
-  callbacksRef.current = {
-    loadConversation,
-    createNewConversation,
-    deleteConversationById,
-    refreshConversations,
-  };
-
-  // 创建稳定的回调函数包装器
-  const stableLoadConversation = useCallback((conversationId: string) => {
-    return callbacksRef.current.loadConversation(conversationId);
-  }, []);
-
-  const stableCreateNewConversation = useCallback(() => {
-    return callbacksRef.current.createNewConversation();
-  }, []);
-
-  const stableDeleteConversationById = useCallback((conversationId: string) => {
-    return callbacksRef.current.deleteConversationById(conversationId);
-  }, []);
-
-  const stableRefreshConversations = useCallback(() => {
-    return callbacksRef.current.refreshConversations();
-  }, []);
 
   // 创建稳定的 currentContext（使用 useMemo 缓存，避免每次都创建新对象）
   const currentContext = useMemo((): AgentContextType => {
-    const ctx = editorContextRef.current;
     return {
       projectId,
-      selectedEpisodeId: ctx.state.selectedEpisodeId,
-      selectedShotIds: [...ctx.state.selectedShotIds], // 创建新数组，但由 useMemo 缓存
-      selectedResource: ctx.state.selectedResource,
-      recentJobs: ctx.jobs.slice(0, 10),
+      selectedEpisodeId: editorContext.state.selectedEpisodeId,
+      selectedShotIds: [...editorContext.state.selectedShotIds],
+      selectedResource: editorContext.state.selectedResource,
+      recentJobs: editorContext.jobs.slice(0, 10),
     };
   }, [
     projectId,
-    editorContextRef.current.state.selectedEpisodeId,
-    editorContextRef.current.state.selectedShotIds.length, // 只依赖长度，减少重建
-    editorContextRef.current.state.selectedResource?.id,   // 只依赖 id
-    editorContextRef.current.jobs.length,                  // 只依赖长度
+    editorContext.state.selectedEpisodeId,
+    editorContext.state.selectedShotIds.length,
+    editorContext.state.selectedResource?.id,
+    editorContext.jobs.length,
   ]);
 
-  // 关键优化：value 不依赖 state，使用 getter 访问最新 state
+  // Context value（包含 state 以触发重新渲染）
   const value = useMemo(
     () => ({
-      get state() {
-        return stateRef.current; // 通过 getter 访问最新 state
-      },
+      state, // 直接包含 state，让组件能响应变化
       dispatch,
       addMessage,
       updateMessage,
       clearMessages,
       setLoading,
-      loadConversation: stableLoadConversation,
-      createNewConversation: stableCreateNewConversation,
-      deleteConversationById: stableDeleteConversationById,
-      refreshConversations: stableRefreshConversations,
-      currentContext, // 直接使用 memoized 值，而非 getter
+      loadConversation,
+      createNewConversation,
+      deleteConversationById,
+      refreshConversations,
+      currentContext,
     }),
     [
-      // 移除 state 依赖
+      state, // 添加 state 依赖
       dispatch,
       addMessage,
       updateMessage,
       clearMessages,
       setLoading,
-      stableLoadConversation,
-      stableCreateNewConversation,
-      stableDeleteConversationById,
-      stableRefreshConversations,
+      loadConversation,
+      createNewConversation,
+      deleteConversationById,
+      refreshConversations,
       currentContext,
     ]
   );
