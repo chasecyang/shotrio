@@ -439,6 +439,9 @@ export const conversation = pgTable("conversation", {
   title: text("title").notNull(), // 对话标题（自动生成或用户设置）
   status: conversationStatusEnum("status").default("active").notNull(),
   
+  // LangGraph 集成
+  threadId: text("thread_id").unique(), // LangGraph thread ID，用于恢复对话状态
+  
   // 时间戳
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -459,16 +462,8 @@ export const conversationMessage = pgTable("conversation_message", {
   role: messageRoleEnum("role").notNull(),
   content: text("content").notNull(),
   
-  // AI 思考过程和迭代步骤
-  thinkingProcess: text("thinking_process"),
+  // AI 迭代步骤（用于前端展示历史）
   iterations: text("iterations"), // JSON string of IterationStep[]
-  
-  // 待确认操作（内联存储）
-  pendingAction: text("pending_action"), // JSON string of PendingAction
-  
-  // 状态标记
-  isStreaming: boolean("is_streaming").default(false),
-  isInterrupted: boolean("is_interrupted").default(false),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

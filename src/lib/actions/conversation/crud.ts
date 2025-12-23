@@ -139,13 +139,7 @@ export async function getConversation(conversationId: string) {
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
         timestamp: msg.createdAt,
-        isStreaming: msg.isStreaming || false,
-        isInterrupted: msg.isInterrupted || false,
       };
-
-      if (msg.thinkingProcess) {
-        message.thinkingProcess = msg.thinkingProcess;
-      }
 
       if (msg.iterations) {
         try {
@@ -155,13 +149,8 @@ export async function getConversation(conversationId: string) {
         }
       }
 
-      if (msg.pendingAction) {
-        try {
-          message.pendingAction = JSON.parse(msg.pendingAction);
-        } catch (e) {
-          console.error("[Conversation] 解析 pendingAction 失败:", e);
-        }
-      }
+      // pendingAction, isStreaming, isInterrupted, thinkingProcess 不再从数据库读取
+      // 这些是运行时状态，应该从 LangGraph stream 事件中获取
 
       return message;
     });
@@ -173,6 +162,7 @@ export async function getConversation(conversationId: string) {
         projectId: conv.projectId,
         title: conv.title,
         status: conv.status,
+        threadId: conv.threadId,
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt,
         lastActivityAt: conv.lastActivityAt,
@@ -229,6 +219,50 @@ export async function updateConversationStatus(
     return {
       success: false,
       error: error instanceof Error ? error.message : "更新对话状态失败",
+    };
+  }
+}
+
+/**
+ * 更新对话 threadId
+ */
+export async function updateConversationThreadId(
+  conversationId: string,
+  threadId: string
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    await db
+      .update(conversation)
+      .set({
+        threadId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(conversation.id, conversationId),
+          eq(conversation.userId, session.user.id)
+        )
+      );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("[Conversation] 更新 threadId 失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "更新 threadId 失败",
     };
   }
 }
@@ -340,11 +374,9 @@ export async function saveMessage(
       conversationId,
       role: message.role,
       content: message.content,
-      thinkingProcess: message.thinkingProcess || null,
       iterations: message.iterations ? JSON.stringify(message.iterations) : null,
-      pendingAction: message.pendingAction ? JSON.stringify(message.pendingAction) : null,
-      isStreaming: message.isStreaming || false,
-      isInterrupted: message.isInterrupted || false,
+      // pendingAction, isStreaming, isInterrupted, thinkingProcess 不再持久化
+      // 这些是运行时状态，应该从 LangGraph stream 事件中获取
       createdAt: new Date(),
     });
 
@@ -377,11 +409,7 @@ export async function updateMessage(
   messageId: string,
   updates: {
     content?: string;
-    thinkingProcess?: string;
     iterations?: string; // JSON string
-    pendingAction?: string | null; // JSON string or null to clear
-    isStreaming?: boolean;
-    isInterrupted?: boolean;
   }
 ) {
   const session = await auth.api.getSession({
@@ -446,8 +474,6 @@ export async function getMessageById(messageId: string) {
       role: msg.role as "user" | "assistant" | "system",
       content: msg.content,
       timestamp: msg.createdAt,
-      isStreaming: msg.isStreaming || false,
-      isInterrupted: msg.isInterrupted || false,
     };
 
     if (msg.thinkingProcess) {
@@ -462,13 +488,7 @@ export async function getMessageById(messageId: string) {
       }
     }
 
-    if (msg.pendingAction) {
-      try {
-        message.pendingAction = JSON.parse(msg.pendingAction);
-      } catch (e) {
-        console.error("[Conversation] 解析 pendingAction 失败:", e);
-      }
-    }
+    // pendingAction, isStreaming, isInterrupted 不再从数据库读取
 
     return {
       success: true,

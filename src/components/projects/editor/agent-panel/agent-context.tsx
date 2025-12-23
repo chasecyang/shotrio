@@ -11,7 +11,6 @@ import {
   getConversation,
   deleteConversation,
 } from "@/lib/actions/conversation/crud";
-import { rejectAndContinueAction } from "@/lib/actions/agent";
 import { toast } from "sonner";
 
 /**
@@ -157,7 +156,7 @@ interface AgentContextValue {
   state: AgentState;
   dispatch: React.Dispatch<AgentAction>;
   // 便捷方法
-  addMessage: (message: Omit<AgentMessage, "id" | "timestamp">) => string;
+  addMessage: (message: Omit<AgentMessage, "timestamp"> & { id?: string }) => string;
   updateMessage: (id: string, updates: Partial<AgentMessage>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
@@ -166,8 +165,6 @@ interface AgentContextValue {
   createNewConversation: () => void;
   deleteConversationById: (conversationId: string) => Promise<void>;
   refreshConversations: () => Promise<void>;
-  // Agent 操作方法
-  rejectAction: (messageId: string, rejectionReason?: string) => Promise<{ success: boolean; error?: string }>;
   // 当前上下文（从 EditorContext 获取）
   currentContext: AgentContextType;
 }
@@ -293,8 +290,8 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   }, [state.currentConversationId, refreshConversations]);
 
   // 便捷方法
-  const addMessage = useCallback((message: Omit<AgentMessage, "id" | "timestamp">) => {
-    const id = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const addMessage = useCallback((message: Omit<AgentMessage, "timestamp"> & { id?: string }) => {
+    const id = message.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     dispatch({
       type: "ADD_MESSAGE",
       payload: {
@@ -317,35 +314,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   const setLoading = useCallback((loading: boolean) => {
     dispatch({ type: "SET_LOADING", payload: loading });
   }, []);
-
-  // 拒绝操作并继续 Agent 执行
-  const rejectAction = useCallback(async (messageId: string, rejectionReason?: string) => {
-    if (!state.currentConversationId) {
-      return { success: false, error: "没有活动的对话" };
-    }
-
-    try {
-      // 1. 调用服务端 action 标记为已拒绝
-      const result = await rejectAndContinueAction({
-        conversationId: state.currentConversationId,
-        messageId,
-        rejectionReason,
-      });
-
-      if (!result.success) {
-        return { success: false, error: result.error };
-      }
-
-      // 2. 返回成功，由调用方触发 resume stream
-      return { success: true };
-    } catch (error) {
-      console.error("拒绝操作失败:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "拒绝操作失败",
-      };
-    }
-  }, [state.currentConversationId]);
 
   // 创建稳定的 currentContext（使用 useMemo 缓存，避免每次都创建新对象）
   const currentContext = useMemo((): AgentContextType => {
@@ -377,7 +345,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       createNewConversation,
       deleteConversationById,
       refreshConversations,
-      rejectAction,
       currentContext,
     }),
     [
@@ -391,7 +358,6 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       createNewConversation,
       deleteConversationById,
       refreshConversations,
-      rejectAction,
       currentContext,
     ]
   );

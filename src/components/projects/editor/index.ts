@@ -12,7 +12,6 @@ export { EpisodeList } from "./resource-panel/episode-list";
 export { PreviewPanel } from "./preview-panel/preview-panel";
 export { EpisodeEditor } from "./preview-panel/episode-editor";
 export { ShotEditor } from "./preview-panel/shot-editor";
-export { EmptyPreview } from "./preview-panel/empty-preview";
 
 // Timeline
 export { TimelineContainer } from "./timeline/timeline-container";

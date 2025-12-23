@@ -145,15 +145,13 @@ export function getTaskStatusConfig(
  * Note: Locale should be passed from a hook that detects current language
  */
 export function formatTaskTime(
-  createdAt: Date | string | null | undefined,
-  locale?: Locale
+  createdAt: Date | string | null | undefined
 ): string {
   if (!createdAt) return "";
 
   try {
     return formatDistanceToNow(new Date(createdAt), {
       addSuffix: true,
-      locale,
     });
   } catch {
     return "";

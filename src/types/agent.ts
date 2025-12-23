@@ -1,8 +1,11 @@
 // AI Agent 系统类型定义
+// 
+// 注意：LangGraph 迁移后，IterationStep 和 PendingAction 的实际定义
+// 移到了 lib/services/langgraph/state.ts，这里仅保留必要的类型引用
 
 import type { Job } from "./job";
 import type { SelectedResource } from "@/components/projects/editor/editor-context";
-import type { CreditCost } from "@/lib/utils/credit-calculator";
+import type { IterationInfo, PendingActionInfo } from "@/lib/services/langgraph/state";
 
 /**
  * Agent 消息角色
@@ -15,45 +18,28 @@ export type AgentMessageRole = "user" | "assistant" | "system";
 export type FunctionCategory = "read" | "generation" | "modification" | "deletion";
 
 /**
- * 迭代步骤（用于展示多轮交互时间线）
+ * 迭代步骤（从 LangGraph state 导出，保持向后兼容）
  */
-export interface IterationStep {
-  id: string;
-  iterationNumber: number; // 第几轮
-  thinkingProcess?: string; // 该轮的思考过程
-  content?: string; // 该轮的对话内容
-  functionCall?: {
-    // 该轮的工具调用
-    id: string;
-    name: string;
-    description?: string; // 工具描述
-    displayName?: string; // 用户友好的显示名称
-    category: FunctionCategory;
-    status: "pending" | "executing" | "completed" | "failed";
-    result?: string;
-    error?: string;
-  };
-  timestamp: Date;
-}
+export type IterationStep = IterationInfo;
 
 /**
  * Agent 消息
+ * 
+ * 注意：运行时状态（isStreaming、isInterrupted、pendingAction）
+ * 不再作为消息的持久化字段，而是通过 LangGraph stream 事件管理
  */
 export interface AgentMessage {
   id: string;
   role: AgentMessageRole;
   content: string;
   timestamp: Date;
-  // AI 的思考过程（仅用于简单消息的向后兼容，新的流式消息使用 iterations）
-  thinkingProcess?: string;
-  // 完整的迭代步骤时间线（用于多轮交互展示）
+  // 完整的迭代步骤时间线
   iterations?: IterationStep[];
-  // 标识消息是否正在流式输出中
+  // 运行时状态：仅用于前端 UI 展示，不持久化到数据库
+  // 这些字段通过 stream 事件动态设置
   isStreaming?: boolean;
-  // 标识消息是否被用户中断
   isInterrupted?: boolean;
-  // 待确认操作（用于内联显示）
-  pendingAction?: PendingAction;
+  pendingAction?: PendingActionInfo;
 }
 
 /**
@@ -79,58 +65,6 @@ export interface FunctionCall {
   needsConfirmation: boolean;
   // AI 给出的调用理由
   reason?: string;
-}
-
-/**
- * 对话状态（用于恢复对话）
- */
-export interface ConversationState {
-  messages: Array<{
-    role: "system" | "user" | "assistant" | "tool";
-    content: string;
-    reasoning_content?: string;
-    tool_call_id?: string;
-    tool_calls?: Array<{
-      id: string;
-      type: "function";
-      function: {
-        name: string;
-        arguments: string;
-      };
-    }>;
-  }>;
-  toolCallId: string;
-}
-
-/**
- * 待确认的操作
- */
-export interface PendingAction {
-  id: string;
-  functionCalls: FunctionCall[];
-  message: string;
-  createdAt: Date;
-  conversationState?: ConversationState; // 用于恢复对话
-  // 积分消耗信息
-  creditCost?: CreditCost;
-  // 操作状态
-  status: "pending" | "accepted" | "rejected";
-  // 拒绝相关字段
-  rejectedAt?: string;
-  rejectionReason?: string;
-  // 接受相关字段
-  acceptedAt?: string;
-}
-
-/**
- * Agent 聊天响应（用于确认操作等非流式场景）
- */
-export interface AgentChatResponse {
-  success: boolean;
-  message?: string;
-  // 已执行的只读操作结果
-  executedResults?: FunctionExecutionResult[];
-  error?: string;
 }
 
 /**

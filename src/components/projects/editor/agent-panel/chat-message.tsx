@@ -1,25 +1,15 @@
 "use client";
 
 import { memo, useState } from "react";
-import type { AgentMessage, IterationStep } from "@/types/agent";
+import type { AgentMessage } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
 import { IterationCard } from "./iteration-card";
 import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
-import { confirmAndExecuteAction } from "@/lib/actions/agent";
+import { useLangGraphStream } from "./use-langgraph-stream";
+import { getConversation } from "@/lib/actions/conversation/crud";
 import { toast } from "sonner";
-
-// 辅助函数：更新迭代数组
-function updateIterations(
-  iterations: IterationStep[],
-  index: number,
-  updates: Partial<IterationStep>
-): IterationStep[] {
-  return iterations.map((iter, i) =>
-    i === index ? { ...iter, ...updates } : iter
-  );
-}
 
 interface ChatMessageProps {
   message: AgentMessage;
@@ -40,86 +30,42 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
 
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
-
-  // 共享函数：调用 resume-stream 并处理响应
-  const resumeAgentWithStream = async (
-    requestBody: {
-      conversationId: string;
-      messageId: string;
-      isRejection: boolean;
-      executionResults?: unknown[];
-      rejectionReason?: string;
-    }
-  ) => {
-    // 创建新的 assistant 消息用于流式输出
-    const tempMsgId = agent.addMessage({
-      role: "assistant",
-      content: "",
-      isStreaming: true,
-      iterations: [],
-    });
-
-    // 调用 resume-stream API
-    const response = await fetch("/api/agent/resume-stream", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("无法读取响应流");
-    }
-
-    // 处理流式响应
-    await processResumeStream(reader, tempMsgId);
-
-    // 刷新对话列表
-    agent.refreshConversations();
-  };
+  
+  // 使用 LangGraph Stream Hook
+  const { resumeConversation } = useLangGraphStream({
+    onComplete: () => {
+      // 刷新对话列表
+      setTimeout(() => {
+        agent.refreshConversations();
+      }, 100);
+    },
+    onError: (error) => {
+      console.error("LangGraph Stream 错误:", error);
+      toast.error("操作失败");
+    },
+  });
 
   // Handle pending action confirmation
   const handleConfirmAction = async () => {
     if (!message.pendingAction || !agent.state.currentConversationId || isConfirming) return;
 
-    // 防止重复调用：检查状态
-    if (message.pendingAction.status !== "pending") {
-      return;
-    }
-
     setIsConfirming(true);
 
     try {
-      // 1. 执行操作
-      const result = await confirmAndExecuteAction({
-        conversationId: agent.state.currentConversationId,
-        messageId: message.id,
-        functionCalls: message.pendingAction.functionCalls,
-      });
-      
-      if (!result.success) {
-        toast.error(result.error || "确认失败");
+      // 1. 获取对话的 threadId
+      const convResult = await getConversation(agent.state.currentConversationId);
+      if (!convResult.success || !convResult.conversation?.threadId) {
+        toast.error("无法获取对话信息");
         setIsConfirming(false);
         return;
       }
 
+      const threadId = convResult.conversation.threadId;
+
       toast.success("操作已确认，Agent 正在继续...");
 
-      // 2. 不在这里更新本地状态，等待 resume-stream 返回后自然更新
-
-      // 3. 调用 resume-stream 继续 agent loop
-      await resumeAgentWithStream({
-        conversationId: agent.state.currentConversationId,
-        messageId: message.id,
-        isRejection: false,
-        executionResults: result.executedResults,
-      });
+      // 2. 恢复对话，LangGraph 会自动执行已确认的 function calls
+      await resumeConversation(threadId, true);
     } catch (error) {
       console.error("确认操作失败:", error);
       toast.error("确认操作失败");
@@ -131,141 +77,28 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   const handleCancelAction = async () => {
     if (!message.pendingAction || !agent.state.currentConversationId || isRejecting) return;
 
-    // 防止重复调用：检查状态
-    if (message.pendingAction.status !== "pending") {
-      return;
-    }
-
     setIsRejecting(true);
     
     try {
-      // 1. 调用服务端 action 更新数据库状态
-      const result = await agent.rejectAction(message.id);
-      
-      if (!result.success) {
-        toast.error(result.error || "拒绝失败");
+      // 1. 获取对话的 threadId
+      const convResult = await getConversation(agent.state.currentConversationId);
+      if (!convResult.success || !convResult.conversation?.threadId) {
+        toast.error("无法获取对话信息");
         setIsRejecting(false);
         return;
       }
 
+      const threadId = convResult.conversation.threadId;
+
       toast.info("操作已拒绝，Agent 正在提供替代方案...");
 
-      // 2. 不在这里更新本地状态，等待 resume-stream 返回后自然更新
-
-      // 3. 调用 resume-stream 继续 agent loop
-      await resumeAgentWithStream({
-        conversationId: agent.state.currentConversationId,
-        messageId: message.id,
-        isRejection: true,
-        rejectionReason: "用户拒绝了此操作",
-      });
+      // 2. 使用 hook 恢复对话（approved: false）
+      await resumeConversation(threadId, false, "用户拒绝了此操作");
     } catch (error) {
       console.error("拒绝操作失败:", error);
       toast.error("拒绝操作失败");
     } finally {
       setIsRejecting(false);
-    }
-  };
-
-  // 处理 resume 流式响应
-  const processResumeStream = async (
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    tempMsgId: string
-  ) => {
-    const decoder = new TextDecoder();
-    let iterations: IterationStep[] = [];
-    let currentIterationIndex = -1;
-    let buffer = "";
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          try {
-            const event = JSON.parse(line);
-
-            switch (event.type) {
-              case "iteration_start":
-                iterations = [...iterations, {
-                  id: `iter-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                  iterationNumber: event.data.iterationNumber,
-                  timestamp: new Date(),
-                }];
-                currentIterationIndex = iterations.length - 1;
-                agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
-                break;
-
-              case "thinking":
-                if (currentIterationIndex >= 0) {
-                  iterations = updateIterations(iterations, currentIterationIndex, {
-                    thinkingProcess: event.data.content,
-                  });
-                  agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
-                }
-                break;
-
-              case "content":
-                if (currentIterationIndex >= 0) {
-                  iterations = updateIterations(iterations, currentIterationIndex, {
-                    content: event.data.content,
-                  });
-                  agent.updateMessage(tempMsgId, { iterations, isStreaming: true });
-                }
-                break;
-
-              case "pending_action":
-                // 新的待确认操作
-                const pendingAction = event.data;
-                agent.updateMessage(tempMsgId, {
-                  pendingAction: {
-                    id: pendingAction.id,
-                    functionCalls: [pendingAction.functionCall],
-                    message: pendingAction.message,
-                    conversationState: pendingAction.conversationState,
-                    createdAt: new Date(),
-                    creditCost: pendingAction.creditCost,
-                    status: "pending",
-                  },
-                  isStreaming: false,
-                  iterations,
-                });
-                break;
-
-              case "complete":
-                agent.updateMessage(tempMsgId, {
-                  isStreaming: false,
-                  iterations,
-                });
-                break;
-
-              case "error":
-                toast.error(event.data || "执行出错");
-                agent.updateMessage(tempMsgId, {
-                  content: `错误：${event.data}`,
-                  isStreaming: false,
-                });
-                break;
-            }
-          } catch (parseError) {
-            console.error("解析事件失败:", parseError);
-          }
-        }
-      }
-    } catch (streamError) {
-      console.error("流式处理失败:", streamError);
-      agent.updateMessage(tempMsgId, {
-        content: `抱歉，出错了：${streamError instanceof Error ? streamError.message : "未知错误"}`,
-        isStreaming: false,
-      });
-      throw streamError;
     }
   };
 

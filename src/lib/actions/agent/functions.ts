@@ -448,14 +448,3 @@ export function getFunctionDefinition(name: string): FunctionDefinition | undefi
   return AGENT_FUNCTIONS.find((f) => f.name === name);
 }
 
-/**
- * 将 Function 定义转换为 OpenAI function calling 格式
- */
-export function toOpenAIFunctionFormat(funcs: FunctionDefinition[]) {
-  return funcs.map((func) => ({
-    name: func.name,
-    description: func.description,
-    parameters: func.parameters,
-  }));
-}
-

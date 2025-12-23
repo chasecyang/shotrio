@@ -38,6 +38,7 @@ import {
   VIEWABLE_TASK_TYPES,
   formatTaskTime
 } from "@/lib/constants/task-labels";
+import { useTranslations } from "next-intl";
 
 export function BackgroundTasks() {
   const { jobs: activeJobs } = useEditor();
@@ -278,10 +279,11 @@ function TaskNodeItem({
   jobDetails,
   depth = 0 
 }: TaskNodeItemProps) {
+  const t = useTranslations();
   const job = node.job;
   const hasChildren = node.children.length > 0;
-  const taskType = getTaskTypeLabel(job.type || "", "sm");
-  const status = getTaskStatusConfig(job.status || "pending", "sm");
+  const taskType = getTaskTypeLabel(job.type || "", t, "sm");
+  const status = getTaskStatusConfig(job.status || "pending", t, "sm");
   
   // 获取节点整体状态（考虑子任务）
   const overallStatus = hasChildren ? getNodeOverallStatus(node) : null;
