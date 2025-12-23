@@ -10,7 +10,6 @@ import type {
   CreateAssetInput,
   UpdateAssetInput,
   AssetWithTags,
-  stringifyAssetMeta,
 } from "@/types/asset";
 import { revalidatePath } from "next/cache";
 
@@ -70,7 +69,7 @@ export async function createAssetInternal(
     // 在worker环境中，revalidatePath可能会失败，需要安全处理
     try {
       revalidatePath(`/[lang]/projects/${input.projectId}`, "page");
-    } catch (e) {
+    } catch {
       // Worker环境中可能无法revalidate，忽略错误
       console.log("无法revalidate路径（worker环境）");
     }

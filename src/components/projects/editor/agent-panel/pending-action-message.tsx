@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Check, X, Coins, Plus } from "lucide-react";
 import type { PendingAction } from "@/types/agent";
@@ -21,6 +22,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   onCancel,
   currentBalance,
 }: PendingActionMessageProps) {
+  const t = useTranslations();
   const hasMultipleCalls = action.functionCalls.length > 1;
   const totalCost = action.creditCost?.total || 0;
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
@@ -73,10 +75,10 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
               {isAccepted 
-                ? "操作已确认并执行" 
+                ? t('agent.action.executing') 
                 : isRejected 
-                ? "操作已取消" 
-                : "AI 需要确认操作"}
+                ? t('agent.action.reject') 
+                : t('agent.action.pending')}
             </p>
             {action.message && (
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -138,15 +140,15 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           {/* Credit Cost */}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-background text-xs">
             <Coins className="h-3.5 w-3.5 text-primary" />
-            <span className="text-muted-foreground">消耗</span>
+            <span className="text-muted-foreground">{t('agent.credits.total')}</span>
             <span className="font-semibold text-foreground">{totalCost}</span>
-            <span className="text-muted-foreground">积分</span>
+            <span className="text-muted-foreground">{t('credits.creditsUnit')}</span>
             {insufficientBalance && (
               <span className="text-red-600 dark:text-red-400 ml-1">
-                (余额不足: {currentBalance}<button
+                ({t('agent.credits.insufficient')}: {currentBalance}<button
                   onClick={() => setShowPurchaseDialog(true)}
                   className="inline-flex items-center justify-center w-4 h-4 ml-0.5 rounded-sm text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
-                  title="购买积分"
+                  title={t('credits.addCredits')}
                   type="button"
                 >
                   <Plus className="w-3 h-3" />
@@ -166,7 +168,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                   className="h-7 px-3 text-xs"
                 >
                   <X className="h-3 w-3 mr-1" />
-                  取消
+                  {t('editor.agent.pendingAction.reject')}
                 </Button>
                 <Button
                   onClick={() => onConfirm(action.id)}
@@ -175,12 +177,12 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                   className="h-7 px-3 text-xs"
                 >
                   <Check className="h-3 w-3 mr-1" />
-                  确认
+                  {t('editor.agent.pendingAction.confirm')}
                 </Button>
               </>
             ) : (
               <span className="text-xs text-muted-foreground px-2 py-1">
-                {isAccepted ? "已执行" : "已取消"}
+                {isAccepted ? t('editor.agent.pendingAction.executing') : t('common.cancel')}
               </span>
             )}
           </div>

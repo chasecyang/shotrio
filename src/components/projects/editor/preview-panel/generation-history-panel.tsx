@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, Copy, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { GenerationHistoryItem } from "@/types/asset";
 import { formatDistanceToNow } from "date-fns";
 import { zhCN } from "date-fns/locale";

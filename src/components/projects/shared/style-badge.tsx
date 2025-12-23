@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Palette, Settings } from "lucide-react";
 import type { ProjectDetail } from "@/types/project";
+import { useTranslations } from "next-intl";
 
 interface StyleBadgeProps {
   project: ProjectDetail;
@@ -12,10 +13,11 @@ interface StyleBadgeProps {
 
 export function StyleBadge({ project }: StyleBadgeProps) {
   const router = useRouter();
+  const t = useTranslations("projects.settings");
   
   // 获取风格名称
   const styleName = project.artStyle?.name || 
-    (project.stylePrompt ? "自定义风格" : "未设置风格");
+    (project.stylePrompt ? t("customStyleName") : t("noStyleSet"));
   
   const hasStyle = project.artStyle || project.stylePrompt;
 
@@ -36,7 +38,7 @@ export function StyleBadge({ project }: StyleBadgeProps) {
         onClick={() => router.push(`/projects/${project.id}/editor?view=settings`)}
       >
         <Settings className="w-3 h-3 mr-1" />
-        设置
+        {t("settingsButton")}
       </Button>
     </div>
   );

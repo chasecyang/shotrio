@@ -1,5 +1,7 @@
 "use server";
 
+import { getErrorMessage } from "./i18n-server";
+
 /**
  * 统一的错误处理包装器
  * 自动捕获异常并返回标准格式的响应
@@ -12,7 +14,8 @@ export async function withErrorHandling<T>(
     const data = await fn();
     return { success: true, data };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "操作失败";
+    const defaultError = await getErrorMessage("operationFailed");
+    const errorMessage = error instanceof Error ? error.message : defaultError;
     const fullMessage = errorPrefix ? `${errorPrefix}: ${errorMessage}` : errorMessage;
     
     console.error(fullMessage, error);
@@ -35,7 +38,8 @@ export async function wrapAction<T>(
   try {
     return await fn();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "操作失败";
+    const defaultError = await getErrorMessage("operationFailed");
+    const errorMessage = error instanceof Error ? error.message : defaultError;
     const fullMessage = errorPrefix ? `${errorPrefix}: ${errorMessage}` : errorMessage;
     
     console.error(fullMessage, error);

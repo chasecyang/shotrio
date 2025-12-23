@@ -44,8 +44,9 @@ export function EditorHeader({
           href="/projects" 
           className="flex items-center hover:opacity-70 transition-opacity shrink-0"
         >
-          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Shotrio
+          <span className="text-xl font-bold">
+            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
+            <span className="text-primary/40">Rio</span>
           </span>
         </Link>
         <Separator orientation="vertical" className="h-6" />

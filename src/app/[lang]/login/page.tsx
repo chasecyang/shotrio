@@ -65,8 +65,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md relative z-10 rounded-3xl border-neutral-200 shadow-xl bg-white/80 backdrop-blur-sm">
         <CardHeader className="space-y-2 pb-6">
           <div className="mx-auto mb-2 flex justify-center">
-            <span className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Shotrio
+            <span className="text-4xl font-bold">
+              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
+              <span className="text-primary/40">Rio</span>
             </span>
           </div>
           <CardTitle className="text-3xl font-bold text-center text-neutral-900">{t('title')}</CardTitle>

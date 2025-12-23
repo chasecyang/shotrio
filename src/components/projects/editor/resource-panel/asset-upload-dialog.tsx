@@ -19,11 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { uploadAsset } from "@/lib/actions/asset";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 interface AssetUploadDialogProps {
   open: boolean;
@@ -40,10 +41,13 @@ export function AssetUploadDialog({
   userId,
   onSuccess,
 }: AssetUploadDialogProps) {
+  const t = useTranslations("editor.resource.upload");
+  const tToast = useTranslations("toasts");
+  const tAsset = useTranslations("projects.assets.types");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [assetName, setAssetName] = useState("");
-  const [selectedTag, setSelectedTag] = useState("参考");
+  const [selectedTag, setSelectedTag] = useState("reference");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,13 +55,13 @@ export function AssetUploadDialog({
   const handleFileSelect = (file: File) => {
     // 验证文件类型
     if (!file.type.startsWith("image/")) {
-      toast.error("请选择图片文件");
+      toast.error(tToast("error.selectImageFile"));
       return;
     }
 
     // 验证文件大小 (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("文件大小不能超过 10MB");
+      toast.error(t("error"));
       return;
     }
 
@@ -103,12 +107,12 @@ export function AssetUploadDialog({
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast.error("请选择文件");
+      toast.error(tToast("error.selectFile"));
       return;
     }
 
     if (!assetName.trim()) {
-      toast.error("请输入素材名称");
+      toast.error(tToast("error.enterAssetName"));
       return;
     }
 
@@ -139,15 +143,15 @@ export function AssetUploadDialog({
       clearInterval(progressInterval);
 
       if (!result.success) {
-        throw new Error(result.error || "上传失败");
+        throw new Error(result.error || t("error"));
       }
 
       setUploadProgress(100);
-      toast.success("素材上传成功");
+      toast.success(t("success"));
 
       // 重置状态
       handleRemoveFile();
-      setSelectedTag("参考");
+      setSelectedTag("reference");
       onOpenChange(false);
 
       // 触发素材列表刷新事件
@@ -159,7 +163,7 @@ export function AssetUploadDialog({
       }
     } catch (error) {
       console.error("上传素材失败:", error);
-      toast.error(error instanceof Error ? error.message : "上传失败");
+      toast.error(error instanceof Error ? error.message : t("error"));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -167,19 +171,19 @@ export function AssetUploadDialog({
   };
 
   const tagOptions = [
-    { value: "角色", label: "角色" },
-    { value: "场景", label: "场景" },
-    { value: "道具", label: "道具" },
-    { value: "分镜", label: "分镜" },
-    { value: "特效", label: "特效" },
-    { value: "参考", label: "参考" },
+    { value: "character", label: tAsset("character") },
+    { value: "scene", label: tAsset("scene") },
+    { value: "prop", label: tAsset("prop") },
+    { value: "storyboard", label: tAsset("storyboard") },
+    { value: "effect", label: tAsset("effect") },
+    { value: "reference", label: tAsset("reference") },
   ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>上传素材</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -200,10 +204,10 @@ export function AssetUploadDialog({
               </div>
               <div>
                 <p className="text-sm font-medium mb-1">
-                  点击或拖拽文件到此处上传
+                  {t("dragHint")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  支持 JPG、PNG、WebP、GIF，最大 10MB
+                  {t("fileInfo")}
                 </p>
               </div>
               <input
@@ -219,7 +223,7 @@ export function AssetUploadDialog({
               <div className="relative aspect-video bg-muted">
                 <Image
                   src={previewUrl || ""}
-                  alt="预览"
+                  alt="preview"
                   fill
                   className="object-contain"
                 />
@@ -245,18 +249,18 @@ export function AssetUploadDialog({
           {selectedFile && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="asset-name">素材名称</Label>
+                <Label htmlFor="asset-name">{t("assetName")}</Label>
                 <Input
                   id="asset-name"
                   value={assetName}
                   onChange={(e) => setAssetName(e.target.value)}
-                  placeholder="输入素材名称"
+                  placeholder={t("assetNamePlaceholder")}
                   disabled={isUploading}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="asset-tag">素材类型</Label>
+                <Label htmlFor="asset-tag">{t("assetType")}</Label>
                 <Select
                   value={selectedTag}
                   onValueChange={setSelectedTag}
@@ -279,7 +283,7 @@ export function AssetUploadDialog({
               {isUploading && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">上传进度</span>
+                    <span className="text-muted-foreground">{t("uploadProgress")}</span>
                     <span className="font-medium">{uploadProgress}%</span>
                   </div>
                   <Progress value={uploadProgress} className="h-2" />
@@ -295,13 +299,13 @@ export function AssetUploadDialog({
             onClick={() => onOpenChange(false)}
             disabled={isUploading}
           >
-            取消
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleUpload}
             disabled={!selectedFile || isUploading || !assetName.trim()}
           >
-            {isUploading ? "上传中..." : "上传"}
+            {isUploading ? t("uploading") : t("title")}
           </Button>
         </DialogFooter>
       </DialogContent>

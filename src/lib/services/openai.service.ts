@@ -100,7 +100,7 @@ export async function getChatCompletion(
     const openai = getOpenAIClient();
     
     // 构建请求参数
-    const requestParams: any = {
+    const requestParams: Record<string, unknown> = {
       model,
       messages,
       max_tokens: maxTokens,
@@ -170,7 +170,7 @@ export async function getChatCompletionStream(
     const openai = getOpenAIClient();
     const stream = await openai.chat.completions.create({
       model,
-      messages: messages as any,
+      messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
       temperature,
       max_tokens: maxTokens,
       stream: true,
@@ -270,7 +270,7 @@ export async function getChatCompletionWithFunctions(
       }
     }
 
-    const response = await openai.chat.completions.create(requestParams as any);
+    const response = await openai.chat.completions.create(requestParams as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming);
     const message = response.choices[0]?.message;
     
     if (!message) {
@@ -375,9 +375,9 @@ export async function* getChatCompletionWithFunctionsStream(
       requestParams.thinking = { type: "enabled" };
     }
 
-    // 直接传递请求参数，使用 as any 绕过类型检查
+    // 直接传递请求参数
     // OpenAI SDK 会将未知字段（如 thinking）透传给 API
-    const stream: any = await openai.chat.completions.create(requestParams as any);
+    const stream = await openai.chat.completions.create(requestParams as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming);
     
     // 逐块处理流式响应
     for await (const chunk of stream) {

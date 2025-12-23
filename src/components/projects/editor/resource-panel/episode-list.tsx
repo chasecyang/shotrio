@@ -9,6 +9,7 @@ import { FileText, Plus } from "lucide-react";
 import { createEpisode, getProjectDetail } from "@/lib/actions/project";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface EpisodeListProps {
   episodes: Episode[];
@@ -18,6 +19,8 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
   const { state, selectEpisode, selectResource, updateProject } = useEditor();
   const { selectedEpisodeId, selectedResource } = state;
   const [isCreating, setIsCreating] = useState(false);
+  const t = useTranslations("editor.resource.episodeList");
+  const tToasts = useTranslations("toasts");
 
   const handleEpisodeClick = (episode: Episode) => {
     selectEpisode(episode.id);
@@ -31,23 +34,23 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
     try {
       const result = await createEpisode({
         projectId: state.project.id,
-        title: `第 ${episodes.length + 1} 集`,
+        title: t("newEpisodeTitle", { number: episodes.length + 1 }),
         order: episodes.length + 1,
       });
 
       if (result.success) {
-        toast.success("剧集已创建");
+        toast.success(tToasts("success.episodeCreated"));
         // 重新获取项目数据并更新 context
         const updatedProject = await getProjectDetail(state.project.id);
         if (updatedProject) {
           updateProject(updatedProject);
         }
       } else {
-        toast.error(result.error || "创建失败");
+        toast.error(result.error || tToasts("error.creationFailed"));
       }
     } catch (error) {
       console.error(error);
-      toast.error("创建失败");
+      toast.error(tToasts("error.creationFailed"));
     } finally {
       setIsCreating(false);
     }
@@ -59,10 +62,10 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
           <FileText className="w-6 h-6 text-primary" />
         </div>
-        <p className="text-sm text-muted-foreground mb-3">暂无剧集</p>
+        <p className="text-sm text-muted-foreground mb-3">{t("empty")}</p>
         <Button size="sm" onClick={handleCreateEpisode} disabled={isCreating}>
           <Plus className="w-3.5 h-3.5 mr-1" />
-          新建剧集
+          {t("createButton")}
         </Button>
       </div>
     );
@@ -79,7 +82,7 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
         disabled={isCreating}
       >
         <Plus className="w-3.5 h-3.5 mr-1.5" />
-        新建剧集
+        {t("createButton")}
       </Button>
 
       {/* 剧集列表 */}
@@ -100,11 +103,11 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
           >
             <div className="flex items-center gap-2 mb-1">
               <Badge variant="outline" className="text-xs font-mono">
-                第 {episode.order} 集
+                {t("episodeNumber", { number: episode.order })}
               </Badge>
               {isSelected && (
                 <Badge variant="secondary" className="text-xs">
-                  当前
+                  {t("current")}
                 </Badge>
               )}
             </div>

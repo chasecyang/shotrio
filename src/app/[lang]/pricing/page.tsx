@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Image, Video, Check } from "lucide-react";
+import { Sparkles, Image as ImageIcon, Video, Check } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PricingClientWrapper } from "./pricing-client";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
@@ -81,7 +81,7 @@ export default async function PricingPage() {
               <FadeIn delay={0.3}>
                 <div className="flex flex-wrap justify-center gap-4 mb-12">
                   <Badge variant="outline" className="px-4 py-2 text-sm font-normal gap-2">
-                    <Image className="w-4 h-4" />
+                    <ImageIcon className="w-4 h-4" aria-hidden="true" />
                     {t("credits.costs.imageGeneration", { credits: 8 })}
                   </Badge>
                   <Badge variant="outline" className="px-4 py-2 text-sm font-normal gap-2">
@@ -116,7 +116,7 @@ export default async function PricingPage() {
                   <Card>
                     <CardHeader>
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                        <Image className="w-6 h-6 text-primary" />
+                        <ImageIcon className="w-6 h-6 text-primary" aria-hidden="true" />
                       </div>
                       <CardTitle>{t("pricing.features.imageGeneration.title")}</CardTitle>
                       <CardDescription>
@@ -184,7 +184,7 @@ export default async function PricingPage() {
 
               <FadeIn delay={0.1}>
                 <Accordion type="single" collapsible className="space-y-4">
-                  {faqs.map((faq, index) => (
+                  {faqs.map((faq) => (
                     <AccordionItem
                       key={faq.id}
                       value={faq.id}

@@ -3,8 +3,11 @@ import { getAllArtStyles } from "@/lib/actions/admin/art-style-admin";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StyleTable } from "@/components/admin/art-styles/style-table";
 import { Palette } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export default async function ArtStylesAdminPage() {
+  const t = await getTranslations("admin.artStyles");
+  
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
@@ -14,11 +17,11 @@ export default async function ArtStylesAdminPage() {
             <Palette className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">美术风格管理</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t("pageTitle")}</h1>
           </div>
         </div>
         <p className="text-muted-foreground">
-          管理系统预设风格，为每个风格生成预览图
+          {t("description")}
         </p>
       </div>
 

@@ -11,92 +11,67 @@ import {
   Video,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
 import type { JobType, JobStatus } from "@/types/job";
 
 /**
- * 任务类型标签配置
+ * Task type configuration
  */
 export interface TaskTypeConfig {
-  label: string;
-  iconName: string; // 改用图标名称，而不是 React 节点
+  labelKey: string; // Translation key
+  iconName: string;
 }
 
-export const TASK_TYPE_LABELS: Record<JobType, TaskTypeConfig> = {
-  batch_image_generation: {
-    label: "批量图像生成",
-    iconName: "Images",
-  },
-  asset_image_generation: {
-    label: "素材图片生成",
-    iconName: "Sparkles",
-  },
-  video_generation: {
-    label: "视频生成",
-    iconName: "Video",
-  },
-  shot_video_generation: {
-    label: "单镜视频生成",
-    iconName: "Video",
-  },
-  batch_video_generation: {
-    label: "批量视频生成",
-    iconName: "Video",
-  },
-  shot_tts_generation: {
-    label: "语音合成",
-    iconName: "Sparkles",
-  },
-  final_video_export: {
-    label: "最终成片导出",
-    iconName: "Film",
-  },
+// Icon name mapping for task types
+export const TASK_TYPE_ICONS: Record<JobType, string> = {
+  batch_image_generation: "Images",
+  asset_image_generation: "Sparkles",
+  video_generation: "Video",
+  shot_video_generation: "Video",
+  batch_video_generation: "Video",
+  shot_tts_generation: "Sparkles",
+  final_video_export: "Film",
 };
 
 /**
- * 任务状态配置
+ * Task status configuration
  */
 export interface TaskStatusConfig {
-  label: string;
+  labelKey: string; // Translation key
   iconName: string;
   color: string;
 }
 
-export const TASK_STATUS_CONFIG: Record<JobStatus, TaskStatusConfig> = {
+// Status configuration with translation keys
+export const TASK_STATUS_ICONS: Record<JobStatus, { iconName: string; color: string }> = {
   pending: {
-    label: "等待中",
     iconName: "Clock",
     color: "text-yellow-600 dark:text-yellow-400",
   },
   processing: {
-    label: "处理中",
     iconName: "Loader2",
     color: "text-blue-600 dark:text-blue-400",
   },
   completed: {
-    label: "已完成",
     iconName: "CheckCircle2",
     color: "text-green-600 dark:text-green-400",
   },
   failed: {
-    label: "失败",
     iconName: "XCircle",
     color: "text-red-600 dark:text-red-400",
   },
   cancelled: {
-    label: "已取消",
     iconName: "Ban",
     color: "text-gray-600 dark:text-gray-400",
   },
 };
 
 /**
- * 支持"查看结果"的任务类型列表
+ * Viewable task types list
  */
 export const VIEWABLE_TASK_TYPES: JobType[] = [];
 
 /**
- * 图标映射表
+ * Icon mapping
  */
 const iconMap = {
   Users,
@@ -112,7 +87,7 @@ const iconMap = {
 };
 
 /**
- * 根据图标名称和大小获取图标组件
+ * Get task icon component by icon name and size
  */
 export function getTaskIcon(iconName: string, size: "sm" | "md" = "md") {
   const IconComponent = iconMap[iconName as keyof typeof iconMap];
@@ -129,55 +104,56 @@ export function getTaskIcon(iconName: string, size: "sm" | "md" = "md") {
 }
 
 /**
- * 获取任务类型标签（仅文本，用于服务端）
- */
-export function getTaskTypeLabelText(type: JobType | string): string {
-  const config = TASK_TYPE_LABELS[type as JobType];
-  return config?.label || "未知任务";
-}
-
-/**
- * 获取任务类型标签和图标（用于客户端）
+ * Get task type label with translation function
+ * Use this in client components with useTranslations
  */
 export function getTaskTypeLabel(
   type: JobType | string,
+  t: (key: string) => string,
   size: "sm" | "md" = "md"
 ): { label: string; icon: React.ReactNode } {
-  const label = getTaskTypeLabelText(type);
-  const config = TASK_TYPE_LABELS[type as JobType];
-
+  const iconName = TASK_TYPE_ICONS[type as JobType];
+  const labelKey = `tasks.types.${type}`;
+  
   return {
-    label,
-    icon: config ? getTaskIcon(config.iconName, size) : null,
+    label: t(labelKey) || t('tasks.types.unknown'),
+    icon: iconName ? getTaskIcon(iconName, size) : null,
   };
 }
 
 /**
- * 获取任务状态标签和图标
+ * Get task status config with translation function
+ * Use this in client components with useTranslations
  */
 export function getTaskStatusConfig(
   status: JobStatus | string,
+  t: (key: string) => string,
   size: "sm" | "md" = "md"
 ): { label: string; icon: React.ReactNode; color: string } {
-  const config = TASK_STATUS_CONFIG[status as JobStatus] || TASK_STATUS_CONFIG.pending;
+  const config = TASK_STATUS_ICONS[status as JobStatus] || TASK_STATUS_ICONS.pending;
+  const labelKey = `tasks.status.${status}`;
 
   return {
-    label: config.label,
+    label: t(labelKey),
     icon: getTaskIcon(config.iconName, size),
     color: config.color,
   };
 }
 
 /**
- * 格式化任务创建时间为相对时间
+ * Format task time as relative time
+ * Note: Locale should be passed from a hook that detects current language
  */
-export function formatTaskTime(createdAt: Date | string | null | undefined): string {
+export function formatTaskTime(
+  createdAt: Date | string | null | undefined,
+  locale?: Locale
+): string {
   if (!createdAt) return "";
 
   try {
     return formatDistanceToNow(new Date(createdAt), {
       addSuffix: true,
-      locale: zhCN,
+      locale,
     });
   } catch {
     return "";

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Syne, Manrope } from "next/font/google";
+import { Syne, Manrope, Noto_Sans_SC } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { NextIntlClientProvider } from 'next-intl';
@@ -10,14 +10,23 @@ import { ChatwootProvider } from '@/components/integrations/chatwoot-provider';
 import { getCurrentUser } from '@/lib/auth/auth-utils';
 import { generatePageMetadata, homepageMetadata } from '@/lib/seo/metadata';
 
+// 英文字体
 const syne = Syne({
-  variable: "--font-heading",
+  variable: "--font-heading-en",
   subsets: ["latin"],
   display: "swap",
 });
 
 const manrope = Manrope({
-  variable: "--font-sans",
+  variable: "--font-sans-en",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// 中文字体 - 使用思源黑体（统一使用无衬线字体，更适合屏幕阅读）
+const notoSansSC = Noto_Sans_SC({
+  variable: "--font-zh",
+  weight: ["300", "400", "500", "700", "900"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -66,7 +75,7 @@ export default async function RootLayout({
   return (
     <html lang={lang} suppressHydrationWarning>
       <body
-        className={`${syne.variable} ${manrope.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}
+        className={`${syne.variable} ${manrope.variable} ${notoSansSC.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}
       >
         <NextIntlClientProvider messages={messages}>
           {children}

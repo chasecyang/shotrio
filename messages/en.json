@@ -21,7 +21,15 @@
     "result": "Result",
     "minutesAgo": "min ago",
     "hoursAgo": "hr ago",
-    "daysAgo": "d ago"
+    "daysAgo": "d ago",
+    "clickToEdit": "Click to edit",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "aiSuggestion": "AI Suggestion",
+    "accept": "Accept",
+    "reject": "Reject",
+    "aiGenerateOptimize": "AI Generate/Optimize"
   },
   "language": {
     "interfaceLanguage": "Interface Language",
@@ -43,11 +51,92 @@
     "logout": "Logout",
     "profile": "Profile",
     "pricing": "Pricing",
-    "credits": "Credits"
+    "credits": "Credits",
+    "creditsCenter": "Credit Center"
   },
   "admin": {
-    "title": "Admin",
-    "settings": "Settings"
+    "title": "Admin Center",
+    "subtitle": "Management Panel",
+    "settings": "Settings",
+    "dashboard": {
+      "title": "Overview",
+      "artStyles": {
+        "title": "Art Styles",
+        "description": "Manage system preset styles",
+        "detail": "Manage and configure system art style library, generate preview images for each style",
+        "action": "Manage"
+      },
+      "moreFeatures": {
+        "title": "More Features",
+        "description": "Coming Soon",
+        "detail": "More management features are under development...",
+        "action": "Stay Tuned"
+      },
+      "hint": {
+        "title": "Hint",
+        "description": "This is the system management panel, accessible only to administrators. You can manage various system settings and content here. Use the left navigation bar to quickly access different management functions."
+      }
+    },
+    "redeemCodes": {
+      "title": "Redeem Code Management",
+      "description": "Create and manage credit redeem codes",
+      "generate": "Generate Code",
+      "table": {
+        "code": "Code",
+        "credits": "Credits",
+        "usage": "Usage",
+        "status": "Status",
+        "expires": "Expires",
+        "description": "Description",
+        "createdAt": "Created At",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "expired": "Expired",
+        "used": "Used Up",
+        "disabled": "Disabled"
+      },
+      "generator": {
+        "title": "Generate Redeem Code",
+        "subtitle": "Create new credit redeem codes",
+        "batchMode": "Batch Generate",
+        "credits": "Credits Amount *",
+        "maxUses": "Max Uses *",
+        "count": "Generate Count (1-1000)",
+        "customCode": "Custom Code (Optional)",
+        "customCodeHint": "Leave blank to auto-generate",
+        "expiresInDays": "Valid Days (Optional)",
+        "expiresInDaysHint": "Leave blank for permanent validity",
+        "description": "Description (Optional)",
+        "descriptionPlaceholder": "Add description...",
+        "generate": "Generate Code",
+        "generating": "Generating...",
+        "generated": "Generated Codes",
+        "copyAll": "Copy All",
+        "copied": "Copied",
+        "done": "Done",
+        "continueGenerate": "Continue Generating",
+        "success": "Redeem code generated successfully",
+        "batchSuccess": "Successfully generated {count} codes"
+      },
+      "empty": "No redeem codes yet",
+      "actions": {
+        "enable": "Enabled",
+        "disable": "Disabled"
+      }
+    },
+    "artStyles": {
+      "title": "Art Styles Management",
+      "description": "Manage system preset styles, generate preview images for each style",
+      "pageTitle": "Art Style Management",
+      "generate": "Generate Preview",
+      "batchGenerate": "Batch Generate",
+      "batchDelete": "Batch Delete",
+      "selectForPreview": "Please select styles to generate preview",
+      "selectForDelete": "Please select styles to delete",
+      "sidebarTitle": "Art Styles"
+    }
   },
   "auth": {
     "title": "Welcome Back",
@@ -152,7 +241,15 @@
     "forbidden": "Forbidden",
     "serverError": "Server Error",
     "networkError": "Network Error",
-    "unknownError": "Unknown Error"
+    "unknownError": "Unknown Error",
+    "notLoggedIn": "Not logged in",
+    "insufficientPermissions": "Insufficient permissions",
+    "operationFailed": "Operation failed",
+    "invalidInput": "Invalid input",
+    "resourceNotFound": "Resource not found",
+    "alreadyExists": "Already exists",
+    "creditsRequired": "Credits must be greater than 0",
+    "maxUsesRequired": "Max uses must be greater than 0"
   },
   "sidebar": {
     "discover": "Dashboard"
@@ -166,6 +263,31 @@
       "characters": "Characters",
       "scenes": "Scenes",
       "settings": "Project Settings"
+    },
+    "settings": {
+      "title": "Project Settings",
+      "description": "Manage basic project information and configuration",
+      "projectName": "Project Name *",
+      "projectNamePlaceholder": "e.g., My Amazing Story",
+      "projectDescription": "Project Description",
+      "projectDescriptionPlaceholder": "Briefly describe this project...",
+      "artStyle": "Art Style",
+      "artStyleDescription": "Choose a preset or custom style to apply to all character and scene image generation in the project",
+      "presetStyle": "Preset Styles",
+      "customStyle": "Custom Style",
+      "customStyleName": "Custom Style",
+      "customStylePlaceholder": "e.g., Cyberpunk style, neon lights, 8k resolution, cinematic lighting",
+      "customStyleHint": "Enter custom English style description for AI image generation's global style prompt",
+      "noStyleSet": "No Style Set",
+      "settingsButton": "Settings",
+      "saveButton": "Save Settings",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDescription": "Once deleted, all project data will be permanently lost and cannot be recovered",
+      "deleteButton": "Delete Project",
+      "deleteConfirm": "Confirm Delete",
+      "deleteConfirmTitle": "Confirm Project Deletion?",
+      "deleteConfirmDescription": "This action cannot be undone. Project \"{title}\" and all its data (including episodes, characters, storyboards, etc.) will be permanently deleted.",
+      "deleteCancel": "Cancel"
     },
     "storyboard": {
       "selectEpisode": "Select Episode",
@@ -193,9 +315,15 @@
     "assets": {
       "title": "Assets",
       "empty": {
-        "title": "No Assets Yet",
-        "description": "Upload image assets to build your asset library",
-        "action": "Upload Asset"
+        "title": "Start Building Your Asset Library",
+        "description": "Assets include character, scene, and prop images to build your story world",
+        "action": "Upload Image",
+        "actionAI": "AI Generate",
+        "categories": {
+          "character": "Character Images - Design appearances for protagonists and supporting roles",
+          "scene": "Scene Images - Locations and environments where the story takes place",
+          "prop": "Prop Images - Important items in the plot"
+        }
       },
       "loading": "Loading assets...",
       "upload": {
@@ -282,9 +410,12 @@
       },
       "filter": {
         "button": "Filter",
-        "title": "Tag Filter",
+        "title": "Filter by Type",
+        "subtitle": "Character / Scene / Prop",
         "clearAll": "Clear All",
         "noTags": "No tags available",
+        "noTagsHint": "You can add character, scene, prop tags when creating assets",
+        "typeTagsTitle": "Type Tags (Character / Scene / Prop)",
         "tagTypes": {
           "type": "Type",
           "character": "Character",
@@ -318,6 +449,12 @@
       "generation": {
         "title": "AI Asset Generation",
         "subtitle": "Generate images from text descriptions using AI",
+        "guide": {
+          "title": "You can create:",
+          "character": "Character - Design character appearances for the script",
+          "scene": "Scene - Create environments and locations for the story",
+          "prop": "Prop - Generate items and elements needed for the plot"
+        },
         "form": {
           "assetName": "Asset Name",
           "assetNamePlaceholder": "Enter asset name...",
@@ -370,7 +507,99 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "pricing": "Pricing",
-    "copyright": "All rights reserved"
+    "copyright": "All rights reserved",
+    "tagline": "Frame by Frame"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: December 2024",
+      "section1": {
+        "title": "Information Collection",
+        "content": "We collect information you provide when using our services, including but not limited to account information and creative content."
+      },
+      "section2": {
+        "title": "Types of Information We Collect",
+        "item1": "Account Information: Including your email address, username, and other registration information",
+        "item2": "Creative Content: Projects, scripts, storyboards, and other content you create on the platform",
+        "item3": "Usage Data: How you use our services, including access times and features used",
+        "item4": "Device Information: Your device type, operating system, browser type, and other technical information"
+      },
+      "section3": {
+        "title": "How We Use Information",
+        "content": "We use the collected information to:",
+        "item1": "Provide, maintain, and improve our services",
+        "item2": "Process your requests and transactions",
+        "item3": "Send service notifications and updates",
+        "item4": "Protect user security and prevent fraud"
+      },
+      "section4": {
+        "title": "Information Sharing",
+        "content": "We do not sell your personal information. We only share information with trusted third-party service providers when necessary to provide services."
+      },
+      "section5": {
+        "title": "Data Security",
+        "content": "We employ industry-standard security measures to protect your data, including encrypted transmission and secure storage."
+      },
+      "section6": {
+        "title": "Your Rights",
+        "content": "You have the right to access, correct, delete your personal information, or withdraw consent for data processing."
+      },
+      "section7": {
+        "title": "Cookie Usage",
+        "content": "We use cookies and similar technologies to improve user experience and analyze service usage."
+      },
+      "section8": {
+        "title": "Contact Us",
+        "content": "If you have any questions about this privacy policy, please contact us at privacy@shotrio.com."
+      }
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: December 2024",
+      "section1": {
+        "title": "Service Terms",
+        "content": "Welcome to Shotrio. By accessing or using our services, you agree to comply with the terms of this agreement."
+      },
+      "section2": {
+        "title": "Account Responsibility",
+        "content": "You are responsible for maintaining the security of your account and are liable for all activities under your account."
+      },
+      "section3": {
+        "title": "Service Usage",
+        "item1": "You must be at least 18 years old or use the service under the supervision of a legal guardian",
+        "item2": "You must not use the service for any illegal or unauthorized purposes",
+        "item3": "You must not interfere with or disrupt the normal operation of the service",
+        "item4": "You must not attempt unauthorized access to any part of the service"
+      },
+      "section4": {
+        "title": "Content Rights",
+        "item1": "You retain all ownership rights to your creative content",
+        "item2": "You grant us necessary permissions to use, store, and process your content to provide services",
+        "item3": "You ensure you have legal rights to upload content",
+        "item4": "We reserve the right to remove content that violates the terms"
+      },
+      "section5": {
+        "title": "Credits and Payment",
+        "content": "All credit purchases are final transactions and non-refundable. We reserve the right to modify prices and services at any time."
+      },
+      "section6": {
+        "title": "Service Changes",
+        "content": "We reserve the right to modify, suspend, or terminate services at any time without prior notice."
+      },
+      "section7": {
+        "title": "Disclaimer",
+        "content": "Services are provided 'as is.' We make no warranties regarding the suitability, reliability, or availability of services."
+      },
+      "section8": {
+        "title": "Limitation of Liability",
+        "content": "To the extent permitted by law, we are not liable for any damages arising from the use or inability to use the services."
+      },
+      "section9": {
+        "title": "Dispute Resolution",
+        "content": "This agreement is governed by the laws of the People's Republic of China. Any disputes should be resolved through friendly negotiation."
+      }
+    }
   },
   "pricing": {
     "title": "Pricing Plans",
@@ -527,13 +756,386 @@
       "startCreating": "Start Creating"
     }
   },
+  "tasks": {
+    "types": {
+      "batch_image_generation": "Batch Image Generation",
+      "asset_image_generation": "Asset Image Generation",
+      "video_generation": "Video Generation",
+      "shot_video_generation": "Shot Video Generation",
+      "batch_video_generation": "Batch Video Generation",
+      "shot_tts_generation": "Text-to-Speech",
+      "final_video_export": "Final Video Export",
+      "unknown": "Unknown Task"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
+  },
   "tools": {
+  },
+  "agent": {
+    "credits": {
+      "total": "Total Cost",
+      "currentBalance": "Current Balance",
+      "insufficient": "Insufficient Credits",
+      "insufficientMessage": "Insufficient credits, need {amount} more credits",
+      "recharge": "Recharge",
+      "perImage": "images",
+      "perSecond": "seconds",
+      "costPerImage": "credits/image",
+      "costPerSecond": "credits/second",
+      "estimating": "Calculating credits...",
+      "estimateFailed": "Failed to estimate credit cost"
+    },
+    "action": {
+      "pending": "Pending Action",
+      "executionPlan": "Execution Plan",
+      "confirm": "Confirm Execution",
+      "confirmGenerate": "Confirm Generation",
+      "confirmDelete": "Confirm Delete",
+      "reject": "Reject",
+      "executing": "Executing...",
+      "viewDetails": "View Details"
+    },
+    "warning": {
+      "deletion": "This action will permanently delete data and cannot be undone.",
+      "modification": "This action will modify existing data. Please confirm before proceeding."
+    },
+    "category": {
+      "read": "Read",
+      "generation": "Generation",
+      "modification": "Modification",
+      "deletion": "Deletion"
+    }
+  },
+  "toasts": {
+    "success": {
+      "assetUploaded": "Asset uploaded successfully",
+      "assetDeleted": "Asset deleted successfully",
+      "assetApplied": "Asset applied to shot",
+      "nameUpdated": "Name updated successfully",
+      "tagAdded": "Tag added successfully",
+      "tagRemoved": "Tag removed successfully",
+      "derivationSubmitted": "Derivation request submitted",
+      "projectCreated": "Project created successfully",
+      "shotAdded": "Shot added successfully",
+      "taskCancelled": "Task cancelled successfully",
+      "taskResubmitted": "Task resubmitted successfully",
+      "videoGenerated": "Video generation completed",
+      "conversationDeleted": "Conversation deleted successfully",
+      "codeGenerated": "Redeem code generated successfully",
+      "codeCopied": "Copied to clipboard",
+      "previewGenerated": "Preview generated successfully",
+      "styleDeleted": "Style deleted successfully",
+      "styleUpdated": "Style updated successfully",
+      "styleCreated": "Style created successfully",
+      "episodeCreated": "Episode created successfully",
+      "settingsSaved": "Settings saved successfully",
+      "projectDeleted": "Project deleted successfully",
+      "referenceAssetAdded": "Reference asset added",
+      "videoTaskStarted": "Video generation task started",
+      "taskCreatedAiProcessing": "Task created, AI is processing..."
+    },
+    "error": {
+      "parseResultFailed": "Failed to parse result",
+      "addImageFailed": "Failed to add image",
+      "promptRequired": "Please enter a prompt",
+      "createTaskFailed": "Failed to create task",
+      "updateDurationFailed": "Failed to update duration",
+      "applyAssetFailed": "Failed to apply asset",
+      "selectImageFile": "Please select an image file",
+      "selectFile": "Please select a file",
+      "enterAssetName": "Please enter asset name",
+      "updateFailed": "Update failed",
+      "deleteFailed": "Delete failed",
+      "addTagFailed": "Failed to add tag",
+      "removeTagFailed": "Failed to remove tag",
+      "generateShotImageFirst": "Please generate shot image first",
+      "generationFailed": "Generation failed",
+      "loadShotsFailed": "Failed to load shots",
+      "addShotFailed": "Failed to add shot",
+      "deleteShotFailed": "Failed to delete shot",
+      "selectShotsForVideo": "Please select shots to generate video",
+      "startBatchGenerationFailed": "Failed to start batch generation",
+      "selectShotsForExport": "Please select shots to export",
+      "loadConversationsFailed": "Failed to load conversations",
+      "loadConversationFailed": "Failed to load conversation",
+      "deleteConversationFailed": "Failed to delete conversation",
+      "confirmActionFailed": "Failed to confirm action",
+      "rejectActionFailed": "Failed to reject action",
+      "enterValidCredits": "Please enter valid credits amount",
+      "enterValidMaxUses": "Please enter valid max uses",
+      "noShotsToPlay": "No shots to play",
+      "loadAssetFailed": "Failed to load asset",
+      "saveFailed": "Failed to save",
+      "tagCannotBeEmpty": "Tag cannot be empty",
+      "loadStylesFailed": "Failed to load styles",
+      "enterProjectName": "Please enter project name",
+      "generationInDevelopment": "Generation feature in development",
+      "taskNotFound": "Task not found",
+      "taskResultNotSupported": "Task result not supported",
+      "cannotParseTaskData": "Cannot parse task data",
+      "enterDerivationName": "Please enter derivation asset name",
+      "enterPrompt": "Please enter prompt",
+      "sortingFailed": "Failed to sort",
+      "creationFailed": "Failed to create",
+      "batchGenerationFailed": "Failed to batch generate",
+      "batchDeletionFailed": "Failed to batch delete",
+      "codeGenerationFailed": "Code generation failed, please try again later",
+      "projectCreationFailed": "Project creation failed, please try again"
+    },
+    "info": {
+      "derivationInDevelopment": "Derivation feature in development, stay tuned",
+      "taskResultNotSupported": "This task result is not supported for viewing",
+      "uploadingReferenceImages": "Uploading reference images..."
+    },
+    "warning": {}
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email address",
+    "invalidUrl": "Invalid URL",
+    "minLength": "Must be at least {min} characters",
+    "maxLength": "Must be at most {max} characters",
+    "min": "Must be at least {min}",
+    "max": "Must be at most {max}",
+    "pattern": "Invalid format"
   },
   "editor": {
     "mobileNotSupported": {
       "title": "Desktop Only",
       "description": "The Editor requires a larger screen. Please visit on a desktop device for the best experience.",
       "backToProjects": "Back to Projects"
+    },
+    "agent": {
+      "conversationStatus": {
+        "awaitingApproval": "Awaiting Approval",
+        "active": "Running",
+        "completed": "Completed"
+      },
+      "conversationList": {
+        "title": "Conversation History",
+        "empty": "No conversations yet",
+        "newConversation": "New Conversation",
+        "deleteConfirm": "Delete Conversation",
+        "deleteDescription": "Are you sure you want to delete this conversation? This action cannot be undone.",
+        "justNow": "just now",
+        "minutesAgo": "{minutes} min ago",
+        "hoursAgo": "{hours} hr ago",
+        "daysAgo": "{days} d ago"
+      },
+      "pendingAction": {
+        "title": "Pending Action",
+        "executionPlan": "Execution Plan",
+        "confirm": "Confirm",
+        "reject": "Reject",
+        "viewDetails": "View Details",
+        "confirmGenerate": "Confirm Generation",
+        "confirmDelete": "Confirm Delete",
+        "executing": "Executing..."
+      },
+      "chatInput": {
+        "placeholder": "Type a message...",
+        "send": "Send",
+        "sending": "Sending...",
+        "stopGeneration": "Stop",
+        "sendMessage": "Send message",
+        "stopToInterrupt": "Click stop button to interrupt generation",
+        "enterToSend": "Enter to send · Shift+Enter for new line"
+      },
+      "panel": {
+        "newConversation": "New Conversation",
+        "aiAssistant": "AI Assistant",
+        "startNewConversation": "Start New Conversation",
+        "startConversation": "Start Conversation",
+        "welcomeMessage": "Tell me what you want to do, I can help you create shots, generate assets, manage projects, and more"
+      }
+    },
+    "resource": {
+      "episodeList": {
+        "empty": "No episodes yet",
+        "createButton": "New Episode",
+        "newEpisodeTitle": "Episode {number}",
+        "episodeNumber": "Episode {number}",
+        "current": "Current"
+      },
+      "assetPanel": {
+        "title": "Assets",
+        "search": "Search assets...",
+        "upload": "Upload",
+        "aiGenerate": "AI Generate",
+        "filter": "Filter",
+        "viewGrid": "Grid View",
+        "viewList": "List View",
+        "empty": "No assets yet",
+        "emptyDescription": "Upload or generate assets to get started"
+      },
+      "assetCard": {
+        "usedTimes": "Used {count} times",
+        "view": "View",
+        "apply": "Apply",
+        "delete": "Delete"
+      },
+      "upload": {
+        "title": "Upload Asset",
+        "dragHint": "Click or drag file here to upload",
+        "fileInfo": "Supports JPG, PNG, WebP, GIF, max 10MB",
+        "assetName": "Asset Name",
+        "assetNamePlaceholder": "Enter asset name",
+        "assetType": "Asset Type",
+        "uploading": "Uploading...",
+        "uploadProgress": "Upload Progress",
+        "success": "Asset uploaded successfully",
+        "error": "Upload failed"
+      },
+      "detail": {
+        "title": "Asset Details",
+        "basicInfo": "Basic Information",
+        "name": "Name",
+        "type": "Type",
+        "usageCount": "Usage Count",
+        "createdAt": "Created At",
+        "generationInfo": "Generation Info",
+        "prompt": "Prompt",
+        "model": "Model",
+        "seed": "Seed",
+        "tags": "Tags",
+        "addTag": "Add Tag",
+        "edit": "Edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "derive": "Derive",
+        "close": "Close"
+      },
+      "derive": {
+        "title": "Derive New Asset",
+        "sourceAsset": "Source Asset",
+        "derivationType": "Derivation Type",
+        "types": {
+          "img2img": {
+            "label": "Image to Image",
+            "description": "Generate variations based on original image"
+          },
+          "inpaint": {
+            "label": "Inpaint",
+            "description": "Modify specific regions of the image"
+          },
+          "edit": {
+            "label": "Edit",
+            "description": "Edit image based on prompt"
+          },
+          "remix": {
+            "label": "Remix",
+            "description": "Mix elements from multiple images"
+          }
+        },
+        "assetName": "Derived Asset Name",
+        "assetNamePlaceholder": "Enter derived asset name",
+        "prompt": "Prompt",
+        "promptPlaceholder": "Describe what you want to create...",
+        "promptHint": "Modify the source asset's prompt, or enter a new one",
+        "strength": "Derivation Strength",
+        "strengthMin": "Keep Original (0.1)",
+        "strengthMax": "Full Redraw (1.0)",
+        "strengthHint": "Lower values preserve more original features, higher values create more variation",
+        "hint": "The derivation feature will use AI generation services to create new asset variants. The generation process may take some time, please check progress in Task Center.",
+        "hintTitle": "Hint",
+        "startDerive": "Start Deriving",
+        "deriving": "Processing...",
+        "success": "Derivation request submitted",
+        "cancel": "Cancel",
+        "nameSuffix": " - Derived"
+      }
+    },
+    "preview": {
+      "shot": {
+        "title": "Shot Editor",
+        "shotNumber": "Shot {number}",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe what happens in this shot...",
+        "duration": "Duration",
+        "durationUnit": "seconds"
+      },
+      "episode": {
+        "title": "Episode Editor",
+        "episodeNumber": "Episode {number}",
+        "episodeTitle": "Episode Title",
+        "summary": "Summary",
+        "hook": "Hook",
+        "script": "Script",
+        "scriptPlaceholder": "Write complete script content, including scene descriptions, character dialogue, actions, etc...",
+        "scriptEmptyText": "Click to write script content",
+        "aiButtonTitle": "AI Generate/Optimize Script"
+      },
+      "assetGeneration": {
+        "title": "AI Asset Generation",
+        "subtitle": "Generate images from text descriptions using AI",
+        "assetName": "Asset Name",
+        "assetNamePlaceholder": "Enter asset name...",
+        "prompt": "Describe what you want to create",
+        "promptPlaceholder": "Describe in detail what you want to create...",
+        "promptHint": "Detailed descriptions help AI generate more accurate images",
+        "parameters": "Advanced Parameters",
+        "aspectRatio": "Aspect Ratio",
+        "resolution": "Resolution",
+        "numImages": "Number of Images",
+        "referenceAssets": "Reference Images",
+        "referenceOptional": "Optional",
+        "referenceHint": "Select reference images from the asset library",
+        "noReference": "No reference images selected",
+        "referenceCount": "{count} reference image(s) selected",
+        "generate": "Generate Image",
+        "generating": "Generating...",
+        "cancel": "Cancel",
+        "results": "Generation Results",
+        "savedToLibrary": "Images saved to asset library"
+      }
+    },
+    "timeline": {
+      "toolbar": {
+        "addShot": "Add Shot",
+        "deleteShot": "Delete Shot",
+        "moveUp": "Move Up",
+        "moveDown": "Move Down",
+        "duplicate": "Duplicate",
+        "play": "Play",
+        "pause": "Pause",
+        "zoom": "Zoom"
+      },
+      "errors": {
+        "loadShotsFailed": "Failed to load shots",
+        "addShotFailed": "Failed to add shot",
+        "deleteShotsFailed": "Failed to delete shots",
+        "applyFailed": "Apply failed",
+        "selectShotsForVideo": "Please select shots to generate video first",
+        "shotsWithoutImages": "{count} shot(s) have no images, please generate images first",
+        "selectShotsForExport": "Please select shots to export first",
+        "noExportableVideos": "No videos to export",
+        "downloadFailed": "Download failed: {message}",
+        "exportFailed": "Export failed, please try again"
+      },
+      "success": {
+        "shotAdded": "Shot added",
+        "shotsDeleted": "Deleted {count} shot(s)",
+        "batchVideoTaskStarted": "Started video generation for {count} shot(s)",
+        "videosExported": "Successfully exported {count} video(s)"
+      },
+      "loading": {
+        "preparingExport": "Preparing export...",
+        "packingVideo": "Packing videos ({current}/{total})...",
+        "generatingZip": "Generating zip file..."
+      },
+      "info": {
+        "skippedShots": "Skipped {count} shot(s) without videos"
+      },
+      "warning": {
+        "shotDownloadFailed": "Shot {order} download failed, skipped"
+      }
     }
   }
 }

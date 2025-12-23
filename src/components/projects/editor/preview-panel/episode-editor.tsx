@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Episode } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { updateEpisode } from "@/lib/actions/project";
 import { toast } from "sonner";
@@ -11,7 +10,6 @@ import {
   FileText,
   Zap,
   ScrollText,
-  Sparkles,
 } from "lucide-react";
 import {
   EditableField,
@@ -21,12 +19,14 @@ import {
   SaveStatus,
 } from "@/components/ui/inline-editable-field";
 import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
+import { useTranslations } from "next-intl";
 
 interface EpisodeEditorProps {
   episode: Episode;
 }
 
 export function EpisodeEditor({ episode }: EpisodeEditorProps) {
+  const t = useTranslations("editor.preview.episode");
   const [formData, setFormData] = useState({
     title: episode.title,
     summary: episode.summary || "",
@@ -274,18 +274,18 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
         {/* 剧本内容 */}
         <div className="space-y-2">
           <EditableField
-            label="剧本内容"
+            label={t("script")}
             icon={ScrollText}
             saveStatus={saveStatus}
             onAIGenerate={handleGenerateScript}
             isAIGenerating={isGeneratingScript}
-            aiButtonTitle="AI 生成/优化剧本"
+            aiButtonTitle={t("aiButtonTitle")}
           >
             <EditableTextarea
               value={formData.scriptContent}
               onChange={(value) => setFormData({ ...formData, scriptContent: value })}
-              placeholder="编写完整的剧本内容，包括场景描述、人物对话、动作等..."
-              emptyText="点击编写剧本内容"
+              placeholder={t("scriptPlaceholder")}
+              emptyText={t("scriptEmptyText")}
               textareaClassName="min-h-[300px] font-mono text-sm leading-relaxed"
               minHeight="min-h-[300px]"
             />

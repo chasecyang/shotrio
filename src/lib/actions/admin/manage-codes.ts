@@ -7,6 +7,7 @@ import { redeemCodes, redeemRecords } from "@/lib/db/schemas/payment";
 import { Role } from "@/lib/db/schemas/auth";
 import { eq, desc, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { getErrorMessage } from "../utils/i18n-server";
 
 /**
  * 生成兑换码
@@ -29,22 +30,22 @@ export async function generateRedeemCode(params: {
     });
 
     if (!session?.user) {
-      return { success: false, error: "未登录" };
+      return { success: false, error: await getErrorMessage("notLoggedIn") };
     }
 
     // 检查管理员权限
     if (session.user.role !== Role.ADMIN) {
-      return { success: false, error: "权限不足" };
+      return { success: false, error: await getErrorMessage("insufficientPermissions") };
     }
 
     const { credits, maxUses = 1, expiresAt, description, customCode } = params;
 
     if (credits <= 0) {
-      return { success: false, error: "积分数量必须大于0" };
+      return { success: false, error: await getErrorMessage("creditsRequired") };
     }
 
     if (maxUses <= 0) {
-      return { success: false, error: "最大使用次数必须大于0" };
+      return { success: false, error: await getErrorMessage("maxUsesRequired") };
     }
 
     // 生成兑换码
@@ -60,7 +61,7 @@ export async function generateRedeemCode(params: {
       .limit(1);
 
     if (existing) {
-      return { success: false, error: "兑换码已存在" };
+      return { success: false, error: await getErrorMessage("alreadyExists") };
     }
 
     // 创建兑换码

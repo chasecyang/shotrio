@@ -2,11 +2,11 @@ import { defineRouting } from 'next-intl/routing';
 import { createNavigation } from 'next-intl/navigation';
 
 export const routing = defineRouting({
-  // 支持的所有语言
-  locales: ['zh', 'en'],
+  // Supported languages
+  locales: ['en', 'zh'],
 
-  // 默认语言
-  defaultLocale: 'zh',
+  // Default language
+  defaultLocale: 'en',
 
   // 使用 URL 路径前缀策略
   localePrefix: 'always',

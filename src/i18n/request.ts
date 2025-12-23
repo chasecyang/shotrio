@@ -1,17 +1,17 @@
 import { getRequestConfig } from 'next-intl/server';
 
-// 支持的语言
-export const locales = ['zh', 'en'] as const;
+// Supported languages
+export const locales = ['en', 'zh'] as const;
 export type Locale = (typeof locales)[number];
 
-// 默认语言
-export const defaultLocale: Locale = 'zh';
+// Default language
+export const defaultLocale: Locale = 'en';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  // 这通常对应于 `[locale]` 段
+  // This usually corresponds to the `[locale]` segment
   let locale = await requestLocale;
 
-  // 确保传入的 locale 是有效的
+  // Ensure the incoming locale is valid
   if (!locale || !locales.includes(locale as Locale)) {
     locale = defaultLocale;
   }

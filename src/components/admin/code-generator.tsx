@@ -18,8 +18,11 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Loader2, Copy, Check } from "lucide-react";
 import { generateRedeemCode, batchGenerateRedeemCodes } from "@/lib/actions/admin/manage-codes";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 export function CodeGenerator() {
+  const t = useTranslations("admin.redeemCodes.generator");
+  const tToast = useTranslations("toasts");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,12 +44,12 @@ export function CodeGenerator() {
     const maxUses = parseInt(formData.maxUses);
 
     if (isNaN(credits) || credits <= 0) {
-      toast.error("请输入有效的积分数量");
+      toast.error(tToast("error.enterValidCredits"));
       return;
     }
 
     if (isNaN(maxUses) || maxUses <= 0) {
-      toast.error("请输入有效的使用次数");
+      toast.error(tToast("error.enterValidMaxUses"));
       return;
     }
 
@@ -55,7 +58,7 @@ export function CodeGenerator() {
       if (isBatch) {
         const count = parseInt(formData.count);
         if (isNaN(count) || count <= 0 || count > 1000) {
-          toast.error("批量生成数量必须在1-1000之间");
+          toast.error(tToast("error.enterValidMaxUses"));
           setLoading(false);
           return;
         }
@@ -90,14 +93,14 @@ export function CodeGenerator() {
 
         if (result.success && result.code) {
           setGeneratedCodes([result.code]);
-          toast.success("兑换码生成成功");
+          toast.success(tToast("success.codeGenerated"));
           router.refresh();
         } else {
-          toast.error(result.error || "生成失败");
+          toast.error(result.error || tToast("error.codeGenerationFailed"));
         }
       }
     } catch (error) {
-      toast.error("生成失败，请稍后重试");
+      toast.error(tToast("error.codeGenerationFailed"));
       console.error("生成兑换码失败:", error);
     } finally {
       setLoading(false);
@@ -108,7 +111,7 @@ export function CodeGenerator() {
     const text = generatedCodes.join("\n");
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success("已复制到剪贴板");
+    toast.success(tToast("success.codeCopied"));
     setTimeout(() => setCopied(false), 2000);
   };
 

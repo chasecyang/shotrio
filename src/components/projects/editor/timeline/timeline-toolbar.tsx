@@ -31,6 +31,7 @@ import { useEditor } from "../editor-context";
 import { formatDurationMMSS } from "@/lib/utils/shot-utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface TimelineToolbarProps {
   onAddShot?: () => void;
@@ -43,6 +44,7 @@ interface TimelineToolbarProps {
 
 // 核心控制栏 - 第一行
 function CoreControlBar() {
+  const tToast = useTranslations("toasts");
   const { state, setTimelineZoom, setPlayhead, totalDuration, selectEpisode, startPlayback } = useEditor();
   const { timeline, project, selectedEpisodeId, playbackState, shots } = state;
 
@@ -64,7 +66,7 @@ function CoreControlBar() {
 
   const handlePlayback = () => {
     if (shots.length === 0) {
-      toast.error("没有可播放的分镜");
+      toast.error(tToast("error.noShotsToPlay"));
       return;
     }
     startPlayback();

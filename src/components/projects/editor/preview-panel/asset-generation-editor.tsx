@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
 import { uploadAsset } from "@/lib/actions/asset/upload-asset";
 import { getAsset } from "@/lib/actions/asset";
 import { useTaskPolling } from "@/hooks/use-task-polling";
-import type { Job, AssetImageGenerationResult } from "@/types/job";
+import type { AssetImageGenerationResult } from "@/types/job";
 import type { AssetWithTags } from "@/types/asset";
 import { hasEnoughCredits } from "@/lib/actions/credits/balance";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
@@ -76,6 +76,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
   const { assetGeneration } = state;
   const t = useTranslations("credits");
+  const tToast = useTranslations("toasts");
 
   // 使用任务轮询
   const { jobs, refresh: refreshJobs } = useTaskPolling();
@@ -139,11 +140,11 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         }, 2000);
       } catch (error) {
         console.error("解析任务结果失败:", error);
-        toast.error("解析结果失败");
+        toast.error(tToast("error.parseResultFailed"));
       }
     } else if (currentJob.status === "failed") {
       // 任务失败
-      toast.error(currentJob.errorMessage || "生成失败");
+      toast.error(currentJob.errorMessage || tToast("error.generationFailed"));
       setCurrentJobId(null);
     }
   }, [currentJob, uploadedImages]);
@@ -226,7 +227,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         const { assetId } = JSON.parse(assetData);
         if (assetId && !assetGeneration.selectedSourceAssets.includes(assetId)) {
           setSelectedSourceAssets([...assetGeneration.selectedSourceAssets, assetId]);
-          toast.success("已添加参考素材");
+          toast.success(tToast("success.referenceAssetAdded"));
         }
         return;
       } catch (error) {
@@ -261,9 +262,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       }));
       
       setUploadedImages(prev => [...prev, ...newImages]);
-      toast.success(`已添加 ${files.length} 张图片`);
-    } catch (error) {
-      toast.error("添加图片失败");
+      toast.success(`${files.length} images added`);
+    } catch {
+      toast.error(tToast("error.addImageFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -290,7 +291,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // 生成图片 - 创建后台任务
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
-      toast.error("请输入提示词");
+      toast.error(tToast("error.promptRequired"));
       return;
     }
 
@@ -311,9 +312,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       let result;
       
       // 如果有上传的图片，先上传到服务器
-      let uploadedAssetIds: string[] = [];
+      const uploadedAssetIds: string[] = [];
       if (uploadedImages.length > 0) {
-        toast.info("正在上传参考图片...");
+        toast.info(tToast("info.uploadingReferenceImages"));
         for (const img of uploadedImages) {
           const uploadResult = await uploadAsset({
             projectId,
@@ -354,7 +355,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
       if (result.success && result.jobId) {
         setCurrentJobId(result.jobId);
-        toast.success("任务已创建，AI正在处理中...");
+        toast.success(tToast("success.taskCreatedAiProcessing"));
         
         // 立即刷新任务列表
         refreshJobs();
@@ -363,7 +364,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       }
     } catch (error) {
       console.error("创建任务失败:", error);
-      toast.error("创建任务失败");
+      toast.error(tToast("error.createTaskFailed"));
     }
   }, [
     prompt,
@@ -375,6 +376,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     assetGeneration,
     refreshJobs,
     state.project?.userId,
+    t,
   ]);
 
   return (
@@ -396,27 +398,27 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
               <Sparkles className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium mb-2">你可以创作：</h3>
+              <h3 className="text-sm font-medium mb-2">{t("guide.title")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className="flex items-start gap-2">
                   <User className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-medium">角色</span>
-                    <span className="text-muted-foreground"> - 为剧本中的人物设计形象</span>
+                    <span className="font-medium">{t("guide.character").split(" - ")[0]}</span>
+                    <span className="text-muted-foreground"> - {t("guide.character").split(" - ")[1]}</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-medium">场景</span>
-                    <span className="text-muted-foreground"> - 创建故事发生的环境和地点</span>
+                    <span className="font-medium">{t("guide.scene").split(" - ")[0]}</span>
+                    <span className="text-muted-foreground"> - {t("guide.scene").split(" - ")[1]}</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <Package className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-medium">道具</span>
-                    <span className="text-muted-foreground"> - 生成剧情所需的物品和元素</span>
+                    <span className="font-medium">{t("guide.prop").split(" - ")[0]}</span>
+                    <span className="text-muted-foreground"> - {t("guide.prop").split(" - ")[1]}</span>
                   </div>
                 </div>
               </div>

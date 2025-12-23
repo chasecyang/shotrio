@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import { 
   HelpCircle, 
   Sparkles, 
@@ -26,6 +27,8 @@ interface SaveStatusBadgeProps {
 }
 
 export function SaveStatusBadge({ status, className }: SaveStatusBadgeProps) {
+  const t = useTranslations("common");
+  
   if (status === "idle") {
     return null;
   }
@@ -41,19 +44,19 @@ export function SaveStatusBadge({ status, className }: SaveStatusBadgeProps) {
       {status === "saving" && (
         <>
           <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-          <span className="text-muted-foreground">保存中...</span>
+          <span className="text-muted-foreground">{t("saving")}</span>
         </>
       )}
       {status === "saved" && (
         <>
           <Check className="w-3.5 h-3.5 text-green-600" />
-          <span className="text-green-600">已保存</span>
+          <span className="text-green-600">{t("saved")}</span>
         </>
       )}
       {status === "error" && (
         <>
           <AlertCircle className="w-3.5 h-3.5 text-destructive" />
-          <span className="text-destructive">保存失败</span>
+          <span className="text-destructive">{t("saveFailed")}</span>
         </>
       )}
     </div>
@@ -74,6 +77,8 @@ export function AIGenerationPanel({
   onReject,
   className,
 }: AIGenerationPanelProps) {
+  const t = useTranslations("common");
+  
   return (
     <div
       className={cn(
@@ -85,7 +90,7 @@ export function AIGenerationPanel({
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-purple-700 flex items-center gap-1.5">
           <Sparkles className="w-3 h-3" />
-          AI 建议
+          {t("aiSuggestion")}
         </span>
         <div className="flex gap-1">
           <Button
@@ -95,7 +100,7 @@ export function AIGenerationPanel({
             onClick={onAccept}
           >
             <Check className="w-3.5 h-3.5 mr-1" />
-            接受
+            {t("accept")}
           </Button>
           <Button
             size="sm"
@@ -104,7 +109,7 @@ export function AIGenerationPanel({
             onClick={onReject}
           >
             <X className="w-3.5 h-3.5 mr-1" />
-            拒绝
+            {t("reject")}
           </Button>
         </div>
       </div>
@@ -136,9 +141,11 @@ export function EditableInput({
   placeholder,
   className,
   inputClassName,
-  emptyText = "点击编辑",
+  emptyText,
   autoFocus = true,
 }: EditableInputProps) {
+  const t = useTranslations("common");
+  const defaultEmptyText = emptyText || t("clickToEdit");
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -201,7 +208,7 @@ export function EditableInput({
           {value}
         </div>
       ) : (
-        <div className="text-xs text-muted-foreground/60 italic">{emptyText}</div>
+        <div className="text-xs text-muted-foreground/60 italic">{defaultEmptyText}</div>
       )}
     </div>
   );
@@ -226,11 +233,13 @@ export function EditableTextarea({
   placeholder,
   className,
   textareaClassName,
-  emptyText = "点击编辑",
+  emptyText,
   rows = 3,
   minHeight = "min-h-[60px]",
   autoFocus = true,
 }: EditableTextareaProps) {
+  const t = useTranslations("common");
+  const defaultEmptyText = emptyText || t("clickToEdit");
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -308,7 +317,7 @@ export function EditableTextarea({
           {value}
         </div>
       ) : (
-        <div className="text-xs text-muted-foreground/60 italic">{emptyText}</div>
+        <div className="text-xs text-muted-foreground/60 italic">{defaultEmptyText}</div>
       )}
     </div>
   );
@@ -334,10 +343,12 @@ export function EditableField({
   saveStatus = "idle",
   onAIGenerate,
   isAIGenerating = false,
-  aiButtonTitle = "AI 生成/优化",
+  aiButtonTitle,
   children,
   className,
 }: EditableFieldProps) {
+  const t = useTranslations("common");
+  const defaultAiButtonTitle = aiButtonTitle || t("aiGenerateOptimize");
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center justify-between">
@@ -365,7 +376,7 @@ export function EditableField({
             className="h-6 w-6 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
             onClick={onAIGenerate}
             disabled={isAIGenerating}
-            title={aiButtonTitle}
+            title={defaultAiButtonTitle}
           >
             {isAIGenerating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

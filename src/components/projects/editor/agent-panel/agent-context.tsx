@@ -71,7 +71,7 @@ const initialState: AgentState = {
   currentConversationId: null,
   conversations: [],
   isLoadingConversations: false,
-  isNewConversation: false,
+  isNewConversation: true, // 默认进入新对话模式，提升用户体验
 };
 
 /**
@@ -247,6 +247,8 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       if (result.success && result.messages) {
         dispatch({ type: "LOAD_HISTORY", payload: result.messages });
         dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
+        // 加载已有对话时，退出新对话模式
+        dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
       } else {
         toast.error(result.error || "加载对话失败");
       }
@@ -273,10 +275,11 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     try {
       const result = await deleteConversation(conversationId);
       if (result.success) {
-        // 如果删除的是当前对话，清空消息
+        // 如果删除的是当前对话，回到新对话状态
         if (state.currentConversationId === conversationId) {
           dispatch({ type: "CLEAR_MESSAGES" });
           dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
+          dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
         }
         await refreshConversations();
         toast.success("已删除对话");

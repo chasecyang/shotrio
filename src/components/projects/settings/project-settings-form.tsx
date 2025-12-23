@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useTranslations } from "next-intl";
 
 interface ProjectSettingsFormProps {
   project: ProjectDetail;
@@ -34,6 +35,9 @@ interface ProjectSettingsFormProps {
 
 export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProps) {
   const router = useRouter();
+  const t = useTranslations("projects.settings");
+  const tCommon = useTranslations("common");
+  const tToasts = useTranslations("toasts");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [systemStyles, setSystemStyles] = useState<ArtStyle[]>([]);
@@ -58,7 +62,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
         setSystemStyles(system);
       } catch (error) {
         console.error("加载风格列表失败:", error);
-        toast.error("加载风格列表失败");
+        toast.error(tToasts("error.loadStylesFailed"));
       } finally {
         setLoadingStyles(false);
       }
@@ -68,7 +72,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
 
   async function handleSave() {
     if (!formData.title.trim()) {
-      toast.error("请输入项目名称");
+      toast.error(tToasts("error.enterProjectName"));
       return;
     }
 
@@ -82,14 +86,14 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
       });
 
       if (result.success) {
-        toast.success("保存成功");
+        toast.success(tToasts("success.settingsSaved"));
         // 刷新页面数据
         router.refresh();
       } else {
-        toast.error(result.error || "保存失败");
+        toast.error(result.error || tToasts("error.saveFailed"));
       }
     } catch (error) {
-      toast.error("保存失败，请重试");
+      toast.error(tToasts("error.saveFailed"));
       console.error(error);
     } finally {
       setLoading(false);
@@ -102,13 +106,13 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
       const result = await deleteProject(project.id);
 
       if (result.success) {
-        toast.success("项目已删除");
+        toast.success(tToasts("success.projectDeleted"));
         router.push("/projects");
       } else {
-        toast.error(result.error || "删除失败");
+        toast.error(result.error || tToasts("error.deleteFailed"));
       }
     } catch (error) {
-      toast.error("删除失败，请重试");
+      toast.error(tToasts("error.deleteFailed"));
       console.error(error);
     } finally {
       setDeleting(false);
@@ -118,16 +122,16 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">项目设置</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          管理项目的基本信息和配置
+          {t("description")}
         </p>
       </div>
 
       <Card className="p-6">
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">项目名称 *</Label>
+            <Label htmlFor="title">{t("projectName")}</Label>
             <Input
               id="title"
               value={formData.title}
@@ -135,12 +139,12 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
                 setFormData({ ...formData, title: e.target.value })
               }
               disabled={loading}
-              placeholder="例如：霸道总裁爱上我"
+              placeholder={t("projectNamePlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">项目简介</Label>
+            <Label htmlFor="description">{t("projectDescription")}</Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -148,16 +152,16 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
                 setFormData({ ...formData, description: e.target.value })
               }
               disabled={loading}
-              placeholder="简单描述这个项目..."
+              placeholder={t("projectDescriptionPlaceholder")}
               rows={3}
             />
           </div>
 
           {/* 美术风格选择 */}
           <div className="space-y-3" id="style">
-            <Label>美术风格</Label>
+            <Label>{t("artStyle")}</Label>
             <p className="text-xs text-muted-foreground">
-              选择一个预设风格或自定义风格，应用于项目中所有角色和场景的图片生成
+              {t("artStyleDescription")}
             </p>
             
             {loadingStyles ? (
@@ -167,8 +171,8 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
             ) : (
               <Tabs defaultValue="preset" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="preset">预设风格</TabsTrigger>
-                  <TabsTrigger value="custom">自定义风格</TabsTrigger>
+                  <TabsTrigger value="preset">{t("presetStyle")}</TabsTrigger>
+                  <TabsTrigger value="custom">{t("customStyle")}</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="preset" className="mt-4">
@@ -187,11 +191,11 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
                         setFormData({ ...formData, stylePrompt: e.target.value, styleId: null })
                       }
                       disabled={loading}
-                      placeholder="例如：Cyberpunk style, neon lights, 8k resolution, cinematic lighting"
+                      placeholder={t("customStylePlaceholder")}
                       rows={4}
                     />
                     <p className="text-xs text-muted-foreground">
-                      输入自定义的英文风格描述词，用于 AI 生成图像时的全局风格提示
+                      {t("customStyleHint")}
                     </p>
                   </div>
                 </TabsContent>
@@ -203,7 +207,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
             <Button onClick={handleSave} disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {!loading && <Save className="mr-2 h-4 w-4" />}
-              保存设置
+              {t("saveButton")}
             </Button>
           </div>
         </div>
@@ -212,9 +216,9 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
       <Card className="p-6 border-destructive">
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-destructive">危险区域</h3>
+            <h3 className="text-lg font-semibold text-destructive">{t("dangerZone")}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              删除项目后，所有相关数据将永久丢失，无法恢复
+              {t("dangerZoneDescription")}
             </p>
           </div>
 
@@ -223,23 +227,23 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
               <Button variant="destructive" disabled={deleting}>
                 {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {!deleting && <Trash2 className="mr-2 h-4 w-4" />}
-                删除项目
+                {t("deleteButton")}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>确认删除项目？</AlertDialogTitle>
+                <AlertDialogTitle>{t("deleteConfirmTitle")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  此操作无法撤销。项目「{project.title}」及其所有数据（包括分集、角色、分镜等）将被永久删除。
+                  {t("deleteConfirmDescription", { title: project.title })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogCancel>{t("deleteCancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  确认删除
+                  {t("deleteConfirm")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

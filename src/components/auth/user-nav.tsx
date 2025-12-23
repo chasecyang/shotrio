@@ -118,7 +118,7 @@ function UserNavSidebar({ user }: { user: UserNavProps['user'] }) {
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push('/credits')} className="cursor-pointer">
                 <Wallet className="mr-2 h-4 w-4" />
-                <span>积分中心</span>
+                <span>{t('nav.creditsCenter')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
@@ -224,7 +224,7 @@ function UserNavDefault({ user }: { user: UserNavProps['user'] }) {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => router.push('/credits')} className="cursor-pointer">
             <Wallet className="mr-2 h-4 w-4" />
-            <span>积分中心</span>
+            <span>{t('nav.creditsCenter')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />

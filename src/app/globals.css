@@ -4,8 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-sans), system-ui, sans-serif;
-  --font-heading: var(--font-heading), system-ui, sans-serif;
+  /* 英文优先的字体栈（默认） */
+  --font-sans: var(--font-sans-en), var(--font-zh), system-ui, sans-serif;
+  --font-heading: var(--font-heading-en), var(--font-zh), system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   --color-background: var(--background);
@@ -161,19 +162,53 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
+  /* 中文页面字体优先级 */
+  html[lang="zh"] {
+    --font-sans: var(--font-zh), var(--font-sans-en), system-ui, sans-serif;
+    --font-heading: var(--font-zh), var(--font-heading-en), system-ui, sans-serif;
+  }
+  
+  /* 英文页面字体优先级 */
+  html[lang="en"] {
+    --font-sans: var(--font-sans-en), var(--font-zh), system-ui, sans-serif;
+    --font-heading: var(--font-heading-en), var(--font-zh), system-ui, sans-serif;
+  }
+  
   /* Typography Scale Overrides */
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
   }
   
   h1 {
-    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    font-weight: 900; /* Extra Bold 更有冲击力 */
     letter-spacing: -0.03em;
   }
   
+  /* 中文标题字间距调整 - 黑体需要适度的间距 */
+  html[lang="zh"] h1 {
+    letter-spacing: -0.01em;
+    font-weight: 900; /* 使用最粗字重 */
+  }
+  
   h2 {
-    @apply text-3xl md:text-4xl font-semibold;
+    @apply text-3xl md:text-4xl;
+    font-weight: 700; /* Bold */
     letter-spacing: -0.02em;
+  }
+  
+  html[lang="zh"] h2 {
+    letter-spacing: 0;
+    font-weight: 700;
+  }
+  
+  h3 {
+    font-weight: 600; /* Semi Bold */
+  }
+  
+  html[lang="zh"] h3 {
+    letter-spacing: 0;
+    font-weight: 600;
   }
 }
 

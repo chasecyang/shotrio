@@ -2,17 +2,20 @@ import { Link } from "@/i18n/routing";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Palette, ArrowRight, Sparkles } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export default async function AdminPage() {
+  const t = await getTranslations("admin");
+  
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-4xl font-bold text-foreground">
-          管理中心
+          {t("title")}
         </h1>
         <p className="text-lg text-muted-foreground">
-          管理系统设置和内容
+          {t("subtitle")}
         </p>
       </div>
 
@@ -25,18 +28,18 @@ export default async function AdminPage() {
                 <Palette className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <CardTitle className="text-xl">美术风格</CardTitle>
-                <CardDescription>管理系统预设风格</CardDescription>
+                <CardTitle className="text-xl">{t("dashboard.artStyles.title")}</CardTitle>
+                <CardDescription>{t("dashboard.artStyles.description")}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              管理和配置系统美术风格库，为每个风格生成预览图
+              {t("dashboard.artStyles.detail")}
             </p>
             <Button asChild className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
               <Link href="/admin/art-styles" className="flex items-center justify-center gap-2">
-                进入管理
+                {t("dashboard.artStyles.action")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
@@ -51,17 +54,17 @@ export default async function AdminPage() {
                 <Sparkles className="w-6 h-6 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="text-xl">更多功能</CardTitle>
-                <CardDescription>即将推出</CardDescription>
+                <CardTitle className="text-xl">{t("dashboard.moreFeatures.title")}</CardTitle>
+                <CardDescription>{t("dashboard.moreFeatures.description")}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              更多管理功能正在开发中...
+              {t("dashboard.moreFeatures.detail")}
             </p>
             <Button disabled className="w-full">
-              敬请期待
+              {t("dashboard.moreFeatures.action")}
             </Button>
           </CardContent>
         </Card>
@@ -75,10 +78,9 @@ export default async function AdminPage() {
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-semibold text-foreground">提示</h3>
+              <h3 className="font-semibold text-foreground">{t("dashboard.hint.title")}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                这是系统管理面板，只有管理员才能访问。你可以在这里管理系统的各项设置和内容。
-                使用左侧导航栏快速访问不同的管理功能。
+                {t("dashboard.hint.description")}
               </p>
             </div>
           </div>

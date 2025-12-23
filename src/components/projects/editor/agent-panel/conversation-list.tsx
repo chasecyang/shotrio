@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, memo } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -31,15 +32,15 @@ interface ConversationListProps {
   onDeleteConversation: (conversationId: string) => void;
   conversations: Conversation[];
   isLoading?: boolean;
-  // 可选的新建对话回调
+  // Optional new conversation callback
   onCreateConversation?: () => void;
 }
 
-// 状态图标和样式
-const statusConfig = {
+// Status icons and styles (labels will be translated)
+const getStatusConfig = (t: (key: string) => string) => ({
   awaiting_approval: {
     icon: AlertCircle,
-    label: "待批准",
+    label: t('editor.agent.conversationStatus.awaitingApproval'),
     className: "text-orange-600 dark:text-orange-500",
     badgeClassName: "bg-orange-500/20 text-orange-600 dark:text-orange-500 font-semibold",
     animationClassName: "animate-bounce",
@@ -47,7 +48,7 @@ const statusConfig = {
   },
   active: {
     icon: Clock,
-    label: "运行中",
+    label: t('editor.agent.conversationStatus.active'),
     className: "text-blue-500",
     badgeClassName: "bg-blue-500/10 text-blue-500",
     animationClassName: "animate-pulse",
@@ -55,15 +56,15 @@ const statusConfig = {
   },
   completed: {
     icon: CheckCircle,
-    label: "已完成",
+    label: t('editor.agent.conversationStatus.completed'),
     className: "text-muted-foreground",
     badgeClassName: "bg-muted/50 text-muted-foreground",
     animationClassName: "",
     cardClassName: "opacity-70",
   },
-};
+});
 
-// 使用 React.memo 优化，避免不必要的重渲染
+// Use React.memo optimization to avoid unnecessary re-renders
 export const ConversationList = memo(function ConversationList({
   currentConversationId,
   onSelectConversation,
@@ -72,8 +73,10 @@ export const ConversationList = memo(function ConversationList({
   isLoading = false,
   onCreateConversation,
 }: ConversationListProps) {
+  const t = useTranslations();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  const statusConfig = getStatusConfig(t);
 
   const handleDeleteClick = (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,7 +92,7 @@ export const ConversationList = memo(function ConversationList({
     setDeleteDialogOpen(false);
   };
 
-  // 格式化时间
+  // Format time
   const formatTime = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
@@ -97,11 +100,11 @@ export const ConversationList = memo(function ConversationList({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return "刚刚";
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
-    return new Date(date).toLocaleDateString("zh-CN");
+    if (minutes < 1) return t('editor.agent.conversationList.justNow');
+    if (minutes < 60) return t('editor.agent.conversationList.minutesAgo', { minutes });
+    if (hours < 24) return t('editor.agent.conversationList.hoursAgo', { hours });
+    if (days < 7) return t('editor.agent.conversationList.daysAgo', { days });
+    return new Date(date).toLocaleDateString();
   };
 
   return (
@@ -115,7 +118,7 @@ export const ConversationList = memo(function ConversationList({
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            新建对话
+            {t('editor.agent.conversationList.newConversation')}
           </Button>
         </div>
       )}
@@ -131,10 +134,7 @@ export const ConversationList = memo(function ConversationList({
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
               <MessageSquare className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                暂无对话
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                点击 + 创建新对话
+                {t('editor.agent.conversationList.empty')}
               </p>
             </div>
           ) : (
@@ -172,7 +172,7 @@ export const ConversationList = memo(function ConversationList({
                         variant="ghost"
                         onClick={(e) => handleDeleteClick(conv.id, e)}
                         className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="删除对话"
+                        title={t('common.delete')}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -203,15 +203,15 @@ export const ConversationList = memo(function ConversationList({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogTitle>{t('editor.agent.conversationList.deleteConfirm')}</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除这个对话吗？此操作无法撤销。
+              {t('editor.agent.conversationList.deleteDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete}>
-              删除
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -115,6 +115,11 @@ export interface PendingAction {
   creditCost?: CreditCost;
   // 操作状态
   status: "pending" | "accepted" | "rejected";
+  // 拒绝相关字段
+  rejectedAt?: string;
+  rejectionReason?: string;
+  // 接受相关字段
+  acceptedAt?: string;
 }
 
 /**

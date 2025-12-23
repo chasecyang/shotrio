@@ -38,7 +38,7 @@ export async function generateShotVideo(shotId: string): Promise<{
     }
 
     // 检查是否有关联的图片
-    if (!(shotData.imageAsset as any)?.imageUrl) {
+    if (!shotData.imageAsset || !('imageUrl' in shotData.imageAsset) || !shotData.imageAsset.imageUrl) {
       return { success: false, error: "该分镜没有图片，请先生成图片" };
     }
 
@@ -53,14 +53,14 @@ export async function generateShotVideo(shotId: string): Promise<{
 
     // 创建视频生成任务
     const { createJob } = await import("@/lib/actions/job");
-    const episode = shotData.episode as { projectId?: string } | null;
+    const episode = shotData.episode && 'projectId' in shotData.episode ? shotData.episode : null;
     const result = await createJob({
       userId: session.user.id,
       projectId: episode?.projectId || "",
       type: "shot_video_generation",
       inputData: {
         shotId,
-        imageUrl: (shotData.imageAsset as any).imageUrl,
+        imageUrl: shotData.imageAsset.imageUrl,
         prompt: videoPrompt,
         duration,
         regenerate: false,

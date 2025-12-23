@@ -11,6 +11,7 @@ import { useEditor } from "../editor-context";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/shot-utils";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 interface ShotClipProps {
   shot: ShotDetail;
@@ -20,6 +21,7 @@ interface ShotClipProps {
 }
 
 export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipProps) {
+  const tToast = useTranslations("toasts");
   const { state, dispatch } = useEditor();
   const [isResizing, setIsResizing] = useState(false);
   const [originalDuration, setOriginalDuration] = useState(0);
@@ -78,7 +80,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
               duration: updatedShot.duration,
             });
             if (!result.success) {
-              toast.error("更新时长失败");
+              toast.error(tToast("error.updateDurationFailed"));
               // 恢复原始时长
               const restoredShots = state.shots.map((s) =>
                 s.id === shot.id ? { ...s, duration: originalDuration } : s
@@ -87,7 +89,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
             }
           } catch (error) {
             console.error(error);
-            toast.error("更新时长失败");
+            toast.error(tToast("error.updateDurationFailed"));
           }
         }
       };
@@ -120,7 +122,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
       const data = e.dataTransfer.getData("application/json");
       if (!data) return;
 
-      const { assetId, assetType } = JSON.parse(data);
+      const { assetId } = JSON.parse(data);
       if (!assetId) return;
 
       // 更新分镜关联的素材
@@ -129,15 +131,15 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
       });
 
       if (result.success) {
-        toast.success("素材已应用到分镜");
+        toast.success(tToast("success.assetApplied"));
         // 刷新分镜数据
         dispatch({ type: "UPDATE_SHOT", payload: { ...shot, imageAssetId: assetId } });
       } else {
-        toast.error(result.error || "应用失败");
+        toast.error(result.error || tToast("error.applyAssetFailed"));
       }
     } catch (error) {
       console.error("应用素材失败:", error);
-      toast.error("应用素材失败");
+      toast.error(tToast("error.applyAssetFailed"));
     }
   }, [shot, dispatch]);
 

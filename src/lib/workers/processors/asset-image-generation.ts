@@ -44,7 +44,6 @@ export async function processAssetImageGeneration(
     name: providedName,
     tags: providedTags,
     aspectRatio = "16:9",
-    resolution = "2K",
     numImages = 1,
     sourceAssetIds = [],
     mode,

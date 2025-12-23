@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-context";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Bot, Info, Square } from "lucide-react";
+import { Send, Bot, Square } from "lucide-react";
 import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation } from "@/lib/actions/conversation/crud";
@@ -40,6 +41,7 @@ function isShotRelatedFunction(functionName: string): boolean {
 
 export function AgentPanel({ projectId }: AgentPanelProps) {
   const agent = useAgent();
+  const t = useTranslations();
   
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -272,7 +274,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       if (agent.state.isNewConversation || !conversationId) {
         const result = await createConversation({ 
           projectId,
-          title: "新对话" // 临时标题，稍后会被AI生成的标题替换
+          title: t('editor.agent.panel.newConversation') // 临时标题，稍后会被AI生成的标题替换
         });
         
         if (!result.success || !result.conversationId) {
@@ -369,8 +371,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             </div>
             <h3 className="text-sm font-semibold">
               {agent.state.isNewConversation 
-                ? "新对话" 
-                : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || "AI 助手"}
+                ? t('editor.agent.panel.newConversation')
+                : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
             </h3>
           </div>
         </div>
@@ -379,21 +381,14 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         <div className="flex-1 overflow-hidden">
           <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden">
             <div className="py-2">
-              {!agent.state.currentConversationId && !agent.state.isNewConversation ? (
-                <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                  <Info className="mb-4 h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    请先选择或创建一个对话
-                  </p>
-                </div>
-              ) : agent.state.isNewConversation || (agent.state.messages.length === 0 && !isProcessing) ? (
+              {agent.state.isNewConversation || (agent.state.messages.length === 0 && !isProcessing) ? (
                 <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                   <Bot className="mb-4 h-12 w-12 text-muted-foreground" />
                   <p className="text-lg font-medium mb-2">
-                    {agent.state.isNewConversation ? "开始新对话" : "开始对话"}
+                    {agent.state.isNewConversation ? t('editor.agent.panel.startNewConversation') : t('editor.agent.panel.startConversation')}
                   </p>
                   <p className="text-sm text-muted-foreground max-w-md">
-                    告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等
+                    {t('editor.agent.panel.welcomeMessage')}
                   </p>
                 </div>
               ) : (
@@ -419,24 +414,17 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                agent.state.currentConversationId || agent.state.isNewConversation
-                  ? "描述你想要做什么..."
-                  : "请先选择或创建对话"
-              }
+              placeholder={t('editor.agent.chatInput.placeholder')}
               className="min-h-[60px] max-h-[120px] resize-none"
-              disabled={isProcessing || (!agent.state.currentConversationId && !agent.state.isNewConversation)}
+              disabled={isProcessing}
             />
             <Button
               onClick={isProcessing ? handleStop : handleSend}
-              disabled={
-                (!isProcessing && !input.trim()) ||
-                (!agent.state.currentConversationId && !agent.state.isNewConversation)
-              }
+              disabled={!isProcessing && !input.trim()}
               size="icon"
               variant={isProcessing ? "destructive" : "default"}
               className="h-[60px] w-[60px] shrink-0"
-              title={isProcessing ? "停止生成" : "发送消息"}
+              title={isProcessing ? t('editor.agent.chatInput.stopGeneration') : t('editor.agent.chatInput.sendMessage')}
             >
               {isProcessing ? (
                 <Square className="h-5 w-5" />
@@ -446,7 +434,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             </Button>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            {isProcessing ? "点击停止按钮中断生成" : "Enter 发送 · Shift+Enter 换行"}
+            {isProcessing ? t('editor.agent.chatInput.stopToInterrupt') : t('editor.agent.chatInput.enterToSend')}
           </p>
         </div>
     </div>

@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TaskProgressBar } from "@/components/tasks/task-progress-bar";
-import { getUserJobs, cancelJob, retryJob, getJobDetail } from "@/lib/actions/job/user-operations";
+import { getUserJobs, cancelJob, retryJob } from "@/lib/actions/job/user-operations";
 import { getJobsDetails, type JobDetails } from "@/lib/actions/job/details";
 import { toast } from "sonner";
 import { useEditor } from "../editor/editor-context";
@@ -293,7 +293,7 @@ function TaskNodeItem({
   // 注意：character_extraction 和 scene_extraction 在资源面板中显示横幅，不需要在这里查看
   const canView = job.status === "completed" && 
                   job.type && 
-                  VIEWABLE_TASK_TYPES.includes(job.type as any) &&
+                  VIEWABLE_TASK_TYPES.includes(job.type) &&
                   !job.isImported;
 
   const isCompleted = job.status === "completed" || job.status === "failed" || job.status === "cancelled";

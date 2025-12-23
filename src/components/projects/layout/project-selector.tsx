@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createProject } from "@/lib/actions/project";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface Project {
   id: string;
@@ -32,6 +33,7 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorProps) {
+  const tToast = useTranslations("toasts");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const router = useRouter();
@@ -53,7 +55,7 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
 
   const handleCreateProject = async () => {
     if (!newProject.title.trim()) {
-      toast.error("请输入项目名称");
+      toast.error(tToast("error.enterProjectName"));
       return;
     }
 
@@ -65,16 +67,16 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
       });
 
       if (result.success && result.data) {
-        toast.success("项目创建成功");
+        toast.success(tToast("success.projectCreated"));
         setDialogOpen(false);
         setNewProject({ title: "", description: "" });
         // 导航到新项目
         router.push(`/projects/${result.data.id}/editor`);
       } else {
-        toast.error(result.error || "创建失败");
+        toast.error(result.error || tToast("error.projectCreationFailed"));
       }
     } catch (error) {
-      toast.error("创建失败，请重试");
+      toast.error(tToast("error.projectCreationFailed"));
       console.error(error);
     } finally {
       setCreating(false);

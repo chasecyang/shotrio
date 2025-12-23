@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -52,19 +53,17 @@ import {
   Maximize2,
 } from "lucide-react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
-import { AssetWithTags, hasAssetTag, parseAssetMeta } from "@/types/asset";
+import { AssetWithTags, hasAssetTag } from "@/types/asset";
 import { updateAsset, deleteAsset } from "@/lib/actions/asset";
 import { addAssetTag, removeAssetTag } from "@/lib/actions/asset";
 import { PRESET_TAGS, isPresetTag } from "@/lib/constants/asset-tags";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 interface AssetDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   asset: AssetWithTags | null;
-  onEdit: (asset: AssetWithTags) => void;
   onDerive: (asset: AssetWithTags) => void;
   onDeleted?: () => void;
   onUpdated?: () => void;
@@ -74,11 +73,11 @@ export function AssetDetailDialog({
   open,
   onOpenChange,
   asset,
-  onEdit,
   onDerive,
   onDeleted,
   onUpdated,
 }: AssetDetailDialogProps) {
+  const tToast = useTranslations("toasts");
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -96,8 +95,6 @@ export function AssetDetailDialog({
 
   if (!asset) return null;
 
-  const meta = parseAssetMeta(asset.meta);
-  
   // 获取可用的预设标签（排除已添加的）
   const availablePresetTags = PRESET_TAGS.filter(
     tag => !hasAssetTag(asset, tag)
@@ -113,7 +110,7 @@ export function AssetDetailDialog({
     try {
       const result = await updateAsset(asset.id, { name: editedName.trim() });
       if (result.success) {
-        toast.success("名称已更新");
+        toast.success(tToast("success.nameUpdated"));
         setIsEditingName(false);
         if (onUpdated) {
           onUpdated();
@@ -123,7 +120,7 @@ export function AssetDetailDialog({
       }
     } catch (error) {
       console.error(error);
-      toast.error("更新失败");
+      toast.error(tToast("error.updateFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -134,7 +131,7 @@ export function AssetDetailDialog({
     try {
       const result = await deleteAsset(asset.id);
       if (result.success) {
-        toast.success("素材已删除");
+        toast.success(tToast("success.assetDeleted"));
         setShowDeleteDialog(false);
         onOpenChange(false);
         if (onDeleted) {
@@ -145,7 +142,7 @@ export function AssetDetailDialog({
       }
     } catch (error) {
       console.error(error);
-      toast.error("删除失败");
+      toast.error(tToast("error.deleteFailed"));
     } finally {
       setIsDeleting(false);
     }
@@ -161,7 +158,7 @@ export function AssetDetailDialog({
       });
 
       if (result.success) {
-        toast.success("标签已添加");
+        toast.success(tToast("success.tagAdded"));
         setNewTagValue("");
         setTagComboOpen(false);
         if (onUpdated) {
@@ -172,7 +169,7 @@ export function AssetDetailDialog({
       }
     } catch (error) {
       console.error(error);
-      toast.error("添加标签失败");
+      toast.error(tToast("error.addTagFailed"));
     }
   };
 
@@ -180,7 +177,7 @@ export function AssetDetailDialog({
     try {
       const result = await removeAssetTag(tagId);
       if (result.success) {
-        toast.success("标签已删除");
+        toast.success(tToast("success.tagRemoved"));
         if (onUpdated) {
           onUpdated();
         }
@@ -189,7 +186,7 @@ export function AssetDetailDialog({
       }
     } catch (error) {
       console.error(error);
-      toast.error("删除标签失败");
+      toast.error(tToast("error.removeTagFailed"));
     }
   };
 

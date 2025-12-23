@@ -6,6 +6,7 @@ import { Images, Upload, User, MapPin, Package, Sparkles, LucideIcon } from "luc
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useEditor } from "../editor-context";
+import { useTranslations } from "next-intl";
 
 interface AssetListProps {
   assets: AssetWithTags[];
@@ -42,6 +43,7 @@ export function AssetList({
   onUpload,
 }: AssetListProps) {
   const { state, selectResource } = useEditor();
+  const t = useTranslations("projects.assets");
   const { project } = state;
 
   // 打开 AI 创作编辑器
@@ -72,9 +74,9 @@ export function AssetList({
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mb-4 mx-auto">
               <Images className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-base font-semibold mb-1.5">开始创建你的创作素材库</h3>
+            <h3 className="text-base font-semibold mb-1.5">{t("empty.title")}</h3>
             <p className="text-sm text-muted-foreground">
-              创作素材包括角色、场景、道具等图片，用于构建你的故事世界
+              {t("empty.description")}
             </p>
           </div>
 
@@ -82,18 +84,18 @@ export function AssetList({
           <div className="space-y-2">
             <EmptyStateItem
               icon={User}
-              title="角色图片"
-              description="主角、配角的形象设计"
+              title={t("empty.categories.character").split(" - ")[0]}
+              description={t("empty.categories.character").split(" - ")[1]}
             />
             <EmptyStateItem
               icon={MapPin}
-              title="场景图片"
-              description="故事发生的地点和环境"
+              title={t("empty.categories.scene").split(" - ")[0]}
+              description={t("empty.categories.scene").split(" - ")[1]}
             />
             <EmptyStateItem
               icon={Package}
-              title="道具图片"
-              description="剧情中的重要物品"
+              title={t("empty.categories.prop").split(" - ")[0]}
+              description={t("empty.categories.prop").split(" - ")[1]}
             />
           </div>
 
@@ -101,11 +103,11 @@ export function AssetList({
           <div className="flex gap-2 pt-2">
             <Button onClick={handleOpenAssetGeneration} className="flex-1" size="sm">
               <Sparkles className="w-4 h-4 mr-1.5" />
-              AI 创作
+              {t("empty.actionAI")}
             </Button>
             <Button onClick={onUpload} variant="outline" className="flex-1" size="sm">
               <Upload className="w-4 h-4 mr-1.5" />
-              上传图片
+              {t("empty.action")}
             </Button>
           </div>
         </div>

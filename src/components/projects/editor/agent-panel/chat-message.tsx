@@ -38,43 +38,108 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   const isUser = message.role === "user";
   const agent = useAgent();
 
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  // 共享函数：调用 resume-stream 并处理响应
+  const resumeAgentWithStream = async (
+    requestBody: {
+      conversationId: string;
+      messageId: string;
+      isRejection: boolean;
+      executionResults?: unknown[];
+      rejectionReason?: string;
+    }
+  ) => {
+    // 创建新的 assistant 消息用于流式输出
+    const tempMsgId = agent.addMessage({
+      role: "assistant",
+      content: "",
+      isStreaming: true,
+      iterations: [],
+    });
+
+    // 调用 resume-stream API
+    const response = await fetch("/api/agent/resume-stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("无法读取响应流");
+    }
+
+    // 处理流式响应
+    await processResumeStream(reader, tempMsgId);
+
+    // 刷新对话列表
+    agent.refreshConversations();
+  };
+
   // Handle pending action confirmation
   const handleConfirmAction = async () => {
-    if (!message.pendingAction || !agent.state.currentConversationId) return;
+    if (!message.pendingAction || !agent.state.currentConversationId || isConfirming) return;
+
+    // 防止重复调用：检查状态
+    if (message.pendingAction.status !== "pending") {
+      return;
+    }
+
+    setIsConfirming(true);
 
     try {
+      // 1. 执行操作
       const result = await confirmAndExecuteAction({
         conversationId: agent.state.currentConversationId,
         messageId: message.id,
         functionCalls: message.pendingAction.functionCalls,
       });
       
-      if (result.success) {
-        toast.success("操作已确认，正在执行...");
-        // Update pendingAction status to accepted (keep the action in history)
-        agent.updateMessage(message.id, { 
-          pendingAction: { ...message.pendingAction, status: "accepted" }
-        });
-        // Refresh conversations to update status
-        agent.refreshConversations();
-      } else {
+      if (!result.success) {
         toast.error(result.error || "确认失败");
+        setIsConfirming(false);
+        return;
       }
+
+      toast.success("操作已确认，Agent 正在继续...");
+
+      // 2. 不在这里更新本地状态，等待 resume-stream 返回后自然更新
+
+      // 3. 调用 resume-stream 继续 agent loop
+      await resumeAgentWithStream({
+        conversationId: agent.state.currentConversationId,
+        messageId: message.id,
+        isRejection: false,
+        executionResults: result.executedResults,
+      });
     } catch (error) {
       console.error("确认操作失败:", error);
       toast.error("确认操作失败");
+    } finally {
+      setIsConfirming(false);
     }
   };
-
-  const [isRejecting, setIsRejecting] = useState(false);
 
   const handleCancelAction = async () => {
     if (!message.pendingAction || !agent.state.currentConversationId || isRejecting) return;
 
+    // 防止重复调用：检查状态
+    if (message.pendingAction.status !== "pending") {
+      return;
+    }
+
     setIsRejecting(true);
     
     try {
-      // 1. 调用服务端 action 标记为已拒绝
+      // 1. 调用服务端 action 更新数据库状态
       const result = await agent.rejectAction(message.id);
       
       if (!result.success) {
@@ -85,47 +150,15 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
 
       toast.info("操作已拒绝，Agent 正在提供替代方案...");
 
-      // 2. 更新本地消息状态（移除 pending action UI）
-      agent.updateMessage(message.id, { 
-        pendingAction: { ...message.pendingAction, status: "rejected" }
+      // 2. 不在这里更新本地状态，等待 resume-stream 返回后自然更新
+
+      // 3. 调用 resume-stream 继续 agent loop
+      await resumeAgentWithStream({
+        conversationId: agent.state.currentConversationId,
+        messageId: message.id,
+        isRejection: true,
+        rejectionReason: "用户拒绝了此操作",
       });
-
-      // 3. 创建新的 assistant 消息用于流式输出
-      const tempMsgId = agent.addMessage({
-        role: "assistant",
-        content: "",
-        isStreaming: true,
-        iterations: [],
-      });
-
-      // 4. 调用 resume-stream API（带拒绝标记）
-      const response = await fetch("/api/agent/resume-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          conversationId: agent.state.currentConversationId,
-          messageId: message.id,
-          isRejection: true,
-          rejectionReason: "用户拒绝了此操作",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("无法读取响应流");
-      }
-
-      // 5. 处理流式响应
-      await processResumeStream(reader, tempMsgId);
-
-      // 6. 刷新对话列表
-      agent.refreshConversations();
     } catch (error) {
       console.error("拒绝操作失败:", error);
       toast.error("拒绝操作失败");

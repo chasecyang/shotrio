@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Filter, X } from "lucide-react";
 import { PRESET_TAGS, isPresetTag } from "@/lib/constants/asset-tags";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface TagFilterProps {
   selectedTags: string[];  // 简化为字符串数组
@@ -26,6 +27,7 @@ export function TagFilter({
   availableTags,
 }: TagFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslations("projects.assets.filter");
 
   const handleToggleTag = (tagValue: string) => {
     const exists = selectedTags.includes(tagValue);
@@ -85,8 +87,8 @@ export function TagFilter({
         <PopoverContent className="w-72 p-0" align="start">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div>
-              <h4 className="text-sm font-medium">按类型筛选</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">角色 / 场景 / 道具</p>
+              <h4 className="text-sm font-medium">{t("title")}</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("subtitle")}</p>
             </div>
             {selectedTags.length > 0 && (
               <Button
@@ -95,7 +97,7 @@ export function TagFilter({
                 className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
                 onClick={handleClearAll}
               >
-                清除全部
+                {t("clearAll")}
               </Button>
             )}
           </div>
@@ -103,9 +105,9 @@ export function TagFilter({
             <div className="p-2">
               {availableTags.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-muted-foreground mb-1">暂无可用标签</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("noTags")}</p>
                   <p className="text-xs text-muted-foreground">
-                    创建素材时可以添加角色、场景、道具等标签
+                    {t("noTagsHint")}
                   </p>
                 </div>
               ) : (
@@ -114,7 +116,7 @@ export function TagFilter({
                   {presetTagsData.length > 0 && (
                     <div className="mb-4">
                       <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-2">
-                        类型标签（角色 / 场景 / 道具）
+                        {t("typeTagsTitle")}
                       </h5>
                       <div className="space-y-1">
                         {presetTagsData.map((tag) => (

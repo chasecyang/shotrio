@@ -41,7 +41,6 @@ export async function createCheckoutSession(params: {
     // 计算积分（每次购买都按套餐配置赠送）
     const baseCredits = pkg.credits;
     const bonusCredits = Math.floor(baseCredits * (pkg.bonusPercent / 100));
-    const totalCredits = baseCredits + bonusCredits;
 
     // 创建订单
     const orderId = nanoid();

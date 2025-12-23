@@ -21,7 +21,15 @@
     "result": "结果",
     "minutesAgo": "分钟前",
     "hoursAgo": "小时前",
-    "daysAgo": "天前"
+    "daysAgo": "天前",
+    "clickToEdit": "点击编辑",
+    "saving": "保存中...",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "aiSuggestion": "AI 建议",
+    "accept": "接受",
+    "reject": "拒绝",
+    "aiGenerateOptimize": "AI 生成/优化"
   },
   "language": {
     "interfaceLanguage": "界面语言",
@@ -43,7 +51,8 @@
     "logout": "退出登录",
     "profile": "个人资料",
     "credits": "积分中心",
-    "pricing": "定价"
+    "pricing": "定价",
+    "creditsCenter": "积分中心"
   },
   "auth": {
     "title": "欢迎回来",
@@ -148,7 +157,15 @@
     "forbidden": "禁止访问",
     "serverError": "服务器错误",
     "networkError": "网络错误",
-    "unknownError": "未知错误"
+    "unknownError": "未知错误",
+    "notLoggedIn": "未登录",
+    "insufficientPermissions": "权限不足",
+    "operationFailed": "操作失败",
+    "invalidInput": "输入无效",
+    "resourceNotFound": "资源不存在",
+    "alreadyExists": "已存在",
+    "creditsRequired": "积分数量必须大于0",
+    "maxUsesRequired": "最大使用次数必须大于0"
   },
   "sidebar": {
     "discover": "控制台"
@@ -162,6 +179,31 @@
       "characters": "角色",
       "scenes": "场景",
       "settings": "设置"
+    },
+    "settings": {
+      "title": "项目设置",
+      "description": "管理项目的基本信息和配置",
+      "projectName": "项目名称 *",
+      "projectNamePlaceholder": "例如：霸道总裁爱上我",
+      "projectDescription": "项目简介",
+      "projectDescriptionPlaceholder": "简单描述这个项目...",
+      "artStyle": "美术风格",
+      "artStyleDescription": "选择一个预设风格或自定义风格，应用于项目中所有角色和场景的图片生成",
+      "presetStyle": "预设风格",
+      "customStyle": "自定义风格",
+      "customStyleName": "自定义风格",
+      "customStylePlaceholder": "例如：Cyberpunk style, neon lights, 8k resolution, cinematic lighting",
+      "customStyleHint": "输入自定义的英文风格描述词，用于 AI 生成图像时的全局风格提示",
+      "noStyleSet": "未设置风格",
+      "settingsButton": "设置",
+      "saveButton": "保存设置",
+      "dangerZone": "危险区域",
+      "dangerZoneDescription": "删除项目后，所有相关数据将永久丢失，无法恢复",
+      "deleteButton": "删除项目",
+      "deleteConfirm": "确认删除",
+      "deleteConfirmTitle": "确认删除项目？",
+      "deleteConfirmDescription": "此操作无法撤销。项目「{title}」及其所有数据（包括分集、角色、分镜等）将被永久删除。",
+      "deleteCancel": "取消"
     },
     "storyboard": {
       "selectEpisode": "选择剧集",
@@ -191,13 +233,13 @@
       "empty": {
         "title": "开始创建你的创作素材库",
         "description": "创作素材包括角色、场景、道具等图片，用于构建你的故事世界",
+        "action": "上传图片",
+        "actionAI": "AI 创作",
         "categories": {
           "character": "角色图片 - 主角、配角的形象设计",
           "scene": "场景图片 - 故事发生的地点和环境",
           "prop": "道具图片 - 剧情中的重要物品"
-        },
-        "action": "上传图片",
-        "actionAI": "AI 创作"
+        }
       },
       "loading": "加载创作素材中...",
       "upload": {
@@ -284,10 +326,13 @@
       },
       "filter": {
         "button": "筛选",
-        "title": "标签筛选",
+        "title": "按类型筛选",
+        "subtitle": "角色 / 场景 / 道具",
         "placeholder": "按类型筛选（角色/场景/道具）",
         "clearAll": "清除全部",
         "noTags": "暂无可用标签",
+        "noTagsHint": "创建素材时可以添加角色、场景、道具等标签",
+        "typeTagsTitle": "类型标签（角色 / 场景 / 道具）",
         "tagTypes": {
           "type": "类型",
           "character": "角色",
@@ -379,7 +424,118 @@
     "privacy": "隐私政策",
     "terms": "用户协议",
     "pricing": "定价",
-    "copyright": "保留所有权利"
+    "copyright": "保留所有权利",
+    "tagline": "Frame by Frame"
+  },
+  "legal": {
+    "privacy": {
+      "title": "隐私政策",
+      "lastUpdated": "最后更新：2024年12月",
+      "section1": {
+        "title": "信息收集",
+        "content": "我们收集您在使用服务时提供的信息，包括但不限于账户信息、创作内容等。"
+      },
+      "section2": {
+        "title": "我们收集的信息类型",
+        "item1": "账户信息：包括您的邮箱地址、用户名等注册信息",
+        "item2": "创作内容：您在平台上创建的项目、剧本、分镜等内容",
+        "item3": "使用数据：您使用服务的方式，包括访问时间、使用的功能等",
+        "item4": "设备信息：您的设备类型、操作系统、浏览器类型等技术信息"
+      },
+      "section3": {
+        "title": "信息使用",
+        "content": "我们使用收集的信息来：",
+        "item1": "提供、维护和改进我们的服务",
+        "item2": "处理您的请求和交易",
+        "item3": "发送服务通知和更新",
+        "item4": "保护用户安全，防止欺诈行为"
+      },
+      "section4": {
+        "title": "信息共享",
+        "content": "我们不会出售您的个人信息。我们仅在必要时与可信赖的第三方服务提供商共享信息，用于提供服务。"
+      },
+      "section5": {
+        "title": "数据安全",
+        "content": "我们采用行业标准的安全措施保护您的数据，包括加密传输和安全存储。"
+      },
+      "section6": {
+        "title": "您的权利",
+        "content": "您有权访问、更正、删除您的个人信息，或撤回对数据处理的同意。"
+      },
+      "section7": {
+        "title": "Cookie 使用",
+        "content": "我们使用 Cookie 和类似技术来改善用户体验，分析服务使用情况。"
+      },
+      "section8": {
+        "title": "联系我们",
+        "content": "如果您对本隐私政策有任何疑问，请通过 privacy@shotrio.com 联系我们。"
+      }
+    },
+    "terms": {
+      "title": "用户协议",
+      "lastUpdated": "最后更新：2024年12月",
+      "section1": {
+        "title": "服务条款",
+        "content": "欢迎使用 Shotrio。通过访问或使用我们的服务，您同意遵守本协议的条款。"
+      },
+      "section2": {
+        "title": "账户责任",
+        "content": "您有责任维护账户的安全性，并对账户下的所有活动负责。"
+      },
+      "section3": {
+        "title": "服务使用",
+        "item1": "您必须年满18岁或在法定监护人的监督下使用服务",
+        "item2": "您不得将服务用于任何非法或未经授权的目的",
+        "item3": "您不得干扰或破坏服务的正常运行",
+        "item4": "您不得试图未经授权访问服务的任何部分"
+      },
+      "section4": {
+        "title": "内容权利",
+        "item1": "您保留对自己创作内容的所有权",
+        "item2": "您授予我们使用、存储和处理您内容的必要权限，以提供服务",
+        "item3": "您确保拥有上传内容的合法权利",
+        "item4": "我们保留删除违反条款内容的权利"
+      },
+      "section5": {
+        "title": "积分和付款",
+        "content": "所有积分购买均为最终交易，不可退款。我们保留随时修改价格和服务的权利。"
+      },
+      "section6": {
+        "title": "服务变更",
+        "content": "我们保留随时修改、暂停或终止服务的权利，无需事先通知。"
+      },
+      "section7": {
+        "title": "免责声明",
+        "content": "服务按原样提供，我们不对服务的适用性、可靠性或可用性做出任何保证。"
+      },
+      "section8": {
+        "title": "责任限制",
+        "content": "在法律允许的范围内，我们不对因使用或无法使用服务而产生的任何损害负责。"
+      },
+      "section9": {
+        "title": "争议解决",
+        "content": "本协议受中华人民共和国法律管辖。任何争议应通过友好协商解决。"
+      }
+    }
+  },
+  "tasks": {
+    "types": {
+      "batch_image_generation": "批量图像生成",
+      "asset_image_generation": "素材图片生成",
+      "video_generation": "视频生成",
+      "shot_video_generation": "单镜视频生成",
+      "batch_video_generation": "批量视频生成",
+      "shot_tts_generation": "语音合成",
+      "final_video_export": "最终成片导出",
+      "unknown": "未知任务"
+    },
+    "status": {
+      "pending": "等待中",
+      "processing": "处理中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    }
   },
   "tools": {
   },
@@ -539,8 +695,28 @@
     }
   },
   "admin": {
-    "title": "管理后台",
+    "title": "管理中心",
+    "subtitle": "管理面板",
     "settings": "设置",
+    "dashboard": {
+      "title": "概览",
+      "artStyles": {
+        "title": "美术风格",
+        "description": "管理系统预设风格",
+        "detail": "管理和配置系统美术风格库，为每个风格生成预览图",
+        "action": "进入管理"
+      },
+      "moreFeatures": {
+        "title": "更多功能",
+        "description": "即将推出",
+        "detail": "更多管理功能正在开发中...",
+        "action": "敬请期待"
+      },
+      "hint": {
+        "title": "提示",
+        "description": "这是系统管理面板，只有管理员才能访问。你可以在这里管理系统的各项设置和内容。使用左侧导航栏快速访问不同的管理功能。"
+      }
+    },
     "redeemCodes": {
       "title": "兑换码管理",
       "description": "创建和管理积分兑换码",
@@ -563,7 +739,7 @@
       },
       "generator": {
         "title": "生成兑换码",
-        "description": "创建新的积分兑换码",
+        "subtitle": "创建新的积分兑换码",
         "batchMode": "批量生成",
         "credits": "积分数量 *",
         "maxUses": "最大使用次数 *",
@@ -589,6 +765,17 @@
         "enable": "已启用",
         "disable": "已禁用"
       }
+    },
+    "artStyles": {
+      "title": "艺术风格管理",
+      "description": "管理系统预设风格，为每个风格生成预览图",
+      "pageTitle": "美术风格管理",
+      "generate": "生成预览图",
+      "batchGenerate": "批量生成",
+      "batchDelete": "批量删除",
+      "selectForPreview": "请先选择要生成预览图的风格",
+      "selectForDelete": "请先选择要删除的风格",
+      "sidebarTitle": "美术风格"
     }
   },
   "agent": {
@@ -626,11 +813,330 @@
       "deletion": "删除"
     }
   },
+  "toasts": {
+    "success": {
+      "assetUploaded": "素材上传成功",
+      "assetDeleted": "素材已删除",
+      "assetApplied": "素材已应用到分镜",
+      "nameUpdated": "名称已更新",
+      "tagAdded": "标签已添加",
+      "tagRemoved": "标签已删除",
+      "derivationSubmitted": "派生请求已提交",
+      "projectCreated": "项目创建成功",
+      "shotAdded": "分镜已添加",
+      "taskCancelled": "任务已取消",
+      "taskResubmitted": "任务已重新提交",
+      "videoGenerated": "视频生成完成",
+      "conversationDeleted": "已删除对话",
+      "codeGenerated": "兑换码生成成功",
+      "codeCopied": "已复制到剪贴板",
+      "previewGenerated": "预览图生成成功",
+      "styleDeleted": "删除成功",
+      "styleUpdated": "更新成功",
+      "styleCreated": "创建成功",
+      "episodeCreated": "剧集已创建",
+      "settingsSaved": "保存成功",
+      "projectDeleted": "项目已删除",
+      "referenceAssetAdded": "已添加参考素材",
+      "videoTaskStarted": "已启动视频生成任务",
+      "taskCreatedAiProcessing": "任务已创建，AI正在处理中..."
+    },
+    "error": {
+      "parseResultFailed": "解析结果失败",
+      "addImageFailed": "添加图片失败",
+      "promptRequired": "请输入提示词",
+      "createTaskFailed": "创建任务失败",
+      "updateDurationFailed": "更新时长失败",
+      "applyAssetFailed": "应用素材失败",
+      "selectImageFile": "请选择图片文件",
+      "selectFile": "请选择文件",
+      "enterAssetName": "请输入素材名称",
+      "updateFailed": "更新失败",
+      "deleteFailed": "删除失败",
+      "addTagFailed": "添加标签失败",
+      "removeTagFailed": "删除标签失败",
+      "generateShotImageFirst": "请先生成分镜图片",
+      "generationFailed": "生成失败",
+      "loadShotsFailed": "加载分镜失败",
+      "addShotFailed": "添加分镜失败",
+      "deleteShotFailed": "删除分镜失败",
+      "selectShotsForVideo": "请先选择要生成视频的分镜",
+      "startBatchGenerationFailed": "启动批量生成失败",
+      "selectShotsForExport": "请先选择要导出的分镜",
+      "loadConversationsFailed": "加载对话列表失败",
+      "loadConversationFailed": "加载对话失败",
+      "deleteConversationFailed": "删除对话失败",
+      "confirmActionFailed": "确认操作失败",
+      "rejectActionFailed": "拒绝操作失败",
+      "enterValidCredits": "请输入有效的积分数量",
+      "enterValidMaxUses": "请输入有效的使用次数",
+      "noShotsToPlay": "没有可播放的分镜",
+      "loadAssetFailed": "加载素材失败",
+      "saveFailed": "保存失败",
+      "tagCannotBeEmpty": "标签不能为空",
+      "loadStylesFailed": "加载风格列表失败",
+      "enterProjectName": "请输入项目名称",
+      "generationInDevelopment": "生成功能开发中",
+      "taskNotFound": "任务不存在",
+      "taskResultNotSupported": "该任务暂不支持查看结果",
+      "cannotParseTaskData": "无法解析任务数据",
+      "enterDerivationName": "请输入派生素材名称",
+      "enterPrompt": "请输入提示词",
+      "sortingFailed": "排序失败",
+      "creationFailed": "创建失败",
+      "batchGenerationFailed": "批量生成失败",
+      "batchDeletionFailed": "批量删除失败",
+      "codeGenerationFailed": "生成失败，请稍后重试",
+      "projectCreationFailed": "创建失败，请重试"
+    },
+    "info": {
+      "derivationInDevelopment": "派生功能开发中，敬请期待",
+      "taskResultNotSupported": "该任务暂不支持查看结果",
+      "uploadingReferenceImages": "正在上传参考图片..."
+    },
+    "warning": {}
+  },
+  "validation": {
+    "required": "此字段为必填项",
+    "invalidEmail": "无效的邮箱地址",
+    "invalidUrl": "无效的URL",
+    "minLength": "至少需要 {min} 个字符",
+    "maxLength": "最多 {max} 个字符",
+    "min": "最小值为 {min}",
+    "max": "最大值为 {max}",
+    "pattern": "格式不正确"
+  },
   "editor": {
     "mobileNotSupported": {
       "title": "暂不支持移动端",
       "description": "Editor 编辑器需要更大的屏幕空间，请使用电脑访问以获得最佳体验。",
       "backToProjects": "返回项目列表"
+    },
+    "agent": {
+      "conversationStatus": {
+        "awaitingApproval": "待批准",
+        "active": "运行中",
+        "completed": "已完成"
+      },
+      "conversationList": {
+        "title": "对话历史",
+        "empty": "还没有对话",
+        "newConversation": "新建对话",
+        "deleteConfirm": "删除对话",
+        "deleteDescription": "确定要删除这个对话吗？此操作无法撤销。",
+        "justNow": "刚刚",
+        "minutesAgo": "{minutes} 分钟前",
+        "hoursAgo": "{hours} 小时前",
+        "daysAgo": "{days} 天前"
+      },
+      "pendingAction": {
+        "title": "待确认操作",
+        "executionPlan": "执行计划",
+        "confirm": "确认",
+        "reject": "拒绝",
+        "viewDetails": "查看详细参数",
+        "confirmGenerate": "确认生成",
+        "confirmDelete": "确认删除",
+        "executing": "执行中..."
+      },
+      "chatInput": {
+        "placeholder": "输入消息...",
+        "send": "发送",
+        "sending": "发送中...",
+        "stopGeneration": "停止生成",
+        "sendMessage": "发送消息",
+        "stopToInterrupt": "点击停止按钮中断生成",
+        "enterToSend": "Enter 发送 · Shift+Enter 换行"
+      },
+      "panel": {
+        "newConversation": "新对话",
+        "aiAssistant": "AI 助手",
+        "startNewConversation": "开始新对话",
+        "startConversation": "开始对话",
+        "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等"
+      }
+    },
+    "resource": {
+      "episodeList": {
+        "empty": "暂无剧集",
+        "createButton": "新建剧集",
+        "newEpisodeTitle": "第 {number} 集",
+        "episodeNumber": "第 {number} 集",
+        "current": "当前"
+      },
+      "assetPanel": {
+        "title": "创作素材",
+        "search": "搜索素材...",
+        "upload": "上传",
+        "aiGenerate": "AI 创作",
+        "filter": "筛选",
+        "viewGrid": "网格视图",
+        "viewList": "列表视图",
+        "empty": "还没有创作素材",
+        "emptyDescription": "上传或生成创作素材以开始使用"
+      },
+      "assetCard": {
+        "usedTimes": "已使用 {count} 次",
+        "view": "查看",
+        "apply": "应用",
+        "delete": "删除"
+      },
+      "upload": {
+        "title": "上传创作素材",
+        "dragHint": "点击或拖拽文件到此处上传",
+        "fileInfo": "支持 JPG、PNG、WebP、GIF，最大 10MB",
+        "assetName": "素材名称",
+        "assetNamePlaceholder": "输入素材名称",
+        "assetType": "素材类型",
+        "uploading": "上传中...",
+        "uploadProgress": "上传进度",
+        "success": "创作素材上传成功",
+        "error": "上传失败"
+      },
+      "detail": {
+        "title": "创作素材详情",
+        "basicInfo": "基本信息",
+        "name": "名称",
+        "type": "类型",
+        "usageCount": "使用次数",
+        "createdAt": "创建时间",
+        "generationInfo": "生成信息",
+        "prompt": "提示词",
+        "model": "模型",
+        "seed": "种子值",
+        "tags": "标签",
+        "addTag": "添加标签",
+        "edit": "编辑",
+        "save": "保存",
+        "cancel": "取消",
+        "delete": "删除",
+        "derive": "派生",
+        "close": "关闭"
+      },
+      "derive": {
+        "title": "派生新创作素材",
+        "sourceAsset": "源素材",
+        "derivationType": "派生类型",
+        "types": {
+          "img2img": {
+            "label": "图生图",
+            "description": "基于原图生成变体"
+          },
+          "inpaint": {
+            "label": "局部重绘",
+            "description": "修改图片的局部区域"
+          },
+          "edit": {
+            "label": "编辑",
+            "description": "根据提示词编辑图片"
+          },
+          "remix": {
+            "label": "混合",
+            "description": "混合多个图片元素"
+          }
+        },
+        "assetName": "派生素材名称",
+        "assetNamePlaceholder": "输入派生素材名称",
+        "prompt": "提示词",
+        "promptPlaceholder": "描述你想要的图片内容...",
+        "promptHint": "基于源素材的提示词修改，或者输入全新的提示词",
+        "strength": "派生强度",
+        "strengthMin": "保持原图 (0.1)",
+        "strengthMax": "完全重绘 (1.0)",
+        "strengthHint": "较低的值会保留更多原图特征，较高的值会生成更多变化",
+        "hint": "派生功能将使用 AI 生成服务创建新的素材变体。生成过程可能需要一些时间，请在任务中心查看进度。",
+        "hintTitle": "提示",
+        "startDerive": "开始派生",
+        "deriving": "处理中...",
+        "success": "派生请求已提交",
+        "cancel": "取消",
+        "nameSuffix": " - 派生"
+      }
+    },
+    "preview": {
+      "shot": {
+        "title": "分镜编辑器",
+        "shotNumber": "第 {number} 个分镜",
+        "description": "描述",
+        "descriptionPlaceholder": "描述这个分镜中发生了什么...",
+        "duration": "时长",
+        "durationUnit": "秒"
+      },
+      "episode": {
+        "title": "剧集编辑器",
+        "episodeNumber": "第 {number} 集",
+        "episodeTitle": "剧集标题",
+        "summary": "梗概",
+        "hook": "钩子",
+        "script": "剧本",
+        "scriptPlaceholder": "编写完整的剧本内容，包括场景描述、人物对话、动作等...",
+        "scriptEmptyText": "点击编写剧本内容",
+        "aiButtonTitle": "AI 生成/优化剧本"
+      },
+      "assetGeneration": {
+        "title": "AI 创作素材",
+        "subtitle": "使用 AI 创作角色、场景、道具等图片素材",
+        "assetName": "素材名称",
+        "assetNamePlaceholder": "输入素材名称...",
+        "prompt": "描述你想要创作的内容",
+        "promptPlaceholder": "详细描述你想要创作的内容...",
+        "promptHint": "详细的描述能帮助 AI 生成更准确的图片",
+        "parameters": "高级参数",
+        "aspectRatio": "宽高比",
+        "resolution": "分辨率",
+        "numImages": "生成数量",
+        "referenceAssets": "参考图片",
+        "referenceOptional": "可选",
+        "referenceHint": "从创作素材库中选择参考图片",
+        "noReference": "尚未选择参考图片",
+        "referenceCount": "已选择 {count} 张参考图",
+        "generate": "开始创作",
+        "generating": "创作中...",
+        "cancel": "取消",
+        "results": "创作结果",
+        "savedToLibrary": "图片已保存到创作素材库"
+      }
+    },
+    "timeline": {
+      "toolbar": {
+        "addShot": "添加分镜",
+        "deleteShot": "删除分镜",
+        "moveUp": "上移",
+        "moveDown": "下移",
+        "duplicate": "复制",
+        "play": "播放",
+        "pause": "暂停",
+        "zoom": "缩放"
+      },
+      "errors": {
+        "loadShotsFailed": "加载分镜失败",
+        "addShotFailed": "添加分镜失败",
+        "deleteShotsFailed": "删除分镜失败",
+        "applyFailed": "应用失败",
+        "selectShotsForVideo": "请先选择要生成视频的分镜",
+        "shotsWithoutImages": "有 {count} 个分镜没有图片，请先生成图片",
+        "selectShotsForExport": "请先选择要导出的分镜",
+        "noExportableVideos": "没有可导出的视频",
+        "downloadFailed": "下载失败: {message}",
+        "exportFailed": "导出失败，请重试"
+      },
+      "success": {
+        "shotAdded": "分镜已添加",
+        "shotsDeleted": "已删除 {count} 个分镜",
+        "batchVideoTaskStarted": "已启动 {count} 个分镜的视频生成任务",
+        "videosExported": "成功导出 {count} 个视频"
+      },
+      "loading": {
+        "preparingExport": "正在准备导出...",
+        "packingVideo": "正在打包视频 ({current}/{total})...",
+        "generatingZip": "正在生成压缩包..."
+      },
+      "info": {
+        "skippedShots": "已跳过 {count} 个未生成视频的分镜"
+      },
+      "warning": {
+        "shotDownloadFailed": "镜头 {order} 下载失败，已跳过"
+      }
     }
   }
 }

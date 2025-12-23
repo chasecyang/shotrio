@@ -23,7 +23,7 @@ export function TimelineContainer({
   isBatchGeneratingVideos,
   isExportingVideos,
 }: TimelineContainerProps) {
-  const { state, selectedEpisode, totalDuration } = useEditor();
+  const { state, totalDuration } = useEditor();
   const { shots, isLoading, selectedEpisodeId } = state;
 
   if (!selectedEpisodeId) {

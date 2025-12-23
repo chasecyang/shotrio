@@ -10,12 +10,13 @@ export function Footer() {
       <div className="container mx-auto px-8 md:px-16">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            {/* Logo and Slogan */}
+            {/* Logo and Tagline */}
             <div className="text-center md:text-left">
-              <span className="text-3xl font-bold text-white mb-2 block">
-                Shotrio
-              </span>
-              <p className="text-sm text-neutral-500">{t('home.slogan')}</p>
+              <div className="text-3xl font-bold mb-2">
+                <span className="text-white">Shot</span>
+                <span className="text-primary/60">Rio</span>
+              </div>
+              <p className="text-sm text-neutral-500">{t('footer.tagline')}</p>
             </div>
 
             {/* Links */}
@@ -48,7 +49,7 @@ export function Footer() {
           {/* Copyright */}
           <div className="text-center">
             <p className="text-sm text-neutral-500">
-              © {new Date().getFullYear()} Shotrio. {t('footer.copyright')}
+              © {new Date().getFullYear()} ShotRio. {t('footer.copyright')}
             </p>
           </div>
         </div>

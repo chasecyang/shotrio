@@ -1,31 +1,31 @@
 import { Metadata } from 'next';
 
 /**
- * 获取基础 URL（根据环境）
+ * Get base URL (based on environment)
  */
 export function getBaseUrl(): string {
   if (process.env.NODE_ENV === 'production') {
-    return 'https://your-startup-domain.com';
+    return 'https://shotrio.com';
   }
   return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 }
 
 /**
- * 生成多语言链接
+ * Generate multilingual links
  */
 export function getAlternateLanguages(path: string = '') {
   const baseUrl = getBaseUrl();
   return {
-    'x-default': `${baseUrl}/zh${path}`,
-    'zh': `${baseUrl}/zh${path}`,
-    'zh-CN': `${baseUrl}/zh${path}`,
+    'x-default': `${baseUrl}/en${path}`,
     'en': `${baseUrl}/en${path}`,
     'en-US': `${baseUrl}/en${path}`,
+    'zh': `${baseUrl}/zh${path}`,
+    'zh-CN': `${baseUrl}/zh${path}`,
   };
 }
 
 /**
- * 页面 metadata 配置接口
+ * Page metadata configuration interface
  */
 interface PageMetadataConfig {
   lang: string;
@@ -38,7 +38,7 @@ interface PageMetadataConfig {
 }
 
 /**
- * 生成完整的页面 metadata
+ * Generate complete page metadata
  */
 export function generatePageMetadata({
   lang,
@@ -58,9 +58,9 @@ export function generatePageMetadata({
     title,
     description,
     keywords: keywords?.join(', '),
-    authors: [{ name: 'Startup Team' }],
-    creator: 'Startup Team',
-    publisher: 'Startup Team',
+    authors: [{ name: 'Shotrio Team' }],
+    creator: 'Shotrio Team',
+    publisher: 'Shotrio Team',
     metadataBase: new URL(baseUrl),
     alternates: {
       canonical: currentUrl,
@@ -70,7 +70,7 @@ export function generatePageMetadata({
       title,
       description,
       url: currentUrl,
-      siteName: 'Startup Template',
+      siteName: 'Shotrio',
       images: [
         {
           url: ogImage || defaultOgImage,
@@ -87,7 +87,7 @@ export function generatePageMetadata({
       title,
       description,
       images: [ogImage || defaultOgImage],
-      creator: '@StartupTeam',
+      creator: '@Shotrio',
     },
     robots: noIndex
       ? {
@@ -109,59 +109,59 @@ export function generatePageMetadata({
 }
 
 /**
- * 首页 metadata 内容（中英文）
+ * Homepage metadata content (English and Chinese)
  */
 export const homepageMetadata = {
-  zh: {
-    title: 'Next.js Startup Template - 快速启动您的项目',
-    description: '基于 Next.js, TailwindCSS, Shadcn UI 和 Drizzle ORM 的全栈开发模版，集成了认证、数据库和多语言支持。',
-    keywords: ['Next.js Template', 'Startup Boilerplate', 'React', 'TailwindCSS'],
-  },
   en: {
-    title: 'Next.js Startup Template - Launch Your Project Faster',
-    description: 'A full-stack starter kit with Next.js, TailwindCSS, Shadcn UI and Drizzle ORM. Includes Authentication, Database and i18n.',
-    keywords: ['Next.js Template', 'Startup Boilerplate', 'React', 'TailwindCSS'],
+    title: 'Shotrio - Professional Micro-Drama Creation Tool',
+    description: 'From script to final cut, an all-in-one micro-drama creation platform. AI-assisted creation to help content creators efficiently produce high-quality micro-drama works.',
+    keywords: ['Micro-Drama', 'AI Video Generation', 'Short Drama', 'Video Creation', 'Storyboard', 'Script Writing'],
+  },
+  zh: {
+    title: 'Shotrio - 专业的微短剧创作工具',
+    description: '从剧本到成片，一站式微短剧创作平台。AI 辅助创作，助力内容创作者高效产出优质微短剧作品。',
+    keywords: ['微短剧', 'AI视频生成', '短剧创作', '视频制作', '分镜设计', '剧本创作'],
   },
 };
 
 /**
- * 登录页 metadata 内容
+ * Login page metadata content
  */
 export const loginMetadata = {
-  zh: {
-    title: '登录 | Startup Template',
-    description: '登录您的账户',
-  },
   en: {
-    title: 'Login | Startup Template',
-    description: 'Login to your account',
+    title: 'Login | Shotrio',
+    description: 'Sign in to your Shotrio account',
+  },
+  zh: {
+    title: '登录 | Shotrio',
+    description: '登录您的 Shotrio 账户',
   },
 };
 
 /**
- * 隐私政策 metadata 内容
+ * Privacy policy metadata content
  */
 export const privacyMetadata = {
-  zh: {
-    title: '隐私政策 | Startup Template',
-    description: '了解我们如何保护您的隐私。',
-  },
   en: {
-    title: 'Privacy Policy | Startup Template',
-    description: 'Learn how we protect your privacy.',
+    title: 'Privacy Policy | Shotrio',
+    description: 'Learn how we protect your privacy and data.',
+  },
+  zh: {
+    title: '隐私政策 | Shotrio',
+    description: '了解我们如何保护您的隐私和数据。',
   },
 };
 
 /**
- * 用户协议 metadata 内容
+ * Terms of service metadata content
  */
 export const termsMetadata = {
-  zh: {
-    title: '用户协议 | Startup Template',
-    description: '阅读用户服务条款。',
-  },
   en: {
-    title: 'Terms of Service | Startup Template',
+    title: 'Terms of Service | Shotrio',
     description: 'Read our terms of service.',
+  },
+  zh: {
+    title: '用户协议 | Shotrio',
+    description: '阅读用户服务条款。',
   },
 };

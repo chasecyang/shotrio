@@ -413,3 +413,73 @@ export async function updateMessage(
   }
 }
 
+/**
+ * 根据消息ID获取单条消息
+ */
+export async function getMessageById(messageId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    const msg = await db.query.conversationMessage.findFirst({
+      where: eq(conversationMessage.id, messageId),
+    });
+
+    if (!msg) {
+      return {
+        success: false,
+        error: "消息不存在",
+      };
+    }
+
+    // 转换消息格式
+    const message: AgentMessage = {
+      id: msg.id,
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+      timestamp: msg.createdAt,
+      isStreaming: msg.isStreaming || false,
+      isInterrupted: msg.isInterrupted || false,
+    };
+
+    if (msg.thinkingProcess) {
+      message.thinkingProcess = msg.thinkingProcess;
+    }
+
+    if (msg.iterations) {
+      try {
+        message.iterations = JSON.parse(msg.iterations);
+      } catch (e) {
+        console.error("[Conversation] 解析 iterations 失败:", e);
+      }
+    }
+
+    if (msg.pendingAction) {
+      try {
+        message.pendingAction = JSON.parse(msg.pendingAction);
+      } catch (e) {
+        console.error("[Conversation] 解析 pendingAction 失败:", e);
+      }
+    }
+
+    return {
+      success: true,
+      message,
+    };
+  } catch (error) {
+    console.error("[Conversation] 获取消息失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "获取消息失败",
+    };
+  }
+}
+

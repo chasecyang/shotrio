@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,11 +33,12 @@ export function TaskItem({
   onView,
   depth = 0 
 }: TaskItemProps) {
+  const t = useTranslations();
   const [isExpanded, setIsExpanded] = useState(false);
   const hasChildren = children.length > 0;
   
-  const taskType = getTaskTypeLabel(job.type || "", "md");
-  const status = getTaskStatusConfig(job.status || "pending", "md");
+  const taskType = getTaskTypeLabel(job.type || "", t, "md");
+  const status = getTaskStatusConfig(job.status || "pending", t, "md");
 
   const canCancel = job.status === "pending" || job.status === "processing";
   const canRetry = job.status === "failed" || job.status === "cancelled";
@@ -44,7 +46,7 @@ export function TaskItem({
   // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
   const canView = job.status === "completed" && 
                   job.type && 
-                  VIEWABLE_TASK_TYPES.includes(job.type as any) &&
+                  VIEWABLE_TASK_TYPES.includes(job.type) &&
                   !job.isImported; // 已导入的任务不再显示查看按钮
 
   // 计算子任务统计

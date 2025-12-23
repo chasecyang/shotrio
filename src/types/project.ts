@@ -1,4 +1,4 @@
-import { project, episode, shot, asset } from "@/lib/db/schemas/project";
+import { project, episode, shot } from "@/lib/db/schemas/project";
 import type { ArtStyle } from "./art-style";
 import type { Asset as AssetType, AssetWithTags } from "./asset";
 

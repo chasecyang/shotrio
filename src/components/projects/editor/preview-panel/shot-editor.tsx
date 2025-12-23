@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ShotDetail, ShotSize, CameraMovement } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,8 @@ interface ShotEditorProps {
 }
 
 export function ShotEditor({ shot }: ShotEditorProps) {
-  const { state, updateShot } = useEditor();
+  const { updateShot } = useEditor();
+  const tToast = useTranslations("toasts");
 
   const [formData, setFormData] = useState({
     shotSize: shot.shotSize,
@@ -174,18 +176,10 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   }, [videoGenerationTasks, shot.id]);
 
-  // 刷新当前分镜数据的辅助函数
-  const refreshCurrentShot = async () => {
-    const result = await refreshShot(shot.id);
-    if (result.success && result.shot) {
-      updateShot(result.shot);
-    }
-  };
-
   // 处理生成视频
   const handleGenerateVideo = async () => {
     if (!shot.imageAsset?.imageUrl) {
-      toast.error("请先生成分镜图片");
+      toast.error(tToast("error.generateShotImageFirst"));
       return;
     }
 
@@ -194,14 +188,14 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       const result = await generateShotVideo(shot.id);
       if (result.success && result.jobId) {
         setVideoGenerationJobId(result.jobId);
-        toast.success("已启动视频生成任务");
+        toast.success(tToast("success.videoTaskStarted"));
         // 不在这里重置状态，等待 useEffect 检测到任务后再处理
       } else {
         toast.error(result.error || "启动失败");
         setIsGeneratingVideo(false); // 失败时才重置
       }
     } catch {
-      toast.error("生成失败");
+      toast.error(tToast("error.generationFailed"));
       setIsGeneratingVideo(false); // 出错时才重置
     }
   };
@@ -223,7 +217,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       if (relevantJob.status === "completed") {
         setIsGeneratingVideo(false);
         setVideoGenerationJobId(null);
-        toast.success("视频生成完成");
+        toast.success(tToast("success.videoGenerated"));
       } else if (relevantJob.status === "failed") {
         setIsGeneratingVideo(false);
         setVideoGenerationJobId(null);

@@ -12,8 +12,7 @@ import {
   Image as ImageIcon, 
   Video, 
   Scissors,
-  Layout,
-  Clapperboard
+  Layout
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 

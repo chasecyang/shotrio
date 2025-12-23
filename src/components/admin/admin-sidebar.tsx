@@ -24,9 +24,10 @@ import {
   SidebarMenuBadge,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useTranslations } from "next-intl";
 
 interface NavItem {
-  title: string;
+  titleKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
@@ -34,17 +35,17 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    title: "概览",
+    titleKey: "dashboard.title",
     href: "/admin",
     icon: LayoutDashboard,
   },
   {
-    title: "美术风格",
+    titleKey: "artStyles.sidebarTitle",
     href: "/admin/art-styles",
     icon: Palette,
   },
   {
-    title: "兑换码管理",
+    titleKey: "redeemCodes.title",
     href: "/admin/redeem-codes",
     icon: Ticket,
   },
@@ -73,6 +74,7 @@ const navItems: NavItem[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const t = useTranslations("admin");
 
   return (
     <Sidebar collapsible="icon">
@@ -86,7 +88,7 @@ export function AdminSidebar() {
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">Admin</span>
-                  <span className="text-xs text-muted-foreground">管理面板</span>
+                  <span className="text-xs text-muted-foreground">{t("subtitle")}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -101,13 +103,14 @@ export function AdminSidebar() {
               {navItems.map((item) => {
                 const isActive = pathname === item.href || 
                   (item.href !== "/admin" && pathname?.startsWith(item.href));
+                const title = t(item.titleKey as any);
                 
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={title}>
                       <Link href={item.href}>
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span>{title}</span>
                       </Link>
                     </SidebarMenuButton>
                     {item.badge && (

@@ -33,8 +33,9 @@ function MobileNotSupported() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="flex flex-col items-center text-center max-w-sm">
         {/* Logo */}
-        <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-8">
-          Shotrio
+        <span className="text-2xl font-bold mb-8">
+          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
+          <span className="text-primary/40">Rio</span>
         </span>
         
         {/* 图标 */}
@@ -80,6 +81,7 @@ function EditorLayoutInner({
   initialView,
 }: EditorLayoutProps) {
   const { state, dispatch, jobs } = useEditor();
+  const t = useTranslations("editor.timeline");
 
   // 注册键盘快捷键
   useEditorKeyboard();
@@ -123,11 +125,11 @@ function EditorLayoutInner({
         if (result.success && result.shots) {
           dispatch({ type: "SET_SHOTS", payload: result.shots });
         } else {
-          toast.error(result.error || "加载分镜失败");
+          toast.error(result.error || t("errors.loadShotsFailed"));
         }
       } catch (error) {
         console.error("加载分镜失败:", error);
-        toast.error("加载分镜失败");
+        toast.error(t("errors.loadShotsFailed"));
       } finally {
         dispatch({ type: "SET_LOADING", payload: false });
       }
@@ -152,18 +154,18 @@ function EditorLayoutInner({
       });
 
       if (result.success) {
-        toast.success("分镜已添加");
+        toast.success(t("success.shotAdded"));
         // 重新加载分镜
         const refreshResult = await refreshEpisodeShots(state.selectedEpisodeId);
         if (refreshResult.success && refreshResult.shots) {
           dispatch({ type: "SET_SHOTS", payload: refreshResult.shots });
         }
       } else {
-        toast.error(result.error || "添加失败");
+        toast.error(result.error || t("errors.addShotFailed"));
       }
     } catch (error) {
       console.error(error);
-      toast.error("添加分镜失败");
+      toast.error(t("errors.addShotFailed"));
     }
   };
 
@@ -175,7 +177,7 @@ function EditorLayoutInner({
       for (const shotId of state.selectedShotIds) {
         await deleteShot(shotId);
       }
-      toast.success(`已删除 ${state.selectedShotIds.length} 个分镜`);
+      toast.success(t("success.shotsDeleted", { count: state.selectedShotIds.length }));
       dispatch({ type: "CLEAR_SHOT_SELECTION" });
       
       // 重新加载分镜
@@ -187,14 +189,14 @@ function EditorLayoutInner({
       }
     } catch (error) {
       console.error(error);
-      toast.error("删除分镜失败");
+      toast.error(t("errors.deleteShotsFailed"));
     }
   };
 
   // 批量生成视频
   const handleGenerateVideos = async () => {
     if (state.selectedShotIds.length === 0) {
-      toast.error("请先选择要生成视频的分镜");
+      toast.error(t("errors.selectShotsForVideo"));
       return;
     }
 
@@ -204,7 +206,7 @@ function EditorLayoutInner({
     );
 
     if (shotsWithoutImages.length > 0) {
-      toast.error(`有 ${shotsWithoutImages.length} 个分镜没有图片，请先生成图片`);
+      toast.error(t("errors.shotsWithoutImages", { count: shotsWithoutImages.length }));
       return;
     }
 
@@ -212,15 +214,15 @@ function EditorLayoutInner({
     try {
       const result = await batchGenerateShotVideos(state.selectedShotIds);
       if (result.success) {
-        toast.success(`已启动 ${state.selectedShotIds.length} 个分镜的视频生成任务`);
+        toast.success(t("success.batchVideoTaskStarted", { count: state.selectedShotIds.length }));
         // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
-        toast.error(result.error || "启动失败");
+        toast.error(result.error || t("errors.addShotFailed"));
         setIsBatchGeneratingVideos(false); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
-      toast.error("启动批量生成失败");
+      toast.error(t("errors.addShotFailed"));
       setIsBatchGeneratingVideos(false); // 出错时才重置
     }
   };
@@ -228,26 +230,26 @@ function EditorLayoutInner({
   // 批量导出视频
   const handleExportVideos = async () => {
     if (state.selectedShotIds.length === 0) {
-      toast.error("请先选择要导出的分镜");
+      toast.error(t("errors.selectShotsForExport"));
       return;
     }
 
     setIsExportingVideos(true);
-    const toastId = toast.loading("正在准备导出...");
+    const toastId = toast.loading(t("loading.preparingExport"));
 
     try {
       // 1. 获取可导出的分镜数据
       const result = await getExportableShots(state.selectedShotIds);
       
       if (!result.success || !result.shots || result.shots.length === 0) {
-        toast.error(result.error || "没有可导出的视频", { id: toastId });
+        toast.error(result.error || t("errors.noExportableVideos"), { id: toastId });
         setIsExportingVideos(false);
         return;
       }
 
       // 显示跳过信息
       if (result.skippedCount > 0) {
-        toast.info(`已跳过 ${result.skippedCount} 个未生成视频的分镜`, { id: toastId });
+        toast.info(t("info.skippedShots", { count: result.skippedCount }), { id: toastId });
       }
 
       // 2. 创建 ZIP
@@ -258,13 +260,13 @@ function EditorLayoutInner({
       for (let i = 0; i < result.shots.length; i++) {
         const shotData = result.shots[i];
         
-        toast.loading(`正在打包视频 (${i + 1}/${totalVideos})...`, { id: toastId });
+        toast.loading(t("loading.packingVideo", { current: i + 1, total: totalVideos }), { id: toastId });
 
         try {
           // 下载视频文件
           const response = await fetch(shotData.videoUrl);
           if (!response.ok) {
-            throw new Error(`下载失败: ${response.statusText}`);
+            throw new Error(t("errors.downloadFailed", { message: response.statusText }));
           }
           
           const blob = await response.blob();
@@ -276,12 +278,12 @@ function EditorLayoutInner({
           zip.file(filename, blob);
         } catch (error) {
           console.error(`下载视频失败 (Shot ${shotData.order}):`, error);
-          toast.warning(`镜头 ${shotData.order} 下载失败，已跳过`, { id: toastId });
+          toast.warning(t("warning.shotDownloadFailed", { order: shotData.order }), { id: toastId });
         }
       }
 
       // 4. 生成 ZIP 并下载
-      toast.loading("正在生成压缩包...", { id: toastId });
+      toast.loading(t("loading.generatingZip"), { id: toastId });
       const zipBlob = await zip.generateAsync({ 
         type: 'blob',
         compression: "DEFLATE",
@@ -310,12 +312,12 @@ function EditorLayoutInner({
       URL.revokeObjectURL(url);
 
       // 6. 显示成功消息
-      toast.success(`成功导出 ${totalVideos} 个视频`, { id: toastId });
+      toast.success(t("success.videosExported", { count: totalVideos }), { id: toastId });
       
     } catch (error) {
       console.error("导出视频失败:", error);
       toast.error(
-        error instanceof Error ? error.message : "导出失败，请重试",
+        error instanceof Error ? error.message : t("errors.exportFailed"),
         { id: toastId }
       );
     } finally {

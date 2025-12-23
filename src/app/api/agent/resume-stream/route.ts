@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { runAgentLoop } from "@/lib/services/agent-loop";
-import { getConversation, updateConversationStatus, saveMessage } from "@/lib/actions/conversation/crud";
+import { getConversation, updateConversationStatus, saveMessage, updateMessage } from "@/lib/actions/conversation/crud";
 
 // Next.js 路由配置：禁用缓冲以支持真正的流式输出
 export const runtime = 'nodejs';
@@ -68,7 +68,29 @@ export async function POST(request: NextRequest) {
             throw new Error("无法找到待确认的操作");
           }
 
-          const conversationState = messageWithAction.pendingAction.conversationState;
+          const pendingAction = messageWithAction.pendingAction;
+
+          // 2.5. 防止重复处理：检查状态
+          const isAlreadyProcessed = pendingAction.status !== "pending";
+          if (isAlreadyProcessed) {
+            const errorMsg = input.isRejection
+              ? pendingAction.status === "rejected"
+                ? "该操作已被拒绝，无法重复处理"
+                : "该操作已被接受，无法拒绝"
+              : pendingAction.status === "accepted"
+                ? "该操作已被接受，无法重复处理"
+                : "该操作已被拒绝，无法接受";
+            
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({ type: "error", data: errorMsg }) + "\n"
+              )
+            );
+            controller.close();
+            return;
+          }
+
+          const conversationState = pendingAction.conversationState;
           if (!conversationState) {
             throw new Error("对话状态不完整");
           }
@@ -109,6 +131,12 @@ export async function POST(request: NextRequest) {
               });
             }
           }
+
+          // 4.5. 清空 pendingAction（已成功读取并处理）
+          // 这样可以避免重复处理，并让前端 UI 不再显示操作按钮
+          await updateMessage(input.messageId, {
+            pendingAction: null,
+          });
 
           // 5. 创建新的 assistant 消息
           const assistantMsgResult = await saveMessage(input.conversationId, {
