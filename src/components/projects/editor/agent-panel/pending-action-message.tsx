@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useMemo, useEffect } from "react";
+import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2 } from "lucide-react";
@@ -26,28 +26,51 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
     thumbnailUrl: string | null;
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // 使用 ref 跟踪当前请求的 assetIds，防止竞态条件
+  const currentRequestRef = useRef<string>("");
 
   useEffect(() => {
+    // 生成当前请求的唯一标识（使用 assetIds 的 JSON 字符串）
+    const requestId = JSON.stringify(assetIds.sort());
+    currentRequestRef.current = requestId;
+
+    // 立即重置状态，避免显示旧的图片
+    setAssets([]);
+    setIsLoading(true);
+
     async function loadAssets() {
       if (assetIds.length === 0) {
-        setIsLoading(false);
+        // 只有在当前请求仍然有效时才更新状态
+        if (currentRequestRef.current === requestId) {
+          setIsLoading(false);
+        }
         return;
       }
 
-      setIsLoading(true);
       try {
         const result = await getAssetsByIds(assetIds);
-        if (result.success && result.assets) {
-          setAssets(result.assets);
+        // 检查请求是否仍然有效（assetIds 没有变化）
+        if (currentRequestRef.current === requestId) {
+          if (result.success && result.assets) {
+            setAssets(result.assets);
+          }
+          setIsLoading(false);
         }
       } catch (error) {
-        console.error("加载参考图失败:", error);
-      } finally {
-        setIsLoading(false);
+        // 只有在当前请求仍然有效时才更新状态
+        if (currentRequestRef.current === requestId) {
+          console.error("加载参考图失败:", error);
+          setIsLoading(false);
+        }
       }
     }
 
     loadAssets();
+
+    // 清理函数：标记请求已取消
+    return () => {
+      currentRequestRef.current = "";
+    };
   }, [assetIds]);
 
   if (isLoading) {
