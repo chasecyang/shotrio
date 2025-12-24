@@ -12,7 +12,7 @@ import { analyzeAssetsByType, getTopTagStats } from "@/lib/actions/asset/stats";
  * 收集 Agent 上下文信息
  * 将当前编辑器状态转换为文本描述，供 AI 理解
  */
-export async function collectContext(context: AgentContext): Promise<string> {
+export async function collectContext(context: AgentContext, projectId: string): Promise<string> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -25,10 +25,9 @@ export async function collectContext(context: AgentContext): Promise<string> {
 
   try {
     // 1. 项目基础信息
-    const project = await getProjectDetail(context.projectId);
+    const project = await getProjectDetail(projectId);
     if (project) {
       parts.push(`# 项目信息`);
-      parts.push(`项目ID: ${context.projectId}`);  // ✅ 添加项目 ID
       parts.push(`项目名称: ${project.title}`);
       if (project.description) {
         parts.push(`项目描述: ${project.description}`);
@@ -114,7 +113,7 @@ export async function collectContext(context: AgentContext): Promise<string> {
     // 5. 项目素材统计
     if (project) {
       const assetsResult = await queryAssets({
-        projectId: context.projectId,
+        projectId,
         limit: 100,
       });
       
@@ -135,7 +134,7 @@ export async function collectContext(context: AgentContext): Promise<string> {
         }
         
         // 获取最常用的标签（前10个）
-        const topTags = await getTopTagStats(context.projectId);
+        const topTags = await getTopTagStats(projectId);
         if (topTags.length > 0) {
           parts.push(`\n最常用的标签（前10个）:`);
           topTags.forEach((tag) => {

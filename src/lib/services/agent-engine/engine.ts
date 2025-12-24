@@ -8,6 +8,9 @@ import { executeFunction } from "@/lib/actions/agent/executor";
 import { collectContext } from "@/lib/actions/agent/context-collector";
 import { estimateActionCredits } from "@/lib/actions/credits/estimate";
 import type { AgentContext, FunctionCall } from "@/types/agent";
+import db from "@/lib/db";
+import { conversation } from "@/lib/db/schemas/project";
+import { eq } from "drizzle-orm";
 
 import type {
   AgentStreamEvent,
@@ -68,6 +71,16 @@ export class AgentEngine {
     await updateConversationStatus(conversationId, "active");
     await saveConversationContext(conversationId, projectContext);
 
+    // 从 conversation 表获取 projectId
+    const conv = await db.query.conversation.findFirst({
+      where: eq(conversation.id, conversationId),
+    });
+
+    if (!conv || !conv.projectId) {
+      yield { type: "error", data: "对话不存在或未关联项目" };
+      return;
+    }
+
     // 初始化状态
     const state: ConversationState = {
       conversationId,
@@ -79,7 +92,7 @@ export class AgentEngine {
     };
 
     // 构建系统消息
-    const contextText = await collectContext(projectContext);
+    const contextText = await collectContext(projectContext, conv.projectId);
     const systemPrompt = buildSystemPrompt();
     state.messages.push({ 
       role: "system", 
@@ -473,7 +486,7 @@ export class AgentEngine {
     };
 
     // 执行工具
-    const result = await executeFunction(functionCall);
+    const result = await executeFunction(functionCall, state.conversationId);
 
     // 格式化结果描述
     const formattedResult = result.success

@@ -37,10 +37,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        projectId: {
-          type: "string",
-          description: "项目ID",
-        },
         tags: {
           type: "string",
           description: "标签筛选（逗号分隔），如 'character,male' 或 'prop,weapon'",
@@ -50,7 +46,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           description: "返回数量限制，默认20",
         },
       },
-      required: ["projectId"],
+      required: [],
     },
     category: "read",
     needsConfirmation: false,
@@ -95,13 +91,8 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     displayName: "分析项目统计",
     parameters: {
       type: "object",
-      properties: {
-        projectId: {
-          type: "string",
-          description: "项目ID",
-        },
-      },
-      required: ["projectId"],
+      properties: {},
+      required: [],
     },
     category: "read",
     needsConfirmation: false,
@@ -235,10 +226,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        projectId: {
-          type: "string",
-          description: "项目ID",
-        },
         prompt: {
           type: "string",
           description: "图像生成提示词（英文自然语言描述，不要使用逗号分隔的短词，而是用完整的句子描述画面内容、人物、场景、光线、氛围等）",
@@ -260,7 +247,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           description: "参考素材ID数组（JSON字符串格式），用于图生图模式。先用 query_assets 查询获取素材ID",
         },
       },
-      required: ["projectId", "prompt"],
+      required: ["prompt"],
     },
     category: "generation",
     needsConfirmation: true,
@@ -272,16 +259,12 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        projectId: {
-          type: "string",
-          description: "项目ID",
-        },
         assets: {
           type: "string",
           description: '素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（英文自然语言描述，用完整句子描述画面）、tags（逗号分隔的标签字符串，如"角色,男性"）、sourceAssetIds（可选，参考素材ID数组）。示例：[{"name":"林晓","prompt":"A young man...","tags":"角色,男性,主角"}]',
         },
       },
-      required: ["projectId", "assets"],
+      required: ["assets"],
     },
     category: "generation",
     needsConfirmation: true,
@@ -408,16 +391,12 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        projectId: {
-          type: "string",
-          description: "项目ID",
-        },
         styleId: {
           type: "string",
           description: "风格ID（从 query_available_art_styles 获取）",
         },
       },
-      required: ["projectId", "styleId"],
+      required: ["styleId"],
     },
     category: "modification",
     needsConfirmation: true,

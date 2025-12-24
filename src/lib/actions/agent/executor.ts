@@ -10,7 +10,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
-import { episode, shot } from "@/lib/db/schemas/project";
+import { episode, shot, conversation } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
@@ -29,7 +29,8 @@ import { analyzeAssetsByType } from "../asset/stats";
  * 执行单个 function call
  */
 export async function executeFunction(
-  functionCall: FunctionCall
+  functionCall: FunctionCall,
+  conversationId: string
 ): Promise<FunctionExecutionResult> {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -43,6 +44,20 @@ export async function executeFunction(
     };
   }
 
+  // 从 conversation 表获取 projectId
+  const conv = await db.query.conversation.findFirst({
+    where: eq(conversation.id, conversationId),
+  });
+
+  if (!conv || !conv.projectId) {
+    return {
+      functionCallId: functionCall.id,
+      success: false,
+      error: "对话不存在或未关联项目",
+    };
+  }
+
+  const projectId = conv.projectId;
   const { name, parameters } = functionCall;
 
   try {
@@ -80,7 +95,7 @@ export async function executeFunction(
       case "query_assets": {
         const tagArray = parameters.tags ? (parameters.tags as string).split(",") : undefined;
         const queryResult = await queryAssets({
-          projectId: parameters.projectId as string,
+          projectId,
           tagFilters: tagArray,
           limit: parameters.limit ? parseInt(parameters.limit as string) : 20,
         });
@@ -133,7 +148,7 @@ export async function executeFunction(
 
       case "analyze_project_stats": {
         const assetsResult = await queryAssets({
-          projectId: parameters.projectId as string,
+          projectId,
           limit: 1000,
         });
 
@@ -257,7 +272,7 @@ export async function executeFunction(
       case "generate_asset": {
         // 构建素材生成输入
         const input: AssetImageGenerationInput = {
-          projectId: parameters.projectId as string,
+          projectId,
           prompt: parameters.prompt as string,
           numImages: parameters.numImages ? parseInt(parameters.numImages as string) : 1,
         };
@@ -283,7 +298,7 @@ export async function executeFunction(
 
         const jobResult = await createJob({
           userId: session.user.id,
-          projectId: parameters.projectId as string,
+          projectId,
           type: "asset_image_generation",
           inputData: input,
         });
@@ -321,7 +336,7 @@ export async function executeFunction(
           }
 
           const input: AssetImageGenerationInput = {
-            projectId: parameters.projectId as string,
+            projectId,
             prompt: assetData.prompt,
             name: assetData.name,
             tags: parsedTags,
@@ -331,7 +346,7 @@ export async function executeFunction(
 
           const jobResult = await createJob({
             userId: session.user.id,
-            projectId: parameters.projectId as string,
+            projectId,
             type: "asset_image_generation",
             inputData: input,
           });
@@ -423,7 +438,7 @@ export async function executeFunction(
 
       case "set_project_art_style": {
         const updateResult = await updateProject(
-          parameters.projectId as string,
+          projectId,
           { styleId: parameters.styleId as string }
         );
 

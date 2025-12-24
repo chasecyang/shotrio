@@ -171,7 +171,7 @@ export async function loadConversationState(conversationId: string): Promise<Con
         recentJobs: [],
       };
     }
-    const contextText = await collectContext(agentContext);
+    const contextText = await collectContext(agentContext, conv.projectId);
     messages.push({ role: "system", content: `# 当前上下文\n\n${contextText}` });
     
     // 3. 先获取最后的 assistant 消息和解析 pendingAction（用于重建 tool_calls）
