@@ -82,18 +82,25 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                     iterations: event.data.iterations,
                   };
                   
-                  // 如果 state_update 包含 pendingAction，也更新它
-                  // 但需要检查ID，避免重复设置（与 interrupt 事件处理保持一致）
-                  if (event.data.pendingAction !== undefined) {
-                    const currentMessage = agent.state.messages.find(m => m.id === currentMessageId);
-                    const existingPendingActionId = currentMessage?.pendingAction?.id;
-                    const newPendingActionId = event.data.pendingAction.id;
-                    
-                    // 如果 pendingAction 已存在且 id 相同，跳过更新
-                    if (existingPendingActionId !== newPendingActionId) {
-                      updates.pendingAction = event.data.pendingAction;
+                  // 如果 state_update 包含 pendingAction 字段（包括 undefined），则更新它
+                  // 这允许后端通过发送 pendingAction: undefined 来清除前端状态
+                  if ("pendingAction" in event.data) {
+                    if (event.data.pendingAction === undefined) {
+                      // 明确清除 pendingAction
+                      updates.pendingAction = undefined;
+                      console.log("[Agent Stream] 清除 pendingAction");
                     } else {
-                      console.log("[Agent Stream] state_update: pendingAction 已存在，跳过重复设置:", newPendingActionId);
+                      // 检查是否需要更新 pendingAction
+                      const currentMessage = agent.state.messages.find(m => m.id === currentMessageId);
+                      const existingPendingActionId = currentMessage?.pendingAction?.id;
+                      const newPendingActionId = event.data.pendingAction.id;
+                      
+                      // 如果 pendingAction 已存在且 id 相同，跳过更新
+                      if (existingPendingActionId !== newPendingActionId) {
+                        updates.pendingAction = event.data.pendingAction;
+                      } else {
+                        console.log("[Agent Stream] state_update: pendingAction 已存在，跳过重复设置:", newPendingActionId);
+                      }
                     }
                   }
                   
@@ -210,16 +217,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
    */
   const resumeConversation = useCallback(
     async (conversationId: string, approved: boolean, reason?: string) => {
-      // 清除当前消息的 pendingAction（如果存在）
-      const currentMessage = agent.state.messages
-        .filter(m => m.role === "assistant")
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-      
-      if (currentMessage?.pendingAction) {
-        agent.updateMessage(currentMessage.id, {
-          pendingAction: undefined,
-        });
-      }
+      // 不再手动清除 pendingAction，让后端通过 state_update 事件统一管理
       
       // 创建 abort controller
       abortControllerRef.current = new AbortController();
@@ -263,7 +261,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
         abortControllerRef.current = null;
       }
     },
-    [processStream, options, agent]
+    [processStream, options]
   );
 
   /**

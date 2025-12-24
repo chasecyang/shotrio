@@ -127,7 +127,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         firstUserMessageRef.current = null;
       }
     }
-  }, [agent.state.currentConversationId, agent.state.isNewConversation]);
+  }, [agent.state.currentConversationId, agent.state.isNewConversation, agent.state.messages.length]);
 
   // 更新对话标题的函数
   const updateConversationTitleFromMessage = useCallback(async (
@@ -224,23 +224,21 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     setIsProcessing(true);
 
     try {
-      // 检查是否有pendingAction，如果有则自动拒绝
+      // 检查是否有pendingAction，如果有则将新消息作为拒绝理由
       const lastAssistantMessage = agent.state.messages
         .filter(m => m.role === "assistant")
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
       
       if (lastAssistantMessage?.pendingAction && agent.state.currentConversationId) {
-        // 清除UI状态
-        agent.updateMessage(lastAssistantMessage.id, {
-          pendingAction: undefined,
-        });
-        
-        // 异步拒绝pendingAction，使用新消息作为拒绝理由（不等待完成）
-        resumeConversation(agent.state.currentConversationId, false, userMessage)
-          .catch(error => {
-            console.error("[AgentPanel] 拒绝pendingAction失败:", error);
-            // 不显示错误提示，因为用户已经发送了新消息
-          });
+        // 同步调用 resumeConversation，将新消息作为拒绝理由
+        // 这会让 AI 看到用户的新消息并继续对话
+        await resumeConversation(
+          agent.state.currentConversationId, 
+          false, 
+          `用户拒绝了操作并回复：${userMessage}`
+        );
+        // 完成后直接返回，不继续创建新对话
+        return;
       }
 
       let conversationId = agent.state.currentConversationId;

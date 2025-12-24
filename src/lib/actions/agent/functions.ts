@@ -261,7 +261,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         assets: {
           type: "string",
-          description: '素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（英文自然语言描述，用完整句子描述画面）、tags（逗号分隔的标签字符串，如"角色,男性"）、sourceAssetIds（可选，参考素材ID数组）。示例：[{"name":"林晓","prompt":"A young man...","tags":"角色,男性,主角"}]',
+          description: '素材数组（JSON字符串格式），每个素材包含 name（名称）、prompt（英文自然语言描述，用完整句子描述画面）、tags（逗号分隔的标签字符串，如"角色,男性"）、sourceAssetIds（可选，参考素材ID数组）。',
         },
       },
       required: ["assets"],

@@ -55,7 +55,7 @@ import {
 } from "lucide-react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { AssetWithTags, hasAssetTag } from "@/types/asset";
-import { updateAsset, deleteAsset } from "@/lib/actions/asset";
+import { updateAsset, deleteAsset, getAsset } from "@/lib/actions/asset";
 import { addAssetTag, removeAssetTag } from "@/lib/actions/asset";
 import { PRESET_TAGS, isPresetTag } from "@/lib/constants/asset-tags";
 import { toast } from "sonner";
@@ -87,10 +87,31 @@ export function AssetDetailDialog({
   const [newTagValue, setNewTagValue] = useState("");
   const [tagComboOpen, setTagComboOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [sourceAssets, setSourceAssets] = useState<AssetWithTags[]>([]);
+  const [isLoadingSourceAssets, setIsLoadingSourceAssets] = useState(false);
 
   useEffect(() => {
     if (asset) {
       setEditedName(asset.name);
+      
+      // 加载源素材
+      if (asset.sourceAssetIds && asset.sourceAssetIds.length > 0) {
+        setIsLoadingSourceAssets(true);
+        Promise.all(
+          asset.sourceAssetIds.map(id => getAsset(id))
+        ).then(results => {
+          const loadedAssets = results
+            .filter(r => r.success && r.asset)
+            .map(r => r.asset!);
+          setSourceAssets(loadedAssets);
+          setIsLoadingSourceAssets(false);
+        }).catch(error => {
+          console.error("加载源素材失败:", error);
+          setIsLoadingSourceAssets(false);
+        });
+      } else {
+        setSourceAssets([]);
+      }
     }
   }, [asset]);
 
@@ -479,41 +500,59 @@ export function AssetDetailDialog({
               </div>
 
               {/* 派生关系 */}
-              {asset.sourceAsset && (
+              {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
                 <>
                   <Separator />
                   <div className="space-y-3">
-                    <h3 className="text-sm font-medium">派生来源</h3>
-                    <div className="flex items-center gap-3 p-3 rounded-lg border">
-                      <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
-                        {asset.sourceAsset.imageUrl ? (
-                          <Image
-                            src={
-                              asset.sourceAsset.thumbnailUrl ||
-                              asset.sourceAsset.imageUrl
-                            }
-                            alt={asset.sourceAsset.name}
-                            fill
-                            className="object-cover"
-                            sizes="64px"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {asset.sourceAsset.name}
-                        </p>
-                        {asset.derivationType && (
-                          <p className="text-xs text-muted-foreground">
-                            派生类型: {asset.derivationType}
-                          </p>
-                        )}
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium">派生来源</h3>
+                      {asset.derivationType && (
+                        <Badge variant="outline" className="text-xs">
+                          {asset.derivationType}
+                        </Badge>
+                      )}
                     </div>
+                    {isLoadingSourceAssets ? (
+                      <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {sourceAssets.map((sourceAsset) => (
+                          <div
+                            key={sourceAsset.id}
+                            className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
+                              {sourceAsset.imageUrl ? (
+                                <Image
+                                  src={
+                                    sourceAsset.thumbnailUrl ||
+                                    sourceAsset.imageUrl
+                                  }
+                                  alt={sourceAsset.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="64px"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {sourceAsset.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(sourceAsset.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

@@ -283,7 +283,6 @@ export async function getAsset(assetId: string): Promise<{
       where: eq(asset.id, assetId),
       with: {
         tags: true,
-        sourceAsset: true,
       },
     });
 

@@ -131,18 +131,25 @@ export class AgentEngine {
     if (!approved) {
       // 用户拒绝，添加拒绝消息
       if (state.pendingAction) {
+        // 1. 添加 tool 消息（标记操作失败）
         const toolMessage: Message = {
           role: "tool",
           content: JSON.stringify({
             success: false,
-            error: reason || "用户拒绝了此操作",
+            error: "用户拒绝了此操作",
             userRejected: true,
           }),
           tool_call_id: state.pendingAction.functionCall.id,
         };
         state.messages.push(toolMessage);
 
-        // 更新迭代状态
+        // 2. 如果用户提供了拒绝理由（新消息），添加为用户消息
+        // 这样 AI 可以看到用户的新输入并据此回复
+        if (reason && reason !== "用户拒绝了此操作") {
+          state.messages.push({ role: "user", content: reason });
+        }
+
+        // 3. 更新迭代状态
         const lastIteration = state.iterations[state.iterations.length - 1];
         if (lastIteration) {
           lastIteration.functionCall = {
@@ -156,18 +163,21 @@ export class AgentEngine {
           };
         }
 
+        // 4. 清除 pendingAction
+        state.pendingAction = undefined;
+
+        // 5. 发送状态更新（明确清除前端 pendingAction）
         yield {
           type: "state_update",
           data: {
             iterations: state.iterations,
             currentIteration: state.currentIteration,
+            pendingAction: undefined, // 明确清除
           },
         };
       }
-
-      state.pendingAction = undefined;
       
-      // 继续执行循环（让 AI 根据拒绝原因调整策略）
+      // 继续执行循环（让 AI 根据拒绝原因或新消息调整策略）
       yield* this.executeConversationLoop(state);
     } else {
       // 用户同意，执行 pendingAction

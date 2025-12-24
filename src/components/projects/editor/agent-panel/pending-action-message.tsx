@@ -9,6 +9,7 @@ import { formatParametersForConfirmation } from "@/lib/utils/agent-params-format
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
 import Image from "next/image";
+import { useEditor } from "../editor-context";
 
 interface PendingActionMessageProps {
   action: PendingActionInfo;
@@ -17,8 +18,8 @@ interface PendingActionMessageProps {
   currentBalance?: number;
 }
 
-// 参考图展示组件
-function ReferenceImages({ assetIds }: { assetIds: string[] }) {
+// 素材预览组件（支持自动刷新）
+function AssetPreview({ assetIds }: { assetIds: string[] }) {
   const [assets, setAssets] = useState<Array<{
     id: string;
     name: string;
@@ -28,9 +29,38 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
   const [isLoading, setIsLoading] = useState(true);
   // 使用 ref 跟踪当前请求的 assetIds，防止竞态条件
   const currentRequestRef = useRef<string>("");
+  // 获取 Editor Context 中的 jobs 状态
+  const { jobs } = useEditor();
 
+  // 加载素材数据
+  const loadAssets = async (requestId: string) => {
+    if (assetIds.length === 0) {
+      if (currentRequestRef.current === requestId) {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    try {
+      const result = await getAssetsByIds(assetIds);
+      // 检查请求是否仍然有效（assetIds 没有变化）
+      if (currentRequestRef.current === requestId) {
+        if (result.success && result.assets) {
+          setAssets(result.assets);
+        }
+        setIsLoading(false);
+      }
+    } catch (error) {
+      // 只有在当前请求仍然有效时才更新状态
+      if (currentRequestRef.current === requestId) {
+        console.error("加载素材失败:", error);
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // 初始加载
   useEffect(() => {
-    // 生成当前请求的唯一标识（使用 assetIds 的 JSON 字符串）
     const requestId = JSON.stringify(assetIds.sort());
     currentRequestRef.current = requestId;
 
@@ -38,34 +68,7 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
     setAssets([]);
     setIsLoading(true);
 
-    async function loadAssets() {
-      if (assetIds.length === 0) {
-        // 只有在当前请求仍然有效时才更新状态
-        if (currentRequestRef.current === requestId) {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const result = await getAssetsByIds(assetIds);
-        // 检查请求是否仍然有效（assetIds 没有变化）
-        if (currentRequestRef.current === requestId) {
-          if (result.success && result.assets) {
-            setAssets(result.assets);
-          }
-          setIsLoading(false);
-        }
-      } catch (error) {
-        // 只有在当前请求仍然有效时才更新状态
-        if (currentRequestRef.current === requestId) {
-          console.error("加载参考图失败:", error);
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadAssets();
+    loadAssets(requestId);
 
     // 清理函数：标记请求已取消
     return () => {
@@ -73,11 +76,42 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
     };
   }, [assetIds]);
 
+  // 监听 jobs 变化，自动刷新相关素材
+  useEffect(() => {
+    // 检查是否有相关的 asset_image_generation 任务完成
+    const completedAssetJobs = jobs.filter(
+      (job) =>
+        job.type === "asset_image_generation" &&
+        job.status === "completed" &&
+        job.inputData
+    );
+
+    if (completedAssetJobs.length === 0) return;
+
+    // 检查是否有我们关心的 assetId
+    const shouldRefresh = completedAssetJobs.some((job) => {
+      try {
+        const inputData = JSON.parse(job.inputData || "{}");
+        return assetIds.includes(inputData.assetId);
+      } catch {
+        return false;
+      }
+    });
+
+    if (shouldRefresh) {
+      // 重新加载素材数据
+      const requestId = currentRequestRef.current;
+      if (requestId) {
+        loadAssets(requestId);
+      }
+    }
+  }, [jobs, assetIds]);
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
-        <span>加载参考图...</span>
+        <span>加载素材...</span>
       </div>
     );
   }
@@ -117,6 +151,9 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
     </div>
   );
 }
+
+// 向后兼容的别名
+const ReferenceImages = AssetPreview;
 
 export const PendingActionMessage = memo(function PendingActionMessage({
   action,
@@ -270,7 +307,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                             <span className="text-xs font-medium text-muted-foreground">参考图:</span>
                             <span className="text-xs text-foreground">{asset.sourceAssetIds.length}张</span>
                           </div>
-                          <ReferenceImages assetIds={asset.sourceAssetIds} />
+                          <AssetPreview assetIds={asset.sourceAssetIds} />
                         </div>
                       )}
                     </div>
@@ -311,10 +348,10 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                           {param.value}
                         </span>
                       </div>
-                      {/* 如果是参考图参数，显示图片 */}
-                      {param.key === "sourceAssetIds" && singleAssetSourceIds.length > 0 && (
+                      {/* 如果是素材引用参数，显示图片预览 */}
+                      {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
                         <div className="pl-0 pt-1">
-                          <ReferenceImages assetIds={singleAssetSourceIds} />
+                          <AssetPreview assetIds={param.assetIds} />
                         </div>
                       )}
                     </div>
@@ -328,7 +365,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                         <span className="text-xs font-medium text-muted-foreground">参考图:</span>
                         <span className="text-xs text-foreground">{singleAssetSourceIds.length}张</span>
                       </div>
-                      <ReferenceImages assetIds={singleAssetSourceIds} />
+                      <AssetPreview assetIds={singleAssetSourceIds} />
                     </div>
                   )}
                 </div>

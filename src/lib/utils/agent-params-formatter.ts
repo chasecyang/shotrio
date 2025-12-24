@@ -15,6 +15,7 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   assetId: "素材ID",
   assetIds: "素材列表",
   sourceAssetIds: "参考图",
+  imageAssetId: "关联素材",
 
   // 内容属性
   prompt: "提示词",
@@ -95,6 +96,8 @@ export interface FormattedParameter {
   label: string;
   value: string;
   rawValue: unknown;
+  isAssetReference?: boolean; // 标记是否为素材引用参数
+  assetIds?: string[]; // 如果是素材引用，提取的 assetId 列表
 }
 
 /**
@@ -229,15 +232,51 @@ export function expandArrayValue(value: unknown): string[] {
 }
 
 /**
- * 技术性ID参数（在确认卡片中应该隐藏）
+ * 技术性ID参数（在确认卡片中应该隐藏，但素材ID除外，需要特殊处理）
  */
 const TECHNICAL_ID_PARAMS = new Set([
   "episodeId",
   "projectId",
   "shotId",
-  "assetId",
   "styleId",
 ]);
+
+/**
+ * 判断参数是否为素材引用（assetId 或 assetIds）
+ */
+function isAssetReferenceParam(key: string): boolean {
+  // 匹配 assetId, assetIds, imageAssetId, sourceAssetIds 等
+  return /assetIds?$/i.test(key);
+}
+
+/**
+ * 从参数值中提取 assetId 列表
+ */
+function extractAssetIds(value: unknown): string[] {
+  if (!value) return [];
+  
+  // 数组类型
+  if (Array.isArray(value)) {
+    return value.filter((id): id is string => typeof id === "string");
+  }
+  
+  // 字符串类型
+  if (typeof value === "string") {
+    // 尝试解析 JSON 数组
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((id): id is string => typeof id === "string");
+      }
+    } catch {
+      // 不是 JSON，可能是单个 ID
+    }
+    // 单个 ID
+    return [value];
+  }
+  
+  return [];
+}
 
 /**
  * 用户可理解的关键参数（优先显示）
@@ -261,6 +300,11 @@ function shouldShowParameter(key: string): boolean {
   // 隐藏技术性ID
   if (TECHNICAL_ID_PARAMS.has(key)) {
     return false;
+  }
+  
+  // 素材引用参数需要特殊处理，保留显示
+  if (isAssetReferenceParam(key)) {
+    return true;
   }
   
   // 显示关键参数
@@ -429,12 +473,18 @@ export function formatParametersForConfirmation(
   return filtered.map(([key, value]) => {
     const label = PARAM_KEY_LABELS[key] || key;
     const formattedValue = formatParameterValueForConfirmation(key, value);
+    
+    // 检查是否为素材引用参数
+    const isAssetRef = isAssetReferenceParam(key);
+    const assetIds = isAssetRef ? extractAssetIds(value) : undefined;
 
     return {
       key,
       label,
       value: formattedValue,
       rawValue: value,
+      isAssetReference: isAssetRef,
+      assetIds,
     };
   });
 }

@@ -80,14 +80,10 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     try {
       console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId);
 
-      // 立即更新UI：清除pendingAction，显示执行中状态
-      agent.updateMessage(message.id, {
-        pendingAction: undefined,
-      });
-
       toast.success("操作已确认，Agent 正在继续...");
 
       // 恢复对话，Engine 会自动执行已确认的操作
+      // pendingAction 的清除由后端通过 state_update 事件管理
       await resumeConversation(agent.state.currentConversationId, true);
     } catch (error) {
       console.error("确认操作失败:", error);
@@ -105,14 +101,10 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     try {
       console.log("[Agent] 准备拒绝，conversationId:", agent.state.currentConversationId);
 
-      // 立即更新UI：清除pendingAction
-      agent.updateMessage(message.id, {
-        pendingAction: undefined,
-      });
-
       toast.info("操作已拒绝，Agent 正在提供替代方案...");
 
       // 恢复对话（拒绝操作）
+      // pendingAction 的清除由后端通过 state_update 事件管理
       await resumeConversation(agent.state.currentConversationId, false, "用户拒绝了此操作");
     } catch (error) {
       console.error("拒绝操作失败:", error);

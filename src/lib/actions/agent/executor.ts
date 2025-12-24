@@ -216,7 +216,8 @@ export async function executeFunction(
       }
 
       case "batch_create_shots": {
-        const shotsData = JSON.parse(parameters.shots as string) as Array<{
+        // 解析 shots 参数，支持数组或 JSON 字符串
+        let shotsData: Array<{
           shotSize: string;
           description: string;
           order?: number;
@@ -226,6 +227,21 @@ export async function executeFunction(
           audioPrompt?: string;
           imageAssetId?: string;
         }>;
+        
+        if (Array.isArray(parameters.shots)) {
+          shotsData = parameters.shots;
+        } else {
+          try {
+            shotsData = JSON.parse(parameters.shots as string);
+          } catch (error) {
+            console.error("[executeFunction] 解析 shots 参数失败:", error);
+            return {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "shots 参数格式错误",
+            };
+          }
+        }
 
         // 验证和转换数据
         const validatedShots = shotsData.map((shotData) => ({
@@ -264,7 +280,23 @@ export async function executeFunction(
       // 生成类
       // ============================================
       case "generate_shot_videos": {
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
+        // 解析 shotIds 参数，支持数组或 JSON 字符串
+        let shotIds: string[];
+        if (Array.isArray(parameters.shotIds)) {
+          shotIds = parameters.shotIds;
+        } else {
+          try {
+            shotIds = JSON.parse(parameters.shotIds as string);
+          } catch (error) {
+            console.error("[executeFunction] 解析 shotIds 参数失败:", error);
+            return {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "shotIds 参数格式错误",
+            };
+          }
+        }
+        
         const videoResult = await batchGenerateShotVideos(shotIds);
 
         result = {
@@ -292,7 +324,23 @@ export async function executeFunction(
         // 解析 sourceAssetIds
         let parsedSourceAssetIds: string[] | undefined;
         if (parameters.sourceAssetIds) {
-          parsedSourceAssetIds = JSON.parse(parameters.sourceAssetIds as string);
+          // 如果已经是数组，直接使用
+          if (Array.isArray(parameters.sourceAssetIds)) {
+            parsedSourceAssetIds = parameters.sourceAssetIds;
+          } else {
+            // 如果是字符串，尝试解析 JSON
+            try {
+              const sourceStr = (parameters.sourceAssetIds as string).trim();
+              parsedSourceAssetIds = JSON.parse(sourceStr);
+            } catch (error) {
+              console.error("[executeFunction] 解析 sourceAssetIds 失败:", error);
+              // 如果解析失败，尝试按逗号分隔
+              parsedSourceAssetIds = (parameters.sourceAssetIds as string)
+                .split(',')
+                .map(id => id.trim())
+                .filter(Boolean);
+            }
+          }
         }
 
         // 生成素材名称（如果未提供）
@@ -355,12 +403,28 @@ export async function executeFunction(
       }
 
       case "batch_generate_assets": {
-        const assetsData = JSON.parse(parameters.assets as string) as Array<{
+        // 解析 assets 参数，支持数组或 JSON 字符串
+        let assetsData: Array<{
           name?: string;
           prompt: string;
           tags?: string | string[];
           sourceAssetIds?: string[];
         }>;
+        
+        if (Array.isArray(parameters.assets)) {
+          assetsData = parameters.assets;
+        } else {
+          try {
+            assetsData = JSON.parse(parameters.assets as string);
+          } catch (error) {
+            console.error("[executeFunction] 解析 assets 参数失败:", error);
+            return {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "assets 参数格式错误",
+            };
+          }
+        }
 
         const jobIds: string[] = [];
         const assetIds: string[] = [];
@@ -492,10 +556,22 @@ export async function executeFunction(
       }
 
       case "reorder_shots": {
-        const shotOrdersRecord = JSON.parse(parameters.shotOrders as string) as Record<
-          string,
-          number
-        >;
+        // 解析 shotOrders 参数，支持对象或 JSON 字符串
+        let shotOrdersRecord: Record<string, number>;
+        if (typeof parameters.shotOrders === 'object' && parameters.shotOrders !== null) {
+          shotOrdersRecord = parameters.shotOrders as Record<string, number>;
+        } else {
+          try {
+            shotOrdersRecord = JSON.parse(parameters.shotOrders as string);
+          } catch (error) {
+            console.error("[executeFunction] 解析 shotOrders 参数失败:", error);
+            return {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "shotOrders 参数格式错误",
+            };
+          }
+        }
         // 转换为数组格式
         const shotOrdersArray = Object.entries(shotOrdersRecord).map(([id, order]) => ({
           id,
@@ -533,7 +609,22 @@ export async function executeFunction(
       // 删除类
       // ============================================
       case "delete_shots": {
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
+        // 解析 shotIds 参数，支持数组或 JSON 字符串
+        let shotIds: string[];
+        if (Array.isArray(parameters.shotIds)) {
+          shotIds = parameters.shotIds;
+        } else {
+          try {
+            shotIds = JSON.parse(parameters.shotIds as string);
+          } catch (error) {
+            console.error("[executeFunction] 解析 shotIds 参数失败:", error);
+            return {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "shotIds 参数格式错误",
+            };
+          }
+        }
 
         for (const shotId of shotIds) {
           await deleteShot(shotId);
