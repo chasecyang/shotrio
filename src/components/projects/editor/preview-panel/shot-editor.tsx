@@ -54,13 +54,15 @@ import { refreshShot } from "@/lib/actions/project/refresh";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface ShotEditorProps {
   shot: ShotDetail;
 }
 
 export function ShotEditor({ shot }: ShotEditorProps) {
-  const { updateShot, project } = useEditor();
+  const { updateShot, state } = useEditor();
+  const { project } = state;
   const tToast = useTranslations("toasts");
 
   const [formData, setFormData] = useState({
@@ -79,6 +81,9 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUpdatingAsset, setIsUpdatingAsset] = useState(false);
+  
+  // 拖拽状态
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -89,21 +94,31 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   // 加载素材列表
   useEffect(() => {
     if (isAssetSelectorOpen && project?.id) {
+      console.log("[Shot Editor] Loading assets for project:", project.id);
       setIsLoadingAssets(true);
       queryAssets({
         projectId: project.id,
         limit: 100,
       })
         .then((result) => {
+          console.log("[Shot Editor] Assets loaded:", result.assets.length, "assets");
           setAssets(result.assets);
+          if (result.assets.length === 0) {
+            console.warn("[Shot Editor] No assets found for project:", project.id);
+          }
         })
         .catch((error) => {
-          console.error("加载素材失败:", error);
+          console.error("[Shot Editor] 加载素材失败:", error);
           toast.error("加载素材失败");
         })
         .finally(() => {
           setIsLoadingAssets(false);
         });
+    } else {
+      console.log("[Shot Editor] Not loading assets:", {
+        isAssetSelectorOpen,
+        projectId: project?.id,
+      });
     }
   }, [isAssetSelectorOpen, project?.id]);
 
@@ -247,8 +262,8 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   };
 
-  // 处理选择素材
-  const handleSelectAsset = async (assetId: string) => {
+  // 更新分镜素材的通用方法
+  const updateShotAsset = async (assetId: string) => {
     setIsUpdatingAsset(true);
     try {
       const result = await updateShotAction(shot.id, {
@@ -256,8 +271,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       });
 
       if (result.success) {
-        toast.success("素材已关联");
-        setIsAssetSelectorOpen(false);
+        toast.success(tToast("success.assetApplied"));
         
         // 刷新分镜数据
         const refreshResult = await refreshShot(shot.id);
@@ -265,14 +279,20 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           updateShot(refreshResult.shot);
         }
       } else {
-        toast.error(result.error || "关联失败");
+        toast.error(result.error || "应用素材失败");
       }
     } catch (error) {
-      console.error(error);
-      toast.error("关联失败");
+      console.error("应用素材失败:", error);
+      toast.error("应用素材失败");
     } finally {
       setIsUpdatingAsset(false);
     }
+  };
+
+  // 处理选择素材（从对话框）
+  const handleSelectAsset = async (assetId: string) => {
+    await updateShotAsset(assetId);
+    setIsAssetSelectorOpen(false);
   };
 
   // 处理清除素材
@@ -299,6 +319,69 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       toast.error("清除失败");
     } finally {
       setIsUpdatingAsset(false);
+    }
+  };
+
+  // 处理打开素材选择器
+  const handleOpenAssetSelector = () => {
+    if (!project?.id) {
+      toast.error("项目信息加载中，请稍后再试");
+      console.error("[Shot Editor] Cannot open asset selector: project not loaded");
+      return;
+    }
+    setIsAssetSelectorOpen(true);
+  };
+
+  // 处理重新加载素材
+  const handleReloadAssets = () => {
+    if (!project?.id) {
+      toast.error("项目信息加载中，请稍后再试");
+      return;
+    }
+    console.log("[Shot Editor] Manual reload assets triggered");
+    setIsLoadingAssets(true);
+    queryAssets({ projectId: project.id, limit: 100 })
+      .then((result) => {
+        console.log("[Shot Editor] Assets reloaded:", result.assets.length, "assets");
+        setAssets(result.assets);
+      })
+      .catch((error) => {
+        console.error("[Shot Editor] 重新加载素材失败:", error);
+        toast.error("加载素材失败");
+      })
+      .finally(() => {
+        setIsLoadingAssets(false);
+      });
+  };
+
+  // 处理素材拖拽放置
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    try {
+      const data = e.dataTransfer.getData("application/json");
+      if (!data) return;
+
+      const { assetId } = JSON.parse(data);
+      if (!assetId) return;
+
+      await updateShotAsset(assetId);
+    } catch (error) {
+      console.error("解析拖拽数据失败:", error);
     }
   };
 
@@ -341,7 +424,15 @@ export function ShotEditor({ shot }: ShotEditorProps) {
           <div className="flex flex-col @[640px]:flex-row gap-6">
             {/* 大图预览 */}
             <div className="w-full @[640px]:w-80 shrink-0">
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative group">
+            <div 
+              className={cn(
+                "aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative group transition-all",
+                isDragOver && "border-primary ring-2 ring-primary/50 bg-primary/5"
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               {shot.imageAsset?.imageUrl ? (
                 <>
                   <Image
@@ -351,41 +442,64 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                     className="object-contain"
                     sizes="320px"
                   />
+                  {/* 拖拽悬停提示 */}
+                  {isDragOver && (
+                    <div className="absolute inset-0 bg-primary/10 backdrop-blur-sm flex items-center justify-center z-10">
+                      <div className="text-center px-4">
+                        <ImagePlus className="w-12 h-12 mx-auto mb-2 text-primary" />
+                        <p className="text-sm font-medium text-primary">释放以替换图片</p>
+                      </div>
+                    </div>
+                  )}
                   {/* 悬停操作按钮 */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setIsAssetSelectorOpen(true)}
-                      disabled={isUpdatingAsset}
-                    >
-                      <ImagePlus className="w-4 h-4 mr-1.5" />
-                      更换素材
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={handleClearAsset}
-                      disabled={isUpdatingAsset}
-                    >
-                      <X className="w-4 h-4 mr-1.5" />
-                      清除
-                    </Button>
-                  </div>
+                  {!isDragOver && (
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleOpenAssetSelector}
+                        disabled={isUpdatingAsset}
+                      >
+                        <ImagePlus className="w-4 h-4 mr-1.5" />
+                        更换素材
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleClearAsset}
+                        disabled={isUpdatingAsset}
+                      >
+                        <X className="w-4 h-4 mr-1.5" />
+                        清除
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
-                <div className="text-center text-muted-foreground p-6">
-                  <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm mb-3">暂无图片</p>
-                  <Button
-                    size="sm"
-                    onClick={() => setIsAssetSelectorOpen(true)}
-                    disabled={isUpdatingAsset}
-                  >
-                    <ImagePlus className="w-4 h-4 mr-1.5" />
-                    选择素材
-                  </Button>
-                </div>
+                <>
+                  {/* 拖拽悬停提示 */}
+                  {isDragOver ? (
+                    <div className="absolute inset-0 bg-primary/10 backdrop-blur-sm flex items-center justify-center z-10">
+                      <div className="text-center px-4">
+                        <ImagePlus className="w-12 h-12 mx-auto mb-2 text-primary" />
+                        <p className="text-sm font-medium text-primary">释放以添加图片</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground p-6">
+                      <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm mb-3">暂无图片</p>
+                      <Button
+                        size="sm"
+                        onClick={handleOpenAssetSelector}
+                        disabled={isUpdatingAsset}
+                      >
+                        <ImagePlus className="w-4 h-4 mr-1.5" />
+                        选择素材
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -574,8 +688,28 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : filteredAssets.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {searchQuery ? "未找到匹配的素材" : "暂无素材"}
+              <div className="text-center py-12 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">
+                    {searchQuery ? "未找到匹配的素材" : "暂无素材"}
+                  </p>
+                  {!searchQuery && assets.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      请先在左侧"创作素材"面板中上传或生成素材
+                    </p>
+                  )}
+                </div>
+                {!searchQuery && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReloadAssets}
+                    disabled={isLoadingAssets}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    重新加载
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
