@@ -227,7 +227,7 @@ export function AssetPanel({ userId }: AssetPanelProps) {
         />
 
         {/* 素材列表 */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto" style={{ containerType: 'inline-size' }}>
           <AssetList
             assets={assets}
             viewMode={viewMode}

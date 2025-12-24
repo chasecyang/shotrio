@@ -595,6 +595,12 @@
     "currency": "美元",
     "creditsUnit": "积分",
     "bonusLabel": "额外赠送 {percent}%",
+    "guide": {
+      "title": "你可以创作：",
+      "character": "角色 - 为剧本中的人物设计形象",
+      "scene": "场景 - 创建故事发生的环境和地点",
+      "prop": "道具 - 生成剧情所需的物品和元素"
+    },
     "balance": {
       "title": "积分余额",
       "current": "当前可用积分",

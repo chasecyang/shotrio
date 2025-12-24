@@ -123,9 +123,14 @@ export function AssetList({
     <div
       className={cn(
         viewMode === "grid"
-          ? "grid grid-cols-1 sm:grid-cols-2 gap-3"
+          ? "grid gap-3"
           : "flex flex-col gap-2"
       )}
+      style={{
+        gridTemplateColumns: viewMode === "grid" 
+          ? "repeat(auto-fill, minmax(180px, 1fr))" 
+          : undefined
+      }}
     >
       {assets.map((asset) => (
         <AssetCard

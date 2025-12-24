@@ -657,6 +657,12 @@
     "currency": "USD",
     "creditsUnit": "Credits",
     "bonusLabel": "{percent}% extra bonus",
+    "guide": {
+      "title": "You can create:",
+      "character": "Character - Design character appearances for the script",
+      "scene": "Scene - Create environments and locations for the story",
+      "prop": "Prop - Generate items and elements needed for the plot"
+    },
     "balance": {
       "title": "Credit Balance",
       "current": "Current Available Credits",
