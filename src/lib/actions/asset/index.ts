@@ -7,7 +7,9 @@ export {
   createAsset,
   updateAsset,
   deleteAsset,
+  deleteAssets,
   getAsset,
+  getAssetsByIds,
   incrementAssetUsage,
 } from "./crud";
 

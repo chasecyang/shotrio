@@ -99,32 +99,21 @@ export async function getChatCompletion(
   try {
     const openai = getOpenAIClient();
     
-    // 构建请求参数
-    const requestParams: Record<string, unknown> = {
-      model,
-      messages,
-      max_tokens: maxTokens,
-      response_format: jsonMode ? { type: "json_object" } : undefined,
-    };
-
     // 检测是否是 reasoner 模型
     const isReasonerModel = model.includes('reasoner');
     
-    // 如果使用 reasoning 模式或检测到 reasoner 模型，添加 thinking 参数
-    if (useReasoning || isReasonerModel) {
-      requestParams.thinking = { type: "enabled" };
-      // reasoning 模式下，max_tokens 建议设置为 32K 或 64K
-      if (maxTokens < 32000) {
-        requestParams.max_tokens = 32000;
-      }
-      // reasoner 模式不支持 response_format
-      if (isReasonerModel && jsonMode) {
-        console.warn("⚠️ reasoner 模型不支持 JSON 模式，已自动禁用");
-        requestParams.response_format = undefined;
-      }
-    } else {
-      // 非 reasoning 模式才设置 temperature
-      requestParams.temperature = temperature;
+    // 构建请求参数
+    const requestParams: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+      model,
+      messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+      max_tokens: (useReasoning || isReasonerModel) && maxTokens < 32000 ? 32000 : maxTokens,
+      ...(jsonMode && !isReasonerModel ? { response_format: { type: "json_object" } } : {}),
+      ...((useReasoning || isReasonerModel) ? { thinking: { type: "enabled" } } : { temperature }),
+    };
+
+    // reasoner 模式不支持 response_format
+    if (isReasonerModel && jsonMode) {
+      console.warn("⚠️ reasoner 模型不支持 JSON 模式，已自动禁用");
     }
 
     const response = await openai.chat.completions.create(requestParams);

@@ -14,21 +14,26 @@ import { Trash2, Maximize2 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface AssetCardProps {
   asset: AssetWithTags;
   viewMode: "grid" | "list";
   isSelected?: boolean;
+  isBatchSelected?: boolean;
   onDelete: (asset: AssetWithTags) => void;
   onClick: (asset: AssetWithTags) => void;
+  onSelectChange?: (assetId: string, selected: boolean) => void;
 }
 
 export function AssetCard({
   asset,
   viewMode,
   isSelected = false,
+  isBatchSelected = false,
   onDelete,
   onClick,
+  onSelectChange,
 }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -72,7 +77,8 @@ export function AssetCard({
           "group relative rounded-lg border overflow-hidden transition-all cursor-move",
           "hover:border-primary/40 hover:bg-accent/50",
           isDragging && "opacity-50",
-          isSelected && "border-primary ring-2 ring-primary/20 bg-primary/5"
+          isSelected && "border-primary ring-2 ring-primary/20 bg-primary/5",
+          isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5"
         )}
       >
         {/* 缩略图区域 */}
@@ -90,11 +96,32 @@ export function AssetCard({
           {/* 悬停遮罩 */}
           {isHovered && (
             <div className="absolute inset-0 animate-in fade-in duration-200">
+              {/* 左上角复选框 */}
+              {onSelectChange && (
+                <div
+                  className="absolute top-2 left-2 z-10 cursor-pointer transition-transform hover:scale-110"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectChange(asset.id, !isBatchSelected);
+                  }}
+                >
+                  <Checkbox
+                    checked={isBatchSelected}
+                    onCheckedChange={(checked) => {
+                      onSelectChange(asset.id, checked === true);
+                    }}
+                    className="bg-background/90 backdrop-blur-sm border-2 shadow-lg hover:bg-background transition-colors cursor-pointer"
+                  />
+                </div>
+              )}
               {/* 左上角放大按钮 */}
               <Button
                 size="sm"
                 variant="secondary"
-                className="absolute top-2 left-2 h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer"
+                className={cn(
+                  "absolute h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer",
+                  onSelectChange ? "top-2 right-2" : "top-2 left-2"
+                )}
                 onClick={(e) => {
                   e.stopPropagation();
                   setLightboxOpen(true);
@@ -102,18 +129,35 @@ export function AssetCard({
               >
                 <Maximize2 className="h-3.5 w-3.5" />
               </Button>
-              {/* 右上角删除按钮 */}
-              <Button
-                size="sm"
-                variant="destructive"
-                className="absolute top-2 right-2 h-7 w-7 p-0 shadow-lg cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(asset);
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              {/* 右上角删除按钮（仅在非批量选择模式下显示） */}
+              {!onSelectChange && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="absolute top-2 right-2 h-7 w-7 p-0 shadow-lg cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(asset);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
+          {/* 非 hover 时也显示复选框（如果已选中） */}
+          {!isHovered && isBatchSelected && onSelectChange && (
+            <div
+              className="absolute top-2 left-2 z-10 animate-in fade-in duration-200 cursor-pointer transition-transform hover:scale-110"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectChange(asset.id, false);
+              }}
+            >
+              <Checkbox
+                checked={true}
+                className="bg-background/90 backdrop-blur-sm border-2 shadow-lg hover:bg-background transition-colors cursor-pointer"
+              />
             </div>
           )}
         </div>
@@ -199,7 +243,8 @@ export function AssetCard({
         "group flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-move",
         "hover:border-primary/40 hover:bg-accent/50",
         isDragging && "opacity-50",
-        isSelected && "border-primary ring-2 ring-primary/20 bg-primary/5"
+        isSelected && "border-primary ring-2 ring-primary/20 bg-primary/5",
+        isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5"
       )}
       onClick={() => onClick(asset)}
     >
@@ -278,8 +323,29 @@ export function AssetCard({
         )}
       </div>
 
+      {/* 复选框（列表视图） */}
+      {onSelectChange && (
+        <div
+          className={cn(
+            "shrink-0 cursor-pointer transition-all hover:scale-110",
+            isHovered || isBatchSelected ? "opacity-100" : "opacity-0"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectChange(asset.id, !isBatchSelected);
+          }}
+        >
+          <Checkbox
+            checked={isBatchSelected}
+            onCheckedChange={(checked) => {
+              onSelectChange(asset.id, checked === true);
+            }}
+            className="bg-background border-2 hover:bg-accent transition-colors cursor-pointer"
+          />
+        </div>
+      )}
       {/* 操作按钮 */}
-      {isHovered && (
+      {isHovered && !onSelectChange && (
         <div className="flex items-center gap-1 shrink-0 animate-in fade-in slide-in-from-right-2 duration-200">
           <Button
             size="sm"

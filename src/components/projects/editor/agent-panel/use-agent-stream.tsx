@@ -6,7 +6,7 @@
 
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
-import type { AgentContext, IterationStep } from "@/types/agent";
+import type { AgentContext, IterationStep, AgentMessage } from "@/types/agent";
 import { useAgent } from "./agent-context";
 import type { AgentStreamEvent } from "@/lib/services/agent-engine";
 
@@ -78,9 +78,26 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
               case "state_update":
                 // 更新状态
                 if (currentMessageId && event.data.iterations) {
-                  agent.updateMessage(currentMessageId, {
+                  const updates: Partial<AgentMessage> = {
                     iterations: event.data.iterations,
-                  });
+                  };
+                  
+                  // 如果 state_update 包含 pendingAction，也更新它
+                  // 但需要检查ID，避免重复设置（与 interrupt 事件处理保持一致）
+                  if (event.data.pendingAction !== undefined) {
+                    const currentMessage = agent.state.messages.find(m => m.id === currentMessageId);
+                    const existingPendingActionId = currentMessage?.pendingAction?.id;
+                    const newPendingActionId = event.data.pendingAction.id;
+                    
+                    // 如果 pendingAction 已存在且 id 相同，跳过更新
+                    if (existingPendingActionId !== newPendingActionId) {
+                      updates.pendingAction = event.data.pendingAction;
+                    } else {
+                      console.log("[Agent Stream] state_update: pendingAction 已存在，跳过重复设置:", newPendingActionId);
+                    }
+                  }
+                  
+                  agent.updateMessage(currentMessageId, updates);
                   options.onIterationUpdate?.(event.data.iterations);
                 }
                 break;
@@ -88,6 +105,18 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
               case "interrupt":
                 // 需要用户确认
                 if (currentMessageId && event.data.pendingAction) {
+                  const currentMessage = agent.state.messages.find(m => m.id === currentMessageId);
+                  
+                  // 检查是否已经存在相同的 pendingAction（通过 id 判断）
+                  const existingPendingActionId = currentMessage?.pendingAction?.id;
+                  const newPendingActionId = event.data.pendingAction.id;
+                  
+                  // 如果 pendingAction 已存在且 id 相同，跳过更新
+                  if (existingPendingActionId === newPendingActionId) {
+                    console.log("[Agent Stream] pendingAction 已存在，跳过重复设置:", newPendingActionId);
+                    break;
+                  }
+                  
                   agent.updateMessage(currentMessageId, {
                     pendingAction: event.data.pendingAction,
                     isStreaming: false,
@@ -112,8 +141,11 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                 toast.error(event.data);
                 break;
 
-              default:
-                console.log("[Agent Stream] 未知事件类型:", (event as any).type);
+              default: {
+                const _exhaustiveCheck: never = event;
+                console.log("[Agent Stream] 未知事件类型:", _exhaustiveCheck);
+                break;
+              }
             }
           } catch (error) {
             console.error("[Agent Stream] 解析事件失败:", error, line);
@@ -178,6 +210,17 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
    */
   const resumeConversation = useCallback(
     async (conversationId: string, approved: boolean, reason?: string) => {
+      // 清除当前消息的 pendingAction（如果存在）
+      const currentMessage = agent.state.messages
+        .filter(m => m.role === "assistant")
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+      
+      if (currentMessage?.pendingAction) {
+        agent.updateMessage(currentMessage.id, {
+          pendingAction: undefined,
+        });
+      }
+      
       // 创建 abort controller
       abortControllerRef.current = new AbortController();
 
@@ -220,7 +263,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
         abortControllerRef.current = null;
       }
     },
-    [processStream, options]
+    [processStream, options, agent]
   );
 
   /**

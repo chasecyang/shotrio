@@ -225,3 +225,167 @@ export async function reorderShots(
     };
   }
 }
+
+/**
+ * 批量创建分镜
+ * 支持指定 order 插入，自动处理 order 冲突
+ */
+export async function batchCreateShots(data: {
+  episodeId: string;
+  shots: Array<{
+    shotSize: ShotSize;
+    description: string;
+    order?: number;
+    cameraMovement?: CameraMovement;
+    duration?: number;
+    visualPrompt?: string;
+    audioPrompt?: string;
+    imageAssetId?: string;
+  }>;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    throw new Error("未登录");
+  }
+
+  try {
+    // 验证剧集存在
+    const episodeData = await db.query.episode.findFirst({
+      where: eq(episode.id, data.episodeId),
+    });
+
+    if (!episodeData) {
+      throw new Error("剧集不存在");
+    }
+
+    if (!data.shots || data.shots.length === 0) {
+      throw new Error("分镜数组不能为空");
+    }
+
+    // 使用事务确保原子性
+    return await db.transaction(async (tx) => {
+      // 1. 获取现有分镜，按 order 排序
+      const existingShots = await tx.query.shot.findMany({
+        where: eq(shot.episodeId, data.episodeId),
+        orderBy: [asc(shot.order)],
+      });
+
+      // 2. 分离指定了 order 和未指定 order 的分镜
+      const shotsWithOrder = data.shots
+        .filter((s) => s.order !== undefined)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      const shotsWithoutOrder = data.shots.filter((s) => s.order === undefined);
+
+      // 3. 计算需要移动的范围
+      let minOrder: number | undefined;
+      let maxOrder: number | undefined;
+      const insertCount = shotsWithOrder.length;
+
+      if (shotsWithOrder.length > 0) {
+        minOrder = Math.min(...shotsWithOrder.map((s) => s.order!));
+        maxOrder = Math.max(...shotsWithOrder.map((s) => s.order!));
+      }
+
+      // 4. 调整现有分镜的 order（如果有指定 order 的分镜需要插入）
+      if (minOrder !== undefined && insertCount > 0) {
+        // 找出所有需要移动的现有分镜（order >= minOrder）
+        const shotsToMove = existingShots.filter((s) => s.order >= minOrder!);
+        
+        // 从后往前更新，避免 order 冲突
+        for (let i = shotsToMove.length - 1; i >= 0; i--) {
+          const shotToMove = shotsToMove[i];
+          const newOrder = shotToMove.order + insertCount;
+          await tx
+            .update(shot)
+            .set({ order: newOrder })
+            .where(eq(shot.id, shotToMove.id));
+        }
+      }
+
+      // 5. 插入指定了 order 的分镜
+      const createdShots: Shot[] = [];
+      for (const shotData of shotsWithOrder) {
+        const newShot: NewShot = {
+          id: randomUUID(),
+          episodeId: data.episodeId,
+          order: shotData.order!,
+          shotSize: shotData.shotSize,
+          cameraMovement: shotData.cameraMovement || "static",
+          duration: shotData.duration || 3000,
+          description: shotData.description || null,
+          visualPrompt: shotData.visualPrompt || null,
+          audioPrompt: shotData.audioPrompt || null,
+          imageAssetId: shotData.imageAssetId || null,
+          videoUrl: null,
+          finalAudioUrl: null,
+        };
+
+        const [created] = await tx.insert(shot).values(newShot).returning();
+        createdShots.push(created);
+      }
+
+      // 6. 插入未指定 order 的分镜
+      // 计算下一个可用的 order
+      let nextOrder: number;
+      if (shotsWithOrder.length > 0 && minOrder !== undefined && maxOrder !== undefined) {
+        // 有指定 order 的分镜，需要计算移动后的最大 order
+        const maxExistingOrder = existingShots.length > 0
+          ? Math.max(...existingShots.map((s) => s.order))
+          : 0;
+        
+        // 如果 maxOrder 超出了现有分镜范围，则没有分镜被移动
+        if (maxOrder > maxExistingOrder) {
+          // 插入的 order 超出了现有范围，直接使用 maxOrder + 1
+          nextOrder = maxOrder + 1;
+        } else {
+          // 有分镜被移动，计算移动后的最大 order
+          const maxOrderAfterMove = maxExistingOrder + insertCount;
+          // 取 maxOrder 和移动后最大 order 的较大值，然后 +1
+          nextOrder = Math.max(maxOrder, maxOrderAfterMove) + 1;
+        }
+      } else if (existingShots.length > 0) {
+        // 没有指定 order 的分镜，直接从现有最大 order + 1 开始
+        nextOrder = existingShots[existingShots.length - 1].order + 1;
+      } else {
+        // 没有任何现有分镜
+        nextOrder = 1;
+      }
+
+      for (const shotData of shotsWithoutOrder) {
+        const newShot: NewShot = {
+          id: randomUUID(),
+          episodeId: data.episodeId,
+          order: nextOrder++,
+          shotSize: shotData.shotSize,
+          cameraMovement: shotData.cameraMovement || "static",
+          duration: shotData.duration || 3000,
+          description: shotData.description || null,
+          visualPrompt: shotData.visualPrompt || null,
+          audioPrompt: shotData.audioPrompt || null,
+          imageAssetId: shotData.imageAssetId || null,
+          videoUrl: null,
+          finalAudioUrl: null,
+        };
+
+        const [created] = await tx.insert(shot).values(newShot).returning();
+        createdShots.push(created);
+      }
+
+      return {
+        success: true,
+        data: {
+          shots: createdShots,
+          createdCount: createdShots.length,
+        },
+      };
+    });
+  } catch (error) {
+    console.error("批量创建分镜失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "批量创建失败",
+    };
+  }
+}

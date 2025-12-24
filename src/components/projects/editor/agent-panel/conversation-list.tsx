@@ -10,8 +10,8 @@ import {
   Clock, 
   CheckCircle, 
   AlertCircle,
-  Loader2,
-  Plus
+  Plus,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Conversation } from "./agent-context";
 
 interface ConversationListProps {
@@ -32,6 +33,7 @@ interface ConversationListProps {
   onDeleteConversation: (conversationId: string) => void;
   conversations: Conversation[];
   isLoading?: boolean;
+  isRefreshing?: boolean;
   // Optional new conversation callback
   onCreateConversation?: () => void;
 }
@@ -71,6 +73,7 @@ export const ConversationList = memo(function ConversationList({
   onDeleteConversation,
   conversations,
   isLoading = false,
+  isRefreshing = false,
   onCreateConversation,
 }: ConversationListProps) {
   const t = useTranslations();
@@ -126,9 +129,40 @@ export const ConversationList = memo(function ConversationList({
       {/* Conversation List */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          {/* 刷新指示器 */}
+          {isRefreshing && conversations.length > 0 && (
+            <div className="flex items-center justify-center py-2 mb-1">
+              <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {/* 初始加载：只在列表为空时显示骨架屏 */}
+          {isLoading && conversations.length === 0 ? (
+            <div className="space-y-1">
+              {[...Array(3)].map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 rounded-lg border p-3 bg-card border-border"
+                >
+                  {/* Status Icon Skeleton */}
+                  <Skeleton className="h-4 w-4 shrink-0 mt-0.5 rounded-full" />
+                  
+                  {/* Content Skeleton */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    {/* Title Skeleton */}
+                    <div className="flex items-start justify-between gap-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-6 w-6 shrink-0 rounded" />
+                    </div>
+                    
+                    {/* Badge and Time Skeleton */}
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
@@ -148,7 +182,8 @@ export const ConversationList = memo(function ConversationList({
                   key={conv.id}
                   onClick={() => onSelectConversation(conv.id)}
                   className={cn(
-                    "group flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all",
+                    "group flex items-start gap-3 rounded-lg border p-3 cursor-pointer",
+                    "transition-all duration-200 ease-in-out",
                     "hover:bg-accent hover:border-accent-foreground/20",
                     isActive
                       ? "bg-accent border-accent-foreground/20 shadow-sm"

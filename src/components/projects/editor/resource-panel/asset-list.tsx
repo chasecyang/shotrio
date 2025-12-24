@@ -13,8 +13,10 @@ interface AssetListProps {
   viewMode: "grid" | "list";
   isLoading?: boolean;
   selectedAssetId?: string | null;
+  selectedAssetIds?: Set<string>;
   onDelete: (asset: AssetWithTags) => void;
   onClick: (asset: AssetWithTags) => void;
+  onSelectChange?: (assetId: string, selected: boolean) => void;
   onUpload: () => void;
 }
 
@@ -38,8 +40,10 @@ export function AssetList({
   viewMode,
   isLoading = false,
   selectedAssetId,
+  selectedAssetIds = new Set(),
   onDelete,
   onClick,
+  onSelectChange,
   onUpload,
 }: AssetListProps) {
   const { state, selectResource } = useEditor();
@@ -129,8 +133,10 @@ export function AssetList({
           asset={asset}
           viewMode={viewMode}
           isSelected={selectedAssetId === asset.id}
+          isBatchSelected={selectedAssetIds.has(asset.id)}
           onDelete={onDelete}
           onClick={onClick}
+          onSelectChange={onSelectChange}
         />
       ))}
     </div>

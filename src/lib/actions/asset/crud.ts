@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
 import { asset, assetTag } from "@/lib/db/schemas/project";
-import { eq } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type {
   CreateAssetInput,
@@ -206,6 +206,64 @@ export async function deleteAsset(assetId: string): Promise<{
 }
 
 /**
+ * 批量删除资产
+ */
+export async function deleteAssets(assetIds: string[]): Promise<{
+  success: boolean;
+  deletedCount?: number;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  if (!assetIds || assetIds.length === 0) {
+    return { success: false, error: "未选择要删除的素材" };
+  }
+
+  try {
+    // 验证权限：确保所有素材都属于当前用户
+    const existingAssets = await db.query.asset.findMany({
+      where: inArray(asset.id, assetIds),
+    });
+
+    if (existingAssets.length === 0) {
+      return { success: false, error: "未找到要删除的素材" };
+    }
+
+    // 检查权限
+    const unauthorizedAssets = existingAssets.filter(
+      (a) => a.userId !== session.user.id
+    );
+    if (unauthorizedAssets.length > 0) {
+      return { success: false, error: "无权限删除部分素材" };
+    }
+
+    // 获取项目ID用于revalidate（假设所有素材属于同一项目）
+    const projectId = existingAssets[0]?.projectId;
+
+    // 批量删除资产（标签会因为CASCADE自动删除）
+    await db.delete(asset).where(inArray(asset.id, assetIds));
+
+    // Revalidate路径
+    if (projectId) {
+      revalidatePath(`/[lang]/projects/${projectId}`, "page");
+    }
+
+    return { success: true, deletedCount: existingAssets.length };
+  } catch (error) {
+    console.error("批量删除资产失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "批量删除资产失败",
+    };
+  }
+}
+
+/**
  * 获取单个资产详情（带标签）
  */
 export async function getAsset(assetId: string): Promise<{
@@ -247,6 +305,57 @@ export async function getAsset(assetId: string): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : "获取资产失败",
+    };
+  }
+}
+
+/**
+ * 批量获取资产（仅获取基本信息，用于展示）
+ */
+export async function getAssetsByIds(assetIds: string[]): Promise<{
+  success: boolean;
+  assets?: Array<{
+    id: string;
+    name: string;
+    imageUrl: string;
+    thumbnailUrl: string | null;
+  }>;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  if (assetIds.length === 0) {
+    return { success: true, assets: [] };
+  }
+
+  try {
+    const assetsData = await db.query.asset.findMany({
+      where: and(
+        inArray(asset.id, assetIds),
+        eq(asset.userId, session.user.id)
+      ),
+      columns: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        thumbnailUrl: true,
+      },
+    });
+
+    return {
+      success: true,
+      assets: assetsData,
+    };
+  } catch (error) {
+    console.error("批量获取资产失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "批量获取资产失败",
     };
   }
 }

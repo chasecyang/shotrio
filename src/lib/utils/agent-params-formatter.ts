@@ -14,7 +14,7 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   shotIds: "分镜列表",
   assetId: "素材ID",
   assetIds: "素材列表",
-  sourceAssetIds: "源素材列表",
+  sourceAssetIds: "参考图",
 
   // 内容属性
   prompt: "提示词",
@@ -303,6 +303,36 @@ function formatParameterValueForConfirmation(key: string, value: unknown): strin
 
   // 字符串
   if (typeof value === "string") {
+    // 特殊处理：tags（标签）
+    if (key === "tags") {
+      // 尝试解析为数组
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          return parsed.join(", ");
+        }
+      } catch {
+        // 不是JSON，可能是逗号分隔的字符串
+        if (value.includes(",")) {
+          return value;
+        }
+      }
+      return value;
+    }
+
+    // 特殊处理：sourceAssetIds（参考图）
+    if (key === "sourceAssetIds") {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          return parsed.length > 0 ? `${parsed.length}张参考图` : "无";
+        }
+      } catch {
+        // 不是JSON数组
+      }
+      return value ? "有参考图" : "无";
+    }
+
     // 尝试解析 JSON 字符串
     try {
       const parsed = JSON.parse(value);
@@ -338,14 +368,22 @@ function formatParameterValueForConfirmation(key: string, value: unknown): strin
 
     // 截断长文本
     if (key === "prompt" || key === "description" || key === "visualPrompt") {
-      return truncateText(value, 50);
+      return truncateText(value, 100);
     }
 
     return value;
   }
 
-  // 数组：显示数量
+  // 数组：显示数量或内容
   if (Array.isArray(value)) {
+    // 特殊处理：tags数组
+    if (key === "tags") {
+      return value.join(", ");
+    }
+    // 特殊处理：sourceAssetIds数组
+    if (key === "sourceAssetIds") {
+      return value.length > 0 ? `${value.length}张参考图` : "无";
+    }
     return `${value.length}项`;
   }
 

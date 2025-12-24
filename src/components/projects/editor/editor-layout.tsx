@@ -123,11 +123,15 @@ function EditorLayoutInner({
       try {
         const result = await refreshEpisodeShots(state.selectedEpisodeId);
         if (result.success && result.shots) {
+          // 只在成功时才更新分镜列表
           dispatch({ type: "SET_SHOTS", payload: result.shots });
         } else {
+          // 刷新失败时不清空现有分镜数据，只显示错误提示
+          console.error("加载分镜失败:", result.error);
           toast.error(result.error || t("errors.loadShotsFailed"));
         }
       } catch (error) {
+        // 刷新失败时不清空现有分镜数据，只显示错误提示
         console.error("加载分镜失败:", error);
         toast.error(t("errors.loadShotsFailed"));
       } finally {

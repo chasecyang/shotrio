@@ -1,18 +1,92 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, useMemo, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Coins, Plus, Check, X } from "lucide-react";
+import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import type { PendingActionInfo } from "@/lib/services/agent-engine";
 import { formatParametersForConfirmation } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
+import { getAssetsByIds } from "@/lib/actions/asset";
+import Image from "next/image";
 
 interface PendingActionMessageProps {
   action: PendingActionInfo;
   onConfirm: (actionId: string) => void;
   onCancel: (actionId: string) => void;
   currentBalance?: number;
+}
+
+// 参考图展示组件
+function ReferenceImages({ assetIds }: { assetIds: string[] }) {
+  const [assets, setAssets] = useState<Array<{
+    id: string;
+    name: string;
+    imageUrl: string;
+    thumbnailUrl: string | null;
+  }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadAssets() {
+      if (assetIds.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const result = await getAssetsByIds(assetIds);
+        if (result.success && result.assets) {
+          setAssets(result.assets);
+        }
+      } catch (error) {
+        console.error("加载参考图失败:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadAssets();
+  }, [assetIds]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        <span>加载参考图...</span>
+      </div>
+    );
+  }
+
+  if (assets.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {assets.map((asset) => (
+        <div
+          key={asset.id}
+          className="relative group rounded-md overflow-hidden border border-border/50 bg-background/50"
+        >
+          <div className="relative w-16 h-16">
+            <Image
+              src={asset.thumbnailUrl || asset.imageUrl}
+              alt={asset.name}
+              fill
+              className="object-cover"
+              sizes="64px"
+            />
+          </div>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
+          <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+            <p className="text-[10px] text-white truncate">{asset.name}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export const PendingActionMessage = memo(function PendingActionMessage({
@@ -33,6 +107,91 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const iconBg = "bg-primary/10";
   const iconColor = "text-primary";
 
+  // 判断是否为生成素材操作
+  const isGenerateAsset = action.functionCall.name === "generate_asset";
+  const isBatchGenerateAssets = action.functionCall.name === "batch_generate_assets";
+
+  // 格式化参数（针对生成素材操作特殊处理）
+  const formattedParams = useMemo(() => {
+    if (isGenerateAsset) {
+      // generate_asset: 过滤projectId，展示prompt、name、tags、sourceAssetIds
+      return formatParametersForConfirmation(action.functionCall.arguments);
+    } else if (isBatchGenerateAssets) {
+      // batch_generate_assets: 返回空数组，因为需要单独处理assets数组
+      return [];
+    } else {
+      // 其他操作：使用标准格式化
+      return formatParametersForConfirmation(action.functionCall.arguments);
+    }
+  }, [action.functionCall.arguments, isGenerateAsset, isBatchGenerateAssets]);
+
+  // 提取单个生成素材的参考图ID
+  const singleAssetSourceIds = useMemo(() => {
+    if (!isGenerateAsset) return [];
+    const sourceAssetIds = action.functionCall.arguments.sourceAssetIds;
+    if (Array.isArray(sourceAssetIds)) {
+      return sourceAssetIds;
+    }
+    if (typeof sourceAssetIds === "string") {
+      try {
+        const parsed = JSON.parse(sourceAssetIds);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // 不是JSON，忽略
+      }
+    }
+    return [];
+  }, [isGenerateAsset, action.functionCall.arguments]);
+
+  // 解析批量生成素材的assets数组
+  const batchAssets = useMemo(() => {
+    if (!isBatchGenerateAssets) return null;
+    
+    try {
+      const assetsStr = action.functionCall.arguments.assets;
+      if (typeof assetsStr === "string") {
+        const parsed = JSON.parse(assetsStr);
+        if (Array.isArray(parsed)) {
+          return parsed.map((asset: any) => {
+            const prompt = asset.prompt || "-";
+            const truncatedPrompt = prompt !== "-" && prompt.length > 100 
+              ? prompt.slice(0, 100) + "..." 
+              : prompt;
+            
+            // 提取参考图ID
+            let sourceAssetIds: string[] = [];
+            if (Array.isArray(asset.sourceAssetIds)) {
+              sourceAssetIds = asset.sourceAssetIds;
+            } else if (typeof asset.sourceAssetIds === "string") {
+              try {
+                const parsed = JSON.parse(asset.sourceAssetIds);
+                if (Array.isArray(parsed)) {
+                  sourceAssetIds = parsed;
+                }
+              } catch {
+                // 不是JSON，忽略
+              }
+            }
+            
+            return {
+              name: asset.name || "-",
+              prompt: truncatedPrompt,
+              tags: Array.isArray(asset.tags) 
+                ? asset.tags.join(", ") 
+                : (typeof asset.tags === "string" ? asset.tags : "-"),
+              sourceAssetIds,
+            };
+          });
+        }
+      }
+    } catch (error) {
+      console.error("解析批量生成素材参数失败:", error);
+    }
+    return null;
+  }, [isBatchGenerateAssets, action.functionCall.arguments]);
+
   return (
     <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
       <div className="p-3 space-y-3">
@@ -43,38 +202,110 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {t('agent.action.pending')}
+              {action.functionCall.displayName || action.functionCall.name}
             </p>
-            {action.message && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {action.message}
-              </p>
-            )}
           </div>
         </div>
 
         {/* Function Call Details */}
         <div className="space-y-2 pl-9">
-          <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
-            {/* Operation Description */}
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-sm font-medium text-foreground">
-                {action.functionCall.displayName || action.functionCall.name}
-              </span>
-            </div>
-
-            {/* Key Parameters */}
-            {Object.keys(action.functionCall.arguments).length > 0 && (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                {Object.entries(action.functionCall.arguments).slice(0, 3).map(([key, value]) => (
-                  <div key={key} className="flex items-center gap-1">
-                    <span className="font-medium">{key}:</span>
-                    <span>{String(value).slice(0, 50)}</span>
+          {isBatchGenerateAssets ? (
+            /* 批量生成素材：为每个素材显示一个卡片 */
+            batchAssets && batchAssets.length > 0 ? (
+              <div className="space-y-2">
+                {batchAssets.map((asset, index) => (
+                  <div key={index} className="rounded-md bg-background/50 border border-border/50 p-2.5">
+                    <div className="space-y-1.5">
+                      {asset.name && asset.name !== "-" && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">名称:</span>
+                          <span className="text-xs text-foreground">{asset.name}</span>
+                        </div>
+                      )}
+                      {asset.prompt && asset.prompt !== "-" && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-medium text-muted-foreground shrink-0">提示词:</span>
+                          <span className="text-xs text-foreground break-words">{asset.prompt}</span>
+                        </div>
+                      )}
+                      {asset.tags && asset.tags !== "-" && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">标签:</span>
+                          <span className="text-xs text-foreground">{asset.tags}</span>
+                        </div>
+                      )}
+                      {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs font-medium text-muted-foreground">参考图:</span>
+                            <span className="text-xs text-foreground">{asset.sourceAssetIds.length}张</span>
+                          </div>
+                          <ReferenceImages assetIds={asset.sourceAssetIds} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            ) : (
+              /* Fallback: 如果解析失败，使用标准格式化 */
+              formattedParams.length > 0 && (
+                <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
+                  <div className="space-y-1.5">
+                    {formattedParams.map((param) => (
+                      <div key={param.key} className="flex items-start gap-2">
+                        <span className="text-xs font-medium text-muted-foreground shrink-0">
+                          {param.label}:
+                        </span>
+                        <span className="text-xs text-foreground break-words">
+                          {param.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )
+          ) : (
+            /* 单个操作：使用格式化参数展示 */
+            formattedParams.length > 0 && (
+              <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
+                <div className="space-y-1.5">
+                  {formattedParams.map((param) => (
+                    <div key={param.key} className="space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-medium text-muted-foreground shrink-0">
+                          {param.label}:
+                        </span>
+                        <span className="text-xs text-foreground break-words">
+                          {param.value}
+                        </span>
+                      </div>
+                      {/* 如果是参考图参数，显示图片 */}
+                      {param.key === "sourceAssetIds" && singleAssetSourceIds.length > 0 && (
+                        <div className="pl-0 pt-1">
+                          <ReferenceImages assetIds={singleAssetSourceIds} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {/* 如果有参考图但不在格式化参数中（被过滤了），单独显示 */}
+                  {isGenerateAsset && singleAssetSourceIds.length > 0 && 
+                   !formattedParams.some(p => p.key === "sourceAssetIds") && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground">参考图:</span>
+                        <span className="text-xs text-foreground">{singleAssetSourceIds.length}张</span>
+                      </div>
+                      <ReferenceImages assetIds={singleAssetSourceIds} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          )}
         </div>
 
         {/* Footer: Credit Cost and Actions */}

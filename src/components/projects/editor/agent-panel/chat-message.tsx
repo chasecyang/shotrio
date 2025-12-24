@@ -60,9 +60,9 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
         }, 300);
       }
       
-      // 刷新对话列表
+      // 刷新对话列表（静默刷新，不显示全屏loading）
       setTimeout(() => {
-        agent.refreshConversations();
+        agent.refreshConversations(true);
       }, 100);
     },
     onError: (error) => {

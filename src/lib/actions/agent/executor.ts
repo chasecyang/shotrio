@@ -15,7 +15,7 @@ import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
 import { batchGenerateShotVideos } from "../video/generate";
-import { createShot, deleteShot, updateShot, reorderShots } from "../project/shot";
+import { createShot, deleteShot, updateShot, reorderShots, batchCreateShots } from "../project/shot";
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
 import { refreshEpisodeShots } from "../project/refresh";
@@ -196,6 +196,44 @@ export async function executeFunction(
           success: createResult.success,
           data: createResult.data,
           error: createResult.error,
+        };
+        break;
+      }
+
+      case "batch_create_shots": {
+        const shotsData = JSON.parse(parameters.shots as string) as Array<{
+          shotSize: string;
+          description: string;
+          order?: number;
+          cameraMovement?: string;
+          duration?: number;
+          visualPrompt?: string;
+          audioPrompt?: string;
+          imageAssetId?: string;
+        }>;
+
+        // 验证和转换数据
+        const validatedShots = shotsData.map((shotData) => ({
+          shotSize: shotData.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
+          description: shotData.description,
+          order: shotData.order,
+          cameraMovement: shotData.cameraMovement as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down" | undefined,
+          duration: shotData.duration,
+          visualPrompt: shotData.visualPrompt,
+          audioPrompt: shotData.audioPrompt,
+          imageAssetId: shotData.imageAssetId,
+        }));
+
+        const batchResult = await batchCreateShots({
+          episodeId: parameters.episodeId as string,
+          shots: validatedShots,
+        });
+
+        result = {
+          functionCallId: functionCall.id,
+          success: batchResult.success,
+          data: batchResult.data,
+          error: batchResult.error,
         };
         break;
       }

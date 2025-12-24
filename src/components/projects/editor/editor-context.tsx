@@ -137,9 +137,22 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "UPDATE_PROJECT":
       // 更新项目数据，但保持当前选中的剧集
+      // 验证当前选中的剧集是否仍然存在于新项目中
+      let validSelectedEpisodeId = state.selectedEpisodeId;
+      if (state.selectedEpisodeId) {
+        const episodeExists = action.payload.episodes.some(
+          (ep) => ep.id === state.selectedEpisodeId
+        );
+        if (!episodeExists) {
+          // 如果当前选中的剧集不存在，重置为第一个剧集或 null
+          validSelectedEpisodeId = action.payload.episodes[0]?.id || null;
+        }
+      }
+      
       return {
         ...state,
         project: action.payload,
+        selectedEpisodeId: validSelectedEpisodeId,
         isLoading: false,
       };
 
@@ -423,12 +436,20 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     // onRefreshCharacter 和 onRefreshScene 已废弃 - 使用 asset 系统代替
 
     onRefreshEpisode: useCallback(async (episodeId: string) => {
-      const result = await refreshEpisodeShots(episodeId);
-      if (result.success && result.shots) {
-        // 只有当该剧集是当前选中的剧集时才更新 shots
-        if (state.selectedEpisodeId === episodeId) {
-          dispatch({ type: "SET_SHOTS", payload: result.shots });
+      try {
+        const result = await refreshEpisodeShots(episodeId);
+        if (result.success && result.shots) {
+          // 只有当该剧集是当前选中的剧集时才更新 shots
+          if (state.selectedEpisodeId === episodeId) {
+            dispatch({ type: "SET_SHOTS", payload: result.shots });
+          }
+        } else {
+          // 刷新失败时不更新分镜列表（保持现有数据），只记录错误日志
+          console.error("刷新剧集分镜失败:", result.error);
         }
+      } catch (error) {
+        // 刷新失败时不更新分镜列表（保持现有数据），只记录错误日志
+        console.error("刷新剧集分镜失败:", error);
       }
     }, [state.selectedEpisodeId]),
 
@@ -449,9 +470,18 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   useEffect(() => {
     const handleShotsChanged = async () => {
       if (state.selectedEpisodeId) {
-        const result = await refreshEpisodeShots(state.selectedEpisodeId);
-        if (result.success && result.shots) {
-          dispatch({ type: "SET_SHOTS", payload: result.shots });
+        try {
+          const result = await refreshEpisodeShots(state.selectedEpisodeId);
+          if (result.success && result.shots) {
+            // 只在成功时才更新分镜列表
+            dispatch({ type: "SET_SHOTS", payload: result.shots });
+          } else {
+            // 刷新失败时保留之前的分镜数据，只记录错误日志
+            console.error("刷新分镜失败:", result.error);
+          }
+        } catch (error) {
+          // 刷新失败时保留之前的分镜数据，只记录错误日志
+          console.error("刷新分镜失败:", error);
         }
       }
     };

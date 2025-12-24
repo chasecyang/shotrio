@@ -87,6 +87,7 @@ export function ResourcePanel() {
               onCreateConversation={handleCreateConversation}
               conversations={agent.state.conversations}
               isLoading={agent.state.isLoadingConversations}
+              isRefreshing={agent.state.isRefreshingConversations}
             />
           </ScrollArea>
         </TabsContent>

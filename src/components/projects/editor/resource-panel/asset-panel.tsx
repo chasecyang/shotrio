@@ -5,7 +5,7 @@ import { useEditor } from "../editor-context";
 import { AssetList } from "./asset-list";
 import { AssetToolbar } from "./asset-toolbar";
 import { AssetUploadDialog } from "./asset-upload-dialog";
-import { queryAssets, deleteAsset } from "@/lib/actions/asset";
+import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
 import { toast } from "sonner";
 import {
@@ -43,6 +43,9 @@ export function AssetPanel({ userId }: AssetPanelProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithTags | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 批量选择状态
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -105,26 +108,52 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     });
   };
 
-  // 处理删除 - 显示确认对话框
+  // 处理删除 - 显示确认对话框（单个删除）
   const handleDelete = (asset: AssetWithTags) => {
+    // 如果有批量选择，忽略单个删除
+    if (selectedAssetIds.size > 0) {
+      return;
+    }
     setAssetToDelete(asset);
     setDeleteDialogOpen(true);
   };
 
-  // 确认删除
-  const handleConfirmDelete = async () => {
-    if (!assetToDelete) return;
+  // 批量删除
+  const handleBatchDelete = () => {
+    if (selectedAssetIds.size === 0) return;
+    setDeleteDialogOpen(true);
+  };
 
+  // 确认删除（支持单个和批量）
+  const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
-      const result = await deleteAsset(assetToDelete.id);
+      let result;
+      let deletedIds: string[] = [];
+
+      if (selectedAssetIds.size > 0) {
+        // 批量删除
+        deletedIds = Array.from(selectedAssetIds);
+        result = await deleteAssets(deletedIds);
+      } else if (assetToDelete) {
+        // 单个删除
+        deletedIds = [assetToDelete.id];
+        result = await deleteAsset(assetToDelete.id);
+      } else {
+        return;
+      }
+
       if (result.success) {
-        toast.success("素材已删除");
+        const count = deletedIds.length;
+        toast.success(`已删除 ${count} 个素材`);
         
         // 如果删除的是当前选中的素材，清除选中状态
-        if (selectedAssetId === assetToDelete.id) {
+        if (selectedAssetId && deletedIds.includes(selectedAssetId)) {
           selectResource(null);
         }
+        
+        // 清除选中状态
+        setSelectedAssetIds(new Set());
         
         // 刷新素材列表
         await loadAssets();
@@ -139,6 +168,29 @@ export function AssetPanel({ userId }: AssetPanelProps) {
       setDeleteDialogOpen(false);
       setAssetToDelete(null);
     }
+  };
+
+  // 选择/取消选择素材
+  const handleSelectChange = (assetId: string, selected: boolean) => {
+    setSelectedAssetIds((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(assetId);
+      } else {
+        next.delete(assetId);
+      }
+      return next;
+    });
+  };
+
+  // 全选
+  const handleSelectAll = () => {
+    setSelectedAssetIds(new Set(assets.map((asset) => asset.id)));
+  };
+
+  // 取消全选
+  const handleDeselectAll = () => {
+    setSelectedAssetIds(new Set());
   };
 
   // 处理上传成功
@@ -168,6 +220,10 @@ export function AssetPanel({ userId }: AssetPanelProps) {
           availableTags={availableTags}
           onUpload={() => setUploadDialogOpen(true)}
           onOpenAssetGeneration={handleOpenAssetGeneration}
+          selectedCount={selectedAssetIds.size}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onBatchDelete={handleBatchDelete}
         />
 
         {/* 素材列表 */}
@@ -177,8 +233,10 @@ export function AssetPanel({ userId }: AssetPanelProps) {
             viewMode={viewMode}
             isLoading={isLoading}
             selectedAssetId={selectedAssetId}
+            selectedAssetIds={selectedAssetIds}
             onDelete={handleDelete}
             onClick={handleAssetClick}
+            onSelectChange={handleSelectChange}
             onUpload={() => setUploadDialogOpen(true)}
           />
         </div>
@@ -199,7 +257,9 @@ export function AssetPanel({ userId }: AssetPanelProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除素材 "{assetToDelete?.name}" 吗？此操作无法撤销。
+              {selectedAssetIds.size > 0
+                ? `确定要删除 ${selectedAssetIds.size} 个素材吗？此操作无法撤销。`
+                : `确定要删除素材 "${assetToDelete?.name}" 吗？此操作无法撤销。`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

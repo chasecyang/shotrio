@@ -39,8 +39,11 @@ export interface AgentState {
   // 对话列表
   conversations: Conversation[];
 
-  // 是否正在加载对话列表
+  // 是否正在加载对话列表（初始加载）
   isLoadingConversations: boolean;
+
+  // 是否正在刷新对话列表（静默刷新）
+  isRefreshingConversations: boolean;
 
   // 是否处于"新对话"模式（懒创建）
   isNewConversation: boolean;
@@ -58,6 +61,7 @@ type AgentAction =
   | { type: "SET_CURRENT_CONVERSATION"; payload: string | null }
   | { type: "SET_CONVERSATIONS"; payload: Conversation[] }
   | { type: "SET_LOADING_CONVERSATIONS"; payload: boolean }
+  | { type: "SET_REFRESHING_CONVERSATIONS"; payload: boolean }
   | { type: "SET_NEW_CONVERSATION"; payload: boolean }
   | { type: "UPDATE_CONVERSATION_TITLE"; payload: { conversationId: string; title: string } };
 
@@ -70,6 +74,7 @@ const initialState: AgentState = {
   currentConversationId: null,
   conversations: [],
   isLoadingConversations: false,
+  isRefreshingConversations: false,
   isNewConversation: true, // 默认进入新对话模式，提升用户体验
 };
 
@@ -128,6 +133,12 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
         isLoadingConversations: action.payload,
       };
 
+    case "SET_REFRESHING_CONVERSATIONS":
+      return {
+        ...state,
+        isRefreshingConversations: action.payload,
+      };
+
     case "SET_NEW_CONVERSATION":
       return {
         ...state,
@@ -164,7 +175,7 @@ interface AgentContextValue {
   loadConversation: (conversationId: string) => Promise<void>;
   createNewConversation: () => void;
   deleteConversationById: (conversationId: string) => Promise<void>;
-  refreshConversations: () => Promise<void>;
+  refreshConversations: (silent?: boolean) => Promise<void>;
   // 当前上下文（从 EditorContext 获取）
   currentContext: AgentContextType;
 }
@@ -186,9 +197,10 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   // 防抖：跟踪刷新状态，避免并发刷新
   const isRefreshingRef = useRef(false);
   const lastRefreshTimeRef = useRef(0);
+  const hasLoadedOnceRef = useRef(false);
 
   // 加载对话列表（带防抖）
-  const refreshConversations = useCallback(async () => {
+  const refreshConversations = useCallback(async (silent: boolean = false) => {
     // 防止并发刷新
     if (isRefreshingRef.current) {
       console.log("[Agent] 跳过并发刷新请求");
@@ -205,7 +217,15 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     isRefreshingRef.current = true;
     lastRefreshTimeRef.current = now;
 
-    dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: true });
+    const isInitialLoad = !hasLoadedOnceRef.current;
+    
+    // 初始加载时显示全屏loading，刷新时只显示刷新指示器
+    if (isInitialLoad) {
+      dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: true });
+    } else if (!silent) {
+      dispatch({ type: "SET_REFRESHING_CONVERSATIONS", payload: true });
+    }
+
     try {
       const result = await listConversations(projectId);
       if (result.success && result.conversations) {
@@ -222,11 +242,16 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
           payload: newConversations,
         });
       }
+      hasLoadedOnceRef.current = true;
     } catch (error) {
       console.error("加载对话列表失败:", error);
       toast.error("加载对话列表失败");
     } finally {
-      dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: false });
+      if (isInitialLoad) {
+        dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: false });
+      } else {
+        dispatch({ type: "SET_REFRESHING_CONVERSATIONS", payload: false });
+      }
       isRefreshingRef.current = false;
     }
   }, [projectId]);
@@ -278,7 +303,8 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
           dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
           dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
         }
-        await refreshConversations();
+        // 静默刷新列表（用户已看到删除结果）
+        await refreshConversations(true);
         toast.success("已删除对话");
       } else {
         toast.error(result.error || "删除对话失败");

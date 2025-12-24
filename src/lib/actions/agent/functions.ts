@@ -186,6 +186,27 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     category: "generation",
     needsConfirmation: true,
   },
+  {
+    name: "batch_create_shots",
+    description: "批量创建多个分镜。支持指定order插入到特定位置，如果order冲突会自动调整现有分镜位置。适用于一次性创建多个分镜的场景。",
+    displayName: "批量创建分镜",
+    parameters: {
+      type: "object",
+      properties: {
+        episodeId: {
+          type: "string",
+          description: "剧集ID",
+        },
+        shots: {
+          type: "string",
+          description: '分镜数组（JSON字符串格式），每个分镜包含 shotSize（必填）、description（必填）、order（可选，整数）、cameraMovement（可选）、duration（可选，毫秒）、visualPrompt（可选）。示例：[{"shotSize":"medium_shot","description":"主角走进房间","order":2},{"shotSize":"close_up","description":"主角的表情特写"}]',
+        },
+      },
+      required: ["episodeId", "shots"],
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
 
   // ============================================
   // 生成类工具（需要确认）

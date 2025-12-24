@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Grid3x3, List, Upload, Sparkles } from "lucide-react";
+import { Grid3x3, List, Upload, Sparkles, Trash2, CheckSquare, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TagFilter } from "./tag-filter";
 import {
@@ -18,6 +18,10 @@ interface AssetToolbarProps {
   availableTags: { tagValue: string; count: number }[];
   onUpload: () => void;
   onOpenAssetGeneration: () => void;
+  selectedCount?: number;
+  onSelectAll?: () => void;
+  onDeselectAll?: () => void;
+  onBatchDelete?: () => void;
 }
 
 export function AssetToolbar({
@@ -28,11 +32,19 @@ export function AssetToolbar({
   availableTags,
   onUpload,
   onOpenAssetGeneration,
+  selectedCount = 0,
+  onSelectAll,
+  onDeselectAll,
+  onBatchDelete,
 }: AssetToolbarProps) {
+  const hasSelection = selectedCount > 0;
+
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-3">
-      {/* 左侧：视图切换 + 筛选 */}
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="space-y-2 mb-3">
+      {/* 主工具栏 */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* 左侧：视图切换 + 筛选 */}
+        <div className="flex items-center gap-2 min-w-0">
         {/* 视图切换 */}
         <div className="flex items-center rounded-lg border p-0.5 shrink-0">
           <Button
@@ -96,6 +108,61 @@ export function AssetToolbar({
           <TooltipContent>上传</TooltipContent>
         </Tooltip>
       </div>
+      </div>
+
+      {/* 批量操作栏 */}
+      {hasSelection && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-accent/50 animate-in slide-in-from-top-2 duration-200">
+          <span className="text-sm font-medium text-foreground">
+            已选择 {selectedCount} 个素材
+          </span>
+          <div className="flex items-center gap-1 ml-auto">
+            {onSelectAll && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={onSelectAll}
+                  >
+                    <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
+                    全选
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>全选</TooltipContent>
+              </Tooltip>
+            )}
+            {onDeselectAll && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={onDeselectAll}
+                  >
+                    <Square className="h-3.5 w-3.5 mr-1.5" />
+                    取消
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>取消全选</TooltipContent>
+              </Tooltip>
+            )}
+            {onBatchDelete && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-7 px-2"
+                onClick={onBatchDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                删除
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

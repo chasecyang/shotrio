@@ -180,7 +180,6 @@ export async function getConversation(conversationId: string) {
         projectId: conv.projectId,
         title: conv.title,
         status: conv.status,
-        threadId: conv.threadId,
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt,
         lastActivityAt: conv.lastActivityAt,
@@ -237,50 +236,6 @@ export async function updateConversationStatus(
     return {
       success: false,
       error: error instanceof Error ? error.message : "更新对话状态失败",
-    };
-  }
-}
-
-/**
- * 更新对话 threadId
- */
-export async function updateConversationThreadId(
-  conversationId: string,
-  threadId: string
-) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user?.id) {
-    return {
-      success: false,
-      error: "未登录",
-    };
-  }
-
-  try {
-    await db
-      .update(conversation)
-      .set({
-        threadId,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(conversation.id, conversationId),
-          eq(conversation.userId, session.user.id)
-        )
-      );
-
-    return {
-      success: true,
-    };
-  } catch (error) {
-    console.error("[Conversation] 更新 threadId 失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "更新 threadId 失败",
     };
   }
 }
