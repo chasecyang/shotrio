@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/inline-editable-field";
 import Image from "next/image";
 import { useEditor } from "../editor-context";
-import { AssetDeriveDialog } from "../resource-panel/asset-derive-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,11 +45,10 @@ interface AssetDetailEditorProps {
 }
 
 export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
-  const { selectResource } = useEditor();
+  const { selectResource, state, setSelectedSourceAssets, setAssetGenerationMode } = useEditor();
   const [asset, setAsset] = useState<AssetWithTags | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [deriveDialogOpen, setDeriveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -175,10 +173,17 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
     window.open(asset.imageUrl, "_blank");
   }, [asset]);
 
-  // 派生成功回调
-  const handleDeriveSuccess = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("asset-created"));
-  }, []);
+  // 参考创作 - 跳转到 AI 创作页面
+  const handleReferenceCreate = useCallback(() => {
+    if (!state.project?.id) return;
+    
+    // 跳转到 AI 创作页面
+    selectResource({ type: "asset-generation", id: state.project.id });
+    // 设置当前素材为参考素材
+    setSelectedSourceAssets([assetId]);
+    // 切换到图生图模式
+    setAssetGenerationMode("image-to-image");
+  }, [state.project?.id, assetId, selectResource, setSelectedSourceAssets, setAssetGenerationMode]);
   
   // 添加标签
   const handleAddTag = useCallback(async () => {
@@ -357,7 +362,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setDeriveDialogOpen(true)}
+              onClick={handleReferenceCreate}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               参考创作
@@ -553,14 +558,6 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
           </div>
         </div>
       </div>
-
-      {/* 派生对话框 */}
-      <AssetDeriveDialog
-        open={deriveDialogOpen}
-        onOpenChange={setDeriveDialogOpen}
-        sourceAsset={asset}
-        onSuccess={handleDeriveSuccess}
-      />
 
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

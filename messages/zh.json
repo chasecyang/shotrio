@@ -991,7 +991,8 @@
         "uploading": "上传中...",
         "uploadProgress": "上传进度",
         "success": "创作素材上传成功",
-        "error": "上传失败"
+        "error": "上传失败",
+        "cancel": "取消"
       },
       "detail": {
         "title": "创作素材详情",
