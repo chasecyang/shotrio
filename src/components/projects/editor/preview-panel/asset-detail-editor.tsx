@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AssetWithTags, parseAssetMeta } from "@/types/asset";
 import { getAsset } from "@/lib/actions/asset";
 import { updateAsset, deleteAsset, addAssetTag, removeAssetTag } from "@/lib/actions/asset";
@@ -58,6 +58,10 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagValue, setNewTagValue] = useState("");
   const [removingTagIds, setRemovingTagIds] = useState<Set<string>>(new Set());
+  
+  // 响应式布局状态
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 表单数据
   const [formData, setFormData] = useState({
@@ -254,6 +258,21 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
       setNewTagValue("");
     }
   }, [handleAddTag]);
+  
+  // 监听容器宽度变化
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setContainerWidth(entries[0].contentRect.width);
+      }
+    });
+    
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    
+    return () => observer.disconnect();
+  }, []);
 
   if (isLoading) {
     return (
@@ -275,6 +294,9 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
   }
 
   const meta = parseAssetMeta(asset.meta);
+  
+  // 判断是否为窄屏（小于 800px）
+  const isNarrow = containerWidth < 800;
 
   return (
     <>
@@ -338,17 +360,17 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
               onClick={() => setDeriveDialogOpen(true)}
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              派生创作
+              参考创作
             </Button>
           </div>
         </div>
 
         {/* 内容区域 - 响应式左右布局 */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto" ref={containerRef}>
           <div className="p-4 lg:p-6">
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className={`flex gap-6 ${isNarrow ? 'flex-col' : 'flex-col lg:flex-row'}`}>
               {/* 左侧：图片预览区域 */}
-              <div className="w-full lg:w-1/2">
+              <div className={`w-full ${isNarrow ? '' : 'lg:w-1/2'}`}>
                 <div className="relative w-full aspect-video bg-muted/30 rounded-lg overflow-hidden border">
                   {asset.imageUrl ? (
                     <Image
@@ -368,7 +390,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
               </div>
 
               {/* 右侧：信息区域 */}
-              <div className="w-full lg:w-1/2 space-y-6">
+              <div className={`w-full ${isNarrow ? '' : 'lg:w-1/2'} space-y-6`}>
                 {/* 标签管理 */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -526,22 +548,6 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
                     </div>
                   </div>
                 </div>
-
-                {/* 元数据详情 */}
-                {meta && Object.keys(meta).length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-3">
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        详细信息
-                      </h3>
-                      <pre className="text-xs bg-muted/30 p-3 rounded-md overflow-auto max-h-60">
-                        {JSON.stringify(meta, null, 2)}
-                      </pre>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
           </div>

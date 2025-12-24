@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   updateShot as updateShotAction, 
 } from "@/lib/actions/project";
@@ -28,6 +34,8 @@ import {
   Loader2,
   RefreshCw,
   PlayIcon,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import {
   EditableField,
@@ -43,13 +51,16 @@ import {
 import { useEditor } from "../editor-context";
 import { Progress } from "@/components/ui/progress";
 import { refreshShot } from "@/lib/actions/project/refresh";
+import { queryAssets } from "@/lib/actions/asset";
+import { AssetWithTags } from "@/types/asset";
+import Image from "next/image";
 
 interface ShotEditorProps {
   shot: ShotDetail;
 }
 
 export function ShotEditor({ shot }: ShotEditorProps) {
-  const { updateShot } = useEditor();
+  const { updateShot, project } = useEditor();
   const tToast = useTranslations("toasts");
 
   const [formData, setFormData] = useState({
@@ -61,12 +72,48 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoGenerationJobId, setVideoGenerationJobId] = useState<string | null>(null);
+  
+  // 素材选择器状态
+  const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
+  const [assets, setAssets] = useState<AssetWithTags[]>([]);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isUpdatingAsset, setIsUpdatingAsset] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const shotSizeOptions = getShotSizeOptions();
   const cameraMovementOptions = getCameraMovementOptions();
+
+  // 加载素材列表
+  useEffect(() => {
+    if (isAssetSelectorOpen && project?.id) {
+      setIsLoadingAssets(true);
+      queryAssets({
+        projectId: project.id,
+        limit: 100,
+      })
+        .then((result) => {
+          setAssets(result.assets);
+        })
+        .catch((error) => {
+          console.error("加载素材失败:", error);
+          toast.error("加载素材失败");
+        })
+        .finally(() => {
+          setIsLoadingAssets(false);
+        });
+    }
+  }, [isAssetSelectorOpen, project?.id]);
+
+  // 筛选素材
+  const filteredAssets = useMemo(() => {
+    if (!searchQuery) return assets;
+    return assets.filter((asset) =>
+      asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [assets, searchQuery]);
 
   // 监听视频生成任务
   const { jobs } = useEditor();
@@ -200,6 +247,61 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   };
 
+  // 处理选择素材
+  const handleSelectAsset = async (assetId: string) => {
+    setIsUpdatingAsset(true);
+    try {
+      const result = await updateShotAction(shot.id, {
+        imageAssetId: assetId,
+      });
+
+      if (result.success) {
+        toast.success("素材已关联");
+        setIsAssetSelectorOpen(false);
+        
+        // 刷新分镜数据
+        const refreshResult = await refreshShot(shot.id);
+        if (refreshResult.success && refreshResult.shot) {
+          updateShot(refreshResult.shot);
+        }
+      } else {
+        toast.error(result.error || "关联失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("关联失败");
+    } finally {
+      setIsUpdatingAsset(false);
+    }
+  };
+
+  // 处理清除素材
+  const handleClearAsset = async () => {
+    setIsUpdatingAsset(true);
+    try {
+      const result = await updateShotAction(shot.id, {
+        imageAssetId: null,
+      });
+
+      if (result.success) {
+        toast.success("已清除素材");
+        
+        // 刷新分镜数据
+        const refreshResult = await refreshShot(shot.id);
+        if (refreshResult.success && refreshResult.shot) {
+          updateShot(refreshResult.shot);
+        }
+      } else {
+        toast.error(result.error || "清除失败");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("清除失败");
+    } finally {
+      setIsUpdatingAsset(false);
+    }
+  };
+
   // 监听视频生成任务完成状态（只用于显示提示和重置 UI 状态）
   useEffect(() => {
     const relevantJob = videoGenerationTasks.find((task) => {
@@ -232,26 +334,57 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const videoGenerationMessage = currentVideoTask?.progressMessage || "正在生成视频...";
 
   return (
-    <ScrollArea className="h-full">
-      <div className="p-6 space-y-6">
-        {/* 顶部：分镜预览图 */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* 大图预览 */}
-          <div className="w-full lg:w-80 shrink-0">
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative">
+    <>
+      <ScrollArea className="h-full">
+        <div className="p-6 space-y-6 @container">
+          {/* 顶部：分镜预览图 */}
+          <div className="flex flex-col @[640px]:flex-row gap-6">
+            {/* 大图预览 */}
+            <div className="w-full @[640px]:w-80 shrink-0">
+            <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative group">
               {shot.imageAsset?.imageUrl ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={shot.imageAsset.imageUrl}
                     alt={`分镜 ${shot.order}`}
-                    className="w-full h-full object-contain"
+                    fill
+                    className="object-contain"
+                    sizes="320px"
                   />
+                  {/* 悬停操作按钮 */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setIsAssetSelectorOpen(true)}
+                      disabled={isUpdatingAsset}
+                    >
+                      <ImagePlus className="w-4 h-4 mr-1.5" />
+                      更换素材
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleClearAsset}
+                      disabled={isUpdatingAsset}
+                    >
+                      <X className="w-4 h-4 mr-1.5" />
+                      清除
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <div className="text-center text-muted-foreground p-6">
                   <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm mb-3">暂无图片</p>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsAssetSelectorOpen(true)}
+                    disabled={isUpdatingAsset}
+                  >
+                    <ImagePlus className="w-4 h-4 mr-1.5" />
+                    选择素材
+                  </Button>
                 </div>
               )}
             </div>
@@ -414,6 +547,91 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         </div>
       </div>
     </ScrollArea>
+
+    {/* 素材选择对话框 */}
+    <Dialog open={isAssetSelectorOpen} onOpenChange={setIsAssetSelectorOpen}>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>选择分镜素材</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* 搜索框 */}
+          <div className="relative">
+            <ImageIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="搜索素材..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+
+          {/* 素材网格 */}
+          <ScrollArea className="h-[400px] pr-4">
+            {isLoadingAssets ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredAssets.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {searchQuery ? "未找到匹配的素材" : "暂无素材"}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {filteredAssets.map((asset) => {
+                  const isSelected = shot.imageAssetId === asset.id;
+                  return (
+                    <button
+                      key={asset.id}
+                      onClick={() => !isUpdatingAsset && handleSelectAsset(asset.id)}
+                      disabled={!asset.imageUrl || isUpdatingAsset}
+                      className={`
+                        relative group aspect-square rounded-lg overflow-hidden
+                        border-2 transition-all
+                        ${isSelected
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-transparent hover:border-muted-foreground/20"
+                        }
+                        ${!asset.imageUrl && "opacity-50 cursor-not-allowed"}
+                        ${isUpdatingAsset && "cursor-wait"}
+                      `}
+                    >
+                      {asset.imageUrl ? (
+                        <Image
+                          src={asset.imageUrl}
+                          alt={asset.name}
+                          fill
+                          className="object-cover"
+                          sizes="160px"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      {/* 选中标记 */}
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                          <ImageIcon className="h-3 w-3" />
+                        </div>
+                      )}
+
+                      {/* 名称 */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                        <p className="text-xs text-white truncate">{asset.name}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
