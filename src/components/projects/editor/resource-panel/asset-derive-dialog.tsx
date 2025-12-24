@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Sparkles } from "lucide-react";
+import { Copy, Sparkles, Loader2 } from "lucide-react";
 import { AssetWithTags, DerivationType } from "@/types/asset";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -137,13 +137,19 @@ export function AssetDeriveDialog({
             </Label>
             <div className="flex items-center gap-3">
               <div className="relative w-20 h-20 rounded-md overflow-hidden bg-muted shrink-0">
-                <Image
-                  src={sourceAsset.thumbnailUrl || sourceAsset.imageUrl}
-                  alt={sourceAsset.name}
-                  fill
-                  className="object-cover"
-                  sizes="80px"
-                />
+                {sourceAsset.imageUrl ? (
+                  <Image
+                    src={sourceAsset.thumbnailUrl || sourceAsset.imageUrl}
+                    alt={sourceAsset.name}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{sourceAsset.name}</p>

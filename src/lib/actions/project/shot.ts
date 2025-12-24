@@ -7,6 +7,7 @@ import { episode, shot } from "@/lib/db/schemas/project";
 import { eq, asc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
+  type Shot,
   type NewShot,
   type ShotDetail,
   type ShotSize,

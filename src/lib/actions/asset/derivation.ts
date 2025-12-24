@@ -27,17 +27,31 @@ export async function createDerivedAsset(
   }
 
   try {
-    // 验证源资产存在
-    const sourceAsset = await db.query.asset.findFirst({
-      where: eq(asset.id, input.sourceAssetId),
-    });
-
-    if (!sourceAsset) {
-      return { success: false, error: "源资产不存在" };
+    // 验证所有源资产存在且有权限
+    if (!input.sourceAssetIds || input.sourceAssetIds.length === 0) {
+      return { success: false, error: "未提供源资产" };
     }
 
-    if (sourceAsset.userId !== session.user.id) {
-      return { success: false, error: "无权限" };
+    const sourceAssets = await Promise.all(
+      input.sourceAssetIds.map(id =>
+        db.query.asset.findFirst({
+          where: eq(asset.id, id),
+        })
+      )
+    );
+
+    // 检查是否所有源资产都存在
+    const missingAssets = sourceAssets.filter(a => !a);
+    if (missingAssets.length > 0) {
+      return { success: false, error: "部分源资产不存在" };
+    }
+
+    // 检查权限
+    const unauthorizedAssets = sourceAssets.filter(
+      a => a && a.userId !== session.user.id
+    );
+    if (unauthorizedAssets.length > 0) {
+      return { success: false, error: "无权访问部分源资产" };
     }
 
     const assetId = randomUUID();
@@ -59,7 +73,7 @@ export async function createDerivedAsset(
       prompt: input.prompt || null,
       seed: input.seed || null,
       modelUsed: input.modelUsed || null,
-      sourceAssetId: input.sourceAssetId,
+      sourceAssetIds: input.sourceAssetIds,
       derivationType: input.derivationType,
       meta: Object.keys(metaData).length > 0 ? JSON.stringify(metaData) : null,
       usageCount: 0,
@@ -76,13 +90,19 @@ export async function createDerivedAsset(
       );
     }
 
-    // 增加源资产的使用计数
-    await db
-      .update(asset)
-      .set({
-        usageCount: sourceAsset.usageCount + 1,
-      })
-      .where(eq(asset.id, input.sourceAssetId));
+    // 增加所有源资产的使用计数
+    await Promise.all(
+      sourceAssets.map(sourceAsset =>
+        sourceAsset
+          ? db
+              .update(asset)
+              .set({
+                usageCount: sourceAsset.usageCount + 1,
+              })
+              .where(eq(asset.id, sourceAsset.id))
+          : Promise.resolve()
+      )
+    );
 
     revalidatePath(`/[lang]/projects/${input.projectId}`, "page");
 

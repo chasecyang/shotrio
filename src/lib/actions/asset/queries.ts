@@ -71,9 +71,12 @@ export async function queryAssets(
       conditions.push(sql`${asset.name} ILIKE ${`%${filter.search}%`}`);
     }
 
-    // 按源资产筛选
-    if (filter.sourceAssetId) {
-      conditions.push(eq(asset.sourceAssetId, filter.sourceAssetId));
+    // 按源资产筛选（查询包含指定源资产的派生资产）
+    if (filter.sourceAssetIds && filter.sourceAssetIds.length > 0) {
+      // 使用 SQL 的数组操作符检查是否包含任意一个源资产ID
+      conditions.push(
+        sql`${asset.sourceAssetIds} && ${filter.sourceAssetIds}`
+      );
     }
 
     // 查询资产
@@ -81,7 +84,6 @@ export async function queryAssets(
       where: and(...conditions),
       with: {
         tags: true,
-        sourceAsset: true,
       },
       orderBy: [desc(asset.createdAt)],
       limit: limit + 1, // 多查一条判断是否还有更多
@@ -217,8 +219,9 @@ export async function getAssetDerivations(
   }
 
   try {
+    // 查询 sourceAssetIds 数组中包含指定 assetId 的派生资产
     const derivedAssets = await db.query.asset.findMany({
-      where: eq(asset.sourceAssetId, assetId),
+      where: sql`${asset.sourceAssetIds} @> ARRAY[${assetId}]::text[]`,
       with: {
         tags: true,
       },

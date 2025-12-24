@@ -22,7 +22,7 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
   const [assets, setAssets] = useState<Array<{
     id: string;
     name: string;
-    imageUrl: string;
+    imageUrl: string | null;
     thumbnailUrl: string | null;
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,13 +94,19 @@ function ReferenceImages({ assetIds }: { assetIds: string[] }) {
           className="relative group rounded-md overflow-hidden border border-border/50 bg-background/50"
         >
           <div className="relative w-16 h-16">
-            <Image
-              src={asset.thumbnailUrl || asset.imageUrl}
-              alt={asset.name}
-              fill
-              className="object-cover"
-              sizes="64px"
-            />
+            {asset.imageUrl ? (
+              <Image
+                src={asset.thumbnailUrl || asset.imageUrl}
+                alt={asset.name}
+                fill
+                className="object-cover"
+                sizes="64px"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
           <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">

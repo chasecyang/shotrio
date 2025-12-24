@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createJob } from "@/lib/actions/job";
+import { createAssetInternal } from "@/lib/actions/asset/crud";
 import type { ImageResolution } from "@/types/asset";
 import type { AssetImageGenerationInput } from "@/types/job";
 import type { AspectRatio } from "@/lib/services/fal.service";
@@ -33,16 +34,17 @@ export interface EditAssetImageInput {
 }
 
 /**
- * 生成素材图片的返回结果（改为返回jobId）
+ * 生成素材图片的返回结果
  */
 export interface GenerateAssetImageJobResult {
   success: boolean;
-  jobId?: string;
+  assetId?: string;  // 创建的素材ID
+  jobId?: string;    // 生成任务ID
   error?: string;
 }
 
 /**
- * 生成素材图片（文生图）- 改为创建后台任务
+ * 生成素材图片（文生图）- 新架构：先创建 asset，再创建 job
  */
 export async function generateAssetImage(
   input: GenerateAssetImageInput
@@ -69,13 +71,38 @@ export async function generateAssetImage(
       return { success: false, error: "请输入提示词" };
     }
 
-    // 创建后台任务（不提供 name/tags，让 AI 自动分析）
-    const jobInput: AssetImageGenerationInput = {
+    // 第一步：创建素材记录（包含所有生成信息，但无图片）
+    // 使用临时名称，由 AI worker 分析后可能会更新
+    const assetName = `AI生成-${Date.now()}`;
+    
+    const createResult = await createAssetInternal({
       projectId,
+      userId: session.user.id,
+      name: assetName,
       prompt: prompt.trim(),
-      aspectRatio,
-      resolution: resolution as ImageResolution,
-      numImages,
+      modelUsed: "nano-banana",
+      derivationType: "generate",
+      meta: {
+        generationParams: {
+          aspectRatio: aspectRatio as any,
+          resolution: resolution,
+          numImages: numImages,
+        },
+      },
+    });
+
+    if (!createResult.success || !createResult.asset) {
+      return {
+        success: false,
+        error: createResult.error || "创建素材失败",
+      };
+    }
+
+    const assetId = createResult.asset.id;
+
+    // 第二步：创建图片生成任务，只需传入 assetId
+    const jobInput: AssetImageGenerationInput = {
+      assetId,
     };
 
     const jobResult = await createJob({
@@ -94,6 +121,7 @@ export async function generateAssetImage(
 
     return {
       success: true,
+      assetId,
       jobId: jobResult.jobId,
     };
   } catch (error) {
@@ -106,7 +134,7 @@ export async function generateAssetImage(
 }
 
 /**
- * 编辑素材图片（图生图）- 改为创建后台任务
+ * 编辑素材图片（图生图）- 新架构：先创建 asset，再创建 job
  */
 export async function editAssetImage(
   input: EditAssetImageInput
@@ -142,14 +170,39 @@ export async function editAssetImage(
       return { success: false, error: "请输入编辑提示词" };
     }
 
-    // 创建后台任务（不提供 name/tags，让 AI 自动分析）
-    const jobInput: AssetImageGenerationInput = {
+    // 第一步：创建素材记录（包含所有生成信息，但无图片）
+    // 使用临时名称，由 AI worker 分析后可能会更新
+    const assetName = `图生图-${Date.now()}`;
+    
+    const createResult = await createAssetInternal({
       projectId,
+      userId: session.user.id,
+      name: assetName,
       prompt: editPrompt.trim(),
-      aspectRatio,
-      resolution: resolution as ImageResolution,
-      numImages,
-      sourceAssetIds,
+      modelUsed: "nano-banana",
+      sourceAssetIds: sourceAssetIds,
+      derivationType: "img2img",
+      meta: {
+        generationParams: {
+          aspectRatio: aspectRatio as any,
+          resolution: resolution,
+          numImages: numImages,
+        },
+      },
+    });
+
+    if (!createResult.success || !createResult.asset) {
+      return {
+        success: false,
+        error: createResult.error || "创建素材失败",
+      };
+    }
+
+    const assetId = createResult.asset.id;
+
+    // 第二步：创建图片生成任务，只需传入 assetId
+    const jobInput: AssetImageGenerationInput = {
+      assetId,
     };
 
     const jobResult = await createJob({
@@ -168,6 +221,7 @@ export async function editAssetImage(
 
     return {
       success: true,
+      assetId,
       jobId: jobResult.jobId,
     };
   } catch (error) {

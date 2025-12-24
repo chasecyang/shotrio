@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { X, Search, Check } from "lucide-react";
+import { X, Search, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
@@ -114,20 +114,28 @@ export function ReferenceAssetSelector({
                 <button
                   key={asset.id}
                   onClick={() => toggleAsset(asset.id)}
+                  disabled={!asset.imageUrl}
                   className={cn(
                     "relative group aspect-square rounded-lg overflow-hidden",
                     "border-2 transition-all",
                     isSelected
                       ? "border-primary ring-2 ring-primary/20"
-                      : "border-transparent hover:border-muted-foreground/20"
+                      : "border-transparent hover:border-muted-foreground/20",
+                    !asset.imageUrl && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  <Image
-                    src={asset.imageUrl}
-                    alt={asset.name}
-                    fill
-                    className="object-cover"
-                  />
+                  {asset.imageUrl ? (
+                    <Image
+                      src={asset.imageUrl}
+                      alt={asset.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                   
                   {/* 选中标记 */}
                   {isSelected && (

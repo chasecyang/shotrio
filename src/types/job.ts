@@ -53,21 +53,9 @@ export interface VideoGenerationInput {
   imageUrl?: string;
 }
 
-// 素材图片生成输入
+// 素材图片生成输入（新架构：只需要 assetId）
 export interface AssetImageGenerationInput {
-  projectId: string;
-  prompt: string;
-  // 素材元数据（可选，Agent 提供时直接使用，否则由 AI 分析 prompt 生成）
-  name?: string;
-  tags?: string[];  // 包含类型标签如 "角色"、"场景"、"道具" 等
-  // 生成参数
-  aspectRatio?: string;
-  resolution?: "1K" | "2K" | "4K";
-  numImages?: number;
-  // 参考图（用于图生图）
-  sourceAssetIds?: string[];
-  // 生成模式（可选，有 sourceAssetIds 时自动使用 image-to-image）
-  mode?: "text-to-image" | "image-to-image";
+  assetId: string;  // 要生成图片的素材ID，所有生成信息从 asset 读取
 }
 
 export interface BatchImageGenerationResult {

@@ -81,6 +81,16 @@ export interface EditParams {
 }
 
 /**
+ * 生成参数（用于资产图片生成）
+ */
+export interface GenerationParams {
+  aspectRatio?: AspectRatio;  // 图片宽高比
+  resolution?: "1K" | "2K" | "4K";  // 分辨率
+  numImages?: number;         // 批量生成时的数量
+  strength?: number;          // 图生图强度
+}
+
+/**
  * 完整的meta数据结构
  */
 export interface AssetMeta {
@@ -89,6 +99,7 @@ export interface AssetMeta {
   prop?: PropMeta;
   storyboard?: StoryboardMeta;
   editParams?: EditParams;
+  generationParams?: GenerationParams;  // 生成参数
   custom?: Record<string, unknown>;
 }
 
@@ -105,8 +116,8 @@ export interface Asset {
   // 基本信息
   name: string;
   
-  // 图片资源
-  imageUrl: string;
+  // 图片资源（可为空，表示素材正在生成中）
+  imageUrl: string | null;
   thumbnailUrl: string | null;
   
   // 生成信息
@@ -115,7 +126,7 @@ export interface Asset {
   modelUsed: string | null;
   
   // 派生关系
-  sourceAssetId: string | null;
+  sourceAssetIds: string[] | null;  // 多个源素材ID（用于图生图）
   derivationType: DerivationType | null;
   
   // 元数据
@@ -135,12 +146,12 @@ export interface Asset {
 export interface CreateAssetInput {
   projectId: string;
   name: string;
-  imageUrl: string;
+  imageUrl?: string;  // 可选，为空表示素材正在生成中
   thumbnailUrl?: string;
   prompt?: string;
   seed?: number;
   modelUsed?: string;
-  sourceAssetId?: string;
+  sourceAssetIds?: string[];  // 多个源素材ID（用于图生图）
   derivationType?: DerivationType;
   meta?: AssetMeta;
   tags?: string[];  // 简化为标签值数组
@@ -184,7 +195,6 @@ export interface CreateAssetTagInput {
  */
 export interface AssetWithTags extends Asset {
   tags: AssetTag[];
-  sourceAsset?: Asset | null;
 }
 
 /**
@@ -202,7 +212,7 @@ export interface AssetQueryFilter {
   projectId: string;
   tagFilters?: string[];  // 标签值数组，用于类型筛选如 ["角色", "场景"]
   search?: string;
-  sourceAssetId?: string;
+  sourceAssetIds?: string[];  // 按源素材ID过滤（查询派生素材）
   limit?: number;
   offset?: number;
 }
@@ -223,7 +233,7 @@ export interface AssetQueryResult {
  */
 export interface CreateDerivedAssetInput {
   projectId: string;
-  sourceAssetId: string;
+  sourceAssetIds: string[];  // 源素材ID数组
   derivationType: DerivationType;
   name: string;
   imageUrl: string;

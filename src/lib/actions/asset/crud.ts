@@ -26,18 +26,18 @@ export async function createAssetInternal(
   try {
     const assetId = randomUUID();
 
-    // 插入资产
+    // 插入资产（imageUrl 可为空，表示正在生成中）
     await db.insert(asset).values({
       id: assetId,
       projectId: input.projectId,
       userId: input.userId,
       name: input.name,
-      imageUrl: input.imageUrl,
+      imageUrl: input.imageUrl || null,
       thumbnailUrl: input.thumbnailUrl || null,
       prompt: input.prompt || null,
       seed: input.seed || null,
       modelUsed: input.modelUsed || null,
-      sourceAssetId: input.sourceAssetId || null,
+      sourceAssetIds: input.sourceAssetIds || null,
       derivationType: input.derivationType || null,
       meta: input.meta ? JSON.stringify(input.meta) : null,
       usageCount: 0,
@@ -317,7 +317,7 @@ export async function getAssetsByIds(assetIds: string[]): Promise<{
   assets?: Array<{
     id: string;
     name: string;
-    imageUrl: string;
+    imageUrl: string | null;
     thumbnailUrl: string | null;
   }>;
   error?: string;

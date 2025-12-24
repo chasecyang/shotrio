@@ -167,7 +167,7 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
 
   // 下载图片
   const handleDownload = useCallback(() => {
-    if (!asset) return;
+    if (!asset || !asset.imageUrl) return;
     window.open(asset.imageUrl, "_blank");
   }, [asset]);
 
@@ -350,13 +350,20 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
               {/* 左侧：图片预览区域 */}
               <div className="w-full lg:w-1/2">
                 <div className="relative w-full aspect-video bg-muted/30 rounded-lg overflow-hidden border">
-                  <Image
-                    src={asset.imageUrl}
-                    alt={asset.name}
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
+                  {asset.imageUrl ? (
+                    <Image
+                      src={asset.imageUrl}
+                      alt={asset.name}
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <Loader2 className="h-10 w-10 animate-spin text-primary/60" />
+                      <span className="text-sm text-muted-foreground mt-3">图片生成中...</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

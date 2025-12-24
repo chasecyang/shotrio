@@ -479,13 +479,19 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                     {selectedAssets.map((asset) => (
                       <div key={asset.id} className="relative group">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border bg-background">
-                          <Image
-                            src={asset.thumbnailUrl || asset.imageUrl}
-                            alt={asset.name}
-                            width={96}
-                            height={96}
-                            className="w-full h-full object-cover"
-                          />
+                          {asset.imageUrl ? (
+                            <Image
+                              src={asset.thumbnailUrl || asset.imageUrl}
+                              alt={asset.name}
+                              width={96}
+                              height={96}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
                         </div>
                         <button
                           onClick={(e) => {
@@ -715,12 +721,18 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                 {generatedAssets.map((asset) => (
                   <div key={asset.id} className="space-y-1.5">
                     <div className="relative aspect-square rounded-lg overflow-hidden border bg-background">
-                      <Image
-                        src={asset.imageUrl}
-                        alt={asset.name}
-                        fill
-                        className="object-cover"
-                      />
+                      {asset.imageUrl ? (
+                        <Image
+                          src={asset.imageUrl}
+                          alt={asset.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-center truncate">{asset.name}</p>

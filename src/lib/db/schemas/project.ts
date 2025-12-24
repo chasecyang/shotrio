@@ -145,8 +145,8 @@ export const asset: any = pgTable("asset", {
   // 基本信息
   name: text("name").notNull(), // 资产名称，如 "张三-正面-愤怒"
   
-  // 图片资源
-  imageUrl: text("image_url").notNull(), // 图片URL
+  // 图片资源（可为空，表示素材正在生成中）
+  imageUrl: text("image_url"), // 图片URL
   thumbnailUrl: text("thumbnail_url"), // 缩略图URL
   
   // 生成信息
@@ -155,7 +155,7 @@ export const asset: any = pgTable("asset", {
   modelUsed: text("model_used"), // 使用的模型
   
   // 派生关系
-  sourceAssetId: text("source_asset_id").references(() => asset.id, { onDelete: "set null" }),
+  sourceAssetIds: text("source_asset_ids").array(), // 多个源素材ID（用于图生图）
   derivationType: text("derivation_type"), // 'generate' | 'img2img' | 'inpaint' | 'edit' | 'remix' | 'composite'
   
   // 灵活的元数据字段（JSON）
@@ -311,14 +311,6 @@ export const assetRelations = relations(asset, ({ one, many }) => ({
   user: one(user, {
     fields: [asset.userId],
     references: [user.id],
-  }),
-  sourceAsset: one(asset, {
-    fields: [asset.sourceAssetId],
-    references: [asset.id],
-    relationName: "assetDerivation",
-  }),
-  derivedAssets: many(asset, {
-    relationName: "assetDerivation",
   }),
   tags: many(assetTag),
 }));

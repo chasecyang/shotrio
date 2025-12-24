@@ -344,7 +344,7 @@ function EditorLayoutInner({
         <ResizablePanel defaultSize={60} minSize={30}>
           <ResizablePanelGroup direction="horizontal" className="h-full">
             {/* 资源面板 */}
-            <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+            <ResizablePanel defaultSize={50} minSize={30}>
               <div className="h-full overflow-auto border-r bg-card">
                 {resourcePanel}
               </div>
@@ -353,7 +353,7 @@ function EditorLayoutInner({
             <ResizableHandle withHandle />
 
             {/* 预览/编辑区 */}
-            <ResizablePanel defaultSize={75}>
+            <ResizablePanel defaultSize={50} minSize={30}>
               <div className="h-full overflow-hidden bg-background">
                 {previewPanel}
               </div>

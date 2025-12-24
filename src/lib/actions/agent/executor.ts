@@ -244,12 +244,19 @@ export async function executeFunction(
           shots: validatedShots,
         });
 
-        result = {
-          functionCallId: functionCall.id,
-          success: batchResult.success,
-          data: batchResult.data,
-          error: batchResult.error,
-        };
+        if (batchResult.success && 'data' in batchResult) {
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: batchResult.data,
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: 'error' in batchResult ? batchResult.error : "创建失败",
+          };
+        }
         break;
       }
 
@@ -270,31 +277,64 @@ export async function executeFunction(
       }
 
       case "generate_asset": {
-        // 构建素材生成输入
-        const input: AssetImageGenerationInput = {
-          projectId,
-          prompt: parameters.prompt as string,
-          numImages: parameters.numImages ? parseInt(parameters.numImages as string) : 1,
-        };
-
-        // 可选：Agent 提供的元数据
-        if (parameters.name) {
-          input.name = parameters.name as string;
-        }
+        // 解析标签
+        let parsedTags: string[] | undefined;
         if (parameters.tags) {
           const tagsStr = (parameters.tags as string).trim();
           // 支持 JSON 数组格式和逗号分隔格式
           if (tagsStr.startsWith('[')) {
-            input.tags = JSON.parse(tagsStr);
+            parsedTags = JSON.parse(tagsStr);
           } else {
-            input.tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+            parsedTags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
           }
         }
 
-        // 可选：参考图（图生图模式）
+        // 解析 sourceAssetIds
+        let parsedSourceAssetIds: string[] | undefined;
         if (parameters.sourceAssetIds) {
-          input.sourceAssetIds = JSON.parse(parameters.sourceAssetIds as string);
+          parsedSourceAssetIds = JSON.parse(parameters.sourceAssetIds as string);
         }
+
+        // 生成素材名称（如果未提供）
+        const assetName = (parameters.name as string) || `AI生成-${Date.now()}`;
+
+        // 解析 numImages
+        const numImages = parameters.numImages ? parseInt(parameters.numImages as string) : 1;
+
+        // 第一步：立即创建素材记录（包含所有生成信息，但无图片）
+        const { createAssetInternal } = await import("../asset/crud");
+        const createResult = await createAssetInternal({
+          projectId,
+          userId: session.user.id,
+          name: assetName,
+          prompt: parameters.prompt as string,
+          tags: parsedTags,
+          modelUsed: "nano-banana",
+          sourceAssetIds: parsedSourceAssetIds,
+          derivationType: parsedSourceAssetIds ? "img2img" : "generate",
+          meta: {
+            generationParams: {
+              aspectRatio: "16:9" as any, // 默认宽高比
+              numImages: numImages,
+            },
+          },
+        });
+
+        if (!createResult.success || !createResult.asset) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: createResult.error || "创建素材失败",
+          };
+          break;
+        }
+
+        const assetId = createResult.asset.id;
+
+        // 第二步：创建图片生成任务，只需传入 assetId
+        const input: AssetImageGenerationInput = {
+          assetId, // 所有信息从 asset 读取
+        };
 
         const jobResult = await createJob({
           userId: session.user.id,
@@ -305,9 +345,11 @@ export async function executeFunction(
 
         result = {
           functionCallId: functionCall.id,
-          success: jobResult.success,
-          jobId: jobResult.jobId,
-          error: jobResult.error,
+          success: true,
+          data: {
+            assetId, // 返回素材ID，Agent可立即使用
+            jobId: jobResult.jobId, // 任务ID用于跟踪
+          },
         };
         break;
       }
@@ -321,40 +363,75 @@ export async function executeFunction(
         }>;
 
         const jobIds: string[] = [];
+        const assetIds: string[] = [];
         const errors: string[] = [];
 
-        // 为每个素材创建独立的生成任务
+        // 为每个素材创建记录和独立的生成任务
+        const { createAssetInternal } = await import("../asset/crud");
+        
         for (const assetData of assetsData) {
-          // 处理 tags：支持逗号分隔字符串或数组格式
-          let parsedTags: string[] | undefined;
-          if (assetData.tags) {
-            if (Array.isArray(assetData.tags)) {
-              parsedTags = assetData.tags;
-            } else {
-              parsedTags = assetData.tags.split(',').map(t => t.trim()).filter(Boolean);
+          try {
+            // 处理 tags：支持逗号分隔字符串或数组格式
+            let parsedTags: string[] | undefined;
+            if (assetData.tags) {
+              if (Array.isArray(assetData.tags)) {
+                parsedTags = assetData.tags;
+              } else {
+                parsedTags = assetData.tags.split(',').map(t => t.trim()).filter(Boolean);
+              }
             }
-          }
 
-          const input: AssetImageGenerationInput = {
-            projectId,
-            prompt: assetData.prompt,
-            name: assetData.name,
-            tags: parsedTags,
-            sourceAssetIds: assetData.sourceAssetIds,
-            numImages: 1,
-          };
+            // 生成素材名称（如果未提供）
+            const assetName = assetData.name || `AI生成-${Date.now()}`;
 
-          const jobResult = await createJob({
-            userId: session.user.id,
-            projectId,
-            type: "asset_image_generation",
-            inputData: input,
-          });
+            // 创建素材记录（包含所有生成信息，但无图片）
+            const createResult = await createAssetInternal({
+              projectId,
+              userId: session.user.id,
+              name: assetName,
+              prompt: assetData.prompt,
+              tags: parsedTags,
+              modelUsed: "nano-banana",
+              sourceAssetIds: assetData.sourceAssetIds,
+              derivationType: assetData.sourceAssetIds ? "img2img" : "generate",
+              meta: {
+                generationParams: {
+                  aspectRatio: "16:9" as any, // 默认宽高比
+                  numImages: 1,
+                },
+              },
+            });
 
-          if (jobResult.success && jobResult.jobId) {
-            jobIds.push(jobResult.jobId);
-          } else {
-            errors.push(`创建 "${assetData.name || 'unnamed'}" 任务失败: ${jobResult.error || "未知错误"}`);
+            if (!createResult.success || !createResult.asset) {
+              errors.push(`创建素材 ${assetName} 失败: ${createResult.error}`);
+              continue;
+            }
+
+            const assetId = createResult.asset.id;
+            assetIds.push(assetId);
+
+            // 创建图片生成任务，只需传入 assetId
+            const input: AssetImageGenerationInput = {
+              assetId, // 所有信息从 asset 读取
+            };
+
+            const jobResult = await createJob({
+              userId: session.user.id,
+              projectId,
+              type: "asset_image_generation",
+              inputData: input,
+            });
+
+            if (jobResult.success && jobResult.jobId) {
+              jobIds.push(jobResult.jobId);
+            } else {
+              errors.push(`创建 "${assetData.name || 'unnamed'}" 任务失败: ${jobResult.error || "未知错误"}`);
+            }
+          } catch (error) {
+            console.error(`处理素材 ${assetData.name || 'unnamed'} 失败:`, error);
+            errors.push(
+              `处理素材 "${assetData.name || 'unnamed'}" 失败: ${error instanceof Error ? error.message : "未知错误"}`
+            );
           }
         }
 
@@ -363,6 +440,7 @@ export async function executeFunction(
           success: jobIds.length > 0,
           data: {
             jobIds,
+            assetIds, // 返回创建的素材ID列表
             createdCount: jobIds.length,
             totalCount: assetsData.length,
             errors: errors.length > 0 ? errors : undefined,

@@ -51,6 +51,7 @@ import {
   Check,
   ChevronsUpDown,
   Maximize2,
+  Loader2,
 } from "lucide-react";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { AssetWithTags, hasAssetTag } from "@/types/asset";
@@ -282,31 +283,43 @@ export function AssetDetailDialog({
               {/* 图片预览 */}
               <div 
                 className="relative aspect-video rounded-xl overflow-hidden border bg-muted group cursor-pointer"
-                onClick={() => setLightboxOpen(true)}
+                onClick={() => asset.imageUrl && setLightboxOpen(true)}
               >
-                <Image
-                  src={asset.imageUrl}
-                  alt={asset.name}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 700px) 100vw, 700px"
-                />
-                {/* 悬停遮罩 */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-white">
-                    <Maximize2 className="h-5 w-5" />
-                    <span className="text-sm font-medium">查看大图</span>
+                {asset.imageUrl ? (
+                  <>
+                    <Image
+                      src={asset.imageUrl}
+                      alt={asset.name}
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 700px) 100vw, 700px"
+                    />
+                    {/* 悬停遮罩 */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-white">
+                        <Maximize2 className="h-5 w-5" />
+                        <span className="text-sm font-medium">查看大图</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  // 生成中状态
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary/60" />
+                    <span className="text-sm text-muted-foreground mt-3">图片生成中...</span>
                   </div>
-                </div>
+                )}
               </div>
               {/* Lightbox */}
-              <ImageLightbox
-                open={lightboxOpen}
-                onOpenChange={setLightboxOpen}
-                src={asset.imageUrl}
-                alt={asset.name}
-                downloadFilename={`${asset.name}.png`}
-              />
+              {asset.imageUrl && (
+                <ImageLightbox
+                  open={lightboxOpen}
+                  onOpenChange={setLightboxOpen}
+                  src={asset.imageUrl}
+                  alt={asset.name}
+                  downloadFilename={`${asset.name}.png`}
+                />
+              )}
 
               {/* 基本信息 */}
               <div className="space-y-3">
@@ -473,16 +486,22 @@ export function AssetDetailDialog({
                     <h3 className="text-sm font-medium">派生来源</h3>
                     <div className="flex items-center gap-3 p-3 rounded-lg border">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
-                        <Image
-                          src={
-                            asset.sourceAsset.thumbnailUrl ||
-                            asset.sourceAsset.imageUrl
-                          }
-                          alt={asset.sourceAsset.name}
-                          fill
-                          className="object-cover"
-                          sizes="64px"
-                        />
+                        {asset.sourceAsset.imageUrl ? (
+                          <Image
+                            src={
+                              asset.sourceAsset.thumbnailUrl ||
+                              asset.sourceAsset.imageUrl
+                            }
+                            alt={asset.sourceAsset.name}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">

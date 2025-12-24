@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Maximize2 } from "lucide-react";
+import { Trash2, Maximize2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
@@ -39,6 +39,9 @@ export function AssetCard({
   const [isDragging, setIsDragging] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // 检查素材是否正在生成中（没有图片）
+  const isGenerating = !asset.imageUrl;
+
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
     // 传递素材数据
@@ -52,8 +55,8 @@ export function AssetCard({
     setIsDragging(false);
   };
 
-  // 共用的 Lightbox 组件
-  const lightbox = (
+  // 共用的 Lightbox 组件（仅当有图片时才渲染）
+  const lightbox = asset.imageUrl ? (
     <ImageLightbox
       open={lightboxOpen}
       onOpenChange={setLightboxOpen}
@@ -61,7 +64,7 @@ export function AssetCard({
       alt={asset.name}
       downloadFilename={`${asset.name}.png`}
     />
-  );
+  ) : null;
 
   if (viewMode === "grid") {
     return (
@@ -86,15 +89,23 @@ export function AssetCard({
           className="relative aspect-video bg-muted/30 overflow-hidden cursor-pointer"
           onClick={() => onClick(asset)}
         >
-          <Image
-            src={asset.thumbnailUrl || asset.imageUrl}
-            alt={asset.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-          />
-          {/* 悬停遮罩 */}
-          {isHovered && (
+          {isGenerating ? (
+            // 生成中状态
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+              <span className="text-xs text-muted-foreground mt-2">生成中...</span>
+            </div>
+          ) : (
+            <Image
+              src={asset.thumbnailUrl || asset.imageUrl!}
+              alt={asset.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          )}
+          {/* 悬停遮罩（仅在有图片时显示操作按钮） */}
+          {isHovered && !isGenerating && (
             <div className="absolute inset-0 animate-in fade-in duration-200">
               {/* 左上角复选框 */}
               {onSelectChange && (
@@ -145,8 +156,8 @@ export function AssetCard({
               )}
             </div>
           )}
-          {/* 非 hover 时也显示复选框（如果已选中） */}
-          {!isHovered && isBatchSelected && onSelectChange && (
+          {/* 非 hover 时也显示复选框（如果已选中且有图片） */}
+          {!isHovered && isBatchSelected && onSelectChange && !isGenerating && (
             <div
               className="absolute top-2 left-2 z-10 animate-in fade-in duration-200 cursor-pointer transition-transform hover:scale-110"
               onClick={(e) => {
@@ -253,19 +264,28 @@ export function AssetCard({
         className="relative w-12 h-12 rounded-md overflow-hidden bg-muted/30 shrink-0 group/thumb"
         onClick={(e) => {
           e.stopPropagation();
-          setLightboxOpen(true);
+          if (!isGenerating) setLightboxOpen(true);
         }}
       >
-        <Image
-          src={asset.thumbnailUrl || asset.imageUrl}
-          alt={asset.name}
-          fill
-          className="object-cover"
-          sizes="48px"
-        />
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
-          <Maximize2 className="h-4 w-4 text-white" />
-        </div>
+        {isGenerating ? (
+          // 生成中状态
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+            <Loader2 className="h-5 w-5 animate-spin text-primary/60" />
+          </div>
+        ) : (
+          <>
+            <Image
+              src={asset.thumbnailUrl || asset.imageUrl!}
+              alt={asset.name}
+              fill
+              className="object-cover"
+              sizes="48px"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+              <Maximize2 className="h-4 w-4 text-white" />
+            </div>
+          </>
+        )}
       </div>
       {/* 信息 */}
       <div className="flex-1 min-w-0">
