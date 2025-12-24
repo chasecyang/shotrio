@@ -43,6 +43,8 @@ export const FunctionCallCard = memo(function FunctionCallCard({
   };
 
   const displayText = functionCall.displayName || functionCall.description || functionCall.name;
+  const statusText = getStatusText();
+  const showStatusText = (functionCall.status === "completed" || functionCall.status === "failed" || functionCall.status === "executing") && statusText;
 
   return (
     <div
@@ -55,18 +57,24 @@ export const FunctionCallCard = memo(function FunctionCallCard({
       )}
     >
       {getStatusIcon()}
-      <span className="truncate flex-1">
+      <span className="font-medium shrink-0">
         {displayText}
-        {functionCall.status !== "completed" && functionCall.status !== "pending" && (
-          <span className="ml-1 text-[10px] opacity-70">
-            {getStatusText()}
-          </span>
-        )}
       </span>
-      {functionCall.status === "failed" && functionCall.error && (
-        <span className="text-[10px] opacity-70 shrink-0">
-          {functionCall.error}
-        </span>
+      {showStatusText && (
+        <>
+          <span className="text-muted-foreground/60 shrink-0">·</span>
+          <span className="text-[10px] opacity-75 flex-1 min-w-0 break-words">
+            {statusText}
+          </span>
+        </>
+      )}
+      {functionCall.status === "failed" && functionCall.error && !showStatusText && (
+        <>
+          <span className="text-muted-foreground/60 shrink-0">·</span>
+          <span className="text-[10px] opacity-70 shrink-0 min-w-0 truncate">
+            {functionCall.error}
+          </span>
+        </>
       )}
     </div>
   );

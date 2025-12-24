@@ -13,6 +13,7 @@ import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq, and, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { AgentMessage, AgentContext } from "@/types/agent";
+import type { PendingActionInfo } from "@/lib/services/agent-engine";
 
 /**
  * 创建新对话
@@ -151,11 +152,26 @@ export async function getConversation(conversationId: string) {
         }
       }
 
-      // pendingAction, isStreaming, isInterrupted 是运行时状态
-      // 应该从 Agent stream 事件中获取，不从数据库读取
-
       return message;
     });
+
+    // 如果有 pendingAction 且对话状态为 awaiting_approval，将其附加到最后一个 assistant 消息上
+    if (conv.pendingAction && conv.status === "awaiting_approval") {
+      try {
+        const pendingAction: PendingActionInfo = JSON.parse(conv.pendingAction);
+        
+        // 找到最后一个 assistant 消息
+        const lastAssistantMessage = messages
+          .filter((msg) => msg.role === "assistant")
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+        
+        if (lastAssistantMessage) {
+          lastAssistantMessage.pendingAction = pendingAction;
+        }
+      } catch (e) {
+        console.error("[Conversation] 解析 pendingAction 失败:", e);
+      }
+    }
 
     return {
       success: true,
