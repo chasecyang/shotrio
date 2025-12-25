@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BetaBadge } from "@/components/ui/beta-badge";
 import { AlertCircle, Info } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from 'next-intl';
@@ -64,11 +65,12 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md relative z-10 rounded-3xl border-neutral-200 shadow-xl bg-white/80 backdrop-blur-sm">
         <CardHeader className="space-y-2 pb-6">
-          <div className="mx-auto mb-2 flex justify-center">
+          <div className="mx-auto mb-2 flex items-center justify-center gap-2">
             <span className="text-4xl font-bold">
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
               <span className="text-primary/40">Rio</span>
             </span>
+            <BetaBadge variant="default" className="translate-y-[-4px]" />
           </div>
           <CardTitle className="text-3xl font-bold text-center text-neutral-900">{t('title')}</CardTitle>
           <CardDescription className="text-center text-base">

@@ -10,6 +10,7 @@ import { BackgroundTasks } from "../layout/background-tasks";
 import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 import { EditorCreditsButton } from "./editor-credits-button";
+import { BetaBadge } from "@/components/ui/beta-badge";
 import type { EditorProject, EditorUser } from "./editor-types";
 
 interface EditorHeaderProps {
@@ -42,12 +43,13 @@ export function EditorHeader({
       <div className="flex items-center gap-3 min-w-0">
         <Link 
           href="/projects" 
-          className="flex items-center hover:opacity-70 transition-opacity shrink-0"
+          className="flex items-center gap-2 hover:opacity-70 transition-opacity shrink-0"
         >
           <span className="text-xl font-bold">
             <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
             <span className="text-primary/40">Rio</span>
           </span>
+          <BetaBadge variant="minimal" />
         </Link>
         <Separator orientation="vertical" className="h-6" />
         <ProjectSelector 

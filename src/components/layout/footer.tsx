@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import { Separator } from "@/components/ui/separator";
+import { AlertCircle } from "lucide-react";
 
 export function Footer() {
   const t = useTranslations();
@@ -45,6 +46,14 @@ export function Footer() {
           </div>
 
           <Separator className="my-6 bg-neutral-800" />
+
+          {/* Beta Notice */}
+          <div className="mb-6 flex items-start justify-center gap-2 text-xs text-neutral-500 max-w-3xl mx-auto">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-primary/60" />
+            <p className="text-center leading-relaxed">
+              {t('beta.description')}
+            </p>
+          </div>
 
           {/* Copyright */}
           <div className="text-center">

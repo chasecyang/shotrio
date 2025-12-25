@@ -8,7 +8,7 @@ import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Bot, Square } from "lucide-react";
+import { Send, Bot, Square, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation, updateConversationTitle } from "@/lib/actions/conversation/crud";
@@ -38,6 +38,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
+  const [isUserNearBottom, setIsUserNearBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   // 跟踪每个对话是否已经生成过标题，避免重复生成
   const titleGeneratedRef = useRef<Set<string>>(new Set());
@@ -49,6 +50,28 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     if (firstUserMessageRef.current) {
       console.log(`[AgentPanel] ${reason}，清除 firstUserMessageRef`);
       firstUserMessageRef.current = null;
+    }
+  }, []);
+
+  // 检测用户是否在底部
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const threshold = 100; // 距离底部100px以内视为在底部
+    const nearBottom = scrollHeight - scrollTop - clientHeight < threshold;
+    setIsUserNearBottom(nearBottom);
+  }, []);
+
+  // 滚动到底部的函数
+  const scrollToBottom = useCallback((smooth = false) => {
+    if (!scrollRef.current) return;
+    if (smooth) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    } else {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, []);
 
@@ -210,12 +233,12 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     fetchBalance();
   }, []);
 
-  // 自动滚动到底部
+  // 条件自动滚动到底部：只在用户位于底部时滚动
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isUserNearBottom) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [agent.state.messages, isProcessing]);
+  }, [agent.state.messages, isProcessing, isUserNearBottom]);
 
   // 监听对话切换，清除保存的第一条消息引用
   useEffect(() => {
@@ -389,8 +412,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         </div>
 
         {/* Messages - with proper overflow handling */}
-        <div className="flex-1 overflow-hidden">
-          <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 overflow-hidden relative">
+          <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
             <div className="py-2">
               {agent.state.isNewConversation || (agent.state.messages.length === 0 && !isProcessing) ? (
                 <div className="flex h-full flex-col items-center justify-center p-8 text-center">
@@ -416,6 +439,20 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               )}
             </div>
           </div>
+
+          {/* 回到底部按钮 */}
+          {!isUserNearBottom && (
+            <div className="absolute bottom-4 right-4 z-10">
+              <Button
+                size="icon"
+                onClick={() => scrollToBottom(true)}
+                className="h-10 w-10 rounded-full shadow-lg transition-all hover:scale-110"
+                title={t('editor.agent.panel.scrollToBottom')}
+              >
+                <ArrowDown className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Input */}

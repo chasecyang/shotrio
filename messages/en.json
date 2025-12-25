@@ -31,6 +31,11 @@
     "reject": "Reject",
     "aiGenerateOptimize": "AI Generate/Optimize"
   },
+  "beta": {
+    "label": "BETA",
+    "title": "Beta Version",
+    "description": "ShotRio is currently in beta. Some features may be unstable or subject to change. Thank you for your understanding and support!"
+  },
   "language": {
     "interfaceLanguage": "Interface Language",
     "interfaceLanguageTooltip": "Switch the display language of the app interface",
@@ -958,7 +963,8 @@
         "aiAssistant": "AI Assistant",
         "startNewConversation": "Start New Conversation",
         "startConversation": "Start Conversation",
-        "welcomeMessage": "Tell me what you want to do, I can help you create shots, generate assets, manage projects, and more"
+        "welcomeMessage": "Tell me what you want to do, I can help you create shots, generate assets, manage projects, and more",
+        "scrollToBottom": "Scroll to Bottom"
       }
     },
     "resource": {

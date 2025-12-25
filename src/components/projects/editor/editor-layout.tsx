@@ -7,6 +7,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
+import { BetaBanner } from "@/components/ui/beta-banner";
 import { EditorProvider, useEditor } from "./editor-context";
 import { EditorHeader } from "./editor-header";
 import { TimelineContainer } from "./timeline/timeline-container";
@@ -327,6 +328,9 @@ function EditorLayoutInner({
         projects={projects}
         user={user}
       />
+
+      {/* Beta Notice - 编辑器专用 */}
+      <BetaBanner dismissible storageKey="editor-beta-banner-dismissed" />
 
       {/* 主内容区：上下分割 */}
       <ResizablePanelGroup direction="vertical" className="flex-1">

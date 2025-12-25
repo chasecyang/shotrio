@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BetaBanner } from "@/components/ui/beta-banner";
 import { Link } from "@/i18n/routing";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
 import { 
@@ -90,6 +91,9 @@ export default async function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background font-sans selection:bg-primary/20">
       <Header />
+      
+      {/* Beta Notice Banner - 可关闭 */}
+      <BetaBanner dismissible storageKey="home-beta-banner-dismissed" />
       
       <main className="flex-1">
         {/* Hero Section */}

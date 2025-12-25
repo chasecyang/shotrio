@@ -31,6 +31,11 @@
     "reject": "拒绝",
     "aiGenerateOptimize": "AI 生成/优化"
   },
+  "beta": {
+    "label": "BETA",
+    "title": "测试版本",
+    "description": "ShotRio 目前处于测试阶段，部分功能可能不稳定或发生变化。感谢您的理解与支持！"
+  },
   "language": {
     "interfaceLanguage": "界面语言",
     "interfaceLanguageTooltip": "切换应用界面的显示语言",
@@ -959,7 +964,8 @@
         "aiAssistant": "AI 助手",
         "startNewConversation": "开始新对话",
         "startConversation": "开始对话",
-        "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等"
+        "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等",
+        "scrollToBottom": "回到底部"
       }
     },
     "resource": {
