@@ -95,26 +95,26 @@
       "storyboard": {
         "title": "分镜设计",
         "description": "可视化分镜编辑器，精准把控每个镜头。支持镜头类型、运镜方式等专业设置。",
+        "badge": "已上线"
+      },
+      "assetManagement": {
+        "title": "素材管理",
+        "description": "统一管理场景、角色、特效等创作素材。支持AI生成和上传，打造专属素材库。",
+        "badge": "已上线"
+      },
+      "agent": {
+        "title": "AI Agent 辅助",
+        "description": "智能助手帮你规划创作流程，生成分镜和素材。Beta功能，持续优化中。",
+        "badge": "Beta"
+      },
+      "voiceMusic": {
+        "title": "AI 配音与音乐",
+        "description": "为视频配上合适的语音和背景音乐，一键生成专业音轨。",
         "badge": "即将推出"
       },
-      "character": {
-        "title": "角色管理",
-        "description": "统一管理剧中角色，设定角色属性、关系与弧光。确保角色形象的一致性。",
-        "badge": "即将推出"
-      },
-      "scene": {
-        "title": "场景管理",
-        "description": "场景库管理与复用，支持场景描述、道具清单。让每个场景都独具特色。",
-        "badge": "即将推出"
-      },
-      "ai": {
-        "title": "AI 成片",
-        "description": "AI 驱动的自动化成片流程，从文字到视频一键生成。大幅提升创作效率。",
-        "badge": "即将推出"
-      },
-      "edit": {
-        "title": "智能剪辑",
-        "description": "智能视频剪辑工具，支持快速调色、转场、特效。让作品更具专业质感。",
+      "subtitle": {
+        "title": "AI 字幕",
+        "description": "自动识别语音生成字幕，支持多语言翻译和样式定制。",
         "badge": "即将推出"
       }
     },

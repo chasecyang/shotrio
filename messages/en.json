@@ -179,26 +179,26 @@
       "storyboard": {
         "title": "Storyboard Design",
         "description": "Visual storyboard editor for precise shot control. Support for professional settings like shot types and camera movements.",
+        "badge": "Available Now"
+      },
+      "assetManagement": {
+        "title": "Asset Management",
+        "description": "Manage scenes, characters, and effects in one place. Support AI generation and uploads for your asset library.",
+        "badge": "Available Now"
+      },
+      "agent": {
+        "title": "AI Agent Assistant",
+        "description": "Smart assistant to help plan your workflow and generate shots. Beta feature, continuously improving.",
+        "badge": "Beta"
+      },
+      "voiceMusic": {
+        "title": "AI Voiceover & Music",
+        "description": "Add professional voiceovers and background music to videos with one click.",
         "badge": "Coming Soon"
       },
-      "character": {
-        "title": "Character Management",
-        "description": "Unified character management with attributes, relationships, and arcs. Ensure consistency in character portrayal.",
-        "badge": "Coming Soon"
-      },
-      "scene": {
-        "title": "Scene Management",
-        "description": "Scene library management and reuse with descriptions and prop lists. Make every scene unique.",
-        "badge": "Coming Soon"
-      },
-      "ai": {
-        "title": "AI Video Production",
-        "description": "AI-powered automated video production workflow. Generate videos from text with one click. Dramatically improve creation efficiency.",
-        "badge": "Coming Soon"
-      },
-      "edit": {
-        "title": "Smart Editing",
-        "description": "Intelligent video editing tools with quick color grading, transitions, and effects. Give your work a professional touch.",
+      "subtitle": {
+        "title": "AI Subtitles",
+        "description": "Auto-generate subtitles from speech, support multilingual translation and style customization.",
         "badge": "Coming Soon"
       }
     },

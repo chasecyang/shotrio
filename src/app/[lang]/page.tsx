@@ -9,11 +9,11 @@ import {
   ArrowRight, 
   Sparkles, 
   FileText, 
-  Users, 
-  Image as ImageIcon, 
-  Video, 
-  Scissors,
-  Layout
+  Layout,
+  FolderOpen,
+  Bot,
+  Music,
+  Subtitles
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -26,42 +26,42 @@ export default async function Home() {
       titleKey: "features.script.title",
       descriptionKey: "features.script.description",
       badgeKey: "features.script.badge",
-      available: true,
+      badgeVariant: "default" as const,
     },
     {
       icon: Layout,
       titleKey: "features.storyboard.title",
       descriptionKey: "features.storyboard.description",
       badgeKey: "features.storyboard.badge",
-      available: false,
+      badgeVariant: "default" as const,
     },
     {
-      icon: Users,
-      titleKey: "features.character.title",
-      descriptionKey: "features.character.description",
-      badgeKey: "features.character.badge",
-      available: false,
+      icon: FolderOpen,
+      titleKey: "features.assetManagement.title",
+      descriptionKey: "features.assetManagement.description",
+      badgeKey: "features.assetManagement.badge",
+      badgeVariant: "default" as const,
     },
     {
-      icon: ImageIcon,
-      titleKey: "features.scene.title",
-      descriptionKey: "features.scene.description",
-      badgeKey: "features.scene.badge",
-      available: false,
+      icon: Bot,
+      titleKey: "features.agent.title",
+      descriptionKey: "features.agent.description",
+      badgeKey: "features.agent.badge",
+      badgeVariant: "outline" as const,
     },
     {
-      icon: Video,
-      titleKey: "features.ai.title",
-      descriptionKey: "features.ai.description",
-      badgeKey: "features.ai.badge",
-      available: false,
+      icon: Music,
+      titleKey: "features.voiceMusic.title",
+      descriptionKey: "features.voiceMusic.description",
+      badgeKey: "features.voiceMusic.badge",
+      badgeVariant: "secondary" as const,
     },
     {
-      icon: Scissors,
-      titleKey: "features.edit.title",
-      descriptionKey: "features.edit.description",
-      badgeKey: "features.edit.badge",
-      available: false,
+      icon: Subtitles,
+      titleKey: "features.subtitle.title",
+      descriptionKey: "features.subtitle.description",
+      badgeKey: "features.subtitle.badge",
+      badgeVariant: "secondary" as const,
     },
   ];
 
@@ -174,7 +174,7 @@ export default async function Home() {
                         <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                           <Icon className="w-6 h-6" />
                         </div>
-                        <Badge variant={feature.available ? "default" : "secondary"} className="text-xs font-mono tracking-wider">
+                        <Badge variant={feature.badgeVariant} className="text-xs font-mono tracking-wider">
                           {t(feature.badgeKey)}
                         </Badge>
                       </div>
