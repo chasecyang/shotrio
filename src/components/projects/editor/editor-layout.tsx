@@ -96,20 +96,14 @@ function EditorLayoutInner({
     }
   }, [initialView, project.id, dispatch]);
 
-  // 批量生成的 loading 状态
-  const [isBatchGeneratingVideos, setIsBatchGeneratingVideos] = useState(false);
+  // 导出视频的 loading 状态
   const [isExportingVideos, setIsExportingVideos] = useState(false);
 
+  // 检查是否有活跃的批量视频生成任务
   const hasBatchVideoJob = jobs.some(job => 
     job.type === 'batch_video_generation' && 
     (job.status === 'pending' || job.status === 'processing')
   );
-
-  useEffect(() => {
-    if (hasBatchVideoJob) {
-      setIsBatchGeneratingVideos(false);
-    }
-  }, [hasBatchVideoJob]);
 
   // 加载分镜数据
   useEffect(() => {
@@ -214,20 +208,16 @@ function EditorLayoutInner({
       return;
     }
 
-    setIsBatchGeneratingVideos(true);
     try {
       const result = await batchGenerateShotVideos(state.selectedShotIds);
       if (result.success) {
         toast.success(t("success.batchVideoTaskStarted", { count: state.selectedShotIds.length }));
-        // 不在这里重置状态，等待 Job 被检测到后再重置
       } else {
         toast.error(result.error || t("errors.addShotFailed"));
-        setIsBatchGeneratingVideos(false); // 失败时才重置
       }
     } catch (error) {
       console.error(error);
       toast.error(t("errors.addShotFailed"));
-      setIsBatchGeneratingVideos(false); // 出错时才重置
     }
   };
 
@@ -371,7 +361,6 @@ function EditorLayoutInner({
               onDeleteShots={handleDeleteShots}
               onGenerateVideos={handleGenerateVideos}
               onExportVideos={handleExportVideos}
-              isBatchGeneratingVideos={isBatchGeneratingVideos || hasBatchVideoJob}
               isExportingVideos={isExportingVideos}
             />
           </div>

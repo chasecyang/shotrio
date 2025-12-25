@@ -11,7 +11,6 @@ interface TimelineContainerProps {
   onDeleteShots?: () => void;
   onGenerateVideos?: () => void;
   onExportVideos?: () => void;
-  isBatchGeneratingVideos?: boolean;
   isExportingVideos?: boolean;
 }
 
@@ -20,7 +19,6 @@ export function TimelineContainer({
   onDeleteShots,
   onGenerateVideos,
   onExportVideos,
-  isBatchGeneratingVideos,
   isExportingVideos,
 }: TimelineContainerProps) {
   const { state, totalDuration } = useEditor();
@@ -45,7 +43,6 @@ export function TimelineContainer({
         onDeleteShots={onDeleteShots}
         onGenerateVideos={onGenerateVideos}
         onExportVideos={onExportVideos}
-        isBatchGeneratingVideos={isBatchGeneratingVideos}
         isExportingVideos={isExportingVideos}
       />
 

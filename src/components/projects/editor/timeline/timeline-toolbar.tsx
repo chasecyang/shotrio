@@ -38,7 +38,6 @@ interface TimelineToolbarProps {
   onDeleteShots?: () => void;
   onGenerateVideos?: () => void;
   onExportVideos?: () => void;
-  isBatchGeneratingVideos?: boolean;
   isExportingVideos?: boolean;
 }
 
@@ -238,13 +237,11 @@ function SelectionActionsBar({
   onDeleteShots,
   onGenerateVideos,
   onExportVideos,
-  isBatchGeneratingVideos,
   isExportingVideos,
 }: {
   onDeleteShots?: () => void;
   onGenerateVideos?: () => void;
   onExportVideos?: () => void;
-  isBatchGeneratingVideos?: boolean;
   isExportingVideos?: boolean;
 }) {
   const { state, clearShotSelection, jobs } = useEditor();
@@ -291,15 +288,15 @@ function SelectionActionsBar({
         variant="outline"
         size="sm"
         onClick={onGenerateVideos}
-        disabled={isBatchGeneratingVideos || hasBatchVideoJob}
+        disabled={hasBatchVideoJob}
         className={cn(
           "h-7 text-xs border-purple-200 dark:border-purple-800/50",
           "hover:bg-purple-50 hover:border-purple-300 dark:hover:bg-purple-950/30 dark:hover:border-purple-700"
         )}
       >
-        <Video className={cn("h-3.5 w-3.5 mr-1", (isBatchGeneratingVideos || hasBatchVideoJob) && "animate-spin")} />
+        <Video className={cn("h-3.5 w-3.5 mr-1", hasBatchVideoJob && "animate-spin")} />
         <Sparkles className="h-3 w-3 mr-1" />
-        {(isBatchGeneratingVideos || hasBatchVideoJob) ? "生成中..." : "生成视频"}
+        {hasBatchVideoJob ? "生成中..." : "生成视频"}
       </Button>
 
       <Separator orientation="vertical" className="h-4 bg-border/50" />
@@ -346,7 +343,6 @@ export function TimelineToolbar({
   onDeleteShots,
   onGenerateVideos,
   onExportVideos,
-  isBatchGeneratingVideos,
   isExportingVideos,
 }: TimelineToolbarProps) {
   const { state, clearShotSelection } = useEditor();
@@ -380,7 +376,6 @@ export function TimelineToolbar({
             onDeleteShots={onDeleteShots}
             onGenerateVideos={onGenerateVideos}
             onExportVideos={onExportVideos}
-            isBatchGeneratingVideos={isBatchGeneratingVideos}
             isExportingVideos={isExportingVideos}
           />
         ) : (

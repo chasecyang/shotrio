@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ShotDetail } from "@/types/project";
 import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Image as ImageIcon, GripVertical, Video, FileText } from "lucide-react";
+import { Image as ImageIcon, GripVertical, Video, FileText, Clock, Loader2 } from "lucide-react";
 import { updateShot } from "@/lib/actions/project";
 import { useEditor } from "../editor-context";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/shot-utils";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
 
 interface ShotClipProps {
   shot: ShotDetail;
@@ -22,7 +23,7 @@ interface ShotClipProps {
 
 export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipProps) {
   const tToast = useTranslations("toasts");
-  const { state, dispatch } = useEditor();
+  const { state, dispatch, jobs } = useEditor();
   const [isResizing, setIsResizing] = useState(false);
   const [originalDuration, setOriginalDuration] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -30,6 +31,24 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
   const duration = shot.duration || 3000;
   const width = duration * pixelsPerMs;
   const minWidth = 500 * pixelsPerMs; // 最小 0.5 秒
+
+  // 检查当前 shot 是否有视频生成任务
+  const videoGenerationStatus = useMemo(() => {
+    const activeJob = jobs.find(job => {
+      if (job.type !== 'shot_video_generation') return false;
+      if (job.status !== 'pending' && job.status !== 'processing') return false;
+      
+      try {
+        const inputData = JSON.parse(job.inputData || '{}');
+        return inputData.shotId === shot.id;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!activeJob) return null;
+    return activeJob.status;
+  }, [jobs, shot.id]);
 
   const {
     attributes,
@@ -188,6 +207,31 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
                 {shot.videoUrl && (
                   <div className="absolute bottom-0.5 right-0.5 bg-primary rounded px-1 py-0.5">
                     <Video className="w-2.5 h-2.5 text-primary-foreground" />
+                  </div>
+                )}
+                {/* 视频生成状态徽章 */}
+                {videoGenerationStatus && (
+                  <div className="absolute top-0.5 left-0.5">
+                    <Badge 
+                      variant={videoGenerationStatus === 'processing' ? 'default' : 'secondary'}
+                      className={cn(
+                        "h-4 px-1 text-[9px] gap-0.5",
+                        videoGenerationStatus === 'processing' && "bg-blue-500 hover:bg-blue-600",
+                        videoGenerationStatus === 'pending' && "bg-yellow-500 hover:bg-yellow-600 text-yellow-950"
+                      )}
+                    >
+                      {videoGenerationStatus === 'processing' ? (
+                        <>
+                          <Loader2 className="w-2 h-2 animate-spin" />
+                          生成中
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-2 h-2" />
+                          排队中
+                        </>
+                      )}
+                    </Badge>
                   </div>
                 )}
               </>
