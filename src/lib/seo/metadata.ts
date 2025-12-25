@@ -165,3 +165,35 @@ export const termsMetadata = {
     description: '阅读用户服务条款。',
   },
 };
+
+/**
+ * Pricing page metadata content
+ */
+export const pricingMetadata = {
+  en: {
+    title: 'Pricing Plans | Shotrio',
+    description: 'Choose the credit package that suits you and start your AI creation journey. AI image and video generation with flexible pricing.',
+    keywords: ['Pricing', 'Credits', 'AI Generation', 'Video Creation', 'Image Generation', 'Subscription'],
+  },
+  zh: {
+    title: '定价方案 | Shotrio',
+    description: '选择适合您的积分包，开始 AI 创作之旅。AI 图片和视频生成，灵活定价方案。',
+    keywords: ['定价', '积分', 'AI生成', '视频创作', '图片生成', '订阅'],
+  },
+};
+
+/**
+ * Credits page metadata content
+ */
+export const creditsMetadata = {
+  en: {
+    title: 'Credit Center | Shotrio',
+    description: 'Purchase credits for AI image and video generation. Manage your credit balance and transaction history.',
+    keywords: ['Credits', 'Purchase', 'Balance', 'Transaction History', 'AI Generation'],
+  },
+  zh: {
+    title: '积分中心 | Shotrio',
+    description: '购买积分用于 AI 图片和视频生成。管理您的积分余额和交易记录。',
+    keywords: ['积分', '购买', '余额', '交易记录', 'AI生成'],
+  },
+};

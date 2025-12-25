@@ -12,11 +12,25 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Metadata } from "next";
+import { generatePageMetadata, pricingMetadata } from "@/lib/seo/metadata";
 
-export const metadata = {
-  title: "定价方案 - Shotrio",
-  description: "选择适合您的积分包，开始AI创作之旅",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const metadata = pricingMetadata[lang as keyof typeof pricingMetadata] || pricingMetadata.zh;
+  
+  return generatePageMetadata({
+    lang,
+    title: metadata.title,
+    description: metadata.description,
+    keywords: metadata.keywords,
+    path: '/pricing',
+  });
+}
 
 export default async function PricingPage() {
   const t = await getTranslations();

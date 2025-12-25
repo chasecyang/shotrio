@@ -1,18 +1,39 @@
 User-agent: *
 
 # 允许公开页面
+Allow: /
+Allow: /zh/
+Allow: /en/
+Allow: /*/login
+Allow: /*/pricing
+Allow: /*/privacy
+Allow: /*/terms
 
 # 禁止抓取
+Disallow: /*/admin
+Disallow: /*/projects
+Disallow: /*/credits
+Disallow: /api/
+Disallow: /_next/
 
 # Sitemap
+Sitemap: https://shotrio.com/sitemap.xml
 
 # 搜索引擎特定配置
 User-agent: Googlebot
 Allow: /
+Disallow: /*/admin
+Disallow: /*/projects
+Disallow: /*/credits
 
 User-agent: Bingbot
 Allow: /
+Disallow: /*/admin
+Disallow: /*/projects
+Disallow: /*/credits
 
 User-agent: Baiduspider
 Allow: /
-
+Disallow: /*/admin
+Disallow: /*/projects
+Disallow: /*/credits

@@ -130,6 +130,37 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
       },
     },
+    
+    // 定价页 - 中文
+    {
+      url: `${baseUrl}/zh/pricing`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+      alternates: {
+        languages: {
+          'zh': `${baseUrl}/zh/pricing`,
+          'zh-CN': `${baseUrl}/zh/pricing`,
+          'en': `${baseUrl}/en/pricing`,
+          'en-US': `${baseUrl}/en/pricing`,
+        },
+      },
+    },
+    // 定价页 - 英文
+    {
+      url: `${baseUrl}/en/pricing`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+      alternates: {
+        languages: {
+          'zh': `${baseUrl}/zh/pricing`,
+          'zh-CN': `${baseUrl}/zh/pricing`,
+          'en': `${baseUrl}/en/pricing`,
+          'en-US': `${baseUrl}/en/pricing`,
+        },
+      },
+    },
   ];
 }
 
