@@ -43,10 +43,10 @@ const getStatusConfig = (t: (key: string) => string) => ({
   awaiting_approval: {
     icon: AlertCircle,
     label: t('editor.agent.conversationStatus.awaitingApproval'),
-    className: "text-orange-600 dark:text-orange-500",
-    badgeClassName: "bg-orange-500/20 text-orange-600 dark:text-orange-500 font-semibold",
-    animationClassName: "animate-bounce",
-    cardClassName: "border-l-2 border-l-orange-500",
+    className: "text-amber-600 dark:text-amber-400",
+    badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium",
+    animationClassName: "",
+    cardClassName: "bg-amber-500/10",
   },
   active: {
     icon: Clock,
