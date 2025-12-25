@@ -44,91 +44,81 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 保存第一条用户消息，用于生成标题
   const firstUserMessageRef = useRef<{ conversationId: string; message: string } | null>(null);
   
-  // 使用 Agent Stream Hook
-  const { sendMessage, abort, resumeConversation } = useAgentStream({
-    onIterationUpdate: (iterations: IterationStep[]) => {
-      // 检查是否有分镜相关操作完成
-      const lastIteration = iterations[iterations.length - 1];
-      if (lastIteration?.functionCall?.status === "completed" && 
-          isShotRelatedFunction(lastIteration.functionCall.name)) {
-        // 延迟触发刷新，确保数据库操作已完成
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("shots-changed"));
-        }, 200);
-      }
-    },
-    onComplete: () => {
-      setIsProcessing(false);
-      
-      // 检查当前消息的所有iterations，看是否有分镜相关操作完成
-      const currentMessage = agent.state.messages.find(
-        m => m.id === agent.state.messages[agent.state.messages.length - 1]?.id
-      );
-      if (currentMessage?.iterations) {
-        const hasShotRelatedCompleted = currentMessage.iterations.some(
-          iteration => 
-            iteration.functionCall?.status === "completed" && 
-            isShotRelatedFunction(iteration.functionCall.name)
-        );
-        if (hasShotRelatedCompleted) {
-          // 延迟触发刷新，确保数据库操作已完成
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent("shots-changed"));
-          }, 300);
-        }
-      }
-      
-      // 标记需要检查标题生成（在 useEffect 中实际处理）
-      // 这里不直接检查，因为状态可能还没更新
-      
-      // 延迟刷新对话列表（静默刷新，不显示全屏loading）
-      setTimeout(() => {
-        agent.refreshConversations(true);
-      }, 100);
-    },
-    onError: (error) => {
-      setIsProcessing(false);
-      console.error("Agent Stream 错误:", error);
-      if (error !== "用户中断") {
-        toast.error("发送失败");
-      }
-    },
-  });
-
-  // 获取用户积分余额
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const result = await getCreditBalance();
-        if (result.success && result.balance) {
-          setCreditBalance(result.balance.balance);
-        }
-      } catch (error) {
-        console.error("获取积分余额失败:", error);
-      }
+  // 清除 firstUserMessageRef 的辅助函数
+  const clearFirstUserMessageRef = useCallback((reason: string) => {
+    if (firstUserMessageRef.current) {
+      console.log(`[AgentPanel] ${reason}，清除 firstUserMessageRef`);
+      firstUserMessageRef.current = null;
     }
-    fetchBalance();
   }, []);
 
-  // 自动滚动到底部
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  // 检查是否应该生成标题
+  const shouldGenerateTitle = useCallback((checkStreaming = false) => {
+    if (!firstUserMessageRef.current || !agent.state.currentConversationId) {
+      return false;
     }
-  }, [agent.state.messages, isProcessing]);
 
-  // 监听对话切换，清除保存的第一条消息引用
-  useEffect(() => {
-    // 当切换到新对话或加载已有对话时，清除 firstUserMessageRef
-    // 但保留 titleGeneratedRef，因为它是全局的，用于避免重复生成
-    if (agent.state.isNewConversation || agent.state.currentConversationId) {
-      // 如果当前对话已经有消息了，说明不是新对话的第一条消息，清除引用
-      if (agent.state.messages.length > 0) {
-        firstUserMessageRef.current = null;
-      }
+    const { conversationId } = firstUserMessageRef.current;
+    
+    // 验证是否为当前对话
+    if (conversationId !== agent.state.currentConversationId) {
+      return false;
     }
-  }, [agent.state.currentConversationId, agent.state.isNewConversation, agent.state.messages.length]);
 
+    const userMessages = agent.state.messages.filter(m => m.role === "user");
+    const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
+    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
+    
+    // 必须是第一次对话：一条用户消息，一条助手消息
+    if (userMessages.length !== 1 || assistantMessages.length !== 1) {
+      return false;
+    }
+    
+    // 不能有待确认的操作
+    if (hasPendingAction) {
+      return false;
+    }
+    
+    // 如果需要检查流式状态（fallback 机制）
+    if (checkStreaming) {
+      const lastAssistantMessage = assistantMessages[0];
+      return !lastAssistantMessage.isStreaming;
+    }
+    
+    return true;
+  }, [agent.state.currentConversationId, agent.state.messages]);
+
+  // 尝试生成标题
+  const tryGenerateTitle = useCallback((source: string) => {
+    if (!firstUserMessageRef.current) {
+      return;
+    }
+
+    const { conversationId, message } = firstUserMessageRef.current;
+    
+    const userMessages = agent.state.messages.filter(m => m.role === "user");
+    const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
+    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
+    
+    console.log(`[AgentPanel] ${source} 检查标题生成条件:`, {
+      conversationId,
+      userMessagesCount: userMessages.length,
+      assistantMessagesCount: assistantMessages.length,
+      hasPendingAction,
+    });
+
+    if (shouldGenerateTitle()) {
+      console.log(`[AgentPanel] ${source} 触发标题生成`);
+      updateConversationTitleFromMessage(conversationId, message);
+      firstUserMessageRef.current = null;
+    } else if (hasPendingAction) {
+      console.log(`[AgentPanel] ${source} 跳过：有待确认操作`);
+    } else if (userMessages.length > 1 || assistantMessages.length > 1) {
+      console.log(`[AgentPanel] ${source} 跳过：不是第一条消息`);
+      firstUserMessageRef.current = null;
+    }
+  }, [agent.state.messages, shouldGenerateTitle]);
+  
   // 更新对话标题的函数
   const updateConversationTitleFromMessage = useCallback(async (
     conversationId: string,
@@ -173,47 +163,114 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     }
   }, [agent]);
 
-  // 监听消息变化，检查是否需要生成标题
+  // 使用 Agent Stream Hook
+  const { sendMessage, abort, resumeConversation } = useAgentStream({
+    onIterationUpdate: (iterations: IterationStep[]) => {
+      // 检查是否有分镜相关操作完成并触发刷新
+      const lastIteration = iterations[iterations.length - 1];
+      if (lastIteration?.functionCall?.status === "completed" && 
+          isShotRelatedFunction(lastIteration.functionCall.name)) {
+        setTimeout(() => window.dispatchEvent(new CustomEvent("shots-changed")), 200);
+      }
+    },
+    onComplete: () => {
+      setIsProcessing(false);
+      
+      // 尝试生成标题（主要路径）
+      tryGenerateTitle("onComplete");
+      
+      // 延迟刷新对话列表
+      setTimeout(() => agent.refreshConversations(true), 100);
+    },
+    onError: (error) => {
+      setIsProcessing(false);
+      console.error("Agent Stream 错误:", error);
+      
+      // 发生错误时清除引用
+      clearFirstUserMessageRef("发生错误");
+      
+      if (error !== "用户中断") {
+        toast.error("发送失败");
+      }
+    },
+  });
+
+  // 获取用户积分余额
   useEffect(() => {
-    const conversationId = agent.state.currentConversationId;
-    if (!conversationId || !firstUserMessageRef.current) {
+    async function fetchBalance() {
+      try {
+        const result = await getCreditBalance();
+        if (result.success && result.balance) {
+          setCreditBalance(result.balance.balance);
+        }
+      } catch (error) {
+        console.error("获取积分余额失败:", error);
+      }
+    }
+    fetchBalance();
+  }, []);
+
+  // 自动滚动到底部
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [agent.state.messages, isProcessing]);
+
+  // 监听对话切换，清除保存的第一条消息引用
+  useEffect(() => {
+    // 切换到不同的对话时清除引用
+    if (agent.state.currentConversationId && firstUserMessageRef.current && 
+        firstUserMessageRef.current.conversationId !== agent.state.currentConversationId) {
+      clearFirstUserMessageRef("切换对话");
+    }
+    
+    // 进入新对话模式时清除引用
+    if (agent.state.isNewConversation) {
+      clearFirstUserMessageRef("进入新对话模式");
+    }
+  }, [agent.state.currentConversationId, agent.state.isNewConversation, clearFirstUserMessageRef]);
+
+  // 监听消息变化，检查是否需要生成标题（Fallback机制）
+  // 主要路径在 onComplete 回调中，这里作为备用
+  useEffect(() => {
+    if (!firstUserMessageRef.current || !agent.state.currentConversationId) {
       return;
     }
 
-    // 只处理第一条消息的标题生成
-    if (firstUserMessageRef.current.conversationId !== conversationId) {
+    // 只处理当前对话
+    if (firstUserMessageRef.current.conversationId !== agent.state.currentConversationId) {
       return;
     }
 
-    // 检查是否只有一条用户消息和一条助手消息（第一条消息）
-    // 排除系统消息
     const userMessages = agent.state.messages.filter(m => m.role === "user");
     const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
+    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
     
-    console.log("[AgentPanel] 检查标题生成条件:", {
-      conversationId,
+    console.log("[AgentPanel] Fallback: 检查标题生成条件:", {
+      conversationId: firstUserMessageRef.current.conversationId,
       userMessagesCount: userMessages.length,
       assistantMessagesCount: assistantMessages.length,
-      totalMessages: agent.state.messages.length,
-      firstUserMessageRef: firstUserMessageRef.current,
+      hasPendingAction,
     });
     
-    // 确保有一条用户消息和至少一条助手消息，且助手消息已完成（不是流式状态）
-    if (userMessages.length === 1 && assistantMessages.length >= 1) {
-      const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
-      // 如果助手消息已完成（不是流式状态），则生成标题
-      if (!lastAssistantMessage.isStreaming) {
-        const userMessage = firstUserMessageRef.current.message;
-        console.log("[AgentPanel] 开始生成标题，用户消息:", userMessage);
-        updateConversationTitleFromMessage(conversationId, userMessage);
-        // 清除保存的第一条消息引用
+    // 检查条件并决定是否生成标题
+    if (userMessages.length === 1 && assistantMessages.length === 1 && !hasPendingAction) {
+      // 检查流式状态
+      if (shouldGenerateTitle(true)) {
+        const { conversationId, message } = firstUserMessageRef.current;
+        console.log("[AgentPanel] Fallback: 触发标题生成");
+        updateConversationTitleFromMessage(conversationId, message);
         firstUserMessageRef.current = null;
+      } else {
+        console.log("[AgentPanel] Fallback: 消息仍在流式传输中");
       }
-    } else if (userMessages.length > 1 || assistantMessages.length > 1) {
-      // 如果不是第一条消息，清除引用
-      firstUserMessageRef.current = null;
+    } else if (hasPendingAction) {
+      console.log("[AgentPanel] Fallback: 有待确认操作，跳过");
+    } else if (userMessages.length > 1) {
+      clearFirstUserMessageRef("Fallback: 已有多条消息");
     }
-  }, [agent.state.messages, agent.state.currentConversationId, updateConversationTitleFromMessage]);
+  }, [agent.state.messages, agent.state.currentConversationId, shouldGenerateTitle, updateConversationTitleFromMessage, clearFirstUserMessageRef]);
 
   // 发送消息
   const handleSend = useCallback(async () => {
@@ -300,8 +357,9 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 停止 AI 生成
   const handleStop = useCallback(() => {
     abort();
+    clearFirstUserMessageRef("用户中断");
     toast.info("已停止 AI 生成");
-  }, [abort]);
+  }, [abort, clearFirstUserMessageRef]);
 
   // 键盘快捷键
   const handleKeyDown = useCallback(

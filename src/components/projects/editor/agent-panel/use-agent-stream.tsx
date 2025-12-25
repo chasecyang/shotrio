@@ -161,6 +161,18 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
       }
     } catch (error) {
       throw error;
+    } finally {
+      // 🔥 Fallback: 确保 isStreaming 被设置为 false
+      // 即使没有收到 complete 事件，也要清理流式状态
+      if (currentMessageId) {
+        const currentMessage = agent.state.messages.find(m => m.id === currentMessageId);
+        if (currentMessage?.isStreaming) {
+          console.log("[Agent Stream] Fallback: 流结束，设置 isStreaming = false");
+          agent.updateMessage(currentMessageId, {
+            isStreaming: false,
+          });
+        }
+      }
     }
   }, [agent, options]);
 
