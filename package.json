@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "postbuild": "npm run db:migrate",
     "start": "next start",
+    "prod": "drizzle-kit migrate && next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
