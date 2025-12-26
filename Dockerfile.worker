@@ -1,0 +1,39 @@
+# Worker Dockerfile - 用于独立部署任务处理器
+# 无需构建，直接运行 TypeScript 源码
+
+FROM node:24-alpine
+
+# 安装必要的系统依赖
+RUN apk add --no-cache \
+    bash \
+    curl
+
+# 设置工作目录
+WORKDIR /app
+
+# 设置环境变量
+ENV NODE_ENV=production
+
+# 复制 package 文件
+COPY package.json package-lock.json ./
+
+# 安装所有依赖（包括 devDependencies，因为需要 tsx）
+# 使用 npm ci 确保与 package-lock.json 一致
+RUN npm ci
+
+# 复制源代码和配置文件
+COPY src ./src
+COPY tsconfig.json ./tsconfig.json
+COPY drizzle.config.ts ./drizzle.config.ts
+COPY drizzle ./drizzle
+
+# 复制必要的脚本
+COPY scripts ./scripts
+
+# 健康检查（可选，Worker 没有 HTTP 端口，所以检查进程是否存在）
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD pgrep -f "tsx" || exit 1
+
+# 启动 Worker
+CMD ["npm", "run", "worker:start"]
+
