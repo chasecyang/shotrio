@@ -34,6 +34,6 @@ COPY scripts ./scripts
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD pgrep -f "tsx" || exit 1
 
-# 启动 Worker
-CMD ["npm", "run", "worker:start"]
+# 启动 Worker（使用不带 --env-file 的命令）
+CMD ["npm", "run", "worker:prod"]
 

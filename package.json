@@ -17,7 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "worker:dev": "tsx --env-file=.env --watch src/workers/standalone-worker.ts",
-    "worker:start": "tsx --env-file=.env src/workers/standalone-worker.ts",
+    "worker:prod": "tsx src/workers/standalone-worker.ts",
     "generate:token": "node scripts/generate-worker-token.js"
   },
   "dependencies": {
