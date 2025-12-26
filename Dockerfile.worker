@@ -11,15 +11,15 @@ RUN apk add --no-cache \
 # 设置工作目录
 WORKDIR /app
 
-# 设置环境变量
-ENV NODE_ENV=production
-
 # 复制 package 文件
 COPY package.json package-lock.json ./
 
 # 安装所有依赖（包括 devDependencies，因为需要 tsx）
-# 使用 npm ci 确保与 package-lock.json 一致
-RUN npm ci
+# 必须在设置 NODE_ENV 之前安装，或使用 --include=dev
+RUN npm ci --include=dev
+
+# 设置环境变量（在安装依赖之后）
+ENV NODE_ENV=production
 
 # 复制源代码和配置文件
 COPY src ./src
