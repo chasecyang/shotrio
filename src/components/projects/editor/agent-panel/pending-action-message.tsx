@@ -221,14 +221,14 @@ export const PendingActionMessage = memo(function PendingActionMessage({
         if (Array.isArray(parsed)) {
           return parsed.map((asset: Record<string, unknown>) => {
             const prompt = asset.prompt || "-";
-            const truncatedPrompt = prompt !== "-" && prompt.length > 100 
+            const truncatedPrompt = typeof prompt === "string" && prompt !== "-" && prompt.length > 100 
               ? prompt.slice(0, 100) + "..." 
               : prompt;
             
             // 提取参考图ID
             let sourceAssetIds: string[] = [];
             if (Array.isArray(asset.sourceAssetIds)) {
-              sourceAssetIds = asset.sourceAssetIds;
+              sourceAssetIds = asset.sourceAssetIds as string[];
             } else if (typeof asset.sourceAssetIds === "string") {
               try {
                 const parsed = JSON.parse(asset.sourceAssetIds);
@@ -241,8 +241,8 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             }
             
             return {
-              name: asset.name || "-",
-              prompt: truncatedPrompt,
+              name: typeof asset.name === "string" ? asset.name : "-",
+              prompt: typeof truncatedPrompt === "string" ? truncatedPrompt : "-",
               tags: Array.isArray(asset.tags) 
                 ? asset.tags.join(", ") 
                 : (typeof asset.tags === "string" ? asset.tags : "-"),

@@ -111,37 +111,6 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     return true;
   }, [agent.state.currentConversationId, agent.state.messages]);
 
-  // 尝试生成标题
-  const tryGenerateTitle = useCallback((source: string) => {
-    if (!firstUserMessageRef.current) {
-      return;
-    }
-
-    const { conversationId, message } = firstUserMessageRef.current;
-    
-    const userMessages = agent.state.messages.filter(m => m.role === "user");
-    const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
-    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
-    
-    console.log(`[AgentPanel] ${source} 检查标题生成条件:`, {
-      conversationId,
-      userMessagesCount: userMessages.length,
-      assistantMessagesCount: assistantMessages.length,
-      hasPendingAction,
-    });
-
-    if (shouldGenerateTitle()) {
-      console.log(`[AgentPanel] ${source} 触发标题生成`);
-      updateConversationTitleFromMessage(conversationId, message);
-      firstUserMessageRef.current = null;
-    } else if (hasPendingAction) {
-      console.log(`[AgentPanel] ${source} 跳过：有待确认操作`);
-    } else if (userMessages.length > 1 || assistantMessages.length > 1) {
-      console.log(`[AgentPanel] ${source} 跳过：不是第一条消息`);
-      firstUserMessageRef.current = null;
-    }
-  }, [agent.state.messages, shouldGenerateTitle, updateConversationTitleFromMessage]);
-  
   // 更新对话标题的函数
   const updateConversationTitleFromMessage = useCallback(async (
     conversationId: string,
@@ -185,6 +154,37 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       // 失败时保持使用临时标题，不显示错误提示（避免打扰用户）
     }
   }, [agent]);
+
+  // 尝试生成标题
+  const tryGenerateTitle = useCallback((source: string) => {
+    if (!firstUserMessageRef.current) {
+      return;
+    }
+
+    const { conversationId, message } = firstUserMessageRef.current;
+    
+    const userMessages = agent.state.messages.filter(m => m.role === "user");
+    const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
+    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
+    
+    console.log(`[AgentPanel] ${source} 检查标题生成条件:`, {
+      conversationId,
+      userMessagesCount: userMessages.length,
+      assistantMessagesCount: assistantMessages.length,
+      hasPendingAction,
+    });
+
+    if (shouldGenerateTitle()) {
+      console.log(`[AgentPanel] ${source} 触发标题生成`);
+      updateConversationTitleFromMessage(conversationId, message);
+      firstUserMessageRef.current = null;
+    } else if (hasPendingAction) {
+      console.log(`[AgentPanel] ${source} 跳过：有待确认操作`);
+    } else if (userMessages.length > 1 || assistantMessages.length > 1) {
+      console.log(`[AgentPanel] ${source} 跳过：不是第一条消息`);
+      firstUserMessageRef.current = null;
+    }
+  }, [agent.state.messages, shouldGenerateTitle, updateConversationTitleFromMessage]);
 
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({

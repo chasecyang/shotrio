@@ -15,6 +15,6 @@ export async function getServerTranslations(namespace: string = "errors") {
  */
 export async function getErrorMessage(key: string): Promise<string> {
   const t = await getTranslations("errors");
-  return t(key as keyof IntlMessages["errors"]);
+  return t(key as never);
 }
 

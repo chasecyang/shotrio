@@ -3,6 +3,7 @@
  */
 
 import type { AgentContext } from "@/types/agent";
+import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 /**
  * OpenAI-compatible message types
@@ -56,10 +57,7 @@ export interface PendingActionInfo {
     category: string;
   };
   message: string;
-  creditCost?: {
-    total: number;
-    breakdown?: Record<string, number>;
-  };
+  creditCost?: CreditCost;
   createdAt: Date;
 }
 
