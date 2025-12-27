@@ -964,7 +964,8 @@
         "startNewConversation": "Start New Conversation",
         "startConversation": "Start Conversation",
         "welcomeMessage": "Tell me what you want to do, I can help you create shots, generate assets, manage projects, and more",
-        "scrollToBottom": "Scroll to Bottom"
+        "scrollToBottom": "Scroll to Bottom",
+        "aiGenerating": "Agent is creating"
       }
     },
     "resource": {

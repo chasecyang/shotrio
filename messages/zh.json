@@ -965,7 +965,8 @@
         "startNewConversation": "开始新对话",
         "startConversation": "开始对话",
         "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等",
-        "scrollToBottom": "回到底部"
+        "scrollToBottom": "回到底部",
+        "aiGenerating": "Agent 正在努力创作"
       }
     },
     "resource": {

@@ -157,9 +157,6 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
           {!hasIterations && message.content && (
             <div className="text-sm break-words">
               <MarkdownRenderer content={message.content} className="inline" />
-              {message.isStreaming && (
-                <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
-              )}
             </div>
           )}
 

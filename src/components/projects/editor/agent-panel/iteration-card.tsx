@@ -22,9 +22,6 @@ export const IterationCard = memo(function IterationCard({
       {iteration.content && (
         <div className="text-sm break-words">
           <MarkdownRenderer content={iteration.content} className="inline" />
-          {isStreaming && isLastIteration && (
-            <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
-          )}
         </div>
       )}
 
