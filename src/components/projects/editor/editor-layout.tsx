@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { BetaBanner } from "@/components/ui/beta-banner";
 import { EditorProvider, useEditor } from "./editor-context";
 import { EditorHeader } from "./editor-header";
-import { TimelineContainer } from "./timeline/timeline-container";
+import { PreviewPanel } from "./preview-panel/preview-panel";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
@@ -69,7 +69,6 @@ interface EditorLayoutProps {
   projects: EditorProject[];
   user: EditorUser;
   resourcePanel: ReactNode;
-  previewPanel: ReactNode;
   initialView?: string;
 }
 
@@ -78,10 +77,9 @@ function EditorLayoutInner({
   projects,
   user,
   resourcePanel,
-  previewPanel,
   initialView,
 }: EditorLayoutProps) {
-  const { state, dispatch, jobs } = useEditor();
+  const { state, dispatch } = useEditor();
   const t = useTranslations("editor.timeline");
 
   // 注册键盘快捷键
@@ -99,12 +97,6 @@ function EditorLayoutInner({
 
   // 导出视频的 loading 状态
   const [isExportingVideos, setIsExportingVideos] = useState(false);
-
-  // 检查是否有活跃的批量视频生成任务
-  const hasBatchVideoJob = jobs.some(job => 
-    job.type === 'batch_video_generation' && 
-    (job.status === 'pending' || job.status === 'processing')
-  );
 
   // 加载分镜数据
   useEffect(() => {
@@ -332,35 +324,21 @@ function EditorLayoutInner({
       {/* Beta Notice - 编辑器专用 */}
       <BetaBanner dismissible storageKey="editor-beta-banner-dismissed" />
 
-      {/* 主内容区：上下分割 */}
-      <ResizablePanelGroup direction="vertical" className="flex-1">
-        {/* 上半部分：资源面板 + 预览区 */}
-        <ResizablePanel defaultSize={60} minSize={30}>
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            {/* 资源面板 */}
-            <ResizablePanel defaultSize={50} minSize={30}>
-              <div className="h-full overflow-auto border-r bg-card">
-                {resourcePanel}
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle />
-
-            {/* 预览/编辑区 */}
-            <ResizablePanel defaultSize={50} minSize={30}>
-              <div className="h-full overflow-hidden bg-background">
-                {previewPanel}
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+      {/* 主内容区：左右分栏 */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* 资源面板 */}
+        <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+          <div className="h-full overflow-auto border-r bg-card">
+            {resourcePanel}
+          </div>
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
-        {/* 下半部分：时间轴轨道 */}
-        <ResizablePanel defaultSize={40} minSize={20} maxSize={60}>
-          <div className="h-full overflow-hidden bg-card/50 backdrop-blur-sm">
-            <TimelineContainer 
+        {/* 预览/编辑区 */}
+        <ResizablePanel defaultSize={65} minSize={50}>
+          <div className="h-full overflow-hidden bg-background">
+            <PreviewPanel
               onAddShot={handleAddShot}
               onDeleteShots={handleDeleteShots}
               onGenerateVideos={handleGenerateVideos}

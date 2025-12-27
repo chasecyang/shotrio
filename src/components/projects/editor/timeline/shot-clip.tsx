@@ -116,7 +116,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     },
-    [duration, originalDuration, pixelsPerMs, shot.id, state.shots, dispatch]
+    [duration, originalDuration, pixelsPerMs, shot.id, state.shots, dispatch, tToast]
   );
 
   // 处理素材拖拽放置
@@ -160,7 +160,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
       console.error("应用素材失败:", error);
       toast.error(tToast("error.applyAssetFailed"));
     }
-  }, [shot, dispatch]);
+  }, [shot, dispatch, tToast]);
 
   return (
     <div

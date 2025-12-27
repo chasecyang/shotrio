@@ -409,7 +409,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         toast.error(relevantJob.errorMessage || "视频生成失败");
       }
     }
-  }, [videoGenerationTasks, shot.id, videoGenerationJobId, isGeneratingVideo]);
+  }, [videoGenerationTasks, shot.id, videoGenerationJobId, isGeneratingVideo, tToast]);
 
   // 获取当前视频生成任务的进度
   const currentVideoTask = videoGenerationTasks.find((task) => task.id === videoGenerationJobId);
@@ -695,7 +695,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                   </p>
                   {!searchQuery && assets.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      请先在左侧"创作素材"面板中上传或生成素材
+                      请先在左侧&ldquo;创作素材&rdquo;面板中上传或生成素材
                     </p>
                   )}
                 </div>

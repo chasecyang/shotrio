@@ -362,7 +362,7 @@ export async function executeFunction(
           derivationType: parsedSourceAssetIds ? "img2img" : "generate",
           meta: {
             generationParams: {
-              aspectRatio: "16:9" as any, // 默认宽高比
+              aspectRatio: "16:9" as "16:9" | "1:1" | "9:16", // 默认宽高比
               numImages: numImages,
             },
           },
@@ -460,7 +460,7 @@ export async function executeFunction(
               derivationType: assetData.sourceAssetIds ? "img2img" : "generate",
               meta: {
                 generationParams: {
-                  aspectRatio: "16:9" as any, // 默认宽高比
+                  aspectRatio: "16:9" as "16:9" | "1:1" | "9:16", // 默认宽高比
                   numImages: 1,
                 },
               },

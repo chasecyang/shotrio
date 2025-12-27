@@ -147,7 +147,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       toast.error(currentJob.errorMessage || tToast("error.generationFailed"));
       setCurrentJobId(null);
     }
-  }, [currentJob, uploadedImages]);
+  }, [currentJob, uploadedImages, tToast]);
 
   // 加载选中的素材详情
   useEffect(() => {
@@ -377,6 +377,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     refreshJobs,
     state.project?.userId,
     t,
+    tToast,
   ]);
 
   return (

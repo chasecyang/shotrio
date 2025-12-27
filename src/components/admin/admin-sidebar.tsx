@@ -103,7 +103,7 @@ export function AdminSidebar() {
               {navItems.map((item) => {
                 const isActive = pathname === item.href || 
                   (item.href !== "/admin" && pathname?.startsWith(item.href));
-                const title = t(item.titleKey as any);
+                const title = t(item.titleKey as keyof IntlMessages["admin"]);
                 
                 return (
                   <SidebarMenuItem key={item.href}>

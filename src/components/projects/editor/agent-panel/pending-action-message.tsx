@@ -74,7 +74,8 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
     return () => {
       currentRequestRef.current = "";
     };
-  }, [assetIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetIds]); // loadAssets 故意省略，使用 requestId 控制
 
   // 监听 jobs 变化，自动刷新相关素材
   useEffect(() => {
@@ -105,7 +106,8 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
         loadAssets(requestId);
       }
     }
-  }, [jobs, assetIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs, assetIds]); // loadAssets 故意省略，使用 requestId 控制
 
   if (isLoading) {
     return (
@@ -151,9 +153,6 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
     </div>
   );
 }
-
-// 向后兼容的别名
-const ReferenceImages = AssetPreview;
 
 export const PendingActionMessage = memo(function PendingActionMessage({
   action,
@@ -220,7 +219,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       if (typeof assetsStr === "string") {
         const parsed = JSON.parse(assetsStr);
         if (Array.isArray(parsed)) {
-          return parsed.map((asset: any) => {
+          return parsed.map((asset: Record<string, unknown>) => {
             const prompt = asset.prompt || "-";
             const truncatedPrompt = prompt !== "-" && prompt.length > 100 
               ? prompt.slice(0, 100) + "..." 

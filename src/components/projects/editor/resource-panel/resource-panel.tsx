@@ -2,17 +2,18 @@
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Images, Bot } from "lucide-react";
+import { FileText, Images, Bot, Clapperboard } from "lucide-react";
 import { useEditor } from "../editor-context";
 import { EpisodeList } from "./episode-list";
 import { AssetPanel } from "./asset-panel";
+import { StoryboardPanel } from "./storyboard-panel";
 import { ConversationList } from "../agent-panel/conversation-list";
 import { useAgent } from "../agent-panel/agent-context";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
 
 export function ResourcePanel() {
-  const { state, dispatch } = useEditor();
+  const { state, dispatch, setActiveResourceTab } = useEditor();
   const { project } = state;
   const agent = useAgent();
   const searchParams = useSearchParams();
@@ -20,6 +21,11 @@ export function ResourcePanel() {
   
   // 从 URL 参数读取默认标签页
   const defaultTab = searchParams.get("tab") || "episodes";
+
+  // Tab切换处理
+  const handleTabChange = (value: string) => {
+    setActiveResourceTab(value as "episodes" | "assets" | "storyboard" | "agent");
+  };
 
   // Agent 对话处理函数
   const handleSelectConversation = async (conversationId: string) => {
@@ -48,9 +54,9 @@ export function ResourcePanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
+      <Tabs defaultValue={defaultTab} onValueChange={handleTabChange} className="h-full flex flex-col">
         <div className="px-3 pt-3 shrink-0">
-          <TabsList className="w-full grid grid-cols-3">
+          <TabsList className="w-full grid grid-cols-4">
             <TabsTrigger value="episodes" className="text-xs gap-1">
               <FileText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">剧本</span>
@@ -58,6 +64,10 @@ export function ResourcePanel() {
             <TabsTrigger value="assets" className="text-xs gap-1">
               <Images className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">素材</span>
+            </TabsTrigger>
+            <TabsTrigger value="storyboard" className="text-xs gap-1">
+              <Clapperboard className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">分镜</span>
             </TabsTrigger>
             <TabsTrigger value="agent" className="text-xs gap-1">
               <Bot className="h-3.5 w-3.5" />
@@ -76,6 +86,10 @@ export function ResourcePanel() {
 
         <TabsContent value="assets" className="flex-1 mt-0 overflow-hidden">
           <AssetPanel userId={session.user.id} />
+        </TabsContent>
+
+        <TabsContent value="storyboard" className="flex-1 mt-0 overflow-hidden">
+          <StoryboardPanel />
         </TabsContent>
 
         <TabsContent value="agent" className="flex-1 mt-0 overflow-hidden">

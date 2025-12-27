@@ -31,7 +31,7 @@ interface TimelineTrackProps {
 }
 
 export function TimelineTrack({ shots, isLoading, onAddShot }: TimelineTrackProps) {
-  const { state, dispatch, selectShot, toggleShotSelection } = useEditor();
+  const { state, dispatch, selectShot, toggleShotSelection, clearShotSelection } = useEditor();
   const { timeline, selectedShotIds, selectedEpisodeId } = state;
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -108,11 +108,16 @@ export function TimelineTrack({ shots, isLoading, onAddShot }: TimelineTrackProp
           dispatch({ type: "SELECT_SHOTS", payload: rangeIds });
         }
       } else {
-        // 普通点击：单选
-        selectShot(shotId);
+        // 普通点击：如果已选中则取消，否则选中
+        const isCurrentlySelected = selectedShotIds.length === 1 && selectedShotIds[0] === shotId;
+        if (isCurrentlySelected) {
+          clearShotSelection();
+        } else {
+          selectShot(shotId);
+        }
       }
     },
-    [isDragging, selectedShotIds, shots, toggleShotSelection, selectShot, dispatch]
+    [isDragging, selectedShotIds, shots, toggleShotSelection, selectShot, clearShotSelection, dispatch]
   );
 
   if (isLoading) {

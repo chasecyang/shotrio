@@ -36,7 +36,6 @@ interface ProjectSettingsFormProps {
 export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProps) {
   const router = useRouter();
   const t = useTranslations("projects.settings");
-  const tCommon = useTranslations("common");
   const tToasts = useTranslations("toasts");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -68,7 +67,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
       }
     }
     loadStyles();
-  }, [userId]);
+  }, [userId, tToasts]);
 
   async function handleSave() {
     if (!formData.title.trim()) {

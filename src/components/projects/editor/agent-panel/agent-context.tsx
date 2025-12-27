@@ -259,7 +259,8 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   // 初始加载对话列表（只依赖 projectId，避免循环）
   useEffect(() => {
     refreshConversations();
-  }, [projectId]); // 移除 refreshConversations 依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]); // refreshConversations 故意省略，避免循环
 
   // 加载指定对话
   const loadConversation = useCallback(async (conversationId: string) => {
@@ -361,9 +362,9 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   }, [
     projectId,
     editorContext.state.selectedEpisodeId,
-    editorContext.state.selectedShotIds.length,
-    editorContext.state.selectedResource?.id,
-    editorContext.jobs.length,
+    editorContext.state.selectedShotIds,
+    editorContext.state.selectedResource,
+    editorContext.jobs,
   ]);
 
   // Context value（包含 state 以触发重新渲染）

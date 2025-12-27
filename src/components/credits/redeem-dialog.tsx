@@ -24,7 +24,6 @@ interface RedeemDialogProps {
 
 export function RedeemDialog({ onSuccess }: RedeemDialogProps) {
   const t = useTranslations("credits.redeem");
-  const tToast = useTranslations("toasts");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");

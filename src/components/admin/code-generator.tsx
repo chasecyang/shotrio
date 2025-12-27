@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
 export function CodeGenerator() {
-  const t = useTranslations("admin.redeemCodes.generator");
   const tToast = useTranslations("toasts");
   const router = useRouter();
   const [open, setOpen] = useState(false);

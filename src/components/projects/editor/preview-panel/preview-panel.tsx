@@ -7,10 +7,25 @@ import { ShotPlaybackPlayer } from "./shot-playback-player";
 import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
 import { ProjectSettingsEditor } from "./project-settings-editor";
+import { StoryboardPreview } from "./storyboard-preview";
 import { AgentPanel } from "../agent-panel";
 import { AgentErrorBoundary } from "../agent-panel/agent-error-boundary";
 
-export function PreviewPanel() {
+interface PreviewPanelProps {
+  onAddShot?: () => void;
+  onDeleteShots?: () => void;
+  onGenerateVideos?: () => void;
+  onExportVideos?: () => void;
+  isExportingVideos?: boolean;
+}
+
+export function PreviewPanel({
+  onAddShot,
+  onDeleteShots,
+  onGenerateVideos,
+  onExportVideos,
+  isExportingVideos,
+}: PreviewPanelProps = {}) {
   const { 
     state, 
     selectedEpisode, 
@@ -20,7 +35,7 @@ export function PreviewPanel() {
     previousShot,
     togglePlaybackPause,
   } = useEditor();
-  const { selectedResource, playbackState } = state;
+  const { selectedResource, playbackState, activeResourceTab, selectedEpisodeId } = state;
 
   // 渲染 AI Agent 的辅助函数
   const renderAgent = () => {
@@ -31,6 +46,19 @@ export function PreviewPanel() {
       </AgentErrorBoundary>
     );
   };
+
+  // 如果当前在分镜Tab，显示分镜预览（含时间轴）
+  if (activeResourceTab === "storyboard" && selectedEpisodeId) {
+    return (
+      <StoryboardPreview
+        onAddShot={onAddShot}
+        onDeleteShots={onDeleteShots}
+        onGenerateVideos={onGenerateVideos}
+        onExportVideos={onExportVideos}
+        isExportingVideos={isExportingVideos}
+      />
+    );
+  }
 
   // 如果在播放模式，显示播放器
   if (playbackState.isPlaybackMode) {

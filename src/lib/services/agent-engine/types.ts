@@ -56,7 +56,10 @@ export interface PendingActionInfo {
     category: string;
   };
   message: string;
-  creditCost?: any; // CreditCost type from credit-calculator
+  creditCost?: {
+    total: number;
+    breakdown?: Record<string, number>;
+  };
   createdAt: Date;
 }
 

@@ -13,7 +13,10 @@ import {
 import type { GenerationHistoryItem } from "@/types/asset";
 
 // 选中资源类型
-export type SelectedResourceType = "episode" | "shot" | "asset-generation" | "asset" | "settings" | "agent" | null;
+export type SelectedResourceType = "episode" | "shot" | "asset-generation" | "asset" | "settings" | "agent" | "storyboard" | null;
+
+// 资源Tab类型
+export type ResourceTabType = "episodes" | "assets" | "agent" | "storyboard";
 
 export interface SelectedResource {
   type: SelectedResourceType;
@@ -50,6 +53,9 @@ export interface EditorState {
   // 当前选中的剧集（用于时间轴展示）
   selectedEpisodeId: string | null;
   
+  // 当前激活的资源Tab
+  activeResourceTab: ResourceTabType;
+  
   // 当前选中的资源（用于右侧预览区）
   selectedResource: SelectedResource | null;
   
@@ -77,6 +83,7 @@ type EditorAction =
   | { type: "SET_PROJECT"; payload: ProjectDetail }
   | { type: "UPDATE_PROJECT"; payload: ProjectDetail } // 用于刷新项目数据（保持当前选中状态）
   | { type: "SELECT_EPISODE"; payload: string | null }
+  | { type: "SET_ACTIVE_RESOURCE_TAB"; payload: ResourceTabType }
   | { type: "SELECT_RESOURCE"; payload: SelectedResource | null }
   | { type: "SET_SHOTS"; payload: ShotDetail[] }
   | { type: "UPDATE_SHOT"; payload: ShotDetail } // 更新单个分镜
@@ -102,6 +109,7 @@ type EditorAction =
 const initialState: EditorState = {
   project: null,
   selectedEpisodeId: null,
+  activeResourceTab: "episodes",
   selectedResource: null,
   timeline: {
     zoom: 1,
@@ -161,6 +169,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         ...state,
         selectedEpisodeId: action.payload,
         selectedShotIds: [],
+        selectedResource: null,
         shots: [],
         // 退出播放模式
         playbackState: {
@@ -170,10 +179,18 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         },
       };
 
+    case "SET_ACTIVE_RESOURCE_TAB":
+      return {
+        ...state,
+        activeResourceTab: action.payload,
+      };
+
     case "SELECT_RESOURCE":
       return {
         ...state,
         selectedResource: action.payload,
+        // 如果选中的是分镜，同步更新 selectedShotIds
+        selectedShotIds: action.payload?.type === "shot" ? [action.payload.id] : [],
         // 退出播放模式
         playbackState: {
           isPlaybackMode: false,
@@ -249,6 +266,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         selectedShotIds: [],
+        selectedResource: state.selectedResource?.type === "shot" ? null : state.selectedResource,
       };
 
     case "SET_TIMELINE_ZOOM":
@@ -368,6 +386,7 @@ interface EditorContextType {
   dispatch: React.Dispatch<EditorAction>;
   // 便捷方法
   selectEpisode: (episodeId: string | null) => void;
+  setActiveResourceTab: (tab: ResourceTabType) => void;
   selectResource: (resource: SelectedResource | null) => void;
   selectShot: (shotId: string) => void;
   selectShots: (shotIds: string[]) => void;
@@ -495,6 +514,10 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "SELECT_EPISODE", payload: episodeId });
   }, []);
 
+  const setActiveResourceTab = useCallback((tab: ResourceTabType) => {
+    dispatch({ type: "SET_ACTIVE_RESOURCE_TAB", payload: tab });
+  }, []);
+
   const selectResource = useCallback((resource: SelectedResource | null) => {
     dispatch({ type: "SELECT_RESOURCE", payload: resource });
   }, []);
@@ -589,9 +612,10 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   }, [state.project, state.selectedEpisodeId]);
 
   const selectedShot = useMemo(() => {
-    if (state.selectedResource?.type !== "shot") return null;
-    return state.shots.find((shot) => shot.id === state.selectedResource?.id) || null;
-  }, [state.selectedResource, state.shots]);
+    // 只在单选时返回选中的分镜（多选时返回 null）
+    if (state.selectedShotIds.length !== 1) return null;
+    return state.shots.find((shot) => shot.id === state.selectedShotIds[0]) || null;
+  }, [state.selectedShotIds, state.shots]);
 
 
   const totalDuration = useMemo(() => {
@@ -603,6 +627,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       state,
       dispatch,
       selectEpisode,
+      setActiveResourceTab,
       selectResource,
       selectShot,
       selectShots,
@@ -631,6 +656,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     [
       state,
       selectEpisode,
+      setActiveResourceTab,
       selectResource,
       selectShot,
       selectShots,

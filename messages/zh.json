@@ -34,7 +34,7 @@
   "beta": {
     "label": "BETA",
     "title": "测试版本",
-    "description": "ShotRio 目前处于测试阶段，部分功能可能不稳定或发生变化。感谢您的理解与支持！"
+    "description": "ShotRio 目前处于测试阶段，各类功能正在补全，敬请期待，欢迎反馈！"
   },
   "language": {
     "interfaceLanguage": "界面语言",
@@ -1150,6 +1150,14 @@
       "warning": {
         "shotDownloadFailed": "镜头 {order} 下载失败，已跳过"
       }
+    },
+    "storyboard": {
+      "selectEpisodeFirst": "请先选择一个剧集",
+      "noShots": "当前剧集还没有分镜",
+      "clickToEdit": "点击分镜查看详情"
+    },
+    "tabs": {
+      "storyboard": "分镜"
     }
   }
 }

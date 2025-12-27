@@ -140,7 +140,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       console.log(`[AgentPanel] ${source} 跳过：不是第一条消息`);
       firstUserMessageRef.current = null;
     }
-  }, [agent.state.messages, shouldGenerateTitle]);
+  }, [agent.state.messages, shouldGenerateTitle, updateConversationTitleFromMessage]);
   
   // 更新对话标题的函数
   const updateConversationTitleFromMessage = useCallback(async (

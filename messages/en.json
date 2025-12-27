@@ -34,7 +34,7 @@
   "beta": {
     "label": "BETA",
     "title": "Beta Version",
-    "description": "ShotRio is currently in beta. Some features may be unstable or subject to change. Thank you for your understanding and support!"
+    "description": "ShotRio is currently in beta. Features are being continuously improved. Stay tuned and feel free to share feedback!"
   },
   "language": {
     "interfaceLanguage": "Interface Language",
@@ -1148,6 +1148,14 @@
       "warning": {
         "shotDownloadFailed": "Shot {order} download failed, skipped"
       }
+    },
+    "storyboard": {
+      "selectEpisodeFirst": "Please select an episode first",
+      "noShots": "No shots in this episode yet",
+      "clickToEdit": "Click shot to view details"
+    },
+    "tabs": {
+      "storyboard": "Storyboard"
     }
   }
 }

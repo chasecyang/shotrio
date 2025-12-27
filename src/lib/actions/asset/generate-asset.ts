@@ -84,7 +84,7 @@ export async function generateAssetImage(
       derivationType: "generate",
       meta: {
         generationParams: {
-          aspectRatio: aspectRatio as any,
+          aspectRatio: aspectRatio as "16:9" | "1:1" | "9:16",
           resolution: resolution,
           numImages: numImages,
         },
@@ -184,7 +184,7 @@ export async function editAssetImage(
       derivationType: "img2img",
       meta: {
         generationParams: {
-          aspectRatio: aspectRatio as any,
+          aspectRatio: aspectRatio as "16:9" | "1:1" | "9:16",
           resolution: resolution,
           numImages: numImages,
         },

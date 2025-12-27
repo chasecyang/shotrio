@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { AssetWithTags, parseAssetMeta } from "@/types/asset";
+import { AssetWithTags } from "@/types/asset";
 import { getAsset } from "@/lib/actions/asset";
 import { updateAsset, deleteAsset, addAssetTag, removeAssetTag } from "@/lib/actions/asset";
 import { Button } from "@/components/ui/button";
@@ -297,8 +297,6 @@ export function AssetDetailEditor({ assetId }: AssetDetailEditorProps) {
       </div>
     );
   }
-
-  const meta = parseAssetMeta(asset.meta);
   
   // 判断是否为窄屏（小于 800px）
   const isNarrow = containerWidth < 800;
