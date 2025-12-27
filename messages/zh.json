@@ -966,7 +966,23 @@
         "startConversation": "开始对话",
         "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等",
         "scrollToBottom": "回到底部",
-        "aiGenerating": "Agent 正在努力创作"
+        "aiGenerating": "Agent 正在努力创作",
+        "suggestions": {
+          "title": "快速开始",
+          "clickToUse": "点击使用",
+          "items": [
+            {
+              "title": "生成素材",
+              "description": "生成符合剧情的人物、道具素材",
+              "prompt": "帮我生成符合剧情的人物、道具素材"
+            },
+            {
+              "title": "创建分镜",
+              "description": "根据剧情创建分镜",
+              "prompt": "帮我根据剧情创建分镜"
+            }
+          ]
+        }
       }
     },
     "resource": {

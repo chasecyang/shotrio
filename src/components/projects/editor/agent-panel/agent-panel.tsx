@@ -6,6 +6,7 @@ import { useAgent } from "./agent-context";
 import { useAgentStream } from "./use-agent-stream";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
+import { SuggestionCards } from "./suggestion-cards";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, Square, ArrowDown } from "lucide-react";
@@ -384,6 +385,16 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     toast.info("已停止 AI 生成");
   }, [abort, clearFirstUserMessageRef]);
 
+  // 处理建议选择
+  const handleSelectSuggestion = useCallback((text: string) => {
+    setInput(text);
+    // 可选：自动聚焦到输入框
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea');
+      textarea?.focus();
+    }, 100);
+  }, []);
+
   // 键盘快捷键
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -421,9 +432,12 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
                   <p className="text-lg font-medium mb-2">
                     {agent.state.isNewConversation ? t('editor.agent.panel.startNewConversation') : t('editor.agent.panel.startConversation')}
                   </p>
-                  <p className="text-sm text-muted-foreground max-w-md">
+                  <p className="text-sm text-muted-foreground max-w-md mb-8">
                     {t('editor.agent.panel.welcomeMessage')}
                   </p>
+                  
+                  {/* 建议卡片 */}
+                  <SuggestionCards onSelectSuggestion={handleSelectSuggestion} />
                 </div>
               ) : (
                 <>

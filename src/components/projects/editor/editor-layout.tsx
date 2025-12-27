@@ -327,7 +327,7 @@ function EditorLayoutInner({
       {/* 主内容区：左右分栏 */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* 资源面板 */}
-        <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+        <ResizablePanel defaultSize={35} minSize={25} maxSize={70}>
           <div className="h-full overflow-auto border-r bg-card">
             {resourcePanel}
           </div>
@@ -336,7 +336,7 @@ function EditorLayoutInner({
         <ResizableHandle withHandle />
 
         {/* 预览/编辑区 */}
-        <ResizablePanel defaultSize={65} minSize={50}>
+        <ResizablePanel defaultSize={65} minSize={30}>
           <div className="h-full overflow-hidden bg-background">
             <PreviewPanel
               onAddShot={handleAddShot}

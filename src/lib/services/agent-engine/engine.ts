@@ -425,7 +425,12 @@ export class AgentEngine {
 
         state.pendingAction = pendingAction;
 
-        // 保存状态到数据库
+        // 保存状态到数据库（包括 assistant 的 content）
+        await saveAssistantResponse(
+          state.assistantMessageId!,
+          iterationInfo.content || "",
+          state.iterations
+        );
         await saveConversationState(state);
         await updateConversationStatus(state.conversationId, "awaiting_approval");
 
@@ -566,10 +571,14 @@ export class AgentEngine {
       },
     };
 
-    // 保存中间状态
+    // 保存中间状态（包括当前的 content）
+    // 从最后一个 iteration 中获取 content
+    const lastIteration = state.iterations[state.iterations.length - 1];
+    const currentContent = lastIteration?.content || "";
+    
     await saveAssistantResponse(
       state.assistantMessageId!,
-      "",
+      currentContent,
       state.iterations
     );
   }

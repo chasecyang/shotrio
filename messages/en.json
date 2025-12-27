@@ -965,7 +965,23 @@
         "startConversation": "Start Conversation",
         "welcomeMessage": "Tell me what you want to do, I can help you create shots, generate assets, manage projects, and more",
         "scrollToBottom": "Scroll to Bottom",
-        "aiGenerating": "Agent is creating"
+        "aiGenerating": "Agent is creating",
+        "suggestions": {
+          "title": "Quick Start",
+          "clickToUse": "Click to use",
+          "items": [
+            {
+              "title": "Generate Assets",
+              "description": "Generate characters and props that match the story",
+              "prompt": "Help me generate characters and props that match the story"
+            },
+            {
+              "title": "Create Shots",
+              "description": "Create storyboard shots based on the plot",
+              "prompt": "Help me create storyboard shots based on the plot"
+            }
+          ]
+        }
       }
     },
     "resource": {

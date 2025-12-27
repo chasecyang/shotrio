@@ -108,11 +108,15 @@ export async function saveConversationState(state: ConversationState): Promise<v
     })
     .where(eq(conversation.id, state.conversationId));
 
-  // 同时更新 assistant 消息的 iterations
-  if (state.assistantMessageId) {
+  // 同时更新 assistant 消息的 iterations 和 content
+  if (state.assistantMessageId && state.iterations.length > 0) {
+    // 从最后一个 iteration 中获取 content
+    const lastIteration = state.iterations[state.iterations.length - 1];
+    const currentContent = lastIteration?.content || "";
+    
     await saveAssistantResponse(
       state.assistantMessageId,
-      "",
+      currentContent,
       state.iterations
     );
   }
@@ -193,12 +197,13 @@ export async function loadConversationState(conversationId: string): Promise<Con
       if (msg.role === "user") {
         messages.push({ role: "user", content: msg.content });
       } else if (msg.role === "assistant") {
-        // 解析 assistant 消息的 iterations 以重建 tool_calls
+        // 只有当这是最后一个 assistant 消息且有 pendingAction 时，才重建 tool_calls
+        // 已完成的工具调用不应该包含 tool_calls（否则 OpenAI API 会要求紧跟 tool 消息）
         let toolCalls: Message["tool_calls"] = undefined;
         
-        // 如果是最后一个 assistant 消息且有 pendingAction，使用 pendingAction 重建 tool_calls
         const isLastAssistantMsg = msg.id === lastAssistantMsg?.id;
         if (isLastAssistantMsg && pendingAction) {
+          // 只有待确认的 pendingAction 需要 tool_calls
           toolCalls = [{
             id: pendingAction.functionCall.id,
             type: "function",
@@ -207,25 +212,8 @@ export async function loadConversationState(conversationId: string): Promise<Con
               arguments: JSON.stringify(pendingAction.functionCall.arguments || {}),
             },
           }];
-        } else if (msg.iterations) {
-          // 否则从 iterations 中重建
-          try {
-            const iterations = JSON.parse(msg.iterations);
-            const lastIteration = iterations[iterations.length - 1];
-            if (lastIteration?.functionCall) {
-              toolCalls = [{
-                id: lastIteration.functionCall.id,
-                type: "function",
-                function: {
-                  name: lastIteration.functionCall.name,
-                  arguments: "{}", // 参数已经执行过，不需要重建
-                },
-              }];
-            }
-          } catch (e) {
-            console.warn("[AgentEngine] 解析 iterations 失败:", e);
-          }
         }
+        // 已完成的工具调用不重建 tool_calls，避免 OpenAI API 报错
         
         messages.push({
           role: "assistant",
@@ -233,7 +221,7 @@ export async function loadConversationState(conversationId: string): Promise<Con
           tool_calls: toolCalls,
         });
       }
-      // tool 消息会在恢复时重新添加
+      // tool 消息不需要重建到历史中，因为工具已经执行完成
     }
 
     // 5. 获取 iterations
