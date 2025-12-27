@@ -12,8 +12,8 @@ export function generateWebSiteSchema(lang: string) {
     name: 'Shotrio',
     url: baseUrl,
     description: lang === 'zh' 
-      ? '在解决问题中学会语言' 
-      : 'Learn languages through solving challenges',
+      ? '用心创作好漫剧 - 强大的可控性与AI智能辅助，完整的微短剧创作工具链' 
+      : 'Create great micro-dramas with powerful control and AI assistance - Complete creation toolchain for quality-focused creators',
     inLanguage: ['zh-CN', 'en-US'],
     potentialAction: {
       '@type': 'SearchAction',
@@ -38,7 +38,7 @@ export function generateOrganizationSchema() {
     name: 'Shotrio',
     url: baseUrl,
     logo: `${baseUrl}/logo.png`,
-    description: 'Innovative language learning through scenario challenges',
+    description: 'Professional micro-drama creation platform providing powerful control and AI assistance for quality-focused content creators',
     sameAs: [
       // 可以添加社交媒体链接
       // 'https://twitter.com/Shotrio',
@@ -58,11 +58,11 @@ export function generateWebApplicationSchema(lang: string) {
     '@type': 'WebApplication',
     name: 'Shotrio',
     url: baseUrl,
-    applicationCategory: 'EducationalApplication',
+    applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web',
     description: lang === 'zh'
-      ? '通过趣味场景挑战学习语言的创新应用'
-      : 'Learn languages through fun scenario challenges',
+      ? '专业的微短剧创作工具 - 提供强大的可控性和AI智能辅助，让创作者精准把控每个细节'
+      : 'Professional micro-drama creation tool - Powerful control and AI assistance for creators who master every detail',
     offers: {
       '@type': 'Offer',
       price: '0',

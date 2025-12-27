@@ -58,9 +58,9 @@ export default async function Home() {
     },
     {
       icon: Subtitles,
-      titleKey: "features.subtitle.title",
-      descriptionKey: "features.subtitle.description",
-      badgeKey: "features.subtitle.badge",
+      titleKey: "features.subtitleFeature.title",
+      descriptionKey: "features.subtitleFeature.description",
+      badgeKey: "features.subtitleFeature.badge",
       badgeVariant: "secondary" as const,
     },
   ];

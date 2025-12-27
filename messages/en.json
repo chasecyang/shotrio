@@ -158,19 +158,19 @@
   },
   "home": {
     "title": "Shotrio",
-    "subtitle": "Professional Micro-Drama Creation Tool",
+    "subtitle": "Craft with Care, Enhance with AI",
     "slogan": "Make creation easier, make stories better",
     "description": "From script to final cut, an all-in-one micro-drama creation platform. AI-assisted creation to help content creators efficiently produce high-quality micro-drama works.",
     "getStarted": "Start Creating",
     "learnMore": "Learn More",
     "hero": {
-      "title": "Professional Micro-Drama",
-      "titleHighlight": "Creation Tool",
-      "subtitle": "From script to final cut, an all-in-one micro-drama creation platform"
+      "title": "Create Great",
+      "titleHighlight": "Micro-Dramas",
+      "subtitle": "Powerful Control × AI Assistance — Master Every Detail of Your Creation"
     },
     "features": {
-      "title": "Powerful Creation Features",
-      "subtitle": "Complete micro-drama creation toolchain to empower your creative journey",
+      "title": "Complete Creation Toolchain",
+      "subtitle": "Precise control over every step, AI-enhanced efficiency",
       "script": {
         "title": "AI Script Writing",
         "description": "Intelligent script generation and editing with episode management. AI-assisted dialogue creation for more vivid stories.",
@@ -196,34 +196,34 @@
         "description": "Add professional voiceovers and background music to videos with one click.",
         "badge": "Coming Soon"
       },
-      "subtitle": {
+      "subtitleFeature": {
         "title": "AI Subtitles",
         "description": "Auto-generate subtitles from speech, support multilingual translation and style customization.",
         "badge": "Coming Soon"
       }
     },
     "workflow": {
-      "title": "Complete Creation Workflow",
+      "title": "From Concept to Final Cut — Master Every Step",
       "step1": {
         "title": "Script Writing",
-        "description": "Create amazing scripts with AI assistance"
+        "description": "Refine your script ideas with AI assistance"
       },
       "step2": {
         "title": "Characters & Scenes",
-        "description": "Design character images and scene atmosphere"
+        "description": "Craft every character and scene detail with care"
       },
       "step3": {
         "title": "Storyboard Design",
-        "description": "Plan every shot and camera movement"
+        "description": "Take control of every shot and camera movement"
       },
       "step4": {
         "title": "AI Production",
-        "description": "Automatically generate high-quality videos"
+        "description": "Generate high-quality videos under your control"
       }
     },
     "cta": {
-      "title": "Start Creating Your Micro-Drama",
-      "description": "Join Shotrio and experience professional creation tools that bring your stories to life",
+      "title": "Begin Your Thoughtful Creation Journey",
+      "description": "Join Shotrio and create compelling micro-dramas with powerful tools and AI assistance",
       "button": "Start Creating for Free"
     },
     "pricing": {

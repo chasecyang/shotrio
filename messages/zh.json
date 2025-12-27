@@ -74,19 +74,19 @@
   },
   "home": {
     "title": "Shotrio",
-    "subtitle": "专业的微短剧创作工具",
+    "subtitle": "精心创作，AI提效",
     "slogan": "让创作更简单，让故事更精彩",
     "description": "从剧本到成片，一站式微短剧创作平台。AI 辅助创作，助力内容创作者高效产出优质微短剧作品。",
     "getStarted": "开始创作",
     "learnMore": "了解更多",
     "hero": {
-      "title": "专业的微短剧",
-      "titleHighlight": "创作工具",
-      "subtitle": "从剧本到成片，一站式微短剧创作平台"
+      "title": "用心创作",
+      "titleHighlight": "好漫剧",
+      "subtitle": "强大的可控性 × AI智能辅助，掌控创作的每个细节"
     },
     "features": {
-      "title": "强大的创作功能",
-      "subtitle": "完整的微短剧创作工具链，助力您的创作之旅",
+      "title": "完整的创作工具链",
+      "subtitle": "精准把控每个环节，AI辅助提升创作效率",
       "script": {
         "title": "AI 剧本创作",
         "description": "智能剧本生成与编辑，支持分集管理。AI 辅助对话创作，让故事更生动精彩。",
@@ -112,34 +112,34 @@
         "description": "为视频配上合适的语音和背景音乐，一键生成专业音轨。",
         "badge": "即将推出"
       },
-      "subtitle": {
+      "subtitleFeature": {
         "title": "AI 字幕",
         "description": "自动识别语音生成字幕，支持多语言翻译和样式定制。",
         "badge": "即将推出"
       }
     },
     "workflow": {
-      "title": "完整的创作工作流",
+      "title": "从构思到成片，掌控每个环节",
       "step1": {
         "title": "剧本创作",
-        "description": "使用 AI 辅助创作精彩剧本"
+        "description": "用 AI 辅助打磨你的剧本创意"
       },
       "step2": {
         "title": "角色与场景",
-        "description": "设计角色形象与场景氛围"
+        "description": "精心设计每个角色和场景细节"
       },
       "step3": {
         "title": "分镜设计",
-        "description": "规划每一个镜头与运镜"
+        "description": "自主规划每个镜头与运镜方式"
       },
       "step4": {
         "title": "AI 成片",
-        "description": "自动化生成高质量视频"
+        "description": "在你的把控下生成高质量视频"
       }
     },
     "cta": {
-      "title": "开始创作您的微短剧",
-      "description": "加入 Shotrio，体验专业的创作工具，让您的故事触动更多人",
+      "title": "开始你的精心创作之旅",
+      "description": "加入 Shotrio，用强大的工具和 AI 辅助，创作出打动人心的微短剧作品",
       "button": "免费开始创作"
     },
     "pricing": {

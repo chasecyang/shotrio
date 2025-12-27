@@ -113,14 +113,14 @@ export function generatePageMetadata({
  */
 export const homepageMetadata = {
   en: {
-    title: 'Shotrio - Professional Micro-Drama Creation Tool',
-    description: 'From script to final cut, an all-in-one micro-drama creation platform. AI-assisted creation to help content creators efficiently produce high-quality micro-drama works.',
-    keywords: ['Micro-Drama', 'AI Video Generation', 'Short Drama', 'Video Creation', 'Storyboard', 'Script Writing'],
+    title: 'Shotrio - Create Great Micro-Dramas with Full Control & AI',
+    description: 'Powerful control × AI assistance — Master every detail of your micro-drama creation. Complete toolchain from script to final cut for creators who care about quality.',
+    keywords: ['Micro-Drama Creation', 'AI Video Generation', 'Storyboard Design', 'Script Writing', 'Video Production Tool', 'Professional Video Creation', 'Short Drama', 'Content Creation'],
   },
   zh: {
-    title: 'Shotrio - 专业的微短剧创作工具',
-    description: '从剧本到成片，一站式微短剧创作平台。AI 辅助创作，助力内容创作者高效产出优质微短剧作品。',
-    keywords: ['微短剧', 'AI视频生成', '短剧创作', '视频制作', '分镜设计', '剧本创作'],
+    title: 'Shotrio - 用心创作好漫剧的专业工具',
+    description: '强大的可控性 × AI智能辅助，掌控创作的每个细节。完整的创作工具链，为注重品质的创作者打造，从剧本到成片精准把控。',
+    keywords: ['微短剧创作', 'AI视频生成', '分镜设计', '剧本创作', '视频制作工具', '专业创作工具', '短剧制作', '内容创作'],
   },
 };
 
