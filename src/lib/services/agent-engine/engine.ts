@@ -59,6 +59,21 @@ export class AgentEngine {
   ): AsyncGenerator<AgentStreamEvent> {
     console.log("[AgentEngine] 开始新对话:", conversationId);
 
+    // 从 conversation 表获取 projectId 和消息历史
+    const conv = await db.query.conversation.findFirst({
+      where: eq(conversation.id, conversationId),
+      with: {
+        messages: {
+          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+        },
+      },
+    });
+
+    if (!conv || !conv.projectId) {
+      yield { type: "error", data: "对话不存在或未关联项目" };
+      return;
+    }
+
     // 保存用户消息
     const userMessageId = await saveUserMessage(conversationId, userMessage);
     yield { type: "user_message_id", data: userMessageId };
@@ -71,34 +86,47 @@ export class AgentEngine {
     await updateConversationStatus(conversationId, "active");
     await saveConversationContext(conversationId, projectContext);
 
-    // 从 conversation 表获取 projectId
-    const conv = await db.query.conversation.findFirst({
-      where: eq(conversation.id, conversationId),
-    });
+    // 检查是否有历史消息（不包括刚保存的用户消息，因为查询在保存之前）
+    // 如果有历史消息，说明这不是首条消息，需要加载完整对话历史
+    const hasHistory = conv.messages && conv.messages.length > 0;
 
-    if (!conv || !conv.projectId) {
-      yield { type: "error", data: "对话不存在或未关联项目" };
-      return;
+    let state: ConversationState;
+
+    if (hasHistory) {
+      // 有历史消息：加载完整对话状态
+      console.log("[AgentEngine] 检测到历史消息，加载完整对话状态");
+      const loadedState = await loadConversationState(conversationId);
+      
+      if (!loadedState) {
+        yield { type: "error", data: "无法加载对话状态" };
+        return;
+      }
+
+      // 使用加载的状态，并添加新的用户消息
+      state = loadedState;
+      state.messages.push({ role: "user", content: userMessage });
+      state.assistantMessageId = assistantMessageId;
+    } else {
+      // 首条消息：初始化新状态
+      console.log("[AgentEngine] 首条消息，初始化新对话状态");
+      state = {
+        conversationId,
+        projectContext,
+        messages: [],
+        iterations: [],
+        currentIteration: 0,
+        assistantMessageId,
+      };
+
+      // 构建系统消息
+      const contextText = await collectContext(projectContext, conv.projectId);
+      const systemPrompt = buildSystemPrompt();
+      state.messages.push({ 
+        role: "system", 
+        content: `${systemPrompt}\n\n# 当前上下文\n\n${contextText}` 
+      });
+      state.messages.push({ role: "user", content: userMessage });
     }
-
-    // 初始化状态
-    const state: ConversationState = {
-      conversationId,
-      projectContext,
-      messages: [],
-      iterations: [],
-      currentIteration: 0,
-      assistantMessageId,
-    };
-
-    // 构建系统消息
-    const contextText = await collectContext(projectContext, conv.projectId);
-    const systemPrompt = buildSystemPrompt();
-    state.messages.push({ 
-      role: "system", 
-      content: `${systemPrompt}\n\n# 当前上下文\n\n${contextText}` 
-    });
-    state.messages.push({ role: "user", content: userMessage });
 
     // 执行对话循环
     yield* this.executeConversationLoop(state);
