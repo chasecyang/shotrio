@@ -56,7 +56,6 @@ export async function createProject(data: {
       projectId: created.id,
       title: "第1集",
       summary: null,
-      hook: null,
       scriptContent: null,
       order: 1,
     };
