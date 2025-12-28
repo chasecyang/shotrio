@@ -47,19 +47,6 @@ export function PreviewPanel({
     );
   };
 
-  // 如果当前在分镜Tab，显示分镜预览（含时间轴）
-  if (activeResourceTab === "storyboard" && selectedEpisodeId) {
-    return (
-      <StoryboardPreview
-        onAddShot={onAddShot}
-        onDeleteShots={onDeleteShots}
-        onGenerateVideos={onGenerateVideos}
-        onExportVideos={onExportVideos}
-        isExportingVideos={isExportingVideos}
-      />
-    );
-  }
-
   // 如果在播放模式，显示播放器
   if (playbackState.isPlaybackMode) {
     return (
@@ -75,7 +62,20 @@ export function PreviewPanel({
     );
   }
 
-  // 空状态或 agent 模式默认显示 AI Agent
+  // 在分镜Tab中，保持时间轴+分镜模式（即使取消选择分镜）
+  if (activeResourceTab === "storyboard" && selectedEpisodeId && !selectedResource) {
+    return (
+      <StoryboardPreview
+        onAddShot={onAddShot}
+        onDeleteShots={onDeleteShots}
+        onGenerateVideos={onGenerateVideos}
+        onExportVideos={onExportVideos}
+        isExportingVideos={isExportingVideos}
+      />
+    );
+  }
+
+  // agent 模式默认显示 AI Agent
   if (!selectedResource || selectedResource.type === "agent") {
     return renderAgent();
   }
@@ -89,6 +89,19 @@ export function PreviewPanel({
 
     case "shot":
       if (selectedShot) {
+        // 如果在分镜Tab且有选中剧集，显示带时间轴的分镜预览
+        if (activeResourceTab === "storyboard" && selectedEpisodeId) {
+          return (
+            <StoryboardPreview
+              onAddShot={onAddShot}
+              onDeleteShots={onDeleteShots}
+              onGenerateVideos={onGenerateVideos}
+              onExportVideos={onExportVideos}
+              isExportingVideos={isExportingVideos}
+            />
+          );
+        }
+        // 否则只显示分镜编辑器
         return <ShotEditor shot={selectedShot} />;
       }
       break;
