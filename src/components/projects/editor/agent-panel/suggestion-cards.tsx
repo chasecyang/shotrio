@@ -12,7 +12,6 @@ interface SuggestionItem {
   titleKey: string;
   descriptionKey: string;
   promptKey: string;
-  gradient: string; // 每个卡片独特的渐变色
 }
 
 interface SuggestionCardsProps {
@@ -29,14 +28,12 @@ export function SuggestionCards({ onSelectSuggestion }: SuggestionCardsProps) {
       titleKey: "editor.agent.panel.suggestions.items.0.title",
       descriptionKey: "editor.agent.panel.suggestions.items.0.description",
       promptKey: "editor.agent.panel.suggestions.items.0.prompt",
-      gradient: "from-blue-500/10 to-cyan-500/10",
     },
     {
       icon: Layers,
       titleKey: "editor.agent.panel.suggestions.items.1.title",
       descriptionKey: "editor.agent.panel.suggestions.items.1.description",
       promptKey: "editor.agent.panel.suggestions.items.1.prompt",
-      gradient: "from-violet-500/10 to-purple-500/10",
     },
   ];
 
@@ -66,8 +63,6 @@ export function SuggestionCards({ onSelectSuggestion }: SuggestionCardsProps) {
                 animationDelay: `${index * 50}ms`,
               }}
             >
-              {/* 装饰性渐变背景 - 使用独特的渐变色 */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${suggestion.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
               
               {/* 边缘高光效果 */}
               <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />

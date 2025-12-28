@@ -143,8 +143,37 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   // ============================================
-  // 修改类工具（需要确认）- 3个
+  // 修改类工具（需要确认）- 4个
   // ============================================
+  {
+    name: "update_episode",
+    description: "修改剧集信息，包括标题、梗概、剧本内容。可以完整替换剧本或基于现有内容进行修改。建议先用query_context获取当前内容。",
+    displayName: "修改剧集",
+    parameters: {
+      type: "object",
+      properties: {
+        episodeId: {
+          type: "string",
+          description: "剧集ID",
+        },
+        title: {
+          type: "string",
+          description: "剧集标题（可选）",
+        },
+        summary: {
+          type: "string",
+          description: "剧集梗概（可选，50字以内）",
+        },
+        scriptContent: {
+          type: "string",
+          description: "完整剧本内容（可选）。如需修改剧本，建议先query_context获取当前内容，然后生成新版本",
+        },
+      },
+      required: ["episodeId"],
+    },
+    category: "modification",
+    needsConfirmation: true,
+  },
   {
     name: "update_shots",
     description: "修改分镜属性（支持单个或批量）。可以修改时长、景别、运镜、描述、视觉提示词，也可以关联素材到分镜。",

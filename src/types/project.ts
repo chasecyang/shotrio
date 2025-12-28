@@ -73,5 +73,5 @@ export type CameraMovement =
 
 // 剧集信息完整性检查
 export function isEpisodeComplete(episode: Episode): boolean {
-  return !!(episode.summary && episode.hook && episode.scriptContent);
+  return !!(episode.summary && episode.scriptContent);
 }

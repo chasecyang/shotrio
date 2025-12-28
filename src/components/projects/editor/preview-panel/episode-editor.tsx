@@ -8,7 +8,6 @@ import { updateEpisode } from "@/lib/actions/project";
 import { toast } from "sonner";
 import {
   FileText,
-  Zap,
   ScrollText,
 } from "lucide-react";
 import {
@@ -18,7 +17,7 @@ import {
   AIGenerationPanel,
   SaveStatus,
 } from "@/components/ui/inline-editable-field";
-import { optimizeEpisodeSummary, optimizeEpisodeHook, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
+import { optimizeEpisodeSummary, optimizeEpisodeScript } from "@/lib/actions/novel-actions";
 import { useTranslations } from "next-intl";
 
 interface EpisodeEditorProps {
@@ -30,7 +29,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   const [formData, setFormData] = useState({
     title: episode.title,
     summary: episode.summary || "",
-    hook: episode.hook || "",
     scriptContent: episode.scriptContent || "",
   });
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -38,8 +36,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
   // AI 生成状态
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [generatedSummary, setGeneratedSummary] = useState<string | null>(null);
-  const [isGeneratingHook, setIsGeneratingHook] = useState(false);
-  const [generatedHook, setGeneratedHook] = useState<string | null>(null);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
 
@@ -51,7 +47,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     setFormData({
       title: episode.title,
       summary: episode.summary || "",
-      hook: episode.hook || "",
       scriptContent: episode.scriptContent || "",
     });
   }, [episode]);
@@ -65,7 +60,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     const hasChanges =
       formData.title !== episode.title ||
       formData.summary !== (episode.summary || "") ||
-      formData.hook !== (episode.hook || "") ||
       formData.scriptContent !== (episode.scriptContent || "");
 
     if (hasChanges) {
@@ -77,7 +71,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
           const result = await updateEpisode(episode.id, {
             title: formData.title || "未命名",
             summary: formData.summary || null,
-            hook: formData.hook || null,
             scriptContent: formData.scriptContent || null,
           });
 
@@ -121,7 +114,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     try {
       const result = await optimizeEpisodeSummary(
         formData.title,
-        formData.hook,
         formData.scriptContent
       );
       if (result.success && result.summary) {
@@ -138,29 +130,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
     }
   };
 
-  const handleGenerateHook = async () => {
-    setIsGeneratingHook(true);
-    setGeneratedHook(null);
-    try {
-      const result = await optimizeEpisodeHook(
-        formData.title,
-        formData.summary,
-        formData.scriptContent
-      );
-      if (result.success && result.hook) {
-        setGeneratedHook(result.hook);
-        toast.success("AI 钩子生成成功");
-      } else {
-        toast.error(result.error || "生成失败");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("生成失败");
-    } finally {
-      setIsGeneratingHook(false);
-    }
-  };
-
   const handleGenerateScript = async () => {
     setIsGeneratingScript(true);
     setGeneratedScript(null);
@@ -168,7 +137,6 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
       const result = await optimizeEpisodeScript(
         formData.title,
         formData.summary,
-        formData.hook,
         formData.scriptContent
       );
       if (result.success && result.script) {
@@ -206,69 +174,35 @@ export function EpisodeEditor({ episode }: EpisodeEditorProps) {
           </div>
         </div>
 
-        {/* 梗概和钩子 */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* 梗概 */}
-          <div className="space-y-2">
-            <EditableField
-              label="梗概"
-              icon={FileText}
-              saveStatus={saveStatus}
-              onAIGenerate={handleGenerateSummary}
-              isAIGenerating={isGeneratingSummary}
-              aiButtonTitle="AI 生成/优化梗概"
-            >
-              <EditableTextarea
-                value={formData.summary}
-                onChange={(value) => setFormData({ ...formData, summary: value })}
-                placeholder="简要描述本集的主要内容..."
-                emptyText="点击添加梗概"
-                rows={4}
-              />
-            </EditableField>
+        {/* 梗概 */}
+        <div className="space-y-2">
+          <EditableField
+            label="梗概"
+            icon={FileText}
+            saveStatus={saveStatus}
+            onAIGenerate={handleGenerateSummary}
+            isAIGenerating={isGeneratingSummary}
+            aiButtonTitle="AI 生成/优化梗概"
+          >
+            <EditableTextarea
+              value={formData.summary}
+              onChange={(value) => setFormData({ ...formData, summary: value })}
+              placeholder="简要描述本集的主要内容..."
+              emptyText="点击添加梗概"
+              rows={4}
+            />
+          </EditableField>
 
-            {generatedSummary && (
-              <AIGenerationPanel
-                content={generatedSummary}
-                onAccept={() => {
-                  setFormData({ ...formData, summary: generatedSummary });
-                  setGeneratedSummary(null);
-                }}
-                onReject={() => setGeneratedSummary(null)}
-              />
-            )}
-          </div>
-
-          {/* 钩子 */}
-          <div className="space-y-2">
-            <EditableField
-              label="钩子/亮点"
-              icon={Zap}
-              saveStatus={saveStatus}
-              onAIGenerate={handleGenerateHook}
-              isAIGenerating={isGeneratingHook}
-              aiButtonTitle="AI 生成/优化钩子"
-            >
-              <EditableTextarea
-                value={formData.hook}
-                onChange={(value) => setFormData({ ...formData, hook: value })}
-                placeholder="本集的核心冲突、悬念点或情感高潮..."
-                emptyText="点击添加钩子/亮点"
-                rows={4}
-              />
-            </EditableField>
-
-            {generatedHook && (
-              <AIGenerationPanel
-                content={generatedHook}
-                onAccept={() => {
-                  setFormData({ ...formData, hook: generatedHook });
-                  setGeneratedHook(null);
-                }}
-                onReject={() => setGeneratedHook(null)}
-              />
-            )}
-          </div>
+          {generatedSummary && (
+            <AIGenerationPanel
+              content={generatedSummary}
+              onAccept={() => {
+                setFormData({ ...formData, summary: generatedSummary });
+                setGeneratedSummary(null);
+              }}
+              onReject={() => setGeneratedSummary(null)}
+            />
+          )}
         </div>
 
         {/* 剧本内容 */}

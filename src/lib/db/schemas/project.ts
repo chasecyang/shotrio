@@ -193,7 +193,6 @@ export const episode = pgTable("episode", {
 
   title: text("title").notNull(),
   summary: text("summary"), // 本集梗概
-  hook: text("hook"), // 本集钩子/亮点
   scriptContent: text("script_content"), // 这一集的完整对话/剧本
   order: integer("order").notNull(), // 第几集
 

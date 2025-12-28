@@ -15,7 +15,6 @@ export async function createEpisode(data: {
   projectId: string;
   title: string;
   summary?: string;
-  hook?: string;
   order: number;
 }) {
   const session = await auth.api.getSession({
@@ -31,7 +30,6 @@ export async function createEpisode(data: {
       projectId: data.projectId,
       title: data.title,
       summary: data.summary || null,
-      hook: data.hook || null,
       scriptContent: null,
       order: data.order,
     };

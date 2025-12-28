@@ -306,7 +306,7 @@
       },
       "incompleteEpisode": {
         "title": "Episode Information Incomplete",
-        "description": "It is recommended to complete the episode information (summary, hook, script) for better creative ideas.",
+        "description": "It is recommended to complete the episode information (summary, script) for better creative ideas.",
         "detail": "",
         "action": "Edit Script"
       },
@@ -1095,7 +1095,6 @@
         "episodeNumber": "Episode {number}",
         "episodeTitle": "Episode Title",
         "summary": "Summary",
-        "hook": "Hook",
         "script": "Script",
         "scriptPlaceholder": "Write complete script content, including scene descriptions, character dialogue, actions, etc...",
         "scriptEmptyText": "Click to write script content",

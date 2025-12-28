@@ -1097,7 +1097,6 @@
         "episodeNumber": "第 {number} 集",
         "episodeTitle": "剧集标题",
         "summary": "梗概",
-        "hook": "钩子",
         "script": "剧本",
         "scriptPlaceholder": "编写完整的剧本内容，包括场景描述、人物对话、动作等...",
         "scriptEmptyText": "点击编写剧本内容",

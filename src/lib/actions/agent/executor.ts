@@ -24,6 +24,8 @@ import type { AssetImageGenerationInput } from "@/types/job";
 import { getSystemArtStyles } from "../art-style/queries";
 import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
+import { updateEpisode } from "../project/episode";
+import type { NewEpisode } from "@/types/project";
 
 /**
  * 执行单个 function call
@@ -328,6 +330,36 @@ export async function executeFunction(
       // ============================================
       // 修改类
       // ============================================
+      case "update_episode": {
+        const episodeId = parameters.episodeId as string;
+        const updates: Partial<NewEpisode> = {};
+        
+        if (parameters.title !== undefined) updates.title = parameters.title as string;
+        if (parameters.summary !== undefined) updates.summary = parameters.summary as string || null;
+        if (parameters.scriptContent !== undefined) updates.scriptContent = parameters.scriptContent as string || null;
+        
+        const updateResult = await updateEpisode(episodeId, updates);
+        
+        if (updateResult.success) {
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              message: "剧集信息已更新",
+              updatedFields: Object.keys(updates),
+              episode: updateResult.data,
+            },
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: updateResult.error || "更新失败",
+          };
+        }
+        break;
+      }
+
       case "update_shots": {
         const updates = parameters.updates as Array<{
           shotId: string;
