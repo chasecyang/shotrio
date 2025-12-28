@@ -7,6 +7,7 @@ import { episode } from "@/lib/db/schemas/project";
 import { eq, asc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { type NewEpisode } from "@/types/project";
+import { revalidatePath } from "next/cache";
 
 /**
  * 创建剧集
@@ -61,11 +62,26 @@ export async function updateEpisode(
   }
 
   try {
+    // 先获取剧集信息以便获取projectId
+    const episodeData = await db.query.episode.findFirst({
+      where: eq(episode.id, episodeId),
+    });
+
+    if (!episodeData) {
+      return {
+        success: false,
+        error: "剧集不存在",
+      };
+    }
+
     const [updated] = await db
       .update(episode)
       .set(data)
       .where(eq(episode.id, episodeId))
       .returning();
+
+    // 刷新项目页面缓存
+    revalidatePath(`/[lang]/projects/${episodeData.projectId}`, "page");
 
     return { success: true, data: updated };
   } catch (error) {

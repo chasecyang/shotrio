@@ -30,6 +30,15 @@ function isShotRelatedFunction(functionName: string): boolean {
   return shotRelatedFunctions.includes(functionName);
 }
 
+// 判断是否为项目/剧集相关操作（需要刷新项目数据）
+function isProjectRelatedFunction(functionName: string): boolean {
+  const projectRelatedFunctions = [
+    'update_episode',
+    'set_art_style',
+  ];
+  return projectRelatedFunctions.includes(functionName);
+}
+
 export function AgentPanel({ projectId }: AgentPanelProps) {
   const agent = useAgent();
   const t = useTranslations();
@@ -187,11 +196,18 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
     onIterationUpdate: (iterations: IterationStep[]) => {
-      // 检查是否有分镜相关操作完成并触发刷新
       const lastIteration = iterations[iterations.length - 1];
-      if (lastIteration?.functionCall?.status === "completed" && 
-          isShotRelatedFunction(lastIteration.functionCall.name)) {
-        setTimeout(() => window.dispatchEvent(new CustomEvent("shots-changed")), 200);
+      
+      // 检查是否有分镜相关操作完成并触发刷新
+      if (lastIteration?.functionCall?.status === "completed") {
+        if (isShotRelatedFunction(lastIteration.functionCall.name)) {
+          setTimeout(() => window.dispatchEvent(new CustomEvent("shots-changed")), 200);
+        }
+        
+        // 检查是否有项目/剧集相关操作完成并触发刷新
+        if (isProjectRelatedFunction(lastIteration.functionCall.name)) {
+          setTimeout(() => window.dispatchEvent(new CustomEvent("project-changed")), 200);
+        }
       }
     },
     onComplete: () => {

@@ -509,6 +509,25 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     return () => window.removeEventListener("shots-changed", handleShotsChanged);
   }, [state.selectedEpisodeId]);
 
+  // 监听 project-changed 事件，用于 Agent 剧集/项目操作后刷新项目数据
+  useEffect(() => {
+    const handleProjectChanged = async () => {
+      if (state.project) {
+        try {
+          const updatedProject = await refreshProject(state.project.id);
+          if (updatedProject) {
+            dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+          }
+        } catch (error) {
+          console.error("刷新项目失败:", error);
+        }
+      }
+    };
+
+    window.addEventListener("project-changed", handleProjectChanged);
+    return () => window.removeEventListener("project-changed", handleProjectChanged);
+  }, [state.project]);
+
   // 便捷方法
   const selectEpisode = useCallback((episodeId: string | null) => {
     dispatch({ type: "SELECT_EPISODE", payload: episodeId });

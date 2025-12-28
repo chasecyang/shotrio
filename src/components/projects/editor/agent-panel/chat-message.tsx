@@ -32,24 +32,35 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   
   // 判断是否为分镜相关操作
   const isShotRelatedAction = message.pendingAction?.functionCall?.name && 
-    ['create_shot', 'update_shot', 'delete_shots', 'reorder_shots'].includes(
+    ['create_shots', 'update_shots', 'delete_shots'].includes(
+      message.pendingAction.functionCall.name
+    );
+
+  // 判断是否为项目/剧集相关操作
+  const isProjectRelatedAction = message.pendingAction?.functionCall?.name && 
+    ['update_episode', 'set_art_style'].includes(
       message.pendingAction.functionCall.name
     );
 
   // 使用 Agent Stream Hook
   const { resumeConversation } = useAgentStream({
     onIterationUpdate: (iterations: IterationStep[]) => {
-      // 检查是否有分镜相关操作完成
+      // 检查最后一个迭代步骤
       const lastIteration = iterations[iterations.length - 1];
-      if (lastIteration?.functionCall?.status === "completed" && 
-          lastIteration.functionCall.name &&
-          ['create_shot', 'update_shot', 'delete_shots', 'reorder_shots'].includes(
-            lastIteration.functionCall.name
-          )) {
-        // 延迟触发刷新，确保数据库操作已完成
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("shots-changed"));
-        }, 200);
+      if (lastIteration?.functionCall?.status === "completed" && lastIteration.functionCall.name) {
+        // 分镜相关操作
+        if (['create_shots', 'update_shots', 'delete_shots'].includes(lastIteration.functionCall.name)) {
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("shots-changed"));
+          }, 200);
+        }
+        
+        // 项目/剧集相关操作
+        if (['update_episode', 'set_art_style'].includes(lastIteration.functionCall.name)) {
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("project-changed"));
+          }, 200);
+        }
       }
     },
     onComplete: () => {
@@ -60,6 +71,13 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
       if (isShotRelatedAction) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent("shots-changed"));
+        }, 300);
+      }
+      
+      // 如果是项目/剧集相关操作，刷新项目
+      if (isProjectRelatedAction) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("project-changed"));
         }, 300);
       }
       

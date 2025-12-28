@@ -28,6 +28,76 @@ import { updateEpisode } from "../project/episode";
 import type { NewEpisode } from "@/types/project";
 
 /**
+ * 映射 shotSize 值到数据库枚举
+ */
+function mapShotSize(value: string): string {
+  const mapping: Record<string, string> = {
+    'WIDE': 'long_shot',
+    'FULL': 'full_shot',
+    'MEDIUM': 'medium_shot',
+    'CLOSE_UP': 'close_up',
+    'EXTREME_CLOSE_UP': 'extreme_close_up',
+    'EXTREME_LONG_SHOT': 'extreme_long_shot',
+    // 支持直接使用数据库值
+    'extreme_long_shot': 'extreme_long_shot',
+    'long_shot': 'long_shot',
+    'full_shot': 'full_shot',
+    'medium_shot': 'medium_shot',
+    'close_up': 'close_up',
+    'extreme_close_up': 'extreme_close_up',
+  };
+  
+  const mapped = mapping[value] || mapping[value.toUpperCase()];
+  if (!mapped) {
+    throw new Error(`无效的景别值: ${value}. 支持的值: ${Object.keys(mapping).filter(k => k === k.toUpperCase()).join(', ')}`);
+  }
+  return mapped;
+}
+
+/**
+ * 映射 cameraMovement 值到数据库枚举
+ */
+function mapCameraMovement(value: string): string {
+  const mapping: Record<string, string> = {
+    'STATIC': 'static',
+    'PUSH_IN': 'push_in',
+    'PULL_OUT': 'pull_out',
+    'PAN_LEFT': 'pan_left',
+    'PAN_RIGHT': 'pan_right',
+    'TILT_UP': 'tilt_up',
+    'TILT_DOWN': 'tilt_down',
+    'TRACKING': 'tracking',
+    'CRANE_UP': 'crane_up',
+    'CRANE_DOWN': 'crane_down',
+    'ORBIT': 'orbit',
+    'ZOOM_IN': 'zoom_in',
+    'ZOOM_OUT': 'zoom_out',
+    'HANDHELD': 'handheld',
+    // 支持直接使用数据库值
+    'static': 'static',
+    'push_in': 'push_in',
+    'pull_out': 'pull_out',
+    'pan_left': 'pan_left',
+    'pan_right': 'pan_right',
+    'tilt_up': 'tilt_up',
+    'tilt_down': 'tilt_down',
+    'tracking': 'tracking',
+    'crane_up': 'crane_up',
+    'crane_down': 'crane_down',
+    'orbit': 'orbit',
+    'zoom_in': 'zoom_in',
+    'zoom_out': 'zoom_out',
+    'handheld': 'handheld',
+  };
+  
+  const mapped = mapping[value] || mapping[value.toUpperCase()];
+  if (!mapped) {
+    throw new Error(`无效的运镜方式值: ${value}. 支持的值: ${Object.keys(mapping).filter(k => k === k.toUpperCase()).join(', ')}`);
+  }
+  return mapped;
+}
+
+/**
  * 执行单个 function call
  */
 export async function executeFunction(
@@ -195,32 +265,42 @@ export async function executeFunction(
           visualPrompt?: string;
         }>;
 
-        // 验证和转换数据
-        const validatedShots = shots.map((shotData) => ({
-          shotSize: shotData.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
-          description: shotData.description,
-          order: shotData.order,
-          cameraMovement: shotData.cameraMovement as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down" | undefined,
-          duration: shotData.duration,
-          visualPrompt: shotData.visualPrompt,
-        }));
+        try {
+          // 验证和转换数据，使用映射函数
+          const validatedShots = shots.map((shotData) => ({
+            shotSize: mapShotSize(shotData.shotSize) as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
+            description: shotData.description,
+            order: shotData.order,
+            cameraMovement: shotData.cameraMovement 
+              ? mapCameraMovement(shotData.cameraMovement) as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down"
+              : undefined,
+            duration: shotData.duration,
+            visualPrompt: shotData.visualPrompt,
+          }));
 
-        const batchResult = await batchCreateShots({
-          episodeId,
-          shots: validatedShots,
-        });
+          const batchResult = await batchCreateShots({
+            episodeId,
+            shots: validatedShots,
+          });
 
-        if (batchResult.success && 'data' in batchResult) {
-          result = {
-            functionCallId: functionCall.id,
-            success: true,
-            data: batchResult.data,
-          };
-        } else {
+          if (batchResult.success && 'data' in batchResult) {
+            result = {
+              functionCallId: functionCall.id,
+              success: true,
+              data: batchResult.data,
+            };
+          } else {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: 'error' in batchResult ? batchResult.error : "创建失败",
+            };
+          }
+        } catch (error) {
           result = {
             functionCallId: functionCall.id,
             success: false,
-            error: 'error' in batchResult ? batchResult.error : "创建失败",
+            error: error instanceof Error ? error.message : "参数验证失败",
           };
         }
         break;
@@ -375,12 +455,30 @@ export async function executeFunction(
 
         for (const update of updates) {
           const { shotId, ...fields } = update;
-          const updateResult = await updateShot(shotId, fields);
-          updateResults.push({
-            shotId,
-            success: updateResult.success,
-            error: updateResult.error,
-          });
+          
+          try {
+            // 转换枚举值
+            const mappedFields: Record<string, unknown> = { ...fields };
+            if (fields.shotSize) {
+              mappedFields.shotSize = mapShotSize(fields.shotSize);
+            }
+            if (fields.cameraMovement) {
+              mappedFields.cameraMovement = mapCameraMovement(fields.cameraMovement);
+            }
+            
+            const updateResult = await updateShot(shotId, mappedFields);
+            updateResults.push({
+              shotId,
+              success: updateResult.success,
+              error: updateResult.error,
+            });
+          } catch (error) {
+            updateResults.push({
+              shotId,
+              success: false,
+              error: error instanceof Error ? error.message : "参数验证失败",
+            });
+          }
         }
 
         const successCount = updateResults.filter(r => r.success).length;
