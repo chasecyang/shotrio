@@ -10,6 +10,7 @@ import type {
   AssetQueryResult,
   AssetWithTags,
 } from "@/types/asset";
+import { getAssetStatus } from "@/types/asset";
 
 /**
  * 查询资产列表（带标签筛选）
@@ -93,11 +94,17 @@ export async function queryAssets(
     const hasMore = assets.length > limit;
     const resultAssets = hasMore ? assets.slice(0, limit) : assets;
 
+    // 为每个asset添加status字段
+    const assetsWithStatus = resultAssets.map(asset => ({
+      ...asset,
+      status: getAssetStatus(asset),
+    }));
+
     // 计算总数（简化版本，实际可能需要单独的count查询）
     const total = offset + resultAssets.length + (hasMore ? 1 : 0);
 
     return {
-      assets: resultAssets as AssetWithTags[],
+      assets: assetsWithStatus as AssetWithTags[],
       total,
       hasMore,
     };
@@ -141,7 +148,13 @@ export async function getProjectAssets(
       orderBy: [desc(asset.createdAt)],
     });
 
-    return assets as AssetWithTags[];
+    // 为每个asset添加status字段
+    const assetsWithStatus = assets.map(asset => ({
+      ...asset,
+      status: getAssetStatus(asset),
+    }));
+
+    return assetsWithStatus as AssetWithTags[];
   } catch (error) {
     console.error("获取项目资产失败:", error);
     return [];
@@ -198,7 +211,13 @@ export async function getAssetsByTag(
       orderBy: [desc(asset.createdAt)],
     });
 
-    return assets as AssetWithTags[];
+    // 为每个asset添加status字段
+    const assetsWithStatus = assets.map(asset => ({
+      ...asset,
+      status: getAssetStatus(asset),
+    }));
+
+    return assetsWithStatus as AssetWithTags[];
   } catch (error) {
     console.error("按标签查询资产失败:", error);
     return [];
@@ -228,7 +247,13 @@ export async function getAssetDerivations(
       orderBy: [desc(asset.createdAt)],
     });
 
-    return derivedAssets as AssetWithTags[];
+    // 为每个asset添加status字段
+    const assetsWithStatus = derivedAssets.map(asset => ({
+      ...asset,
+      status: getAssetStatus(asset),
+    }));
+
+    return assetsWithStatus as AssetWithTags[];
   } catch (error) {
     console.error("获取派生资产失败:", error);
     return [];

@@ -28,6 +28,13 @@ export type AssetType =
   | "effect"       // 特效图
   | "reference";   // 参考图
 
+/**
+ * 资产状态（运行时计算字段）
+ */
+export type AssetStatus = 
+  | "completed"    // 图片已生成完成（有imageUrl）
+  | "generating";  // 图片正在生成中（imageUrl为null）
+
 // ===== Meta数据结构 =====
 
 /**
@@ -138,6 +145,9 @@ export interface Asset {
   // 时间戳
   createdAt: Date;
   updatedAt: Date;
+  
+  // 运行时计算字段（不在数据库中，由查询函数添加）
+  status?: AssetStatus;
 }
 
 /**
@@ -279,6 +289,13 @@ export function getAssetTagValues(asset: AssetWithTags): string[] {
  */
 export function hasAssetTag(asset: AssetWithTags, tagValue: string): boolean {
   return asset.tags.some(tag => tag.tagValue === tagValue);
+}
+
+/**
+ * 计算Asset的状态
+ */
+export function getAssetStatus(asset: Asset): AssetStatus {
+  return asset.imageUrl ? "completed" : "generating";
 }
 
 // ===== 素材生成相关类型 =====

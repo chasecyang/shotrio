@@ -179,10 +179,15 @@ export async function executeFunction(
             ? await analyzeAssetsByType(assetsResult.assets)
             : { byType: {}, withoutImage: 0 };
 
+          // 计算completed和generating数量
+          const completedCount = assetsResult.assets.filter(a => a.imageUrl).length;
+          const generatingCount = assetsResult.assets.filter(a => !a.imageUrl).length;
+
           contextData.assets = {
             total: assetsResult.total || 0,
             byType: assetStats.byType,
-            withoutImage: assetStats.withoutImage,
+            completed: completedCount,
+            generating: generatingCount,
           };
         }
 
@@ -208,15 +213,21 @@ export async function executeFunction(
           limit: (parameters.limit as number) || 20,
         });
 
+        // 统计状态
+        const completedCount = queryResult.assets.filter(a => a.status === "completed").length;
+        const generatingCount = queryResult.assets.filter(a => a.status === "generating").length;
+
         result = {
           functionCallId: functionCall.id,
           success: true,
           data: {
             assets: queryResult.assets,
             total: queryResult.total,
+            completed: completedCount,
+            generating: generatingCount,
             message: queryResult.assets.length === 0 
               ? "素材库为空，没有找到任何素材" 
-              : `找到 ${queryResult.total} 个素材`,
+              : `找到 ${queryResult.total} 个素材（${completedCount} 个已完成，${generatingCount} 个生成中）`,
           },
         };
         break;
