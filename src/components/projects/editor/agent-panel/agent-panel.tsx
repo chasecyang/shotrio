@@ -23,11 +23,9 @@ interface AgentPanelProps {
 // 判断是否为分镜相关操作
 function isShotRelatedFunction(functionName: string): boolean {
   const shotRelatedFunctions = [
-    'create_shot',
-    'batch_create_shots',
-    'update_shot',
+    'create_shots',
+    'update_shots',
     'delete_shots',
-    'reorder_shots'
   ];
   return shotRelatedFunctions.includes(functionName);
 }

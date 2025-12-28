@@ -63,9 +63,9 @@ export function estimateFunctionCallCredits(
 
   try {
     switch (name) {
-      case "generate_shot_videos": {
+      case "generate_videos": {
         // 单个或多个分镜视频生成
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
+        const shotIds = parameters.shotIds as string[];
         
         if (additionalData?.shotDurations) {
           // 如果有具体的duration数据，计算精确值
@@ -99,26 +99,11 @@ export function estimateFunctionCallCredits(
         }
       }
 
-      case "generate_asset": {
-        // 单个素材生成
-        const numImages = parameters.numImages ? parseInt(parameters.numImages as string) : 1;
-        const { credits } = calculateImageCredits(numImages);
+      case "generate_assets": {
+        // 素材生成（单个或批量）
+        const assets = parameters.assets as Array<{ numImages?: number }>;
         
-        return {
-          functionCallId: id,
-          functionName: name,
-          credits,
-          details: `${numImages}张图片 × ${CREDIT_COSTS.IMAGE_GENERATION}积分`,
-        };
-      }
-
-      case "batch_generate_assets": {
-        // 批量素材生成
-        const assetsData = JSON.parse(parameters.assets as string) as Array<{
-          numImages?: number;
-        }>;
-        
-        const totalImages = assetsData.reduce((sum, asset) => {
+        const totalImages = assets.reduce((sum, asset) => {
           return sum + (asset.numImages || 1);
         }, 0);
         

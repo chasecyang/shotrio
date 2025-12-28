@@ -90,6 +90,19 @@ export interface FunctionExecutionResult {
 }
 
 /**
+ * Function 参数属性定义
+ */
+export interface FunctionParameterProperty {
+  type: "string" | "number" | "boolean" | "array" | "object";
+  description?: string;
+  enum?: string[];
+  items?: {
+    type: string;
+    properties?: Record<string, unknown>;
+  };
+}
+
+/**
  * Function 定义
  */
 export interface FunctionDefinition {
@@ -98,11 +111,7 @@ export interface FunctionDefinition {
   displayName?: string; // 用于用户界面展示的友好名称
   parameters: {
     type: "object";
-    properties: Record<string, {
-      type: string;
-      description?: string;
-      enum?: string[];
-    }>;
+    properties: Record<string, FunctionParameterProperty>;
     required?: string[];
   };
   category: FunctionCategory;

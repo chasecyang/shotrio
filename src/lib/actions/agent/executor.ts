@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Agent Function 执行器
+ * Agent Function 执行器（精简版）
  * 
  * 将 Function Call 路由到对应的 Server Action
  */
@@ -15,7 +15,7 @@ import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
 import { batchGenerateShotVideos } from "../video/generate";
-import { createShot, deleteShot, updateShot, reorderShots, batchCreateShots } from "../project/shot";
+import { deleteShot, updateShot, batchCreateShots } from "../project/shot";
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
 import { refreshEpisodeShots } from "../project/refresh";
@@ -67,42 +67,78 @@ export async function executeFunction(
       // ============================================
       // 查询类
       // ============================================
-      case "query_script_content": {
-        const episodeData = await db.query.episode.findFirst({
-          where: eq(episode.id, parameters.episodeId as string),
-        });
-        
-        if (!episodeData) {
-          return {
-            functionCallId: functionCall.id,
-            success: false,
-            error: "剧集不存在",
+      case "query_context": {
+        const episodeId = parameters.episodeId as string | undefined;
+        const includeAssets = parameters.includeAssets !== false; // 默认true
+        const includeArtStyles = parameters.includeArtStyles !== false; // 默认true
+
+        const contextData: Record<string, unknown> = {};
+
+        // 如果提供了episodeId，获取剧本和分镜
+        if (episodeId) {
+          const episodeData = await db.query.episode.findFirst({
+            where: eq(episode.id, episodeId),
+          });
+          
+          if (episodeData) {
+            contextData.episode = {
+              id: episodeData.id,
+              title: episodeData.title,
+              scriptContent: episodeData.scriptContent,
+              summary: episodeData.summary,
+            };
+
+            // 获取分镜列表
+            const shotsResult = await refreshEpisodeShots(episodeId);
+            if (shotsResult.success) {
+              contextData.shots = shotsResult.shots;
+            }
+          }
+        }
+
+        // 包含素材统计
+        if (includeAssets) {
+          const assetsResult = await queryAssets({
+            projectId,
+            limit: 1000,
+          });
+
+          const assetStats = assetsResult.assets 
+            ? await analyzeAssetsByType(assetsResult.assets)
+            : { byType: {}, withoutImage: 0 };
+
+          contextData.assets = {
+            total: assetsResult.total || 0,
+            byType: assetStats.byType,
+            withoutImage: assetStats.withoutImage,
           };
+        }
+
+        // 包含美术风格
+        if (includeArtStyles) {
+          const styles = await getSystemArtStyles();
+          contextData.artStyles = styles;
         }
 
         result = {
           functionCallId: functionCall.id,
           success: true,
-          data: {
-            title: episodeData.title,
-            scriptContent: episodeData.scriptContent,
-            summary: episodeData.summary,
-          },
+          data: contextData,
         };
         break;
       }
 
       case "query_assets": {
-        const tagArray = parameters.tags ? (parameters.tags as string).split(",") : undefined;
+        const tagArray = parameters.tags as string[] | undefined;
         const queryResult = await queryAssets({
           projectId,
           tagFilters: tagArray,
-          limit: parameters.limit ? parseInt(parameters.limit as string) : 20,
+          limit: (parameters.limit as number) || 20,
         });
 
         result = {
           functionCallId: functionCall.id,
-          success: true, // 查询成功执行，即使结果为空也算成功
+          success: true,
           data: {
             assets: queryResult.assets,
             total: queryResult.total,
@@ -115,148 +151,60 @@ export async function executeFunction(
       }
 
       case "query_shots": {
-        const shotsResult = await refreshEpisodeShots(parameters.episodeId as string);
-        result = {
-          functionCallId: functionCall.id,
-          success: shotsResult.success,
-          data: shotsResult.shots,
-          error: shotsResult.error,
-        };
-        break;
-      }
+        const episodeId = parameters.episodeId as string;
+        const shotIds = parameters.shotIds as string[] | undefined;
 
-      case "query_shot_details": {
-        const shotData = await db.query.shot.findFirst({
-          where: eq(shot.id, parameters.shotId as string),
-        });
-
-        if (!shotData) {
-          return {
+        const shotsResult = await refreshEpisodeShots(episodeId);
+        
+        if (!shotsResult.success) {
+          result = {
             functionCallId: functionCall.id,
             success: false,
-            error: "分镜不存在",
+            error: shotsResult.error,
           };
+          break;
+        }
+
+        // 如果指定了shotIds，只返回这些分镜
+        let shots = shotsResult.shots || [];
+        if (shotIds && shotIds.length > 0) {
+          shots = shots.filter(s => shotIds.includes(s.id));
         }
 
         result = {
           functionCallId: functionCall.id,
           success: true,
-          data: shotData,
-        };
-        break;
-      }
-
-      case "analyze_project_stats": {
-        const assetsResult = await queryAssets({
-          projectId,
-          limit: 1000,
-        });
-
-        const assetStats = assetsResult.assets 
-          ? await analyzeAssetsByType(assetsResult.assets)
-          : { byType: {}, withoutImage: 0 };
-
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: {
-            totalAssets: assetsResult.total || 0,
-            assetsByType: assetStats.byType,
-            assetsWithoutImage: assetStats.withoutImage,
-          },
-        };
-        break;
-      }
-
-      case "query_available_art_styles": {
-        const styles = await getSystemArtStyles();
-        
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: {
-            styles,
-            message: `找到 ${styles.length} 个系统预设风格`,
-          },
+          data: { shots, total: shots.length },
         };
         break;
       }
 
       // ============================================
-      // 创建类
+      // 创作类
       // ============================================
-      case "create_shot": {
-        // 获取当前剧集的分镜数量以确定 order
-        let order = parameters.order ? parseInt(parameters.order as string) : undefined;
-        
-        if (order === undefined) {
-          const existingShots = await db.query.shot.findMany({
-            where: eq(shot.episodeId, parameters.episodeId as string),
-          });
-          order = existingShots.length + 1;
-        }
-
-        const createResult = await createShot({
-          episodeId: parameters.episodeId as string,
-          order,
-          shotSize: parameters.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
-          cameraMovement: (parameters.cameraMovement as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down") || "static",
-          duration: parameters.duration ? parseInt(parameters.duration as string) : 3000,
-          description: parameters.description as string,
-          visualPrompt: parameters.visualPrompt as string | undefined,
-        });
-
-        result = {
-          functionCallId: functionCall.id,
-          success: createResult.success,
-          data: createResult.data,
-          error: createResult.error,
-        };
-        break;
-      }
-
-      case "batch_create_shots": {
-        // 解析 shots 参数，支持数组或 JSON 字符串
-        let shotsData: Array<{
+      case "create_shots": {
+        const episodeId = parameters.episodeId as string;
+        const shots = parameters.shots as Array<{
           shotSize: string;
           description: string;
           order?: number;
           cameraMovement?: string;
           duration?: number;
           visualPrompt?: string;
-          audioPrompt?: string;
-          imageAssetId?: string;
         }>;
-        
-        if (Array.isArray(parameters.shots)) {
-          shotsData = parameters.shots;
-        } else {
-          try {
-            shotsData = JSON.parse(parameters.shots as string);
-          } catch (error) {
-            console.error("[executeFunction] 解析 shots 参数失败:", error);
-            return {
-              functionCallId: functionCall.id,
-              success: false,
-              error: "shots 参数格式错误",
-            };
-          }
-        }
 
         // 验证和转换数据
-        const validatedShots = shotsData.map((shotData) => ({
+        const validatedShots = shots.map((shotData) => ({
           shotSize: shotData.shotSize as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
           description: shotData.description,
           order: shotData.order,
           cameraMovement: shotData.cameraMovement as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down" | undefined,
           duration: shotData.duration,
           visualPrompt: shotData.visualPrompt,
-          audioPrompt: shotData.audioPrompt,
-          imageAssetId: shotData.imageAssetId,
         }));
 
         const batchResult = await batchCreateShots({
-          episodeId: parameters.episodeId as string,
+          episodeId,
           shots: validatedShots,
         });
 
@@ -276,155 +224,13 @@ export async function executeFunction(
         break;
       }
 
-      // ============================================
-      // 生成类
-      // ============================================
-      case "generate_shot_videos": {
-        // 解析 shotIds 参数，支持数组或 JSON 字符串
-        let shotIds: string[];
-        if (Array.isArray(parameters.shotIds)) {
-          shotIds = parameters.shotIds;
-        } else {
-          try {
-            shotIds = JSON.parse(parameters.shotIds as string);
-          } catch (error) {
-            console.error("[executeFunction] 解析 shotIds 参数失败:", error);
-            return {
-              functionCallId: functionCall.id,
-              success: false,
-              error: "shotIds 参数格式错误",
-            };
-          }
-        }
-        
-        const videoResult = await batchGenerateShotVideos(shotIds);
-
-        result = {
-          functionCallId: functionCall.id,
-          success: videoResult.success,
-          jobId: videoResult.jobId,
-          error: videoResult.error,
-        };
-        break;
-      }
-
-      case "generate_asset": {
-        // 解析标签
-        let parsedTags: string[] | undefined;
-        if (parameters.tags) {
-          const tagsStr = (parameters.tags as string).trim();
-          // 支持 JSON 数组格式和逗号分隔格式
-          if (tagsStr.startsWith('[')) {
-            parsedTags = JSON.parse(tagsStr);
-          } else {
-            parsedTags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
-          }
-        }
-
-        // 解析 sourceAssetIds
-        let parsedSourceAssetIds: string[] | undefined;
-        if (parameters.sourceAssetIds) {
-          // 如果已经是数组，直接使用
-          if (Array.isArray(parameters.sourceAssetIds)) {
-            parsedSourceAssetIds = parameters.sourceAssetIds;
-          } else {
-            // 如果是字符串，尝试解析 JSON
-            try {
-              const sourceStr = (parameters.sourceAssetIds as string).trim();
-              parsedSourceAssetIds = JSON.parse(sourceStr);
-            } catch (error) {
-              console.error("[executeFunction] 解析 sourceAssetIds 失败:", error);
-              // 如果解析失败，尝试按逗号分隔
-              parsedSourceAssetIds = (parameters.sourceAssetIds as string)
-                .split(',')
-                .map(id => id.trim())
-                .filter(Boolean);
-            }
-          }
-        }
-
-        // 生成素材名称（如果未提供）
-        const assetName = (parameters.name as string) || `AI生成-${Date.now()}`;
-
-        // 解析 numImages
-        const numImages = parameters.numImages ? parseInt(parameters.numImages as string) : 1;
-
-        // 第一步：立即创建素材记录（包含所有生成信息，但无图片）
-        const { createAssetInternal } = await import("../asset/crud");
-        const createResult = await createAssetInternal({
-          projectId,
-          userId: session.user.id,
-          name: assetName,
-          prompt: parameters.prompt as string,
-          tags: parsedTags,
-          modelUsed: "nano-banana",
-          sourceAssetIds: parsedSourceAssetIds,
-          derivationType: parsedSourceAssetIds ? "img2img" : "generate",
-          meta: {
-            generationParams: {
-              aspectRatio: "16:9" as "16:9" | "1:1" | "9:16", // 默认宽高比
-              numImages: numImages,
-            },
-          },
-        });
-
-        if (!createResult.success || !createResult.asset) {
-          result = {
-            functionCallId: functionCall.id,
-            success: false,
-            error: createResult.error || "创建素材失败",
-          };
-          break;
-        }
-
-        const assetId = createResult.asset.id;
-
-        // 第二步：创建图片生成任务，只需传入 assetId
-        const input: AssetImageGenerationInput = {
-          assetId, // 所有信息从 asset 读取
-        };
-
-        const jobResult = await createJob({
-          userId: session.user.id,
-          projectId,
-          type: "asset_image_generation",
-          inputData: input,
-        });
-
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: {
-            assetId, // 返回素材ID，Agent可立即使用
-            jobId: jobResult.jobId, // 任务ID用于跟踪
-          },
-        };
-        break;
-      }
-
-      case "batch_generate_assets": {
-        // 解析 assets 参数，支持数组或 JSON 字符串
-        let assetsData: Array<{
+      case "generate_assets": {
+        const assets = parameters.assets as Array<{
           name?: string;
           prompt: string;
-          tags?: string | string[];
+          tags?: string[];
           sourceAssetIds?: string[];
         }>;
-        
-        if (Array.isArray(parameters.assets)) {
-          assetsData = parameters.assets;
-        } else {
-          try {
-            assetsData = JSON.parse(parameters.assets as string);
-          } catch (error) {
-            console.error("[executeFunction] 解析 assets 参数失败:", error);
-            return {
-              functionCallId: functionCall.id,
-              success: false,
-              error: "assets 参数格式错误",
-            };
-          }
-        }
 
         const jobIds: string[] = [];
         const assetIds: string[] = [];
@@ -433,18 +239,8 @@ export async function executeFunction(
         // 为每个素材创建记录和独立的生成任务
         const { createAssetInternal } = await import("../asset/crud");
         
-        for (const assetData of assetsData) {
+        for (const assetData of assets) {
           try {
-            // 处理 tags：支持逗号分隔字符串或数组格式
-            let parsedTags: string[] | undefined;
-            if (assetData.tags) {
-              if (Array.isArray(assetData.tags)) {
-                parsedTags = assetData.tags;
-              } else {
-                parsedTags = assetData.tags.split(',').map(t => t.trim()).filter(Boolean);
-              }
-            }
-
             // 生成素材名称（如果未提供）
             const assetName = assetData.name || `AI生成-${Date.now()}`;
 
@@ -454,13 +250,13 @@ export async function executeFunction(
               userId: session.user.id,
               name: assetName,
               prompt: assetData.prompt,
-              tags: parsedTags,
+              tags: assetData.tags,
               modelUsed: "nano-banana",
               sourceAssetIds: assetData.sourceAssetIds,
               derivationType: assetData.sourceAssetIds ? "img2img" : "generate",
               meta: {
                 generationParams: {
-                  aspectRatio: "16:9" as "16:9" | "1:1" | "9:16", // 默认宽高比
+                  aspectRatio: "16:9" as "16:9" | "1:1" | "9:16",
                   numImages: 1,
                 },
               },
@@ -474,9 +270,9 @@ export async function executeFunction(
             const assetId = createResult.asset.id;
             assetIds.push(assetId);
 
-            // 创建图片生成任务，只需传入 assetId
+            // 创建图片生成任务
             const input: AssetImageGenerationInput = {
-              assetId, // 所有信息从 asset 读取
+              assetId,
             };
 
             const jobResult = await createJob({
@@ -504,9 +300,9 @@ export async function executeFunction(
           success: jobIds.length > 0,
           data: {
             jobIds,
-            assetIds, // 返回创建的素材ID列表
+            assetIds,
             createdCount: jobIds.length,
-            totalCount: assetsData.length,
+            totalCount: assets.length,
             errors: errors.length > 0 ? errors : undefined,
           },
           error: errors.length > 0 && jobIds.length === 0 
@@ -516,81 +312,97 @@ export async function executeFunction(
         break;
       }
 
+      case "generate_videos": {
+        const shotIds = parameters.shotIds as string[];
+        const videoResult = await batchGenerateShotVideos(shotIds);
+
+        result = {
+          functionCallId: functionCall.id,
+          success: videoResult.success,
+          jobId: videoResult.jobId,
+          error: videoResult.error,
+        };
+        break;
+      }
+
       // ============================================
       // 修改类
       // ============================================
-      case "update_shot": {
-        const updates: Record<string, unknown> = {};
-        
-        if (parameters.duration) updates.duration = parseInt(parameters.duration as string);
-        if (parameters.shotSize) updates.shotSize = parameters.shotSize;
-        if (parameters.cameraMovement) updates.cameraMovement = parameters.cameraMovement;
-        if (parameters.description) updates.description = parameters.description;
-        if (parameters.visualPrompt) updates.visualPrompt = parameters.visualPrompt;
-        if (parameters.imageAssetId) updates.imageAssetId = parameters.imageAssetId;
+      case "update_shots": {
+        const updates = parameters.updates as Array<{
+          shotId: string;
+          duration?: number;
+          shotSize?: string;
+          cameraMovement?: string;
+          description?: string;
+          visualPrompt?: string;
+          imageAssetId?: string;
+        }>;
 
-        const updateResult = await updateShot(parameters.shotId as string, updates);
+        const updateResults: Array<{ shotId: string; success: boolean; error?: string }> = [];
 
-        result = {
-          functionCallId: functionCall.id,
-          success: updateResult.success,
-          error: updateResult.error,
-        };
-        break;
-      }
-
-      case "update_asset": {
-        const updates: Record<string, unknown> = {};
-        
-        if (parameters.name) updates.name = parameters.name;
-        // Note: updateAsset 不支持直接更新 tags
-
-        const updateResult = await updateAsset(parameters.assetId as string, updates);
-
-        result = {
-          functionCallId: functionCall.id,
-          success: updateResult.success,
-          error: updateResult.error,
-        };
-        break;
-      }
-
-      case "reorder_shots": {
-        // 解析 shotOrders 参数，支持对象或 JSON 字符串
-        let shotOrdersRecord: Record<string, number>;
-        if (typeof parameters.shotOrders === 'object' && parameters.shotOrders !== null) {
-          shotOrdersRecord = parameters.shotOrders as Record<string, number>;
-        } else {
-          try {
-            shotOrdersRecord = JSON.parse(parameters.shotOrders as string);
-          } catch (error) {
-            console.error("[executeFunction] 解析 shotOrders 参数失败:", error);
-            return {
-              functionCallId: functionCall.id,
-              success: false,
-              error: "shotOrders 参数格式错误",
-            };
-          }
+        for (const update of updates) {
+          const { shotId, ...fields } = update;
+          const updateResult = await updateShot(shotId, fields);
+          updateResults.push({
+            shotId,
+            success: updateResult.success,
+            error: updateResult.error,
+          });
         }
-        // 转换为数组格式
-        const shotOrdersArray = Object.entries(shotOrdersRecord).map(([id, order]) => ({
-          id,
-          order,
-        }));
-        const reorderResult = await reorderShots(
-          parameters.episodeId as string,
-          shotOrdersArray
-        );
+
+        const successCount = updateResults.filter(r => r.success).length;
+        const errors = updateResults.filter(r => !r.success).map(r => `${r.shotId}: ${r.error}`);
 
         result = {
           functionCallId: functionCall.id,
-          success: reorderResult.success,
-          error: reorderResult.error,
+          success: successCount > 0,
+          data: {
+            updated: successCount,
+            total: updates.length,
+            errors: errors.length > 0 ? errors : undefined,
+          },
+          error: successCount === 0 ? `所有更新失败: ${errors.join("; ")}` : undefined,
         };
         break;
       }
 
-      case "set_project_art_style": {
+      case "update_assets": {
+        const updates = parameters.updates as Array<{
+          assetId: string;
+          name?: string;
+          tags?: string[];
+        }>;
+
+        const updateResults: Array<{ assetId: string; success: boolean; error?: string }> = [];
+
+        for (const update of updates) {
+          const { assetId, ...fields } = update;
+          const updateResult = await updateAsset(assetId, fields);
+          updateResults.push({
+            assetId,
+            success: updateResult.success,
+            error: updateResult.error,
+          });
+        }
+
+        const successCount = updateResults.filter(r => r.success).length;
+        const errors = updateResults.filter(r => !r.success).map(r => `${r.assetId}: ${r.error}`);
+
+        result = {
+          functionCallId: functionCall.id,
+          success: successCount > 0,
+          data: {
+            updated: successCount,
+            total: updates.length,
+            errors: errors.length > 0 ? errors : undefined,
+          },
+          error: successCount === 0 ? `所有更新失败: ${errors.join("; ")}` : undefined,
+        };
+        break;
+      }
+
+      case "set_art_style": {
         const updateResult = await updateProject(
           projectId,
           { styleId: parameters.styleId as string }
@@ -609,22 +421,7 @@ export async function executeFunction(
       // 删除类
       // ============================================
       case "delete_shots": {
-        // 解析 shotIds 参数，支持数组或 JSON 字符串
-        let shotIds: string[];
-        if (Array.isArray(parameters.shotIds)) {
-          shotIds = parameters.shotIds;
-        } else {
-          try {
-            shotIds = JSON.parse(parameters.shotIds as string);
-          } catch (error) {
-            console.error("[executeFunction] 解析 shotIds 参数失败:", error);
-            return {
-              functionCallId: functionCall.id,
-              success: false,
-              error: "shotIds 参数格式错误",
-            };
-          }
-        }
+        const shotIds = parameters.shotIds as string[];
 
         for (const shotId of shotIds) {
           await deleteShot(shotId);
@@ -638,13 +435,31 @@ export async function executeFunction(
         break;
       }
 
-      case "delete_asset": {
-        const deleteResult = await deleteAsset(parameters.assetId as string);
+      case "delete_assets": {
+        const assetIds = parameters.assetIds as string[];
+        const deleteResults: Array<{ assetId: string; success: boolean; error?: string }> = [];
+
+        for (const assetId of assetIds) {
+          const deleteResult = await deleteAsset(assetId);
+          deleteResults.push({
+            assetId,
+            success: deleteResult.success,
+            error: deleteResult.error,
+          });
+        }
+
+        const successCount = deleteResults.filter(r => r.success).length;
+        const errors = deleteResults.filter(r => !r.success).map(r => `${r.assetId}: ${r.error}`);
 
         result = {
           functionCallId: functionCall.id,
-          success: deleteResult.success,
-          error: deleteResult.error,
+          success: successCount > 0,
+          data: {
+            deleted: successCount,
+            total: assetIds.length,
+            errors: errors.length > 0 ? errors : undefined,
+          },
+          error: successCount === 0 ? `所有删除失败: ${errors.join("; ")}` : undefined,
         };
         break;
       }
@@ -667,4 +482,3 @@ export async function executeFunction(
     };
   }
 }
-

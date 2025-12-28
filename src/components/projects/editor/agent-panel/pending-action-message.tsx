@@ -173,89 +173,72 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const iconColor = "text-primary";
 
   // 判断是否为生成素材操作
-  const isGenerateAsset = action.functionCall.name === "generate_asset";
-  const isBatchGenerateAssets = action.functionCall.name === "batch_generate_assets";
+  const isGenerateAssets = action.functionCall.name === "generate_assets";
 
   // 格式化参数（针对生成素材操作特殊处理）
   const formattedParams = useMemo(() => {
-    if (isGenerateAsset) {
-      // generate_asset: 过滤projectId，展示prompt、name、tags、sourceAssetIds
-      return formatParametersForConfirmation(action.functionCall.arguments);
-    } else if (isBatchGenerateAssets) {
-      // batch_generate_assets: 返回空数组，因为需要单独处理assets数组
+    if (isGenerateAssets) {
+      // generate_assets: 返回空数组，因为需要单独处理assets数组
       return [];
     } else {
       // 其他操作：使用标准格式化
       return formatParametersForConfirmation(action.functionCall.arguments);
     }
-  }, [action.functionCall.arguments, isGenerateAsset, isBatchGenerateAssets]);
+  }, [action.functionCall.arguments, isGenerateAssets]);
 
-  // 提取单个生成素材的参考图ID
-  const singleAssetSourceIds = useMemo(() => {
-    if (!isGenerateAsset) return [];
-    const sourceAssetIds = action.functionCall.arguments.sourceAssetIds;
-    if (Array.isArray(sourceAssetIds)) {
-      return sourceAssetIds;
-    }
-    if (typeof sourceAssetIds === "string") {
-      try {
-        const parsed = JSON.parse(sourceAssetIds);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      } catch {
-        // 不是JSON，忽略
-      }
-    }
-    return [];
-  }, [isGenerateAsset, action.functionCall.arguments]);
-
-  // 解析批量生成素材的assets数组
-  const batchAssets = useMemo(() => {
-    if (!isBatchGenerateAssets) return null;
+  // 解析生成素材的assets数组
+  const generationAssets = useMemo(() => {
+    if (!isGenerateAssets) return null;
     
     try {
-      const assetsStr = action.functionCall.arguments.assets;
-      if (typeof assetsStr === "string") {
-        const parsed = JSON.parse(assetsStr);
-        if (Array.isArray(parsed)) {
-          return parsed.map((asset: Record<string, unknown>) => {
-            const prompt = asset.prompt || "-";
-            const truncatedPrompt = typeof prompt === "string" && prompt !== "-" && prompt.length > 100 
-              ? prompt.slice(0, 100) + "..." 
-              : prompt;
-            
-            // 提取参考图ID
-            let sourceAssetIds: string[] = [];
-            if (Array.isArray(asset.sourceAssetIds)) {
-              sourceAssetIds = asset.sourceAssetIds as string[];
-            } else if (typeof asset.sourceAssetIds === "string") {
-              try {
-                const parsed = JSON.parse(asset.sourceAssetIds);
-                if (Array.isArray(parsed)) {
-                  sourceAssetIds = parsed;
-                }
-              } catch {
-                // 不是JSON，忽略
-              }
-            }
-            
-            return {
-              name: typeof asset.name === "string" ? asset.name : "-",
-              prompt: typeof truncatedPrompt === "string" ? truncatedPrompt : "-",
-              tags: Array.isArray(asset.tags) 
-                ? asset.tags.join(", ") 
-                : (typeof asset.tags === "string" ? asset.tags : "-"),
-              sourceAssetIds,
-            };
-          });
-        }
+      const assetsArg = action.functionCall.arguments.assets;
+      let assetsArray: Array<Record<string, unknown>>;
+
+      // 兼容数组和JSON字符串
+      if (Array.isArray(assetsArg)) {
+        assetsArray = assetsArg;
+      } else if (typeof assetsArg === "string") {
+        assetsArray = JSON.parse(assetsArg);
+      } else {
+        return null;
       }
+
+      if (!Array.isArray(assetsArray)) return null;
+
+      return assetsArray.map((asset: Record<string, unknown>) => {
+        const prompt = asset.prompt || "-";
+        const name = asset.name || "未命名";
+        const tags = Array.isArray(asset.tags) 
+          ? asset.tags.join(", ") 
+          : (typeof asset.tags === "string" ? asset.tags : "-");
+        
+        // 提取sourceAssetIds（用于图生图）
+        let sourceIds: string[] = [];
+        if (Array.isArray(asset.sourceAssetIds)) {
+          sourceIds = asset.sourceAssetIds as string[];
+        } else if (typeof asset.sourceAssetIds === "string") {
+          try {
+            const parsed = JSON.parse(asset.sourceAssetIds);
+            if (Array.isArray(parsed)) {
+              sourceIds = parsed;
+            }
+          } catch {
+            // 不是JSON，忽略
+          }
+        }
+
+        return {
+          name: name as string,
+          prompt: prompt as string,
+          tags: tags as string,
+          sourceAssetIds: sourceIds,
+        };
+      });
     } catch (error) {
-      console.error("解析批量生成素材参数失败:", error);
+      console.error("解析assets数组失败:", error);
+      return null;
     }
-    return null;
-  }, [isBatchGenerateAssets, action.functionCall.arguments]);
+  }, [isGenerateAssets, action.functionCall.arguments]);
 
   return (
     <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
@@ -274,11 +257,11 @@ export const PendingActionMessage = memo(function PendingActionMessage({
 
         {/* Function Call Details */}
         <div className="space-y-2 pl-9">
-          {isBatchGenerateAssets ? (
-            /* 批量生成素材：为每个素材显示一个卡片 */
-            batchAssets && batchAssets.length > 0 ? (
+          {isGenerateAssets ? (
+            /* 生成素材：为每个素材显示一个卡片 */
+            generationAssets && generationAssets.length > 0 ? (
               <div className="space-y-2">
-                {batchAssets.map((asset, index) => (
+                {generationAssets.map((asset, index) => (
                   <div key={index} className="rounded-md bg-background/50 border border-border/50 p-2.5">
                     <div className="space-y-1.5">
                       {asset.name && asset.name !== "-" && (

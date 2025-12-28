@@ -30,8 +30,8 @@ export async function estimateActionCredits(
 
     for (const fc of functionCalls) {
       try {
-        if (fc.name === "generate_shot_videos") {
-          const shotIds = JSON.parse(fc.parameters.shotIds as string) as string[];
+        if (fc.name === "generate_videos") {
+          const shotIds = fc.parameters.shotIds as string[];
           shotIds.forEach((id) => shotIdsToQuery.add(id));
         }
       } catch (error) {
