@@ -338,18 +338,6 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                       )}
                     </div>
                   ))}
-                  {/* 如果有参考图但不在格式化参数中（被过滤了），单独显示 */}
-                  {isGenerateAsset && singleAssetSourceIds.length > 0 && 
-                   !formattedParams.some(p => p.key === "sourceAssetIds") && (
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground">参考图:</span>
-                        <span className="text-xs text-foreground">{singleAssetSourceIds.length}张</span>
-                      </div>
-                      <AssetPreview assetIds={singleAssetSourceIds} />
-                    </div>
-                  )}
                 </div>
               </div>
             )
