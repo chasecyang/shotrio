@@ -35,7 +35,6 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const t = useTranslations();
   
   const [input, setInput] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -196,7 +195,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       }
     },
     onComplete: () => {
-      setIsProcessing(false);
+      // 设置 loading 状态为 false（由 context 统一管理）
+      agent.setLoading(false);
       
       // 尝试生成标题（主要路径）
       tryGenerateTitle("onComplete");
@@ -205,7 +205,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       setTimeout(() => agent.refreshConversations(true), 100);
     },
     onError: (error) => {
-      setIsProcessing(false);
+      // 设置 loading 状态为 false（由 context 统一管理）
+      agent.setLoading(false);
       console.error("Agent Stream 错误:", error);
       
       // 发生错误时清除引用
@@ -237,7 +238,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     if (scrollRef.current && isUserNearBottom) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [agent.state.messages, isProcessing, isUserNearBottom]);
+  }, [agent.state.messages, agent.state.isLoading, isUserNearBottom]);
 
   // 监听对话切换，清除保存的第一条消息引用
   useEffect(() => {
@@ -296,11 +297,11 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
   // 发送消息
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isProcessing) return;
+    if (!input.trim() || agent.state.isLoading) return;
 
     const userMessage = input.trim();
     setInput("");
-    setIsProcessing(true);
+    agent.setLoading(true);
 
     try {
       // 检查是否有pendingAction，如果有则将新消息作为拒绝理由
@@ -332,7 +333,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         
         if (!result.success || !result.conversationId) {
           toast.error(result.error || "创建对话失败");
-          setIsProcessing(false);
+          agent.setLoading(false);
           return;
         }
         
@@ -368,13 +369,13 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       // 使用 hook 发送消息
       await sendMessage(userMessage, agent.currentContext, conversationId);
     } catch (error) {
-      setIsProcessing(false);
+      agent.setLoading(false);
       console.error("发送消息失败:", error);
       toast.error("发送失败");
       // 如果发送失败，清除保存的第一条消息引用
       firstUserMessageRef.current = null;
     }
-  }, [input, isProcessing, agent, projectId, sendMessage, resumeConversation, t]);
+  }, [input, agent, projectId, sendMessage, resumeConversation, t]);
 
   // 停止 AI 生成
   const handleStop = useCallback(() => {
@@ -424,7 +425,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         <div className="flex-1 overflow-hidden relative">
           <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
             <div className="py-2">
-              {agent.state.isNewConversation || (agent.state.messages.length === 0 && !isProcessing) ? (
+              {agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading) ? (
                 <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                   <Bot className="mb-4 h-12 w-12 text-muted-foreground" />
                   <p className="text-lg font-medium mb-2">
@@ -446,7 +447,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
                       currentBalance={creditBalance}
                     />
                   ))}
-                  {isProcessing && <TypingIndicator />}
+                  {agent.state.isLoading && <TypingIndicator />}
                 </>
               )}
             </div>
@@ -476,17 +477,17 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               onKeyDown={handleKeyDown}
               placeholder={t('editor.agent.chatInput.placeholder')}
               className="min-h-[60px] max-h-[120px] resize-none"
-              disabled={isProcessing}
+              disabled={agent.state.isLoading}
             />
             <Button
-              onClick={isProcessing ? handleStop : handleSend}
-              disabled={!isProcessing && !input.trim()}
+              onClick={agent.state.isLoading ? handleStop : handleSend}
+              disabled={!agent.state.isLoading && !input.trim()}
               size="icon"
-              variant={isProcessing ? "destructive" : "default"}
+              variant={agent.state.isLoading ? "destructive" : "default"}
               className="h-[60px] w-[60px] shrink-0"
-              title={isProcessing ? t('editor.agent.chatInput.stopGeneration') : t('editor.agent.chatInput.sendMessage')}
+              title={agent.state.isLoading ? t('editor.agent.chatInput.stopGeneration') : t('editor.agent.chatInput.sendMessage')}
             >
-              {isProcessing ? (
+              {agent.state.isLoading ? (
                 <Square className="h-5 w-5" />
               ) : (
                 <Send className="h-5 w-5" />
@@ -494,7 +495,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             </Button>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            {isProcessing ? t('editor.agent.chatInput.stopToInterrupt') : t('editor.agent.chatInput.enterToSend')}
+            {agent.state.isLoading ? t('editor.agent.chatInput.stopToInterrupt') : t('editor.agent.chatInput.enterToSend')}
           </p>
         </div>
     </div>

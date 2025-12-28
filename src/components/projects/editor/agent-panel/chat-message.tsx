@@ -53,6 +53,9 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
       }
     },
     onComplete: () => {
+      // 设置 loading 状态为 false（由 context 统一管理）
+      agent.setLoading(false);
+      
       // 如果是分镜相关操作，刷新时间轴
       if (isShotRelatedAction) {
         setTimeout(() => {
@@ -66,6 +69,8 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
       }, 100);
     },
     onError: (error) => {
+      // 设置 loading 状态为 false（由 context 统一管理）
+      agent.setLoading(false);
       console.error("Agent Stream 错误:", error);
       toast.error("操作失败");
     },
@@ -82,12 +87,17 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
 
       toast.success("操作已确认，Agent 正在继续...");
 
+      // 设置 loading 状态
+      agent.setLoading(true);
+
       // 恢复对话，Engine 会自动执行已确认的操作
       // pendingAction 的清除由后端通过 state_update 事件管理
       await resumeConversation(agent.state.currentConversationId, true);
     } catch (error) {
       console.error("确认操作失败:", error);
       toast.error("确认操作失败");
+      // 出错时清除 loading 状态
+      agent.setLoading(false);
     } finally {
       setIsConfirming(false);
     }
@@ -103,12 +113,17 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
 
       toast.info("操作已拒绝，Agent 正在提供替代方案...");
 
+      // 设置 loading 状态
+      agent.setLoading(true);
+
       // 恢复对话（拒绝操作）
       // pendingAction 的清除由后端通过 state_update 事件管理
       await resumeConversation(agent.state.currentConversationId, false, "用户拒绝了此操作");
     } catch (error) {
       console.error("拒绝操作失败:", error);
       toast.error("拒绝操作失败");
+      // 出错时清除 loading 状态
+      agent.setLoading(false);
     } finally {
       setIsRejecting(false);
     }
