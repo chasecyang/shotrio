@@ -99,7 +99,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         shots: {
           type: "array",
-          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt)。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
+          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt)。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。默认3秒。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
         },
       },
       required: ["episodeId", "shots"],
@@ -183,7 +183,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         updates: {
           type: "array",
-          description: "更新数组，每项包含 shotId（必填）和要修改的字段（duration, shotSize, cameraMovement, description, visualPrompt, imageAssetId）。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
+          description: "更新数组，每项包含 shotId（必填）和要修改的字段（duration, shotSize, cameraMovement, description, visualPrompt, imageAssetId）。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
         },
       },
       required: ["updates"],

@@ -265,14 +265,14 @@ export const PendingActionMessage = memo(function PendingActionMessage({
         const description = shot.description || "-";
         const shotSize = shot.shotSize as string || "-";
         const cameraMovement = shot.cameraMovement as string || "static";
-        const duration = typeof shot.duration === "number" ? shot.duration : 3000;
+        // Agent传的是秒，直接使用，不需要除以1000
+        const durationSeconds = typeof shot.duration === "number" ? shot.duration : 3;
         const order = typeof shot.order === "number" ? shot.order : index + 1;
         const visualPrompt = shot.visualPrompt as string || "";
         
         // 翻译枚举值
         const shotSizeLabel = ENUM_VALUE_LABELS.shotSize?.[shotSize] || shotSize;
         const cameraMovementLabel = ENUM_VALUE_LABELS.cameraMovement?.[cameraMovement] || cameraMovement;
-        const durationSeconds = duration / 1000;
 
         return {
           order,
@@ -281,8 +281,8 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           shotSizeLabel,
           cameraMovement: cameraMovement as string,
           cameraMovementLabel,
-          duration,
-          durationSeconds,
+          duration: durationSeconds * 1000, // 保留毫秒字段用于内部计算（如果需要）
+          durationSeconds, // 直接用秒显示
           visualPrompt: visualPrompt as string,
         };
       });
@@ -330,8 +330,9 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           changes.push({ key: "cameraMovement", label: "运镜", value: label });
         }
         if (update.duration !== undefined) {
-          const duration = Number(update.duration);
-          changes.push({ key: "duration", label: "时长", value: `${duration / 1000}秒` });
+          // Agent传的是秒，直接显示
+          const durationSeconds = typeof update.duration === "number" ? update.duration : 3;
+          changes.push({ key: "duration", label: "时长", value: `${durationSeconds}秒` });
         }
         if (update.visualPrompt !== undefined) {
           changes.push({ key: "visualPrompt", label: "视觉提示词", value: String(update.visualPrompt) });

@@ -285,7 +285,8 @@ export async function executeFunction(
             cameraMovement: shotData.cameraMovement 
               ? mapCameraMovement(shotData.cameraMovement) as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down"
               : undefined,
-            duration: shotData.duration,
+            // 将秒转换为毫秒
+            duration: shotData.duration !== undefined ? Math.round(shotData.duration * 1000) : undefined,
             visualPrompt: shotData.visualPrompt,
           }));
 
@@ -475,6 +476,10 @@ export async function executeFunction(
             }
             if (fields.cameraMovement) {
               mappedFields.cameraMovement = mapCameraMovement(fields.cameraMovement);
+            }
+            // 将秒转换为毫秒
+            if (fields.duration !== undefined) {
+              mappedFields.duration = Math.round(fields.duration * 1000);
             }
             
             const updateResult = await updateShot(shotId, mappedFields);
