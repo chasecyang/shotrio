@@ -16,7 +16,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
 import { createShot, deleteShot } from "@/lib/actions/project";
 import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
-import { batchGenerateShotVideos } from "@/lib/actions/video/generate";
 import { getExportableShots } from "@/lib/actions/video/export";
 import { toast } from "sonner";
 import { Monitor, ArrowLeft } from "lucide-react";
@@ -184,36 +183,6 @@ function EditorLayoutInner({
     }
   };
 
-  // 批量生成视频
-  const handleGenerateVideos = async () => {
-    if (state.selectedShotIds.length === 0) {
-      toast.error(t("errors.selectShotsForVideo"));
-      return;
-    }
-
-    // 检查选中的分镜是否都有图片
-    const shotsWithoutImages = state.shots.filter(
-      s => state.selectedShotIds.includes(s.id) && !s.imageAsset?.imageUrl
-    );
-
-    if (shotsWithoutImages.length > 0) {
-      toast.error(t("errors.shotsWithoutImages", { count: shotsWithoutImages.length }));
-      return;
-    }
-
-    try {
-      const result = await batchGenerateShotVideos(state.selectedShotIds);
-      if (result.success) {
-        toast.success(t("success.batchVideoTaskStarted", { count: state.selectedShotIds.length }));
-      } else {
-        toast.error(result.error || t("errors.addShotFailed"));
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(t("errors.addShotFailed"));
-    }
-  };
-
   // 批量导出视频
   const handleExportVideos = async () => {
     if (state.selectedShotIds.length === 0) {
@@ -341,7 +310,6 @@ function EditorLayoutInner({
             <PreviewPanel
               onAddShot={handleAddShot}
               onDeleteShots={handleDeleteShots}
-              onGenerateVideos={handleGenerateVideos}
               onExportVideos={handleExportVideos}
               isExportingVideos={isExportingVideos}
             />

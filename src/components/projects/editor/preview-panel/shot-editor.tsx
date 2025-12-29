@@ -23,6 +23,7 @@ import {
 import { 
   updateShot as updateShotAction, 
 } from "@/lib/actions/project";
+import { addShotAsset, removeShotAsset } from "@/lib/actions/project/shot-asset";
 import { generateShotVideo } from "@/lib/actions/video/generate";
 import { toast } from "sonner";
 import {
@@ -81,6 +82,10 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUpdatingAsset, setIsUpdatingAsset] = useState(false);
+
+  // 获取第一张关联素材
+  const firstAsset = shot.shotAssets?.[0];
+  const hasImage = !!firstAsset?.asset?.imageUrl;
   
   // 拖拽状态
   const [isDragOver, setIsDragOver] = useState(false);
@@ -240,7 +245,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
 
   // 处理生成视频
   const handleGenerateVideo = async () => {
-    if (!shot.imageAsset?.imageUrl) {
+    if (!hasImage) {
       toast.error(tToast("error.generateShotImageFirst"));
       return;
     }
@@ -262,12 +267,21 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     }
   };
 
-  // 更新分镜素材的通用方法
+  // 添加或更新分镜素材
   const updateShotAsset = async (assetId: string) => {
     setIsUpdatingAsset(true);
     try {
-      const result = await updateShotAction(shot.id, {
-        imageAssetId: assetId,
+      // 如果已有素材，先删除
+      if (firstAsset) {
+        await removeShotAsset(firstAsset.id);
+      }
+      
+      // 添加新素材（作为首帧）
+      const result = await addShotAsset({
+        shotId: shot.id,
+        assetId,
+        label: "首帧",
+        order: 0,
       });
 
       if (result.success) {
@@ -297,11 +311,11 @@ export function ShotEditor({ shot }: ShotEditorProps) {
 
   // 处理清除素材
   const handleClearAsset = async () => {
+    if (!firstAsset) return;
+    
     setIsUpdatingAsset(true);
     try {
-      const result = await updateShotAction(shot.id, {
-        imageAssetId: null,
-      });
+      const result = await removeShotAsset(firstAsset.id);
 
       if (result.success) {
         toast.success("已清除素材");
@@ -433,10 +447,10 @@ export function ShotEditor({ shot }: ShotEditorProps) {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              {shot.imageAsset?.imageUrl ? (
+              {firstAsset?.asset?.imageUrl ? (
                 <>
                   <Image
-                    src={shot.imageAsset.imageUrl}
+                    src={firstAsset.asset.imageUrl}
                     alt={`分镜 ${shot.order}`}
                     fill
                     className="object-contain"
@@ -536,7 +550,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
                   <Progress value={videoGenerationProgress} className="w-full max-w-[200px] mx-auto" />
                   <p className="text-xs text-muted-foreground mt-2">{videoGenerationProgress}%</p>
                 </div>
-              ) : shot.imageAsset?.imageUrl ? (
+              ) : hasImage ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -714,7 +728,7 @@ export function ShotEditor({ shot }: ShotEditorProps) {
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 {filteredAssets.map((asset) => {
-                  const isSelected = shot.imageAssetId === asset.id;
+                  const isSelected = firstAsset?.assetId === asset.id;
                   return (
                     <button
                       key={asset.id}

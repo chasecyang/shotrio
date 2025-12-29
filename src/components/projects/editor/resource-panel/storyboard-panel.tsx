@@ -74,6 +74,7 @@ export function StoryboardPanel() {
           {shots.map((shot) => {
             const isSelected = selectedShotIds.includes(shot.id);
             const duration = shot.duration || 3000;
+            const firstAsset = shot.shotAssets?.[0]?.asset;
 
             return (
               <div
@@ -88,10 +89,10 @@ export function StoryboardPanel() {
                 <div className="flex gap-3">
                   {/* 缩略图 */}
                   <div className="relative w-20 h-14 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                    {shot.imageAsset?.imageUrl ? (
+                    {firstAsset?.imageUrl ? (
                       <>
                         <Image
-                          src={shot.imageAsset.imageUrl}
+                          src={firstAsset.imageUrl}
                           alt={`分镜 #${shot.order}`}
                           fill
                           className="object-cover"
@@ -122,7 +123,7 @@ export function StoryboardPanel() {
                       <div className="ml-auto flex items-center gap-1">
                         {shot.videoUrl ? (
                           <Video className="w-3.5 h-3.5 text-primary" />
-                        ) : shot.imageAsset?.imageUrl ? (
+                        ) : firstAsset?.imageUrl ? (
                           <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
                         ) : (
                           <FileText className="w-3.5 h-3.5 text-muted-foreground/50" />

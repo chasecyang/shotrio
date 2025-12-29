@@ -8,7 +8,6 @@ import { registry } from "./processor-registry";
 import {
   processVideoGeneration,
   processShotVideoGeneration,
-  processBatchVideoGeneration,
   processFinalVideoExport,
 } from "./processors/video-processors";
 import { processAssetImageGeneration } from "./processors/asset-image-generation";
@@ -22,7 +21,6 @@ export function registerAllProcessors(): void {
     asset_image_generation: processAssetImageGeneration,
     video_generation: processVideoGeneration,
     shot_video_generation: processShotVideoGeneration,
-    batch_video_generation: processBatchVideoGeneration,
     final_video_export: processFinalVideoExport,
   });
 

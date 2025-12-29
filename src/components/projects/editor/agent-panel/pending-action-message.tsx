@@ -337,9 +337,6 @@ export const PendingActionMessage = memo(function PendingActionMessage({
         if (update.visualPrompt !== undefined) {
           changes.push({ key: "visualPrompt", label: "视觉提示词", value: String(update.visualPrompt) });
         }
-        if (update.imageAssetId !== undefined) {
-          changes.push({ key: "imageAssetId", label: "关联素材", value: String(update.imageAssetId) });
-        }
 
         return {
           shotId,

@@ -80,11 +80,6 @@ export function formatFunctionResult(
         return "已创建素材生成任务";
       }
 
-      case "generate_videos": {
-        const shotIds = Array.isArray(parameters.shotIds) ? (parameters.shotIds as string[]).length : 1;
-        return `已为 ${shotIds} 个分镜创建视频生成任务`;
-      }
-
       // ============================================
       // 修改类
       // ============================================

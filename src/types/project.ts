@@ -1,4 +1,4 @@
-import { project, episode, shot } from "@/lib/db/schemas/project";
+import { project, episode, shot, shotAsset, shotVideo } from "@/lib/db/schemas/project";
 import type { ArtStyle } from "./art-style";
 import type { Asset as AssetType, AssetWithTags } from "./asset";
 
@@ -11,6 +11,12 @@ export type NewEpisode = typeof episode.$inferInsert;
 
 export type Shot = typeof shot.$inferSelect;
 export type NewShot = typeof shot.$inferInsert;
+
+export type ShotAsset = typeof shotAsset.$inferSelect;
+export type NewShotAsset = typeof shotAsset.$inferInsert;
+
+export type ShotVideo = typeof shotVideo.$inferSelect;
+export type NewShotVideo = typeof shotVideo.$inferInsert;
 
 // 重新导出Asset类型
 export type { AssetType, AssetWithTags };
@@ -40,8 +46,17 @@ export interface ScriptDetail extends Episode {
 }
 
 // 分镜相关类型
+export interface ShotAssetWithAsset extends ShotAsset {
+  asset: AssetType;
+}
+
 export interface ShotDetail extends Shot {
-  imageAsset?: AssetType | null;
+  // 多张关联图片（通过 shotAsset 多对多表）
+  shotAssets?: ShotAssetWithAsset[];
+  // 当前使用的视频版本
+  currentVideo?: ShotVideo | null;
+  // 所有视频版本
+  shotVideos?: ShotVideo[];
 }
 
 // 景别类型

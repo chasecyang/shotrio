@@ -529,7 +529,6 @@
       "asset_image_generation": "素材图片生成",
       "video_generation": "视频生成",
       "shot_video_generation": "单镜视频生成",
-      "batch_video_generation": "批量视频生成",
       "shot_tts_generation": "语音合成",
       "final_video_export": "最终成片导出",
       "unknown": "未知任务"
@@ -1152,7 +1151,6 @@
       "success": {
         "shotAdded": "分镜已添加",
         "shotsDeleted": "已删除 {count} 个分镜",
-        "batchVideoTaskStarted": "已启动 {count} 个分镜的视频生成任务",
         "videosExported": "成功导出 {count} 个视频"
       },
       "loading": {

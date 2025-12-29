@@ -48,10 +48,6 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
     type: "shot",
     refreshOn: ["completed"],
   },
-  batch_video_generation: {
-    type: "episode",
-    refreshOn: ["completed"],
-  },
 
   // 提取任务
   character_extraction: {

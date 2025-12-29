@@ -83,12 +83,6 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         return count > 0 ? `生成 ${count} 个素材` : "生成素材";
       }
 
-      case "generate_videos": {
-        const shotIds = parameters.shotIds as string[];
-        const count = shotIds?.length || 0;
-        return count > 0 ? `生成 ${count} 个分镜视频` : "生成分镜视频";
-      }
-
       // ============================================
       // 修改类操作
       // ============================================

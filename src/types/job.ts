@@ -5,7 +5,6 @@ export type JobType =
   | "asset_image_generation" // 素材图片生成
   | "video_generation" // 视频生成
   | "shot_video_generation" // 单镜视频生成
-  | "batch_video_generation" // 批量视频生成
   | "shot_tts_generation" // 单镜TTS生成
   | "final_video_export"; // 最终成片导出
 
@@ -86,13 +85,10 @@ export interface AssetImageGenerationResult {
   errors?: string[];
 }
 
-// 单镜视频生成输入
+// 单镜视频生成输入（新架构）
 export interface ShotVideoGenerationInput {
   shotId: string;
-  imageUrl: string; // 图片URL（从关联的 imageAsset 获取）
-  prompt: string; // 运动提示词
-  duration: "5" | "10"; // 视频时长
-  regenerate?: boolean; // 是否重新生成
+  videoConfigId: string; // shot_video 记录的 ID
 }
 
 // 单镜视频生成结果
@@ -100,25 +96,6 @@ export interface ShotVideoGenerationResult {
   shotId: string;
   videoUrl: string;
   duration: number;
-}
-
-// 批量视频生成输入
-export interface BatchVideoGenerationInput {
-  shotIds: string[];
-  concurrency?: number; // 并发数，默认3
-}
-
-// 批量视频生成结果
-export interface BatchVideoGenerationResult {
-  results: Array<{
-    shotId: string;
-    success: boolean;
-    videoUrl?: string;
-    error?: string;
-  }>;
-  totalCount: number;
-  successCount: number;
-  failedCount: number;
 }
 
 // 单镜TTS生成输入

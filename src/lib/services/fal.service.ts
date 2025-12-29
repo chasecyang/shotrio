@@ -351,6 +351,148 @@ export async function getImageToVideoResult(
   return result.data as ImageToVideoOutput;
 }
 
+// ============= Kling O1 Reference-to-Video 类型定义 =============
+
+/**
+ * Kling O1 Element - 角色/物体元素定义
+ */
+export interface KlingO1Element {
+  frontal_image_url: string;      // 主图（正面图/主要视角）
+  reference_image_urls?: string[]; // 参考图（其他角度/动作/表情）
+}
+
+/**
+ * Kling O1 Reference-to-Video 输入参数
+ * 
+ * 注意：如果要指定起始帧，将其放在 image_urls 的第一位，并在 prompt 中用 @Image1 引用
+ */
+export interface KlingO1ReferenceToVideoInput {
+  prompt: string;                     // 详细的运动描述，使用 @Element1, @Image1 等引用图片
+  elements?: KlingO1Element[];        // 角色/物体元素数组（最多7张图片总计）
+  image_urls?: string[];              // 参考图数组（用于风格、场景、起始帧等）
+  duration?: VideoDuration;           // 视频时长：5秒或10秒
+  aspect_ratio?: VideoAspectRatio;    // 宽高比
+  negative_prompt?: string;           // 负面提示词
+}
+
+// ============= Kling O1 Reference-to-Video 接口 =============
+
+/**
+ * 使用 Kling O1 Reference-to-Video API 生成视频
+ * 
+ * 支持特性：
+ * - 多张参考图组合
+ * - 角色一致性（通过 elements）
+ * - 起始帧控制
+ * - 复杂镜头运动
+ * 
+ * API 文档: https://fal.ai/models/fal-ai/kling-video/o1/standard/reference-to-video
+ */
+export async function generateReferenceToVideo(
+  input: KlingO1ReferenceToVideoInput
+): Promise<ImageToVideoOutput> {
+  configureFal();
+
+  // 处理所有图片 URL（如果是 R2 key，转换为公开 URL）
+  const processImageUrl = async (url: string): Promise<string> => {
+    if (!url.startsWith("http")) {
+      const publicUrl = getImageUrl(url);
+      return publicUrl || url;
+    }
+    return url;
+  };
+
+  // 处理 elements
+  const processedElements = input.elements 
+    ? await Promise.all(
+        input.elements.map(async (element) => ({
+          frontal_image_url: await processImageUrl(element.frontal_image_url),
+          reference_image_urls: element.reference_image_urls
+            ? await Promise.all(element.reference_image_urls.map(processImageUrl))
+            : undefined,
+        }))
+      )
+    : undefined;
+
+  // 处理全局参考图
+  const processedImageUrls = input.image_urls
+    ? await Promise.all(input.image_urls.map(processImageUrl))
+    : undefined;
+
+  const result = await fal.subscribe(
+    "fal-ai/kling-video/o1/standard/reference-to-video",
+    {
+      input: {
+        prompt: input.prompt,
+        elements: processedElements,
+        image_urls: processedImageUrls,
+        duration: input.duration ?? "5",
+        aspect_ratio: input.aspect_ratio ?? "16:9",
+        negative_prompt: input.negative_prompt ?? "blur, distort, low quality, subtitles",
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      },
+    }
+  );
+
+  return result.data as ImageToVideoOutput;
+}
+
+/**
+ * 使用队列方式提交 Kling O1 Reference-to-Video 请求
+ */
+export async function queueReferenceToVideo(
+  input: KlingO1ReferenceToVideoInput,
+  webhookUrl?: string
+): Promise<{ request_id: string }> {
+  configureFal();
+
+  // 处理图片 URL（同上）
+  const processImageUrl = async (url: string): Promise<string> => {
+    if (!url.startsWith("http")) {
+      const publicUrl = getImageUrl(url);
+      return publicUrl || url;
+    }
+    return url;
+  };
+
+  const processedElements = input.elements 
+    ? await Promise.all(
+        input.elements.map(async (element) => ({
+          frontal_image_url: await processImageUrl(element.frontal_image_url),
+          reference_image_urls: element.reference_image_urls
+            ? await Promise.all(element.reference_image_urls.map(processImageUrl))
+            : undefined,
+        }))
+      )
+    : undefined;
+
+  const processedImageUrls = input.image_urls
+    ? await Promise.all(input.image_urls.map(processImageUrl))
+    : undefined;
+
+  const { request_id } = await fal.queue.submit(
+    "fal-ai/kling-video/o1/standard/reference-to-video",
+    {
+      input: {
+        prompt: input.prompt,
+        elements: processedElements,
+        image_urls: processedImageUrls,
+        duration: input.duration ?? "5",
+        aspect_ratio: input.aspect_ratio ?? "16:9",
+        negative_prompt: input.negative_prompt ?? "blur, distort, low quality, subtitles",
+      },
+      webhookUrl,
+    }
+  );
+
+  return { request_id };
+}
+
 // ============= Vision 接口 =============
 
 export interface VisionInput {

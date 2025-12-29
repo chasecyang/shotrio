@@ -9,7 +9,6 @@ import { TimelineContainer } from "../timeline/timeline-container";
 interface StoryboardPreviewProps {
   onAddShot?: () => void;
   onDeleteShots?: () => void;
-  onGenerateVideos?: () => void;
   onExportVideos?: () => void;
   isExportingVideos?: boolean;
 }
@@ -17,7 +16,6 @@ interface StoryboardPreviewProps {
 export function StoryboardPreview({
   onAddShot,
   onDeleteShots,
-  onGenerateVideos,
   onExportVideos,
   isExportingVideos,
 }: StoryboardPreviewProps) {
@@ -86,7 +84,6 @@ export function StoryboardPreview({
             <TimelineContainer
               onAddShot={onAddShot}
               onDeleteShots={onDeleteShots}
-              onGenerateVideos={onGenerateVideos}
               onExportVideos={onExportVideos}
               isExportingVideos={isExportingVideos}
             />

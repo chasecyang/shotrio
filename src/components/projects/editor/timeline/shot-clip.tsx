@@ -6,9 +6,7 @@ import { cn } from "@/lib/utils";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Image as ImageIcon, GripVertical, Video, FileText, Clock, Loader2 } from "lucide-react";
-import { updateShot } from "@/lib/actions/project";
 import { useEditor } from "../editor-context";
-import { toast } from "sonner";
 import { formatDuration } from "@/lib/utils/shot-utils";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -26,7 +24,9 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
   const { state, dispatch, jobs } = useEditor();
   const [isResizing, setIsResizing] = useState(false);
   const [originalDuration, setOriginalDuration] = useState(0);
-  const [isDragOver, setIsDragOver] = useState(false);
+
+  // 获取第一张关联素材作为缩略图
+  const firstAsset = shot.shotAssets?.[0]?.asset;
 
   const duration = shot.duration || 3000;
   const width = duration * pixelsPerMs;
@@ -119,48 +119,6 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
     [duration, originalDuration, pixelsPerMs, shot.id, state.shots, dispatch, tToast]
   );
 
-  // 处理素材拖拽放置
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-
-    try {
-      const data = e.dataTransfer.getData("application/json");
-      if (!data) return;
-
-      const { assetId } = JSON.parse(data);
-      if (!assetId) return;
-
-      // 更新分镜关联的素材
-      const result = await updateShot(shot.id, {
-        imageAssetId: assetId,
-      });
-
-      if (result.success) {
-        toast.success(tToast("success.assetApplied"));
-        // 刷新分镜数据
-        dispatch({ type: "UPDATE_SHOT", payload: { ...shot, imageAssetId: assetId } });
-      } else {
-        toast.error(result.error || tToast("error.applyAssetFailed"));
-      }
-    } catch (error) {
-      console.error("应用素材失败:", error);
-      toast.error(tToast("error.applyAssetFailed"));
-    }
-  }, [shot, dispatch, tToast]);
 
   return (
     <div
@@ -173,13 +131,9 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
           ? "border-primary ring-2 ring-primary/30"
           : "border-border hover:border-primary/40",
         isDragging && "opacity-50 z-50",
-        isResizing && "select-none",
-        isDragOver && "border-primary ring-2 ring-primary/50 bg-primary/10"
+        isResizing && "select-none"
       )}
       onClick={onClick}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {/* 分镜内容 */}
       <div className="absolute inset-0 flex">
@@ -195,10 +149,10 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
 
           {/* 缩略图 */}
           <div className="w-12 h-full rounded bg-muted/50 flex items-center justify-center overflow-hidden relative">
-            {shot.imageAsset?.imageUrl ? (
+            {firstAsset?.imageUrl ? (
               <>
                 <Image
-                  src={shot.imageAsset.imageUrl}
+                  src={firstAsset.imageUrl}
                   alt={`#${shot.order}`}
                   fill
                   className="object-cover"
@@ -260,10 +214,10 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
               {shot.videoUrl && (
                 <Video className="w-3 h-3 text-primary" />
               )}
-              {!shot.videoUrl && shot.imageAsset?.imageUrl && (
+              {!shot.videoUrl && firstAsset?.imageUrl && (
                 <ImageIcon className="w-3 h-3 text-blue-500" />
               )}
-              {!shot.videoUrl && !shot.imageAsset?.imageUrl && (
+              {!shot.videoUrl && !firstAsset?.imageUrl && (
                 <FileText className="w-3 h-3 text-muted-foreground/50" />
               )}
             </div>

@@ -33,11 +33,17 @@ export async function getEpisodeShots(
       where: eq(shot.episodeId, episodeId),
       orderBy: [asc(shot.order)],
       with: {
-        imageAsset: {
+        shotAssets: {
           with: {
-            tags: true,
+            asset: {
+              with: {
+                tags: true,
+              },
+            },
           },
+          orderBy: (shotAsset, { asc }) => [asc(shotAsset.order)],
         },
+        currentVideo: true,
       },
     });
 
@@ -60,7 +66,6 @@ export async function createShot(data: {
   description?: string;
   visualPrompt?: string;
   audioPrompt?: string;
-  imageAssetId?: string;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -89,9 +94,6 @@ export async function createShot(data: {
       description: data.description || null,
       visualPrompt: data.visualPrompt || null,
       audioPrompt: data.audioPrompt || null,
-      imageAssetId: data.imageAssetId || null,
-      videoUrl: null,
-      finalAudioUrl: null,
     };
 
     const [created] = await db.insert(shot).values(newShot).returning();
@@ -241,7 +243,6 @@ export async function batchCreateShots(data: {
     duration?: number;
     visualPrompt?: string;
     audioPrompt?: string;
-    imageAssetId?: string;
   }>;
 }) {
   const session = await auth.api.getSession({
@@ -318,9 +319,6 @@ export async function batchCreateShots(data: {
           description: shotData.description || null,
           visualPrompt: shotData.visualPrompt || null,
           audioPrompt: shotData.audioPrompt || null,
-          imageAssetId: shotData.imageAssetId || null,
-          videoUrl: null,
-          finalAudioUrl: null,
         };
 
         const [created] = await tx.insert(shot).values(newShot).returning();
@@ -365,9 +363,6 @@ export async function batchCreateShots(data: {
           description: shotData.description || null,
           visualPrompt: shotData.visualPrompt || null,
           audioPrompt: shotData.audioPrompt || null,
-          imageAssetId: shotData.imageAssetId || null,
-          videoUrl: null,
-          finalAudioUrl: null,
         };
 
         const [created] = await tx.insert(shot).values(newShot).returning();

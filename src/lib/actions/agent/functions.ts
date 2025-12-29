@@ -63,7 +63,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "query_shots",
-    description: "查询指定剧集的分镜详情。返回完整的分镜信息，包括描述、景别、运镜、时长等。",
+    description: "查询指定剧集的分镜详情。返回完整的分镜信息，包括描述、景别、运镜、时长、关联的素材（shotAssets）等。shotAssets 包含 label 和 imageUrl，用于视频生成时引用。",
     displayName: "查询分镜详情",
     parameters: {
       type: "object",
@@ -88,7 +88,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "create_shots",
-    description: "创建分镜（支持单个或批量）。可以指定order插入到特定位置。适合从剧本生成分镜脚本、补充新镜头等场景。",
+    description: "创建分镜（支持单个或批量）。可以指定order插入到特定位置，可以关联图片（首帧、尾帧、关键帧、角色/场景/道具参考等）并提供建议的生成配置。适合从剧本生成分镜脚本、补充新镜头等场景。",
     displayName: "创建分镜",
     parameters: {
       type: "object",
@@ -99,7 +99,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         shots: {
           type: "array",
-          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt)。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。默认3秒。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
+          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt, assets, suggestedConfig)。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。默认3秒。\n\n**assets**: 关联图片数组，每项包含 assetId（素材ID）和 label（语义化标签）。label 用于 AI 理解图片用途和在 prompt 中引用。\n\n**suggestedConfig**: 建议的视频生成配置，包含 prompt（包含 @label 占位符）和 duration（\"5\" 或 \"10\"）。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
         },
       },
       required: ["episodeId", "shots"],
@@ -125,18 +125,56 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "generate_videos",
-    description: "为分镜生成视频（支持单个或批量）。需要分镜已经有关联的图片。会创建异步任务。",
-    displayName: "生成视频",
+    name: "generate_shot_video",
+    description: `使用 Kling O1 Reference-to-Video API 为分镜生成视频。需要提供完整的视频生成参数。
+
+**Kling O1 参数结构说明：**
+
+1. **prompt**（必填）：详细的运动描述。可以使用 @Element1, @Image1 等引用图片。
+
+2. **elements**（可选）：角色/物体元素数组，用于保持角色一致性。
+   每个元素包含：
+   - frontal_image_url: 主图URL（如角色正面图）
+   - reference_image_urls: 参考图URL数组（如侧面、动作等）
+   
+   在 prompt 中使用 @Element1, @Element2 引用这些元素。
+
+3. **image_urls**（可选）：参考图URL数组，用于：
+   - 起始帧：放在第一位，在 prompt 中用 @Image1 引用（如 "Take @Image1 as the start frame..."）
+   - 风格/场景参考：其他位置，用 @Image2, @Image3 等引用
+   
+   注意：elements + image_urls 总数最多 7 张图片
+
+4. **duration**（可选）："5" 或 "10"，默认 "5"
+
+5. **aspect_ratio**（可选）："16:9", "9:16" 或 "1:1"，默认 "16:9"
+
+**使用建议：**
+- 先用 query_shots 查询分镜关联的素材，获取 imageUrl 和 label
+- 根据 label 的语义，将图片分类为 elements 或 image_urls
+- 如果有起始帧，将其放在 image_urls 的第一位
+- 在 prompt 中使用对应的引用占位符`,
+    displayName: "生成分镜视频",
     parameters: {
       type: "object",
       properties: {
-        shotIds: {
-          type: "array",
-          description: "分镜ID数组",
+        shotId: {
+          type: "string",
+          description: "分镜ID",
+        },
+        klingO1Config: {
+          type: "object",
+          description: `Kling O1 API 完整配置。包含：
+- prompt: 运动描述（必填）
+- elements: 角色元素数组（可选）
+- image_urls: 参考图URL数组（可选，起始帧放第一位）
+- duration: "5" 或 "10"（可选）
+- aspect_ratio: "16:9"/"9:16"/"1:1"（可选）
+
+注意：elements + image_urls 总数最多 7 张图片`,
         },
       },
-      required: ["shotIds"],
+      required: ["shotId", "klingO1Config"],
     },
     category: "generation",
     needsConfirmation: true,
@@ -176,14 +214,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "update_shots",
-    description: "修改分镜属性（支持单个或批量）。可以修改时长、景别、运镜、描述、视觉提示词，也可以关联素材到分镜。",
+    description: "修改分镜属性（支持单个或批量）。可以修改时长、景别、运镜、描述、视觉提示词。",
     displayName: "修改分镜",
     parameters: {
       type: "object",
       properties: {
         updates: {
           type: "array",
-          description: "更新数组，每项包含 shotId（必填）和要修改的字段（duration, shotSize, cameraMovement, description, visualPrompt, imageAssetId）。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
+          description: "更新数组，每项包含 shotId（必填）和要修改的字段（duration, shotSize, cameraMovement, description, visualPrompt）。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
         },
       },
       required: ["updates"],

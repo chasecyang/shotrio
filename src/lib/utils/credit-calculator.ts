@@ -63,42 +63,6 @@ export function estimateFunctionCallCredits(
 
   try {
     switch (name) {
-      case "generate_videos": {
-        // 单个或多个分镜视频生成
-        const shotIds = parameters.shotIds as string[];
-        
-        if (additionalData?.shotDurations) {
-          // 如果有具体的duration数据，计算精确值
-          let totalCredits = 0;
-          const durations: number[] = [];
-          
-          shotIds.forEach((shotId) => {
-            const durationMs = additionalData.shotDurations![shotId] || 3000;
-            const { credits, seconds } = calculateVideoCredits(durationMs);
-            totalCredits += credits;
-            durations.push(seconds);
-          });
-          
-          const avgSeconds = durations.reduce((a, b) => a + b, 0) / durations.length;
-          
-          return {
-            functionCallId: id,
-            functionName: name,
-            credits: totalCredits,
-            details: `${shotIds.length}个视频 (平均${avgSeconds}秒 × ${CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND}积分/秒)`,
-          };
-        } else {
-          // 保守估算：假设每个都是10秒
-          const creditsPerVideo = 10 * CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND;
-          return {
-            functionCallId: id,
-            functionName: name,
-            credits: shotIds.length * creditsPerVideo,
-            details: `${shotIds.length}个视频 (估算10秒 × ${CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND}积分/秒)`,
-          };
-        }
-      }
-
       case "generate_assets": {
         // 素材生成（单个或批量）
         const assets = parameters.assets as Array<{ numImages?: number }>;

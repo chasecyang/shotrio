@@ -15,7 +15,6 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   assetId: "素材ID",
   assetIds: "素材列表",
   sourceAssetIds: "参考图",
-  imageAssetId: "关联素材",
 
   // 内容属性
   prompt: "提示词",
@@ -245,7 +244,7 @@ const TECHNICAL_ID_PARAMS = new Set([
  * 判断参数是否为素材引用（assetId 或 assetIds）
  */
 function isAssetReferenceParam(key: string): boolean {
-  // 匹配 assetId, assetIds, imageAssetId, sourceAssetIds 等
+  // 匹配 assetId, assetIds, sourceAssetIds 等
   return /assetIds?$/i.test(key);
 }
 

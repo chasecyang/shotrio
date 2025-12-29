@@ -26,7 +26,13 @@ export async function refreshShot(shotId: string): Promise<{
     const shotData = await db.query.shot.findFirst({
       where: eq(shot.id, shotId),
       with: {
-        imageAsset: true,
+        shotAssets: {
+          with: {
+            asset: true,
+          },
+          orderBy: (shotAsset, { asc }) => [asc(shotAsset.order)],
+        },
+        currentVideo: true,
       },
     });
 
@@ -48,7 +54,7 @@ export async function refreshShot(shotId: string): Promise<{
 }
 
 /**
- * 刷新剧集的所有 shots
+ * 刷新剧集的所有 shots（包含关联的素材）
  */
 export async function refreshEpisodeShots(episodeId: string): Promise<{
   success: boolean;
@@ -67,7 +73,13 @@ export async function refreshEpisodeShots(episodeId: string): Promise<{
       where: eq(shot.episodeId, episodeId),
       orderBy: [asc(shot.order)],
       with: {
-        imageAsset: true,
+        shotAssets: {
+          with: {
+            asset: true,
+          },
+          orderBy: (shotAsset, { asc }) => [asc(shotAsset.order)],
+        },
+        currentVideo: true,
       },
     });
 

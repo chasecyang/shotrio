@@ -27,7 +27,6 @@ export const TASK_TYPE_ICONS: Record<JobType, string> = {
   asset_image_generation: "Sparkles",
   video_generation: "Video",
   shot_video_generation: "Video",
-  batch_video_generation: "Video",
   shot_tts_generation: "Sparkles",
   final_video_export: "Film",
 };

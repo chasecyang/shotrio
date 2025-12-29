@@ -773,7 +773,6 @@
       "asset_image_generation": "Asset Image Generation",
       "video_generation": "Video Generation",
       "shot_video_generation": "Shot Video Generation",
-      "batch_video_generation": "Batch Video Generation",
       "shot_tts_generation": "Text-to-Speech",
       "final_video_export": "Final Video Export",
       "unknown": "Unknown Task"
@@ -1150,7 +1149,6 @@
       "success": {
         "shotAdded": "Shot added",
         "shotsDeleted": "Deleted {count} shot(s)",
-        "batchVideoTaskStarted": "Started video generation for {count} shot(s)",
         "videosExported": "Successfully exported {count} video(s)"
       },
       "loading": {

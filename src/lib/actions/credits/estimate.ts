@@ -28,16 +28,8 @@ export async function estimateActionCredits(
     // 收集需要查询的shot IDs
     const shotIdsToQuery = new Set<string>();
 
-    for (const fc of functionCalls) {
-      try {
-        if (fc.name === "generate_videos") {
-          const shotIds = fc.parameters.shotIds as string[];
-          shotIds.forEach((id) => shotIdsToQuery.add(id));
-        }
-      } catch (error) {
-        console.error(`解析参数失败 [${fc.name}]:`, error);
-      }
-    }
+    // 暂时不需要查询shot数据，因为generate_shot_video使用klingO1Config中的duration
+    // 如果将来需要支持其他需要查询shot的功能，可以在这里添加
 
     // 查询shot数据
     const shotDurations: Record<string, number> = {};

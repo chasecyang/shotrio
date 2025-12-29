@@ -38,10 +38,13 @@ export function ShotPlaybackPlayer({
   const isFirstShot = currentIndex === 0;
   const isLastShot = currentIndex === shots.length - 1;
 
+  // 获取第一张关联素材
+  const firstAsset = currentShot?.shotAssets?.[0]?.asset;
+
   // 根据分镜内容确定类型
   const contentType = currentShot?.videoUrl 
     ? "video" 
-    : currentShot?.imageAsset?.imageUrl 
+    : firstAsset?.imageUrl 
     ? "image" 
     : "text";
 
@@ -132,10 +135,10 @@ export function ShotPlaybackPlayer({
           />
         )}
 
-        {contentType === "image" && currentShot.imageAsset?.imageUrl && (
+        {contentType === "image" && firstAsset?.imageUrl && (
           <div className="relative w-full h-full">
             <Image
-              src={currentShot.imageAsset.imageUrl}
+              src={firstAsset.imageUrl}
               alt={`分镜 ${currentShot.order}`}
               fill
               className="object-contain"

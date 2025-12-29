@@ -14,7 +14,6 @@ import { episode, shot, conversation } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
-import { batchGenerateShotVideos } from "../video/generate";
 import { deleteShot, updateShot, batchCreateShots } from "../project/shot";
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
@@ -274,10 +273,18 @@ export async function executeFunction(
           cameraMovement?: string;
           duration?: number;
           visualPrompt?: string;
+          assets?: Array<{
+            assetId: string;
+            label: string;
+          }>;
+          suggestedConfig?: {
+            prompt: string;
+            duration?: "5" | "10";
+          };
         }>;
 
         try {
-          // 验证和转换数据，使用映射函数
+          // 验证和转换数据
           const validatedShots = shots.map((shotData) => ({
             shotSize: mapShotSize(shotData.shotSize) as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
             description: shotData.description,
@@ -290,24 +297,58 @@ export async function executeFunction(
             visualPrompt: shotData.visualPrompt,
           }));
 
+          // 创建分镜
           const batchResult = await batchCreateShots({
             episodeId,
             shots: validatedShots,
           });
 
-          if (batchResult.success && 'data' in batchResult) {
-            result = {
-              functionCallId: functionCall.id,
-              success: true,
-              data: batchResult.data,
-            };
-          } else {
+          if (!batchResult.success || !('data' in batchResult)) {
             result = {
               functionCallId: functionCall.id,
               success: false,
               error: 'error' in batchResult ? batchResult.error : "创建失败",
             };
+            break;
           }
+
+          const createdShots = batchResult.data.shots;
+          
+          // 处理每个分镜的 assets 和 suggestedConfig
+          const { batchAddShotAssets } = await import("../project/shot-asset");
+          const assetsAddResults = [];
+          
+          for (let i = 0; i < createdShots.length; i++) {
+            const shot = createdShots[i];
+            const shotData = shots[i];
+            
+            // 添加关联图片
+            if (shotData.assets && shotData.assets.length > 0) {
+              const addResult = await batchAddShotAssets({
+                shotId: shot.id,
+                assets: shotData.assets,
+              });
+              
+              if (addResult.success) {
+                assetsAddResults.push({
+                  shotId: shot.id,
+                  assetsCount: shotData.assets.length,
+                });
+              }
+            }
+            
+            // 保存 suggestedConfig（存储在shot表的meta字段或新字段）
+            // TODO: 如果需要保存 suggestedConfig，可以添加到 shot 表或创建shot_video记录
+          }
+
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              ...batchResult.data,
+              assetsAddResults,
+            },
+          };
         } catch (error) {
           result = {
             functionCallId: functionCall.id,
@@ -406,16 +447,61 @@ export async function executeFunction(
         break;
       }
 
-      case "generate_videos": {
-        const shotIds = parameters.shotIds as string[];
-        const videoResult = await batchGenerateShotVideos(shotIds);
-
-        result = {
-          functionCallId: functionCall.id,
-          success: videoResult.success,
-          jobId: videoResult.jobId,
-          error: videoResult.error,
+      case "generate_shot_video": {
+        const shotId = parameters.shotId as string;
+        const klingO1Config = parameters.klingO1Config as {
+          prompt: string;
+          elements?: Array<{
+            frontal_image_url: string;
+            reference_image_urls?: string[];
+          }>;
+          image_urls?: string[];
+          duration?: "5" | "10";
+          aspect_ratio?: "16:9" | "9:16" | "1:1";
         };
+
+        if (!klingO1Config || !klingO1Config.prompt) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "缺少必填参数：klingO1Config.prompt",
+          };
+          break;
+        }
+
+        try {
+          const { createShotVideoGeneration } = await import("../project/shot-video");
+          
+          // 直接使用 Agent 提供的 Kling O1 配置创建任务
+          const generateResult = await createShotVideoGeneration({
+            shotId,
+            klingO1Config,
+          });
+
+          if (generateResult.success) {
+            result = {
+              functionCallId: functionCall.id,
+              success: true,
+              data: {
+                shotId,
+                jobId: generateResult.data?.jobId,
+                videoConfigId: generateResult.data?.shotVideo.id,
+              },
+            };
+          } else {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: generateResult.error || "创建视频生成任务失败",
+            };
+          }
+        } catch (error) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: error instanceof Error ? error.message : "生成视频失败",
+          };
+        }
         break;
       }
 
@@ -460,7 +546,6 @@ export async function executeFunction(
           cameraMovement?: string;
           description?: string;
           visualPrompt?: string;
-          imageAssetId?: string;
         }>;
 
         const updateResults: Array<{ shotId: string; success: boolean; error?: string }> = [];

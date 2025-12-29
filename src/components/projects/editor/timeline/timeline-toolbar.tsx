@@ -21,8 +21,6 @@ import {
   Clock,
   Plus,
   Trash2,
-  Video,
-  Sparkles,
   X,
   Play,
   Download,
@@ -36,7 +34,6 @@ import { useTranslations } from "next-intl";
 interface TimelineToolbarProps {
   onAddShot?: () => void;
   onDeleteShots?: () => void;
-  onGenerateVideos?: () => void;
   onExportVideos?: () => void;
   isExportingVideos?: boolean;
 }
@@ -235,23 +232,15 @@ function DefaultActionsBar({
 // 上下文操作栏 - 第二行（选中状态）
 function SelectionActionsBar({
   onDeleteShots,
-  onGenerateVideos,
   onExportVideos,
   isExportingVideos,
 }: {
   onDeleteShots?: () => void;
-  onGenerateVideos?: () => void;
   onExportVideos?: () => void;
   isExportingVideos?: boolean;
 }) {
-  const { state, clearShotSelection, jobs } = useEditor();
+  const { state, clearShotSelection } = useEditor();
   const { selectedShotIds } = state;
-
-  // 检查是否有活跃的批量任务
-  const hasBatchVideoJob = jobs.some(job => 
-    job.type === 'batch_video_generation' && 
-    (job.status === 'pending' || job.status === 'processing')
-  );
 
   return (
     <motion.div
@@ -279,24 +268,6 @@ function SelectionActionsBar({
       >
         <Trash2 className="h-3.5 w-3.5 mr-1" />
         删除 ({selectedShotIds.length})
-      </Button>
-
-      <Separator orientation="vertical" className="h-4 bg-border/50" />
-
-      {/* AI 生成按钮组 */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onGenerateVideos}
-        disabled={hasBatchVideoJob}
-        className={cn(
-          "h-7 text-xs border-purple-200 dark:border-purple-800/50",
-          "hover:bg-purple-50 hover:border-purple-300 dark:hover:bg-purple-950/30 dark:hover:border-purple-700"
-        )}
-      >
-        <Video className={cn("h-3.5 w-3.5 mr-1", hasBatchVideoJob && "animate-spin")} />
-        <Sparkles className="h-3 w-3 mr-1" />
-        {hasBatchVideoJob ? "生成中..." : "生成视频"}
       </Button>
 
       <Separator orientation="vertical" className="h-4 bg-border/50" />
@@ -341,7 +312,6 @@ function SelectionActionsBar({
 export function TimelineToolbar({
   onAddShot,
   onDeleteShots,
-  onGenerateVideos,
   onExportVideos,
   isExportingVideos,
 }: TimelineToolbarProps) {
@@ -374,7 +344,6 @@ export function TimelineToolbar({
           <SelectionActionsBar
             key="selection"
             onDeleteShots={onDeleteShots}
-            onGenerateVideos={onGenerateVideos}
             onExportVideos={onExportVideos}
             isExportingVideos={isExportingVideos}
           />

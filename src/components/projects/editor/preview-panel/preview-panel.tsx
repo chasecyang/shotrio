@@ -14,7 +14,6 @@ import { AgentErrorBoundary } from "../agent-panel/agent-error-boundary";
 interface PreviewPanelProps {
   onAddShot?: () => void;
   onDeleteShots?: () => void;
-  onGenerateVideos?: () => void;
   onExportVideos?: () => void;
   isExportingVideos?: boolean;
 }
@@ -22,7 +21,6 @@ interface PreviewPanelProps {
 export function PreviewPanel({
   onAddShot,
   onDeleteShots,
-  onGenerateVideos,
   onExportVideos,
   isExportingVideos,
 }: PreviewPanelProps = {}) {
@@ -68,7 +66,6 @@ export function PreviewPanel({
       <StoryboardPreview
         onAddShot={onAddShot}
         onDeleteShots={onDeleteShots}
-        onGenerateVideos={onGenerateVideos}
         onExportVideos={onExportVideos}
         isExportingVideos={isExportingVideos}
       />
@@ -95,7 +92,6 @@ export function PreviewPanel({
             <StoryboardPreview
               onAddShot={onAddShot}
               onDeleteShots={onDeleteShots}
-              onGenerateVideos={onGenerateVideos}
               onExportVideos={onExportVideos}
               isExportingVideos={isExportingVideos}
             />

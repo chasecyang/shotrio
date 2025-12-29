@@ -47,7 +47,6 @@ export const jobTypeEnum = pgEnum("job_type", [
   "script_element_extraction", // 剧本元素提取
   "video_generation", // 视频生成
   "shot_video_generation", // 单镜视频生成
-  "batch_video_generation", // 批量视频生成
   "shot_tts_generation", // 单镜TTS生成
   "final_video_export", // 最终成片导出
 ]);
@@ -73,6 +72,14 @@ export const messageRoleEnum = pgEnum("message_role", [
   "user",
   "assistant",
   "system",
+]);
+
+// 视频生成状态
+export const shotVideoStatusEnum = pgEnum("shot_video_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
 ]);
 
 // --- 表定义 ---
@@ -223,18 +230,53 @@ export const shot = pgTable("shot", {
   // 听觉内容 (Audio)
   audioPrompt: text("audio_prompt"), // 音效/BGM 提示
 
-  // 生成结果 (Media)
-  videoUrl: text("video_url"), // 生成的视频片段
+  // 生成结果 (Audio)
   finalAudioUrl: text("final_audio_url"), // 混音后的完整音频
 
-  // 关联资产（关联到asset表获取图片）
-  imageAssetId: text("image_asset_id").references(() => asset.id, { onDelete: "set null" }),
+  // 当前使用的视频版本（指向 shot_video 表）
+  currentVideoId: text("current_video_id"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
+});
+
+// 4.1 分镜关联素材表 (Shot Asset) - 分镜可关联多张图片
+export const shotAsset = pgTable("shot_asset", {
+  id: text("id").primaryKey(),
+  shotId: text("shot_id")
+    .notNull()
+    .references(() => shot.id, { onDelete: "cascade" }),
+  assetId: text("asset_id")
+    .notNull()
+    .references(() => asset.id, { onDelete: "cascade" }),
+  
+  // 语义化标签（用于 AI 理解和 prompt 引用）
+  label: text("label").notNull(), // 如 "首帧"、"汤姆-主图"、"厨房场景"
+  order: integer("order").notNull(), // 决定 prompt 中的引用顺序
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 4.2 分镜视频生成记录表 (Shot Video) - 支持多版本生成
+export const shotVideo = pgTable("shot_video", {
+  id: text("id").primaryKey(),
+  shotId: text("shot_id")
+    .notNull()
+    .references(() => shot.id, { onDelete: "cascade" }),
+  
+  // 生成配置（JSON 字符串）
+  // 包含: prompt, additionalAssets, model, duration, aspectRatio 等
+  generationConfig: text("generation_config").notNull(),
+  
+  // 生成结果
+  videoUrl: text("video_url"), // 生成的视频URL
+  status: shotVideoStatusEnum("status").default("pending").notNull(),
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 5. 任务表 (Job) - 异步任务队列
@@ -329,15 +371,37 @@ export const episodeRelations = relations(episode, ({ one, many }) => ({
   shots: many(shot),
 }));
 
-export const shotRelations = relations(shot, ({ one }) => ({
+export const shotRelations = relations(shot, ({ one, many }) => ({
   episode: one(episode, {
     fields: [shot.episodeId],
     references: [episode.id],
   }),
-  // 关联资产图片（可选）
-  imageAsset: one(asset, {
-    fields: [shot.imageAssetId],
+  // 关联的素材（多张图片）
+  shotAssets: many(shotAsset),
+  // 生成的视频版本
+  shotVideos: many(shotVideo),
+  // 当前使用的视频版本
+  currentVideo: one(shotVideo, {
+    fields: [shot.currentVideoId],
+    references: [shotVideo.id],
+  }),
+}));
+
+export const shotAssetRelations = relations(shotAsset, ({ one }) => ({
+  shot: one(shot, {
+    fields: [shotAsset.shotId],
+    references: [shot.id],
+  }),
+  asset: one(asset, {
+    fields: [shotAsset.assetId],
     references: [asset.id],
+  }),
+}));
+
+export const shotVideoRelations = relations(shotVideo, ({ one }) => ({
+  shot: one(shot, {
+    fields: [shotVideo.shotId],
+    references: [shot.id],
   }),
 }));
 
