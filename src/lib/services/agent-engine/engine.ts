@@ -147,9 +147,6 @@ export class AgentEngine {
       return;
     }
 
-    // 发送 assistant 消息ID（复用已有消息）
-    yield { type: "assistant_message_id", data: state.assistantMessageId! };
-
     // 更新对话状态
     await updateConversationStatus(conversationId, "active");
 
@@ -202,10 +199,20 @@ export class AgentEngine {
         };
       }
       
-      // 继续执行循环（让 AI 根据拒绝原因或新消息调整策略）
+      // 6. 创建新的 assistant message（拒绝后的新响应）
+      const newAssistantMessageId = await createAssistantMessage(state.conversationId);
+      state.assistantMessageId = newAssistantMessageId;
+      
+      // 7. 发送新的 assistant_message_id 事件
+      yield { type: "assistant_message_id", data: newAssistantMessageId };
+      
+      // 8. 继续执行循环（让 AI 根据拒绝原因或新消息调整策略）
       yield* this.executeConversationLoop(state);
     } else {
       // 用户同意，执行 pendingAction
+      // 发送 assistant 消息ID（复用已有消息）
+      yield { type: "assistant_message_id", data: state.assistantMessageId! };
+      
       if (state.pendingAction) {
         yield* this.executeToolAndContinue(state);
       } else {
