@@ -122,12 +122,18 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
 
     // 5. 直接调用 Kling O1 API（使用 Agent 提供的配置）
     console.log(`[Worker] 调用 Kling O1 API`);
-    console.log(`[Worker] Prompt: ${klingO1Config.prompt}`);
+    console.log(`[Worker] 完整配置:`, JSON.stringify(klingO1Config, null, 2));
     
     let videoResult;
     try {
       videoResult = await generateReferenceToVideo(klingO1Config);
     } catch (error) {
+      // 打印详细错误信息
+      console.error(`[Worker] Kling O1 API 调用失败:`, error);
+      if (error && typeof error === 'object' && 'body' in error) {
+        console.error(`[Worker] 错误详情:`, JSON.stringify((error as any).body, null, 2));
+      }
+      
       // 生成失败，退还积分
       if (transactionId) {
         await refundCredits({

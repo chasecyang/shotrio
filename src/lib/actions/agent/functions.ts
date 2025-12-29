@@ -179,7 +179,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "object",
           description: `Kling O1 API 完整配置。包含：
 - prompt: 电影化视频描述（必填，英文，在描述中自然嵌入 @Element1/@Image1 等占位符）
-- elements: 角色/物体元素数组（可选，每个 element 包含 frontal_image_url 和可选的 reference_image_urls）
+- elements: 角色/物体元素数组（可选，用于角色一致性控制）
+  * 每个 element 必须包含 frontal_image_url（正面图）和至少一张 reference_image_urls（多角度参考图）
+  * ⚠️ 重要：如果某个角色只有一张图片，不要使用 elements，而是放到 image_urls 中
 - image_urls: 首帧/风格/场景/氛围参考图URL数组（可选，第一张通常作为首帧）
 - duration: "5" 或 "10"（可选，默认 "5"）
 - aspect_ratio: "16:9"/"9:16"/"1:1"（可选，默认 "16:9"）

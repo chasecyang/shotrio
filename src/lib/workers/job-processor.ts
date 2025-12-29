@@ -41,10 +41,10 @@ export async function processJob(jobData: Job): Promise<void> {
     await registry.process(jobData, workerToken);
   } catch (error) {
     console.error(`处理任务 ${jobData.id} 失败:`, error);
-    // 错误处理已经在BaseProcessor或processor内部完成
-    // 这里只是记录日志，避免重复failJob
+    // 错误处理统一在 standalone-worker.ts 的 processJobAsync 中完成
+    // 这里只处理特殊情况：未知的任务类型（这种情况任务还没有被 startJob）
     if (error instanceof Error && error.message.includes("未知的任务类型")) {
-      // 只有未知类型才需要在这里处理
+      // 未知类型的任务还没有被标记为 processing，需要在这里处理
       const { failJob } = await import("@/lib/actions/job");
       await failJob(
         {
@@ -53,6 +53,10 @@ export async function processJob(jobData: Job): Promise<void> {
         },
         workerToken
       );
+      // 不重新抛出，避免在 standalone-worker 中重复调用 failJob
+      return;
     }
+    // 其他错误重新抛出，由 standalone-worker 统一处理
+    throw error;
   }
 }

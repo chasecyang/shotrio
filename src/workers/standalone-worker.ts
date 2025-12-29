@@ -8,7 +8,7 @@
  * - 使用 PM2：pm2 start ecosystem.config.js
  */
 
-import { getPendingJobs } from "../lib/actions/job";
+import { getPendingJobs, failJob } from "../lib/actions/job";
 import { processJob, registerAllProcessors } from "../lib/workers/job-processor";
 import { getWorkerToken } from "../lib/workers/auth";
 import { recoverTimeoutJobs } from "../lib/workers/utils/timeout-handler";
@@ -88,6 +88,21 @@ async function processJobAsync(job: Job): Promise<void> {
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.error(`[Worker] ❌ 任务 ${job.id} 处理失败 (耗时 ${duration}s):`, error);
+    
+    // 立即标记任务为失败，不等待超时
+    try {
+      await failJob(
+        {
+          jobId: job.id,
+          errorMessage: error instanceof Error ? error.message : "处理任务失败",
+        },
+        workerToken
+      );
+      console.log(`[Worker] 📝 已将任务 ${job.id} 标记为失败`);
+    } catch (failError) {
+      console.error(`[Worker] ⚠️  标记任务 ${job.id} 失败时出错:`, failError);
+      // 不抛出错误，避免影响其他任务的处理
+    }
   }
 }
 

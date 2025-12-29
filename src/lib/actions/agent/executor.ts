@@ -472,10 +472,41 @@ export async function executeFunction(
         try {
           const { createShotVideoGeneration } = await import("../project/shot-video");
           
-          // 直接使用 Agent 提供的 Kling O1 配置创建任务
+          // 修正配置：如果 elements 中有 reference_image_urls 为空或只有 frontal_image_url 的情况
+          // 将其移到 image_urls 中，避免 API 422 错误
+          const correctedConfig = { ...klingO1Config };
+          
+          if (correctedConfig.elements && correctedConfig.elements.length > 0) {
+            const validElements: typeof correctedConfig.elements = [];
+            const movedImages: string[] = [];
+            
+            correctedConfig.elements.forEach((element) => {
+              const hasValidReferences = element.reference_image_urls && element.reference_image_urls.length > 0;
+              
+              if (hasValidReferences) {
+                // reference_image_urls 有内容，保留在 elements 中
+                validElements.push(element);
+              } else {
+                // reference_image_urls 为空，将 frontal_image_url 移到 image_urls
+                movedImages.push(element.frontal_image_url);
+              }
+            });
+            
+            // 更新配置
+            correctedConfig.elements = validElements.length > 0 ? validElements : undefined;
+            
+            if (movedImages.length > 0) {
+              correctedConfig.image_urls = [
+                ...(correctedConfig.image_urls || []),
+                ...movedImages,
+              ];
+            }
+          }
+          
+          // 使用修正后的配置创建任务
           const generateResult = await createShotVideoGeneration({
             shotId,
-            klingO1Config,
+            klingO1Config: correctedConfig,
           });
 
           if (generateResult.success) {
