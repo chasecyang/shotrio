@@ -496,8 +496,6 @@ export const conversation = pgTable("conversation", {
   status: conversationStatusEnum("status").default("active").notNull(),
   
   // Agent 状态存储
-  // 待确认操作（JSON 序列化的 PendingActionInfo）
-  pendingAction: text("pending_action"), // 用于存储需要用户确认的操作
   // 对话上下文（JSON 序列化的 AgentContext）
   context: text("context"), // 用于存储创建对话时的完整上下文信息（选中的剧集、分镜等）
   

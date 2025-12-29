@@ -55,13 +55,17 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     try {
       console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId);
 
+      // 立即清除 pendingAction，不等后端事件
+      agent.updateMessage(message.id, {
+        pendingAction: undefined,
+      });
+
       toast.success("操作已确认，Agent 正在继续...");
 
       // 设置 loading 状态
       agent.setLoading(true);
 
       // 恢复对话，Engine 会自动执行已确认的操作
-      // pendingAction 的清除由后端通过 state_update 事件管理
       await resumeConversation(agent.state.currentConversationId, true);
     } catch (error) {
       console.error("确认操作失败:", error);
@@ -79,16 +83,34 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     setIsRejecting(true);
     
     try {
-      console.log("[Agent] 准备拒绝，conversationId:", agent.state.currentConversationId);
+      console.log("[Agent] 用户拒绝操作");
 
-      toast.info("操作已拒绝，Agent 正在提供替代方案...");
+      const toolCallId = message.pendingAction.functionCall.id;
+
+      // 立即创建拒绝的 tool message（客户端预测，避免显示"执行中"状态）
+      agent.addMessage({
+        id: `tool-${toolCallId}-${Date.now()}`,
+        role: "tool",
+        content: JSON.stringify({
+          success: false,
+          error: "用户拒绝了此操作",
+          userRejected: true,
+        }),
+        toolCallId: toolCallId,
+      });
+
+      // 清除 pendingAction，让确认卡片消失
+      agent.updateMessage(message.id, {
+        pendingAction: undefined,
+      });
+
+      toast.info("操作已拒绝，Agent 正在回应...");
 
       // 设置 loading 状态
       agent.setLoading(true);
 
-      // 恢复对话（拒绝操作）
-      // pendingAction 的清除由后端通过 state_update 事件管理
-      await resumeConversation(agent.state.currentConversationId, false, "用户拒绝了此操作");
+      // 纯粹拒绝，不传 reason
+      await resumeConversation(agent.state.currentConversationId, false);
     } catch (error) {
       console.error("拒绝操作失败:", error);
       toast.error("拒绝操作失败");

@@ -316,21 +316,16 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     agent.setLoading(true);
 
     try {
-      // 检查是否有pendingAction，如果有则将新消息作为拒绝理由
+      // 检查是否有 pendingAction，如果有则先拒绝
       const lastAssistantMessage = agent.state.messages
         .filter(m => m.role === "assistant")
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
       
       if (lastAssistantMessage?.pendingAction && agent.state.currentConversationId) {
-        // 同步调用 resumeConversation，将新消息作为拒绝理由
-        // 这会让 AI 看到用户的新消息并继续对话
-        await resumeConversation(
-          agent.state.currentConversationId, 
-          false, 
-          `用户拒绝了操作并回复：${userMessage}`
-        );
-        // 完成后直接返回，不继续创建新对话
-        return;
+        console.log("[AgentPanel] 检测到 pendingAction，先拒绝操作");
+        // 步骤1：纯粹拒绝
+        await resumeConversation(agent.state.currentConversationId, false);
+        // 不 return，继续执行发送消息逻辑
       }
 
       let conversationId = agent.state.currentConversationId;

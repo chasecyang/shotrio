@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
       resumeConversationId?: string;
       resumeValue?: {
         approved: boolean;
-        reason?: string;
       };
     } = await request.json();
 
@@ -80,8 +79,7 @@ export async function POST(request: NextRequest) {
 
             for await (const event of engine.resumeConversation(
               input.resumeConversationId,
-              input.resumeValue.approved,
-              input.resumeValue.reason
+              input.resumeValue.approved
             )) {
               controller.enqueue(
                 encoder.encode(JSON.stringify(event) + "\n")

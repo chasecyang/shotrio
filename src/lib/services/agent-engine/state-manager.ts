@@ -7,6 +7,7 @@ import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { collectContext } from "@/lib/actions/agent/context-collector";
 import { buildSystemPrompt } from "./prompts";
+import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 import type { AgentContext } from "@/types/agent";
 import type { ConversationState, Message, PendingActionInfo } from "./types";
 
@@ -117,21 +118,6 @@ export async function saveConversationContext(
 }
 
 /**
- * 保存对话状态（用于恢复）
- */
-export async function saveConversationState(state: ConversationState): Promise<void> {
-  // 只保存 pendingAction 到数据库
-  // messages 已经通过 saveAssistantResponse 和 saveToolMessage 保存
-  await db
-    .update(conversation)
-    .set({
-      pendingAction: state.pendingAction ? JSON.stringify(state.pendingAction) : null,
-      updatedAt: new Date(),
-    })
-    .where(eq(conversation.id, state.conversationId));
-}
-
-/**
  * 加载对话状态（从数据库重建）
  */
 export async function loadConversationState(conversationId: string): Promise<ConversationState | null> {
@@ -187,19 +173,10 @@ export async function loadConversationState(conversationId: string): Promise<Con
     const contextText = await collectContext(agentContext, conv.projectId);
     messages.push({ role: "system", content: `# 当前上下文\n\n${contextText}` });
     
-    // 3. 先获取最后的 assistant 消息和解析 pendingAction（用于重建 tool_calls）
+    // 3. 先获取最后的 assistant 消息（messages 已按 createdAt asc 排序）
     const lastAssistantMsg = conv.messages
       .filter(m => m.role === "assistant")
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-    
-    let pendingAction: PendingActionInfo | undefined;
-    if (conv.pendingAction) {
-      try {
-        pendingAction = JSON.parse(conv.pendingAction);
-      } catch (e) {
-        console.warn("[AgentEngine] 解析 pendingAction 失败:", e);
-      }
-    }
+      .at(-1);
 
     // 4. 重建对话消息
     for (const msg of conv.messages) {
@@ -216,19 +193,6 @@ export async function loadConversationState(conversationId: string): Promise<Con
           }
         }
         
-        // 如果有 pendingAction 且这是最后一条 assistant 消息，使用 pendingAction 重建 tool_calls
-        const isLastAssistantMsg = msg.id === lastAssistantMsg?.id;
-        if (isLastAssistantMsg && pendingAction && !toolCalls) {
-          toolCalls = [{
-            id: pendingAction.functionCall.id,
-            type: "function",
-            function: {
-              name: pendingAction.functionCall.name,
-              arguments: JSON.stringify(pendingAction.functionCall.arguments || {}),
-            },
-          }];
-        }
-        
         messages.push({
           role: "assistant",
           content: msg.content,
@@ -243,6 +207,9 @@ export async function loadConversationState(conversationId: string): Promise<Con
         });
       }
     }
+    
+    // 5. 从消息历史推导 pendingAction（Event Sourcing）
+    const pendingAction = derivePendingAction(messages, conv.status);
 
     return {
       conversationId,
@@ -255,5 +222,75 @@ export async function loadConversationState(conversationId: string): Promise<Con
     console.error("[AgentEngine] 加载对话状态失败:", error);
     return null;
   }
+}
+
+/**
+ * 从消息历史推导 pendingAction（Event Sourcing）
+ * 
+ * 规则：
+ * 1. 只有 status === "awaiting_approval" 时才可能有 pending
+ * 2. 找到最后一条 assistant 消息的 tool_calls
+ * 3. 如果 tool call 没有对应的 tool message，且 needsConfirmation === true，则为 pending
+ */
+export function derivePendingAction(
+  messages: Message[],
+  conversationStatus: string
+): PendingActionInfo | undefined {
+  // 关键检查1：只有等待确认状态才检查
+  if (conversationStatus !== "awaiting_approval") {
+    return undefined;
+  }
+
+  // 找到最后一条 assistant 消息
+  const lastAssistant = messages
+    .filter(m => m.role === "assistant")
+    .sort((a, b) => {
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return timeB - timeA;
+    })[0];
+
+  if (!lastAssistant?.tool_calls?.length) {
+    return undefined;
+  }
+
+  // 找出没有对应 tool message 的 tool call
+  const pendingToolCall = lastAssistant.tool_calls.find(tc => {
+    // 检查是否有对应的 tool message（墓碑标记）
+    const hasToolMessage = messages.some(m => 
+      m.role === "tool" && 
+      m.tool_call_id === tc.id
+    );
+    
+    if (hasToolMessage) {
+      return false; // 已经有 tool message，不是 pending
+    }
+    
+    // 关键检查2：只有需要确认的 function 才算 pending
+    const funcDef = getFunctionDefinition(tc.function.name);
+    return funcDef?.needsConfirmation === true;
+  });
+
+  if (!pendingToolCall) {
+    return undefined;
+  }
+
+  // 重建 PendingActionInfo
+  const funcDef = getFunctionDefinition(pendingToolCall.function.name);
+  const args = JSON.parse(pendingToolCall.function.arguments);
+  
+  return {
+    id: pendingToolCall.id,
+    functionCall: {
+      id: pendingToolCall.id,
+      name: pendingToolCall.function.name,
+      displayName: funcDef?.displayName,
+      arguments: args,
+      category: funcDef?.category || "generation",
+    },
+    message: lastAssistant.content || `准备执行: ${funcDef?.displayName || pendingToolCall.function.name}`,
+    // creditCost 不推导，由前端重新计算
+    createdAt: new Date(),
+  };
 }
 

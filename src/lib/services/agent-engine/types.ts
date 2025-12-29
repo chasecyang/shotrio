@@ -56,12 +56,7 @@ export interface ConversationState {
   conversationId: string;
   projectContext: AgentContext;
   messages: Message[];
-  pendingAction?: PendingActionInfo;
+  pendingAction?: PendingActionInfo; // 运行时从消息历史推导，不持久化到数据库
   assistantMessageId?: string;
-  // 优化：标记状态是否需要保存（减少数据库写入）
-  _dirty?: {
-    assistantMessage?: boolean; // assistant 消息是否需要保存
-    conversationState?: boolean; // 对话状态是否需要保存
-  };
 }
 

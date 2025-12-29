@@ -28,7 +28,6 @@ import {
   saveAssistantResponse,
   updateConversationStatus,
   saveConversationContext,
-  saveConversationState,
   loadConversationState,
   saveToolMessage,
 } from "./state-manager";
@@ -135,8 +134,7 @@ export class AgentEngine {
    */
   async *resumeConversation(
     conversationId: string,
-    approved: boolean,
-    reason?: string
+    approved: boolean
   ): AsyncGenerator<AgentStreamEvent> {
     console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`);
 
@@ -152,9 +150,66 @@ export class AgentEngine {
 
     // 处理用户决定
     if (!approved) {
-      // 用户拒绝，添加拒绝消息
-      if (state.pendingAction) {
-        // 1. 添加 tool 消息（标记操作失败）
+      // 用户拒绝，为所有 tool_calls 添加拒绝消息
+      // 找到最后一条 assistant 消息
+      const lastAssistantMessage = [...state.messages]
+        .reverse()
+        .find(m => m.role === "assistant");
+
+      if (lastAssistantMessage?.tool_calls && lastAssistantMessage.tool_calls.length > 0) {
+        // 为所有 tool_calls 创建拒绝的 tool message
+        console.log(`[AgentEngine] 为 ${lastAssistantMessage.tool_calls.length} 个 tool_calls 添加拒绝消息`);
+        
+        // 批量创建拒绝消息
+        const rejectionContent = JSON.stringify({
+          success: false,
+          error: "用户拒绝了此操作",
+          userRejected: true,
+        });
+
+        // 并行保存所有 tool messages
+        const savePromises = lastAssistantMessage.tool_calls.map(async (toolCall) => {
+          // 1. 添加 tool message（墓碑标记）
+          const toolMessage: Message = {
+            role: "tool",
+            content: rejectionContent,
+            tool_call_id: toolCall.id,
+          };
+          state.messages.push(toolMessage);
+          
+          // 2. 保存 tool 消息到数据库
+          await saveToolMessage(
+            state.conversationId,
+            toolMessage.tool_call_id!,
+            toolMessage.content
+          );
+
+          return toolCall;
+        });
+
+        // 等待所有保存完成
+        const rejectedToolCalls = await Promise.all(savePromises);
+
+        // 3. 发送所有 tool_call_end 事件
+        for (const toolCall of rejectedToolCalls) {
+          yield {
+            type: "tool_call_end",
+            data: {
+              id: toolCall.id,
+              name: toolCall.function.name,
+              success: false,
+              error: "用户拒绝了此操作",
+            },
+          };
+        }
+      } else if (state.pendingAction) {
+        // 降级逻辑：如果没有找到 assistant 消息的 tool_calls，使用 pendingAction
+        console.warn("[AgentEngine] 未找到 assistant 消息的 tool_calls，使用 pendingAction 降级处理");
+        
+        const rejectedToolCallId = state.pendingAction.functionCall.id;
+        const rejectedToolCallName = state.pendingAction.functionCall.name;
+
+        // 1. 添加 tool message（墓碑标记）
         const toolMessage: Message = {
           role: "tool",
           content: JSON.stringify({
@@ -162,7 +217,7 @@ export class AgentEngine {
             error: "用户拒绝了此操作",
             userRejected: true,
           }),
-          tool_call_id: state.pendingAction.functionCall.id,
+          tool_call_id: rejectedToolCallId,
         };
         state.messages.push(toolMessage);
         
@@ -173,40 +228,26 @@ export class AgentEngine {
           toolMessage.content
         );
 
-        // 2. 如果用户提供了拒绝理由（新消息），添加为用户消息
-        // 这样 AI 可以看到用户的新输入并据此回复
-        if (reason && reason !== "用户拒绝了此操作") {
-          state.messages.push({ role: "user", content: reason });
-          await saveUserMessage(state.conversationId, reason);
-        }
-
-        // 3. 保存 pendingAction 信息（在清除之前）
-        const rejectedToolCallId = state.pendingAction.functionCall.id;
-        const rejectedToolCallName = state.pendingAction.functionCall.name;
-
-        // 4. 清除 pendingAction
-        state.pendingAction = undefined;
-
-        // 5. 发送 tool_call_end 事件
+        // 2. 发送 tool_call_end 事件
         yield {
           type: "tool_call_end",
           data: {
             id: rejectedToolCallId,
             name: rejectedToolCallName,
             success: false,
-            error: reason || "用户拒绝了此操作",
+            error: "用户拒绝了此操作",
           },
         };
       }
       
-      // 6. 创建新的 assistant message（拒绝后的新响应）
+      // 3. 创建新的 assistant message（拒绝后的新响应）
       const newAssistantMessageId = await createAssistantMessage(state.conversationId);
       state.assistantMessageId = newAssistantMessageId;
       
-      // 7. 发送新的 assistant_message_id 事件
+      // 4. 发送新的 assistant_message_id 事件
       yield { type: "assistant_message_id", data: newAssistantMessageId };
       
-      // 8. 继续执行循环（让 AI 根据拒绝原因或新消息调整策略）
+      // 5. 继续执行循环（让 AI 根据拒绝做出回应）
       yield* this.executeConversationLoop(state);
     } else {
       // 用户同意，执行 pendingAction
@@ -440,7 +481,6 @@ export class AgentEngine {
             currentContent,
             aiMessage.tool_calls
           ),
-          saveConversationState(state),
           updateConversationStatus(state.conversationId, "awaiting_approval"),
         ]);
 

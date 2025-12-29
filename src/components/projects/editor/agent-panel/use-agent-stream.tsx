@@ -97,6 +97,15 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                 // 更新当前messageId
                 streamStateRef.current.messageId = messageId;
                 
+                // 清除其他消息的 pendingAction（恢复对话时的兜底逻辑）
+                agent.state.messages.forEach(msg => {
+                  if (msg.id !== messageId && msg.pendingAction) {
+                    agent.updateMessage(msg.id, {
+                      pendingAction: undefined,
+                    });
+                  }
+                });
+                
                 // 检查是否已经有这个消息（恢复对话时）
                 const existingMessage = agent.state.messages.find(m => m.id === messageId);
                 if (existingMessage) {
@@ -177,18 +186,27 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                 );
                 
                 if (matchingToolCall) {
-                  // 创建对应的 tool message 并添加到状态中
-                  const toolMessageId = `tool-${matchingToolCall.id}-${Date.now()}`;
-                  agent.addMessage({
-                    id: toolMessageId,
-                    role: "tool",
-                    content: JSON.stringify({
-                      success: event.data.success,
-                      data: event.data.result,
-                      error: event.data.error,
-                    }),
-                    toolCallId: matchingToolCall.id, // 关联到具体的 tool call（使用真实 ID）
-                  });
+                  // 检查是否已存在此 tool call 的 tool message（客户端预测可能已创建）
+                  const existingToolMessage = agent.state.messages.find(
+                    m => m.role === "tool" && m.toolCallId === matchingToolCall.id
+                  );
+                  
+                  if (existingToolMessage) {
+                    console.log("[Agent Stream] Tool message 已存在（客户端预测），跳过创建");
+                  } else {
+                    // 创建对应的 tool message 并添加到状态中
+                    const toolMessageId = `tool-${matchingToolCall.id}-${Date.now()}`;
+                    agent.addMessage({
+                      id: toolMessageId,
+                      role: "tool",
+                      content: JSON.stringify({
+                        success: event.data.success,
+                        data: event.data.result,
+                        error: event.data.error,
+                      }),
+                      toolCallId: matchingToolCall.id, // 关联到具体的 tool call（使用真实 ID）
+                    });
+                  }
                 } else {
                   console.warn("[Agent Stream] 未找到匹配的 tool call:", event.data.name, "ID:", event.data.id);
                 }
@@ -328,9 +346,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
    * 恢复对话（确认/拒绝后继续）
    */
   const resumeConversation = useCallback(
-    async (conversationId: string, approved: boolean, reason?: string) => {
-      // 不再手动清除 pendingAction，让后端通过 state_update 事件统一管理
-      
+    async (conversationId: string, approved: boolean) => {
       // 创建 abort controller
       abortControllerRef.current = new AbortController();
 
@@ -344,7 +360,6 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
             resumeConversationId: conversationId,
             resumeValue: {
               approved,
-              reason,
             },
           }),
           signal: abortControllerRef.current.signal,
