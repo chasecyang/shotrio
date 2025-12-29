@@ -2,47 +2,14 @@
  * Agent Engine 类型定义
  */
 
-import type { AgentContext } from "@/types/agent";
+import type { AgentContext, EngineMessage } from "@/types/agent";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 /**
- * OpenAI-compatible message types
+ * 使用统一的 Message 类型
+ * @deprecated 使用 EngineMessage 替代
  */
-export type MessageRole = "system" | "user" | "assistant" | "tool";
-
-export interface Message {
-  role: MessageRole;
-  content: string;
-  tool_calls?: Array<{
-    id: string;
-    type: "function";
-    function: {
-      name: string;
-      arguments: string;
-    };
-  }>;
-  tool_call_id?: string; // for tool messages
-}
-
-/**
- * 迭代信息
- */
-export interface IterationInfo {
-  id: string;
-  iterationNumber: number;
-  content?: string;
-  functionCall?: {
-    id: string;
-    name: string;
-    displayName?: string;
-    description?: string;
-    category: string;
-    status: "pending" | "executing" | "completed" | "failed";
-    result?: string;
-    error?: string;
-  };
-  timestamp: Date;
-}
+export type Message = EngineMessage;
 
 /**
  * 待执行操作信息
@@ -62,17 +29,14 @@ export interface PendingActionInfo {
 }
 
 /**
- * 执行状态
- */
-export type ExecutionState = "thinking" | "tool_call" | "awaiting_approval" | "completed";
-
-/**
  * 流式事件类型
  */
 export type AgentStreamEvent =
   | { type: "user_message_id"; data: string }
   | { type: "assistant_message_id"; data: string }
-  | { type: "state_update"; data: { iterations: IterationInfo[]; currentIteration: number; pendingAction?: PendingActionInfo } }
+  | { type: "content_delta"; data: string }
+  | { type: "tool_call_start"; data: { id: string; name: string; displayName?: string } }
+  | { type: "tool_call_end"; data: { id: string; name: string; success: boolean; result?: string; error?: string } }
   | { type: "interrupt"; data: { action: "approval_required"; pendingAction: PendingActionInfo } }
   | { type: "complete"; data: "done" | "pending_confirmation" }
   | { type: "error"; data: string };
@@ -92,9 +56,12 @@ export interface ConversationState {
   conversationId: string;
   projectContext: AgentContext;
   messages: Message[];
-  iterations: IterationInfo[];
-  currentIteration: number;
   pendingAction?: PendingActionInfo;
   assistantMessageId?: string;
+  // 优化：标记状态是否需要保存（减少数据库写入）
+  _dirty?: {
+    assistantMessage?: boolean; // assistant 消息是否需要保存
+    conversationState?: boolean; // 对话状态是否需要保存
+  };
 }
 

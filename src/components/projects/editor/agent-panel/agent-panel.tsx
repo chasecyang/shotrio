@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
-import type { IterationStep } from "@/types/agent";
 
 interface AgentPanelProps {
   projectId: string;
@@ -195,21 +194,6 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
-    onIterationUpdate: (iterations: IterationStep[]) => {
-      const lastIteration = iterations[iterations.length - 1];
-      
-      // 检查是否有分镜相关操作完成并触发刷新
-      if (lastIteration?.functionCall?.status === "completed") {
-        if (isShotRelatedFunction(lastIteration.functionCall.name)) {
-          setTimeout(() => window.dispatchEvent(new CustomEvent("shots-changed")), 200);
-        }
-        
-        // 检查是否有项目/剧集相关操作完成并触发刷新
-        if (isProjectRelatedFunction(lastIteration.functionCall.name)) {
-          setTimeout(() => window.dispatchEvent(new CustomEvent("project-changed")), 200);
-        }
-      }
-    },
     onComplete: () => {
       // 设置 loading 状态为 false（由 context 统一管理）
       agent.setLoading(false);
@@ -219,6 +203,18 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       
       // 延迟刷新对话列表
       setTimeout(() => agent.refreshConversations(true), 100);
+      
+      // 触发事件刷新（基于最后的消息判断）
+      const lastMessage = agent.state.messages[agent.state.messages.length - 1];
+      if (lastMessage?.toolCalls) {
+        const toolName = lastMessage.toolCalls[0]?.function.name;
+        if (toolName && isShotRelatedFunction(toolName)) {
+          setTimeout(() => window.dispatchEvent(new CustomEvent("shots-changed")), 200);
+        }
+        if (toolName && isProjectRelatedFunction(toolName)) {
+          setTimeout(() => window.dispatchEvent(new CustomEvent("project-changed")), 200);
+        }
+      }
     },
     onError: (error) => {
       // 设置 loading 状态为 false（由 context 统一管理）
@@ -456,13 +452,15 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
                 </div>
               ) : (
                 <>
-                  {agent.state.messages.map((message) => (
-                    <ChatMessage 
-                      key={message.id} 
-                      message={message} 
-                      currentBalance={creditBalance}
-                    />
-                  ))}
+                  {agent.state.messages
+                    .filter(msg => msg.role !== "tool") // 过滤掉 tool 消息（工具执行结果通过 DisplayStepCard 显示）
+                    .map((message) => (
+                      <ChatMessage 
+                        key={message.id} 
+                        message={message} 
+                        currentBalance={creditBalance}
+                      />
+                    ))}
                   {agent.state.isLoading && <TypingIndicator />}
                 </>
               )}

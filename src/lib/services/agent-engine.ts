@@ -10,6 +10,5 @@ export { AgentEngine } from "./agent-engine/engine";
 // 导出类型
 export type {
   AgentStreamEvent,
-  IterationInfo,
   PendingActionInfo,
 } from "./agent-engine/types";

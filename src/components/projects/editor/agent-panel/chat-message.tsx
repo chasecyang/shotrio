@@ -1,10 +1,11 @@
 "use client";
 
 import { memo, useState } from "react";
-import type { AgentMessage, IterationStep } from "@/types/agent";
+import type { AgentMessage } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
-import { IterationCard } from "./iteration-card";
+import { DisplayStepCard } from "./display-step-card";
+import { useMessageDisplay } from "./use-message-display";
 import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
 import { useAgentStream } from "./use-agent-stream";
@@ -42,57 +43,8 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
       message.pendingAction.functionCall.name
     );
 
-  // 使用 Agent Stream Hook
-  const { resumeConversation } = useAgentStream({
-    onIterationUpdate: (iterations: IterationStep[]) => {
-      // 检查最后一个迭代步骤
-      const lastIteration = iterations[iterations.length - 1];
-      if (lastIteration?.functionCall?.status === "completed" && lastIteration.functionCall.name) {
-        // 分镜相关操作
-        if (['create_shots', 'update_shots', 'delete_shots'].includes(lastIteration.functionCall.name)) {
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent("shots-changed"));
-          }, 200);
-        }
-        
-        // 项目/剧集相关操作
-        if (['update_episode', 'set_art_style'].includes(lastIteration.functionCall.name)) {
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent("project-changed"));
-          }, 200);
-        }
-      }
-    },
-    onComplete: () => {
-      // 设置 loading 状态为 false（由 context 统一管理）
-      agent.setLoading(false);
-      
-      // 如果是分镜相关操作，刷新时间轴
-      if (isShotRelatedAction) {
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("shots-changed"));
-        }, 300);
-      }
-      
-      // 如果是项目/剧集相关操作，刷新项目
-      if (isProjectRelatedAction) {
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("project-changed"));
-        }, 300);
-      }
-      
-      // 刷新对话列表（静默刷新，不显示全屏loading）
-      setTimeout(() => {
-        agent.refreshConversations(true);
-      }, 100);
-    },
-    onError: (error) => {
-      // 设置 loading 状态为 false（由 context 统一管理）
-      agent.setLoading(false);
-      console.error("Agent Stream 错误:", error);
-      toast.error("操作失败");
-    },
-  });
+  // 使用 Agent Stream Hook（仅用于恢复对话）
+  const { resumeConversation } = useAgentStream();
 
   // Handle pending action confirmation
   const handleConfirmAction = async () => {
@@ -148,8 +100,9 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   };
 
 
-  // Check if this message uses the new iterations format
-  const hasIterations = message.iterations && message.iterations.length > 0;
+  // 使用新的 useMessageDisplay hook 构建展示步骤
+  const displays = useMessageDisplay(agent.state.messages);
+  const currentDisplay = displays.find(d => d.messageId === message.id);
   const hasPendingAction = message.pendingAction !== undefined;
 
   return (
@@ -172,22 +125,21 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
       ) : (
         /* AI Message */
         <div className="space-y-3">
-          {/* Iterations Timeline (思考过程) */}
-          {hasIterations && (
+          {/* Display Steps (思考过程和工具调用) */}
+          {currentDisplay && currentDisplay.steps.length > 0 && (
             <div className="space-y-3">
-              {message.iterations!.map((iteration, index) => (
-                <IterationCard
-                  key={iteration.id}
-                  iteration={iteration}
+              {currentDisplay.steps.map(step => (
+                <DisplayStepCard
+                  key={step.id}
+                  step={step}
                   isStreaming={message.isStreaming}
-                  isLastIteration={index === message.iterations!.length - 1}
                 />
               ))}
             </div>
           )}
 
-          {/* Simple content (for responses without iterations) */}
-          {!hasIterations && message.content && (
+          {/* Simple content (for responses without any steps) */}
+          {!currentDisplay && message.content && (
             <div className="text-sm break-words">
               <MarkdownRenderer content={message.content} className="inline" />
             </div>

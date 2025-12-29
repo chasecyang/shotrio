@@ -3,6 +3,9 @@
  * 将技术参数转换为用户友好的展示格式
  */
 
+import { getAllEnumLabels } from "@/lib/constants/enums";
+import { safeJSONParse, parseAsArray } from "./json-helpers";
+
 /**
  * Kling O1 配置展示结构
  */
@@ -69,51 +72,9 @@ const PARAM_KEY_LABELS: Record<string, string> = {
 };
 
 /**
- * 枚举值中文映射
+ * 枚举值中文映射（从统一枚举管理中获取）
  */
-export const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = {
-  // 素材类型
-  assetType: {
-    character: "角色",
-    scene: "场景",
-    prop: "道具",
-    reference: "参考图",
-  },
-
-  // 生成模式
-  mode: {
-    "text-to-image": "文生图",
-    "image-to-image": "图生图",
-  },
-
-  // 景别
-  shotSize: {
-    extreme_long_shot: "远景",
-    long_shot: "全景",
-    full_shot: "全身",
-    medium_shot: "中景",
-    close_up: "近景",
-    extreme_close_up: "特写",
-  },
-
-  // 运镜
-  cameraMovement: {
-    static: "固定镜头",
-    push_in: "推进",
-    pull_out: "拉出",
-    pan_left: "向左摇",
-    pan_right: "向右摇",
-    tilt_up: "向上摇",
-    tilt_down: "向下摇",
-    tracking: "跟踪",
-    crane_up: "升起",
-    crane_down: "降落",
-    orbit: "环绕",
-    zoom_in: "放大",
-    zoom_out: "缩小",
-    handheld: "手持",
-  },
-};
+export const ENUM_VALUE_LABELS: Record<string, Record<string, string>> = getAllEnumLabels();
 
 /**
  * 格式化后的参数
@@ -128,9 +89,17 @@ export interface FormattedParameter {
 }
 
 /**
- * 格式化参数值
+ * 格式化模式
  */
-function formatParameterValue(key: string, value: unknown): string {
+type FormatMode = "detailed" | "concise";
+
+/**
+ * 格式化参数值（统一的基础函数）
+ * @param key 参数键名
+ * @param value 参数值
+ * @param mode 格式化模式：detailed（详细）或 concise（简洁）
+ */
+function formatParameterValue(key: string, value: unknown, mode: FormatMode = "detailed"): string {
   // null/undefined
   if (value === null || value === undefined) {
     return "-";
@@ -153,17 +122,25 @@ function formatParameterValue(key: string, value: unknown): string {
 
   // 字符串
   if (typeof value === "string") {
+    // 特殊处理：tags（标签）
+    if (key === "tags" && mode === "concise") {
+      return handleTagsValue(value);
+    }
+
+    // 特殊处理：sourceAssetIds（参考图）
+    if (key === "sourceAssetIds" && mode === "concise") {
+      return handleSourceAssetIdsValue(value);
+    }
+
     // 尝试解析 JSON 字符串
-    try {
-      const parsed = JSON.parse(value);
+    const parsed = safeJSONParse(value);
+    if (parsed !== undefined) {
       if (Array.isArray(parsed)) {
-        return formatArrayValue(parsed);
+        return formatArrayValue(parsed, key, mode);
       }
       if (typeof parsed === "object" && parsed !== null) {
-        return formatObjectValue(parsed);
+        return formatObjectValue(parsed as Record<string, unknown>, mode);
       }
-    } catch {
-      // 不是 JSON，继续作为字符串处理
     }
 
     // 枚举值翻译
@@ -171,30 +148,86 @@ function formatParameterValue(key: string, value: unknown): string {
       return ENUM_VALUE_LABELS[key][value];
     }
 
+    // 截断长文本（简洁模式）
+    if (mode === "concise" && (key === "prompt" || key === "description" || key === "visualPrompt")) {
+      return truncateText(value, 100);
+    }
+
     return value;
   }
 
   // 数组
   if (Array.isArray(value)) {
-    return formatArrayValue(value);
+    return formatArrayValue(value, key, mode);
   }
 
   // 对象
-  if (typeof value === "object" && value !== null) {
-    return formatObjectValue(value as Record<string, unknown>);
+  if (typeof value === "object") {
+    return formatObjectValue(value as Record<string, unknown>, mode);
   }
 
   return String(value);
 }
 
 /**
+ * 处理标签值（简洁模式专用）
+ */
+function handleTagsValue(value: string): string {
+  const parsed = safeJSONParse<string[]>(value);
+  if (Array.isArray(parsed)) {
+    return parsed.join(", ");
+  }
+  // 不是JSON，可能是逗号分隔的字符串
+  if (value.includes(",")) {
+    return value;
+  }
+  return value;
+}
+
+/**
+ * 处理参考图值（简洁模式专用）
+ */
+function handleSourceAssetIdsValue(value: string): string {
+  const parsed = safeJSONParse<string[]>(value);
+  if (Array.isArray(parsed)) {
+    return parsed.length > 0 ? `${parsed.length}张参考图` : "无";
+  }
+  return value ? "有参考图" : "无";
+}
+
+/**
  * 格式化数组值
  */
-function formatArrayValue(arr: unknown[]): string {
+function formatArrayValue(arr: unknown[], key?: string, mode: FormatMode = "detailed"): string {
   if (arr.length === 0) {
     return "空";
   }
 
+  // 简洁模式：特殊处理
+  if (mode === "concise") {
+    // 标签数组：显示内容
+    if (key === "tags") {
+      return arr.join(", ");
+    }
+    // 参考图数组
+    if (key === "sourceAssetIds") {
+      return arr.length > 0 ? `${arr.length}张参考图` : "无";
+    }
+    // 分镜或素材数组：显示数量
+    if (key === "shots" && arr.length > 0 && typeof arr[0] === "object") {
+      return `${arr.length}个分镜`;
+    }
+    if (key === "assets" && arr.length > 0 && typeof arr[0] === "object") {
+      return `${arr.length}个素材`;
+    }
+    if (key === "shotIds" || key === "assetIds") {
+      return `${arr.length}项`;
+    }
+    // 其他数组：显示数量
+    return `${arr.length}项`;
+  }
+
+  // 详细模式
   if (arr.length <= 3) {
     return arr.map((item) => String(item)).join(", ");
   }
@@ -205,12 +238,19 @@ function formatArrayValue(arr: unknown[]): string {
 /**
  * 格式化对象值
  */
-function formatObjectValue(obj: Record<string, unknown>): string {
+function formatObjectValue(obj: Record<string, unknown>, mode: FormatMode = "detailed"): string {
   const entries = Object.entries(obj);
   if (entries.length === 0) {
     return "{}";
   }
 
+  // 简洁模式：只显示属性数量
+  if (mode === "concise") {
+    const count = Object.keys(obj).length;
+    return `${count}个属性`;
+  }
+
+  // 详细模式
   if (entries.length <= 2) {
     return entries
       .map(([k, v]) => `${k}: ${String(v)}`)
@@ -221,14 +261,14 @@ function formatObjectValue(obj: Record<string, unknown>): string {
 }
 
 /**
- * 格式化参数对象为可展示的列表
+ * 格式化参数对象为可展示的列表（详细模式）
  */
 export function formatParameters(
   parameters: Record<string, unknown>
 ): FormattedParameter[] {
   return Object.entries(parameters).map(([key, value]) => {
     const label = PARAM_KEY_LABELS[key] || key;
-    const formattedValue = formatParameterValue(key, value);
+    const formattedValue = formatParameterValue(key, value, "detailed");
 
     return {
       key,
@@ -237,25 +277,6 @@ export function formatParameters(
       rawValue: value,
     };
   });
-}
-
-/**
- * 展开数组详情（用于折叠展示）
- */
-export function expandArrayValue(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    try {
-      const parsed = JSON.parse(String(value));
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => String(item));
-      }
-    } catch {
-      // ignore
-    }
-    return [];
-  }
-
-  return value.map((item) => String(item));
 }
 
 /**
@@ -282,27 +303,9 @@ function isAssetReferenceParam(key: string): boolean {
 function extractAssetIds(value: unknown): string[] {
   if (!value) return [];
   
-  // 数组类型
-  if (Array.isArray(value)) {
-    return value.filter((id): id is string => typeof id === "string");
-  }
-  
-  // 字符串类型
-  if (typeof value === "string") {
-    // 尝试解析 JSON 数组
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parsed.filter((id): id is string => typeof id === "string");
-      }
-    } catch {
-      // 不是 JSON，可能是单个 ID
-    }
-    // 单个 ID
-    return [value];
-  }
-  
-  return [];
+  // 使用工具函数解析为数组
+  const arr = parseAsArray<string>(value);
+  return arr.filter((id): id is string => typeof id === "string");
 }
 
 /**
@@ -349,125 +352,6 @@ function truncateText(text: string, maxLength: number = 50): string {
 }
 
 /**
- * 格式化参数值（用于确认卡片，更简洁）
- */
-function formatParameterValueForConfirmation(key: string, value: unknown): string {
-  // null/undefined
-  if (value === null || value === undefined) {
-    return "-";
-  }
-
-  // 布尔值
-  if (typeof value === "boolean") {
-    return value ? "是" : "否";
-  }
-
-  // 数字
-  if (typeof value === "number") {
-    // 时长特殊处理（毫秒转秒）
-    if (key === "duration") {
-      const seconds = value / 1000;
-      return `${seconds}秒`;
-    }
-    return String(value);
-  }
-
-  // 字符串
-  if (typeof value === "string") {
-    // 特殊处理：tags（标签）
-    if (key === "tags") {
-      // 尝试解析为数组
-      try {
-        const parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-          return parsed.join(", ");
-        }
-      } catch {
-        // 不是JSON，可能是逗号分隔的字符串
-        if (value.includes(",")) {
-          return value;
-        }
-      }
-      return value;
-    }
-
-    // 特殊处理：sourceAssetIds（参考图）
-    if (key === "sourceAssetIds") {
-      try {
-        const parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-          return parsed.length > 0 ? `${parsed.length}张参考图` : "无";
-        }
-      } catch {
-        // 不是JSON数组
-      }
-      return value ? "有参考图" : "无";
-    }
-
-    // 尝试解析 JSON 字符串
-    try {
-      const parsed = JSON.parse(value);
-      
-      // 数组：只显示数量
-      if (Array.isArray(parsed)) {
-        // 特殊处理：如果是分镜或素材数组，尝试提取更多信息
-        if (key === "shots" && parsed.length > 0 && typeof parsed[0] === "object") {
-          return `${parsed.length}个分镜`;
-        }
-        if (key === "assets" && parsed.length > 0 && typeof parsed[0] === "object") {
-          return `${parsed.length}个素材`;
-        }
-        if (key === "shotIds" || key === "assetIds") {
-          return `${parsed.length}项`;
-        }
-        return `${parsed.length}项`;
-      }
-      
-      // 对象：显示属性数量
-      if (typeof parsed === "object" && parsed !== null) {
-        const count = Object.keys(parsed).length;
-        return `${count}个属性`;
-      }
-    } catch {
-      // 不是 JSON，继续作为字符串处理
-    }
-
-    // 枚举值翻译
-    if (ENUM_VALUE_LABELS[key]?.[value]) {
-      return ENUM_VALUE_LABELS[key][value];
-    }
-
-    // 截断长文本
-    if (key === "prompt" || key === "description" || key === "visualPrompt") {
-      return truncateText(value, 100);
-    }
-
-    return value;
-  }
-
-  // 数组：显示数量或内容
-  if (Array.isArray(value)) {
-    // 特殊处理：tags数组
-    if (key === "tags") {
-      return value.join(", ");
-    }
-    // 特殊处理：sourceAssetIds数组
-    if (key === "sourceAssetIds") {
-      return value.length > 0 ? `${value.length}张参考图` : "无";
-    }
-    return `${value.length}项`;
-  }
-
-  // 对象：显示属性数量
-  if (typeof value === "object") {
-    const count = Object.keys(value).length;
-    return `${count}个属性`;
-  }
-
-  return String(value);
-}
-
-/**
  * 格式化参数对象为确认卡片展示（过滤ID，只显示关键参数）
  */
 export function formatParametersForConfirmation(
@@ -496,10 +380,10 @@ export function formatParametersForConfirmation(
     return 0;
   });
 
-  // 格式化参数
+  // 格式化参数（使用简洁模式）
   return filtered.map(([key, value]) => {
     const label = PARAM_KEY_LABELS[key] || key;
-    const formattedValue = formatParameterValueForConfirmation(key, value);
+    const formattedValue = formatParameterValue(key, value, "concise");
     
     // 检查是否为素材引用参数
     const isAssetRef = isAssetReferenceParam(key);

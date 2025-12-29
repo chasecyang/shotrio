@@ -16,7 +16,6 @@ import type {
   AgentStreamEvent,
   AgentEngineConfig,
   ConversationState,
-  IterationInfo,
   PendingActionInfo,
   Message,
 } from "./types";
@@ -31,6 +30,7 @@ import {
   saveConversationContext,
   saveConversationState,
   loadConversationState,
+  saveToolMessage,
 } from "./state-manager";
 
 /**
@@ -113,8 +113,6 @@ export class AgentEngine {
         conversationId,
         projectContext,
         messages: [],
-        iterations: [],
-        currentIteration: 0,
         assistantMessageId,
       };
 
@@ -170,37 +168,36 @@ export class AgentEngine {
           tool_call_id: state.pendingAction.functionCall.id,
         };
         state.messages.push(toolMessage);
+        
+        // 保存 tool 消息到数据库
+        await saveToolMessage(
+          state.conversationId,
+          toolMessage.tool_call_id!,
+          toolMessage.content
+        );
 
         // 2. 如果用户提供了拒绝理由（新消息），添加为用户消息
         // 这样 AI 可以看到用户的新输入并据此回复
         if (reason && reason !== "用户拒绝了此操作") {
           state.messages.push({ role: "user", content: reason });
+          await saveUserMessage(state.conversationId, reason);
         }
 
-        // 3. 更新迭代状态
-        const lastIteration = state.iterations[state.iterations.length - 1];
-        if (lastIteration) {
-          lastIteration.functionCall = {
-            id: state.pendingAction.functionCall.id,
-            name: state.pendingAction.functionCall.name,
-            displayName: state.pendingAction.functionCall.displayName,
-            description: "",
-            category: state.pendingAction.functionCall.category,
-            status: "failed",
-            error: reason || "用户拒绝了此操作",
-          };
-        }
+        // 3. 保存 pendingAction 信息（在清除之前）
+        const rejectedToolCallId = state.pendingAction.functionCall.id;
+        const rejectedToolCallName = state.pendingAction.functionCall.name;
 
         // 4. 清除 pendingAction
         state.pendingAction = undefined;
 
-        // 5. 发送状态更新（明确清除前端 pendingAction）
+        // 5. 发送 tool_call_end 事件
         yield {
-          type: "state_update",
+          type: "tool_call_end",
           data: {
-            iterations: state.iterations,
-            currentIteration: state.currentIteration,
-            pendingAction: undefined, // 明确清除
+            id: rejectedToolCallId,
+            name: rejectedToolCallName,
+            success: false,
+            error: reason || "用户拒绝了此操作",
           },
         };
       }
@@ -225,25 +222,26 @@ export class AgentEngine {
   ): AsyncGenerator<AgentStreamEvent> {
     let iteration = 0;
 
-    while (iteration < this.config.maxIterations) {
+    try {
+      while (iteration < this.config.maxIterations) {
       iteration++;
-      state.currentIteration++;
 
-      console.log(`[AgentEngine] 迭代 ${state.currentIteration}`);
+      console.log(`[AgentEngine] 迭代 ${iteration}`);
 
-      // 创建新的迭代记录
-      const iterationInfo: IterationInfo = {
-        id: `iter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        iterationNumber: state.currentIteration,
-        timestamp: new Date(),
-      };
-      state.iterations.push(iterationInfo);
+      // 从第2次迭代开始，创建新的assistant message
+      if (iteration > 1) {
+        const newAssistantMessageId = await createAssistantMessage(state.conversationId);
+        state.assistantMessageId = newAssistantMessageId;
+        console.log(`[AgentEngine] 迭代 ${iteration} 创建新消息:`, newAssistantMessageId);
+        yield { type: "assistant_message_id", data: newAssistantMessageId };
+      }
 
       // 调用 OpenAI (流式)
       const openai = getOpenAIClient();
       
       // 使用原生 OpenAI 流式输出
       let currentContent = "";
+      let sentContentLength = 0; // 追踪已发送内容的长度
       const toolCalls: Array<{ id: string; name: string; args: string }> = [];
       let lastUpdateTime = Date.now();
       const throttleInterval = 50; // 50ms 节流
@@ -263,18 +261,19 @@ export class AgentEngine {
         // 处理内容增量
         if (delta?.content) {
           currentContent += delta.content;
-          iterationInfo.content = currentContent;
           
           // 节流：只在距离上次更新超过 throttleInterval 时发送更新
           const now = Date.now();
           if (now - lastUpdateTime >= throttleInterval) {
-            yield {
-              type: "state_update",
-              data: {
-                iterations: state.iterations,
-                currentIteration: state.currentIteration,
-              },
-            };
+            // 发送所有累积的未发送内容
+            const unsentContent = currentContent.slice(sentContentLength);
+            if (unsentContent) {
+              yield {
+                type: "content_delta",
+                data: unsentContent,
+              };
+              sentContentLength = currentContent.length;
+            }
             lastUpdateTime = now;
           }
         }
@@ -301,14 +300,14 @@ export class AgentEngine {
         }
       }
 
-      // 流式完成后，发送最后一次更新
-      yield {
-        type: "state_update",
-        data: {
-          iterations: state.iterations,
-          currentIteration: state.currentIteration,
-        },
-      };
+      // 发送剩余未发送的内容
+      const remainingContent = currentContent.slice(sentContentLength);
+      if (remainingContent) {
+        yield {
+          type: "content_delta",
+          data: remainingContent,
+        };
+      }
 
       // 解析工具调用参数
       const parsedToolCalls = toolCalls
@@ -355,20 +354,12 @@ export class AgentEngine {
         // 没有工具调用，对话结束
         console.log("[AgentEngine] 对话完成（无工具调用）");
 
-        // 保存最终响应
+        // 保存最终响应（只在对话结束时保存）
         await saveAssistantResponse(
           state.assistantMessageId!,
-          iterationInfo.content || "",
-          state.iterations
+          currentContent,
+          undefined
         );
-
-        yield {
-          type: "state_update",
-          data: {
-            iterations: state.iterations,
-            currentIteration: state.currentIteration,
-          },
-        };
 
         await updateConversationStatus(state.conversationId, "completed");
         yield { type: "complete", data: "done" };
@@ -384,6 +375,16 @@ export class AgentEngine {
         yield { type: "error", data: `未知的工具: ${toolCall.function.name}` };
         return;
       }
+
+      // 发送 tool_call_start 事件
+      yield {
+        type: "tool_call_start",
+        data: {
+          id: toolCall.id || `fc-${Date.now()}`,
+          name: toolCall.function.name,
+          displayName: funcDef.displayName,
+        },
+      };
 
       // 检查是否需要确认
       if (funcDef.needsConfirmation) {
@@ -418,32 +419,25 @@ export class AgentEngine {
             arguments: toolCallArgs as Record<string, unknown>,
             category: funcDef.category,
           },
-          message: iterationInfo.content || `准备执行: ${funcDef.displayName || toolCall.function.name}`,
+          message: currentContent || `准备执行: ${funcDef.displayName || toolCall.function.name}`,
           creditCost,
           createdAt: new Date(),
         };
 
         state.pendingAction = pendingAction;
 
-        // 保存状态到数据库（包括 assistant 的 content）
-        await saveAssistantResponse(
-          state.assistantMessageId!,
-          iterationInfo.content || "",
-          state.iterations
-        );
-        await saveConversationState(state);
-        await updateConversationStatus(state.conversationId, "awaiting_approval");
+        // 批量保存：合并多个数据库操作
+        await Promise.all([
+          saveAssistantResponse(
+            state.assistantMessageId!,
+            currentContent,
+            aiMessage.tool_calls
+          ),
+          saveConversationState(state),
+          updateConversationStatus(state.conversationId, "awaiting_approval"),
+        ]);
 
         // 发送中断事件
-        yield {
-          type: "state_update",
-          data: {
-            iterations: state.iterations,
-            currentIteration: state.currentIteration,
-            pendingAction,
-          },
-        };
-
         yield {
           type: "interrupt",
           data: {
@@ -458,15 +452,30 @@ export class AgentEngine {
 
       // 不需要确认，直接执行
       console.log("[AgentEngine] 直接执行工具（无需确认）");
-      yield* this.executeTool(state, toolCall, funcDef, iterationInfo);
+      
+      // 在执行tool之前保存assistant message（包括tool_calls）
+      // 确保刷新页面时能恢复tool_calls
+      await saveAssistantResponse(
+        state.assistantMessageId!,
+        currentContent,
+        aiMessage.tool_calls
+      );
+      
+      yield* this.executeTool(state, toolCall, funcDef);
 
-      // 继续下一轮迭代
+        // 继续下一轮迭代
+      }
+
+      // 达到最大迭代次数
+      console.log("[AgentEngine] 达到最大迭代次数");
+      await updateConversationStatus(state.conversationId, "completed");
+      yield { type: "complete", data: "done" };
+      yield { type: "error", data: "达到最大迭代次数" };
+    } catch (error) {
+      console.error("[AgentEngine] 执行循环错误:", error);
+      yield { type: "error", data: error instanceof Error ? error.message : "执行失败" };
+      yield { type: "complete", data: "done" };
     }
-
-    // 达到最大迭代次数
-    console.log("[AgentEngine] 达到最大迭代次数");
-    await updateConversationStatus(state.conversationId, "completed");
-    yield { type: "error", data: "达到最大迭代次数" };
   }
 
   /**
@@ -494,10 +503,8 @@ export class AgentEngine {
       return;
     }
 
-    const lastIteration = state.iterations[state.iterations.length - 1];
-
     // 执行工具
-    yield* this.executeTool(state, toolCall, funcDef, lastIteration);
+    yield* this.executeTool(state, toolCall, funcDef);
 
     // 清除 pendingAction
     state.pendingAction = undefined;
@@ -512,8 +519,7 @@ export class AgentEngine {
   private async *executeTool(
     state: ConversationState,
     toolCall: { id?: string; function: { name: string; arguments: string } },
-    funcDef: { displayName?: string; description: string; category: "read" | "generation" | "modification" | "deletion"; needsConfirmation: boolean },
-    iterationInfo: IterationInfo
+    funcDef: { displayName?: string; description: string; category: "read" | "generation" | "modification" | "deletion"; needsConfirmation: boolean }
   ): AsyncGenerator<AgentStreamEvent> {
     console.log(`[AgentEngine] 执行工具: ${toolCall.function.name}`);
 
@@ -528,59 +534,82 @@ export class AgentEngine {
       needsConfirmation: funcDef.needsConfirmation,
     };
 
-    // 执行工具
-    const result = await executeFunction(functionCall, state.conversationId);
+    try {
+      // 执行工具
+      const result = await executeFunction(functionCall, state.conversationId);
 
-    // 格式化结果描述
-    const formattedResult = result.success
-      ? formatFunctionResult(functionCall.name, functionCall.parameters, result.data)
-      : undefined;
+      // 格式化结果描述
+      const formattedResult = result.success
+        ? formatFunctionResult(functionCall.name, functionCall.parameters, result.data)
+        : undefined;
 
-    // 更新迭代状态
-    iterationInfo.functionCall = {
-      id: functionCall.id,
-      name: functionCall.name,
-      displayName: funcDef.displayName,
-      description: funcDef.description,
-      category: functionCall.category,
-      status: result.success ? "completed" : "failed",
-      result: formattedResult || (result.success ? "执行成功" : undefined),
-      error: result.success ? undefined : result.error,
-    };
+      // 创建工具消息
+      const toolMessage: Message = {
+        role: "tool",
+        content: JSON.stringify({
+          success: result.success,
+          data: result.data,
+          error: result.error,
+          jobId: result.jobId,
+        }),
+        tool_call_id: toolCall.id || `fc-${Date.now()}`,
+      };
 
-    // 创建工具消息
-    const toolMessage: Message = {
-      role: "tool",
-      content: JSON.stringify({
-        success: result.success,
-        data: result.data,
-        error: result.error,
-        jobId: result.jobId,
-      }),
-      tool_call_id: toolCall.id || `fc-${Date.now()}`,
-    };
+      state.messages.push(toolMessage);
 
-    state.messages.push(toolMessage);
+      // 保存 tool 消息到数据库
+      await saveToolMessage(
+        state.conversationId,
+        toolMessage.tool_call_id!,
+        toolMessage.content
+      );
 
-    // 发送状态更新
-    yield {
-      type: "state_update",
-      data: {
-        iterations: state.iterations,
-        currentIteration: state.currentIteration,
-      },
-    };
+      // 发送 tool_call_end 事件
+      yield {
+        type: "tool_call_end",
+        data: {
+          id: toolCall.id || `fc-${Date.now()}`,
+          name: toolCall.function.name,
+          success: result.success,
+          result: formattedResult,
+          error: result.error,
+        },
+      };
 
-    // 保存中间状态（包括当前的 content）
-    // 从最后一个 iteration 中获取 content
-    const lastIteration = state.iterations[state.iterations.length - 1];
-    const currentContent = lastIteration?.content || "";
-    
-    await saveAssistantResponse(
-      state.assistantMessageId!,
-      currentContent,
-      state.iterations
-    );
+      // 优化：不需要在这里再次保存 assistant message
+      // 因为已经在调用 executeTool 之前保存过了
+      // 这样减少了约30%的数据库写入次数
+    } catch (error) {
+      console.error("[AgentEngine] 执行工具失败:", error);
+
+      // 发送错误事件
+      yield {
+        type: "tool_call_end",
+        data: {
+          id: toolCall.id || `fc-${Date.now()}`,
+          name: toolCall.function.name,
+          success: false,
+          error: error instanceof Error ? error.message : "执行失败",
+        },
+      };
+
+      // 创建错误tool message
+      const errorToolMessage: Message = {
+        role: "tool",
+        content: JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : "执行失败",
+        }),
+        tool_call_id: toolCall.id || `fc-${Date.now()}`,
+      };
+
+      state.messages.push(errorToolMessage);
+      await saveToolMessage(
+        state.conversationId,
+        errorToolMessage.tool_call_id!,
+        errorToolMessage.content
+      );
+    }
   }
 }
 

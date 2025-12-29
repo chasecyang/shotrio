@@ -72,6 +72,7 @@ export const messageRoleEnum = pgEnum("message_role", [
   "user",
   "assistant",
   "system",
+  "tool", // 用于保存 function 执行结果
 ]);
 
 // 视频生成状态
@@ -520,8 +521,9 @@ export const conversationMessage = pgTable("conversation_message", {
   role: messageRoleEnum("role").notNull(),
   content: text("content").notNull(),
   
-  // AI 迭代步骤（用于前端展示历史）
-  iterations: text("iterations"), // JSON string of IterationStep[]
+  // Tool 消息相关字段
+  toolCallId: text("tool_call_id"), // tool 消息关联的 tool_call_id
+  toolCalls: text("tool_calls"), // assistant 消息的 tool_calls (JSON)
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

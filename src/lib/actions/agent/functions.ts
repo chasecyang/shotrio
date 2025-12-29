@@ -88,7 +88,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "create_shots",
-    description: "创建分镜（支持单个或批量）。可以指定order插入到特定位置，可以关联图片（首帧、尾帧、关键帧、角色/场景/道具参考等）并提供建议的生成配置。适合从剧本生成分镜脚本、补充新镜头等场景。",
+    description: "创建分镜（支持单个或批量）。可以指定order插入到特定位置，可以关联图片（首帧、尾帧、关键帧、角色/场景/道具参考等）。适合从剧本生成分镜脚本、补充新镜头等场景。",
     displayName: "创建分镜",
     parameters: {
       type: "object",
@@ -99,7 +99,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         shots: {
           type: "array",
-          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt, assets, suggestedConfig)。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。默认3秒。\n\n**assets**: 关联图片数组，每项包含 assetId（素材ID）和 label（语义化标签）。label 用于 AI 理解图片用途和在 prompt 中引用。\n\n**suggestedConfig**: 建议的视频生成配置，包含 prompt（包含 @label 占位符）和 duration（\"5\" 或 \"10\"）。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
+          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt, assets)。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。默认3秒。\n\n**assets**: 关联图片数组，每项包含 assetId（素材ID）和 label（语义化标签）。label 用于 AI 理解图片用途和在 prompt 中引用。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
         },
       },
       required: ["episodeId", "shots"],

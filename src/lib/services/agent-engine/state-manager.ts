@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { collectContext } from "@/lib/actions/agent/context-collector";
 import { buildSystemPrompt } from "./prompts";
 import type { AgentContext } from "@/types/agent";
-import type { ConversationState, Message, IterationInfo, PendingActionInfo } from "./types";
+import type { ConversationState, Message, PendingActionInfo } from "./types";
 
 /**
  * 保存用户消息
@@ -50,15 +50,37 @@ export async function createAssistantMessage(conversationId: string): Promise<st
 export async function saveAssistantResponse(
   messageId: string,
   content: string,
-  iterations: IterationInfo[]
+  toolCalls?: Array<{id: string; type: "function"; function: {name: string; arguments: string}}>
 ): Promise<void> {
   await db
     .update(conversationMessage)
     .set({
       content,
-      iterations: JSON.stringify(iterations),
+      toolCalls: toolCalls ? JSON.stringify(toolCalls) : null,
     })
     .where(eq(conversationMessage.id, messageId));
+}
+
+/**
+ * 保存 tool 消息
+ */
+export async function saveToolMessage(
+  conversationId: string,
+  toolCallId: string,
+  content: string
+): Promise<string> {
+  const messageId = `msg_${Math.random().toString(36).substr(2, 9)}`;
+  
+  await db.insert(conversationMessage).values({
+    id: messageId,
+    conversationId,
+    role: "tool",
+    content,
+    toolCallId,
+    createdAt: new Date(),
+  });
+
+  return messageId;
 }
 
 /**
@@ -99,7 +121,7 @@ export async function saveConversationContext(
  */
 export async function saveConversationState(state: ConversationState): Promise<void> {
   // 只保存 pendingAction 到数据库
-  // 其他数据（messages, iterations）已经通过 conversationMessage 表保存
+  // messages 已经通过 saveAssistantResponse 和 saveToolMessage 保存
   await db
     .update(conversation)
     .set({
@@ -107,19 +129,6 @@ export async function saveConversationState(state: ConversationState): Promise<v
       updatedAt: new Date(),
     })
     .where(eq(conversation.id, state.conversationId));
-
-  // 同时更新 assistant 消息的 iterations 和 content
-  if (state.assistantMessageId && state.iterations.length > 0) {
-    // 从最后一个 iteration 中获取 content
-    const lastIteration = state.iterations[state.iterations.length - 1];
-    const currentContent = lastIteration?.content || "";
-    
-    await saveAssistantResponse(
-      state.assistantMessageId,
-      currentContent,
-      state.iterations
-    );
-  }
 }
 
 /**
@@ -197,13 +206,19 @@ export async function loadConversationState(conversationId: string): Promise<Con
       if (msg.role === "user") {
         messages.push({ role: "user", content: msg.content });
       } else if (msg.role === "assistant") {
-        // 只有当这是最后一个 assistant 消息且有 pendingAction 时，才重建 tool_calls
-        // 已完成的工具调用不应该包含 tool_calls（否则 OpenAI API 会要求紧跟 tool 消息）
+        // 从数据库读取 tool_calls
         let toolCalls: Message["tool_calls"] = undefined;
+        if (msg.toolCalls) {
+          try {
+            toolCalls = JSON.parse(msg.toolCalls);
+          } catch (e) {
+            console.warn("[AgentEngine] 解析 toolCalls 失败:", e);
+          }
+        }
         
+        // 如果有 pendingAction 且这是最后一条 assistant 消息，使用 pendingAction 重建 tool_calls
         const isLastAssistantMsg = msg.id === lastAssistantMsg?.id;
-        if (isLastAssistantMsg && pendingAction) {
-          // 只有待确认的 pendingAction 需要 tool_calls
+        if (isLastAssistantMsg && pendingAction && !toolCalls) {
           toolCalls = [{
             id: pendingAction.functionCall.id,
             type: "function",
@@ -213,36 +228,26 @@ export async function loadConversationState(conversationId: string): Promise<Con
             },
           }];
         }
-        // 已完成的工具调用不重建 tool_calls，避免 OpenAI API 报错
         
         messages.push({
           role: "assistant",
           content: msg.content,
           tool_calls: toolCalls,
         });
-      }
-      // tool 消息不需要重建到历史中，因为工具已经执行完成
-    }
-
-    // 5. 获取 iterations
-    let iterations: IterationInfo[] = [];
-    let currentIteration = 0;
-    
-    if (lastAssistantMsg?.iterations) {
-      try {
-        iterations = JSON.parse(lastAssistantMsg.iterations);
-        currentIteration = iterations.length;
-      } catch (e) {
-        console.warn("[AgentEngine] 解析 iterations 失败:", e);
+      } else if (msg.role === "tool") {
+        // 重建 tool 消息
+        messages.push({
+          role: "tool",
+          content: msg.content,
+          tool_call_id: msg.toolCallId!,
+        });
       }
     }
 
     return {
       conversationId,
-      projectContext: agentContext, // 使用从数据库加载的上下文
+      projectContext: agentContext,
       messages,
-      iterations,
-      currentIteration,
       pendingAction,
       assistantMessageId: lastAssistantMsg?.id,
     };

@@ -10,7 +10,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
-import { episode, shot, conversation } from "@/lib/db/schemas/project";
+import { episode, conversation } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
@@ -25,76 +25,7 @@ import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
 import { updateEpisode } from "../project/episode";
 import type { NewEpisode } from "@/types/project";
-
-/**
- * 映射 shotSize 值到数据库枚举
- */
-function mapShotSize(value: string): string {
-  const mapping: Record<string, string> = {
-    'WIDE': 'long_shot',
-    'FULL': 'full_shot',
-    'MEDIUM': 'medium_shot',
-    'CLOSE_UP': 'close_up',
-    'EXTREME_CLOSE_UP': 'extreme_close_up',
-    'EXTREME_LONG_SHOT': 'extreme_long_shot',
-    // 支持直接使用数据库值
-    'extreme_long_shot': 'extreme_long_shot',
-    'long_shot': 'long_shot',
-    'full_shot': 'full_shot',
-    'medium_shot': 'medium_shot',
-    'close_up': 'close_up',
-    'extreme_close_up': 'extreme_close_up',
-  };
-  
-  const mapped = mapping[value] || mapping[value.toUpperCase()];
-  if (!mapped) {
-    throw new Error(`无效的景别值: ${value}. 支持的值: ${Object.keys(mapping).filter(k => k === k.toUpperCase()).join(', ')}`);
-  }
-  return mapped;
-}
-
-/**
- * 映射 cameraMovement 值到数据库枚举
- */
-function mapCameraMovement(value: string): string {
-  const mapping: Record<string, string> = {
-    'STATIC': 'static',
-    'PUSH_IN': 'push_in',
-    'PULL_OUT': 'pull_out',
-    'PAN_LEFT': 'pan_left',
-    'PAN_RIGHT': 'pan_right',
-    'TILT_UP': 'tilt_up',
-    'TILT_DOWN': 'tilt_down',
-    'TRACKING': 'tracking',
-    'CRANE_UP': 'crane_up',
-    'CRANE_DOWN': 'crane_down',
-    'ORBIT': 'orbit',
-    'ZOOM_IN': 'zoom_in',
-    'ZOOM_OUT': 'zoom_out',
-    'HANDHELD': 'handheld',
-    // 支持直接使用数据库值
-    'static': 'static',
-    'push_in': 'push_in',
-    'pull_out': 'pull_out',
-    'pan_left': 'pan_left',
-    'pan_right': 'pan_right',
-    'tilt_up': 'tilt_up',
-    'tilt_down': 'tilt_down',
-    'tracking': 'tracking',
-    'crane_up': 'crane_up',
-    'crane_down': 'crane_down',
-    'orbit': 'orbit',
-    'zoom_in': 'zoom_in',
-    'zoom_out': 'zoom_out',
-    'handheld': 'handheld',
-  };
-  
-  const mapped = mapping[value] || mapping[value.toUpperCase()];
-  if (!mapped) {
-    throw new Error(`无效的运镜方式值: ${value}. 支持的值: ${Object.keys(mapping).filter(k => k === k.toUpperCase()).join(', ')}`);
-  }
-  return mapped;
-}
+import { mapApiToDb, SHOT_SIZE_ENUM, CAMERA_MOVEMENT_ENUM } from "@/lib/constants/enums";
 
 /**
  * 执行单个 function call
@@ -277,20 +208,16 @@ export async function executeFunction(
             assetId: string;
             label: string;
           }>;
-          suggestedConfig?: {
-            prompt: string;
-            duration?: "5" | "10";
-          };
         }>;
 
         try {
           // 验证和转换数据
           const validatedShots = shots.map((shotData) => ({
-            shotSize: mapShotSize(shotData.shotSize) as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
+            shotSize: mapApiToDb(shotData.shotSize, SHOT_SIZE_ENUM) as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
             description: shotData.description,
             order: shotData.order,
             cameraMovement: shotData.cameraMovement 
-              ? mapCameraMovement(shotData.cameraMovement) as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down"
+              ? mapApiToDb(shotData.cameraMovement, CAMERA_MOVEMENT_ENUM) as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down"
               : undefined,
             // 将秒转换为毫秒
             duration: shotData.duration !== undefined ? Math.round(shotData.duration * 1000) : undefined,
@@ -314,7 +241,7 @@ export async function executeFunction(
 
           const createdShots = batchResult.data.shots;
           
-          // 处理每个分镜的 assets 和 suggestedConfig
+          // 处理每个分镜的关联图片
           const { batchAddShotAssets } = await import("../project/shot-asset");
           const assetsAddResults = [];
           
@@ -336,9 +263,6 @@ export async function executeFunction(
                 });
               }
             }
-            
-            // 保存 suggestedConfig（存储在shot表的meta字段或新字段）
-            // TODO: 如果需要保存 suggestedConfig，可以添加到 shot 表或创建shot_video记录
           }
 
           result = {
@@ -588,10 +512,10 @@ export async function executeFunction(
             // 转换枚举值
             const mappedFields: Record<string, unknown> = { ...fields };
             if (fields.shotSize) {
-              mappedFields.shotSize = mapShotSize(fields.shotSize);
+              mappedFields.shotSize = mapApiToDb(fields.shotSize, SHOT_SIZE_ENUM);
             }
             if (fields.cameraMovement) {
-              mappedFields.cameraMovement = mapCameraMovement(fields.cameraMovement);
+              mappedFields.cameraMovement = mapApiToDb(fields.cameraMovement, CAMERA_MOVEMENT_ENUM);
             }
             // 将秒转换为毫秒
             if (fields.duration !== undefined) {

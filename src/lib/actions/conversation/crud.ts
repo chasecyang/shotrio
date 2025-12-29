@@ -12,7 +12,7 @@ import db from "@/lib/db";
 import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq, and, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import type { AgentMessage, AgentContext } from "@/types/agent";
+import type { AgentMessage, AgentMessageRole, AgentContext } from "@/types/agent";
 import type { PendingActionInfo } from "@/lib/services/agent-engine";
 
 /**
@@ -139,16 +139,22 @@ export async function getConversation(conversationId: string) {
     const messages: AgentMessage[] = conv.messages.map((msg) => {
       const message: AgentMessage = {
         id: msg.id,
-        role: msg.role as "user" | "assistant" | "system",
+        role: msg.role as AgentMessageRole,
         content: msg.content,
         timestamp: msg.createdAt,
       };
 
-      if (msg.iterations) {
+      // 解析 toolCallId (tool 消息)
+      if (msg.toolCallId) {
+        message.toolCallId = msg.toolCallId;
+      }
+
+      // 解析 toolCalls (assistant 消息)
+      if (msg.toolCalls) {
         try {
-          message.iterations = JSON.parse(msg.iterations);
+          message.toolCalls = JSON.parse(msg.toolCalls);
         } catch (e) {
-          console.error("[Conversation] 解析 iterations 失败:", e);
+          console.error("[Conversation] 解析 toolCalls 失败:", e);
         }
       }
 
@@ -347,7 +353,8 @@ export async function saveMessage(
       conversationId,
       role: message.role,
       content: message.content,
-      iterations: message.iterations ? JSON.stringify(message.iterations) : null,
+      toolCallId: message.toolCallId || null,
+      toolCalls: message.toolCalls ? JSON.stringify(message.toolCalls) : null,
       // pendingAction, isStreaming, isInterrupted 是运行时状态，不持久化
       createdAt: new Date(),
     });
@@ -381,7 +388,7 @@ export async function updateMessage(
   messageId: string,
   updates: {
     content?: string;
-    iterations?: string; // JSON string
+    toolCalls?: string; // JSON string
   }
 ) {
   const session = await auth.api.getSession({
@@ -443,16 +450,22 @@ export async function getMessageById(messageId: string) {
     // 转换消息格式
     const message: AgentMessage = {
       id: msg.id,
-      role: msg.role as "user" | "assistant" | "system",
+      role: msg.role as AgentMessageRole,
       content: msg.content,
       timestamp: msg.createdAt,
     };
 
-    if (msg.iterations) {
+    // 解析 toolCallId (tool 消息)
+    if (msg.toolCallId) {
+      message.toolCallId = msg.toolCallId;
+    }
+
+    // 解析 toolCalls (assistant 消息)
+    if (msg.toolCalls) {
       try {
-        message.iterations = JSON.parse(msg.iterations);
+        message.toolCalls = JSON.parse(msg.toolCalls);
       } catch (e) {
-        console.error("[Conversation] 解析 iterations 失败:", e);
+        console.error("[Conversation] 解析 toolCalls 失败:", e);
       }
     }
 
