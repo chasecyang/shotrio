@@ -22,7 +22,6 @@ import type { ShotVideoGenerationInput } from "@/types/job";
  * - prompt: 视频描述
  * - elements: 角色元素（可选）
  * - image_urls: 全局参考图（可选）
- * - start_frame: 起始帧（可选）
  * - duration, aspect_ratio 等
  */
 export async function createShotVideoGeneration(data: {

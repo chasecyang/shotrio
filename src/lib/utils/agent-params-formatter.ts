@@ -15,7 +15,7 @@ export interface KlingO1ConfigDisplay {
   images: {                    // 所有关联图片
     imageUrl: string;
     label: string;             // 从shotAssets或推断
-    type: 'element' | 'reference' | 'start_frame';
+    type: 'element' | 'reference';
     apiReference: string;      // API引用标识，如 @Image1, @Element1
   }[];
   duration: string;            // "5秒" 或 "10秒"
@@ -605,11 +605,11 @@ export function extractImagesFromKlingO1Config(
   if (config.image_urls) {
     config.image_urls.forEach((url, index) => {
       const imageNumber = index + 1;
-      const label = urlToLabelMap?.get(url) || (index === 0 ? '起始帧' : `参考图${index}`);
+      const label = urlToLabelMap?.get(url) || `参考图${imageNumber}`;
       images.push({
         imageUrl: url,
         label,
-        type: index === 0 ? 'start_frame' : 'reference',
+        type: 'reference',
         apiReference: `@Image${imageNumber}`
       });
     });

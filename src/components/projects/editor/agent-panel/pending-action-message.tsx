@@ -73,8 +73,6 @@ function ImageThumbnail({
     switch (image.type) {
       case 'element':
         return '角色';
-      case 'start_frame':
-        return '起始帧';
       case 'reference':
         return '参考';
       default:

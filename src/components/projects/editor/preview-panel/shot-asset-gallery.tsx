@@ -25,13 +25,13 @@ import { cn } from "@/lib/utils";
 import { ShotAssetWithAsset } from "@/types/project";
 import { AssetWithTags } from "@/types/asset";
 import { ShotAssetLabelEditor } from "./shot-asset-label-editor";
+import { ShotAssetSelectorSkeleton, AssetThumbnailSkeleton } from "../resource-panel/asset-skeleton";
 import {
   Plus,
   Trash2,
   GripVertical,
   Star,
   ImageIcon,
-  Loader2,
 } from "lucide-react";
 import {
   DndContext,
@@ -300,7 +300,7 @@ export function ShotAssetGallery({
   const handleSelectAsset = async (assetId: string) => {
     setIsUpdating(true);
     try {
-      const defaultLabel = shotAssets.length === 0 ? "首帧" : "参考图";
+      const defaultLabel = "参考图";
       const result = await addShotAsset({
         shotId,
         assetId,
@@ -430,9 +430,7 @@ export function ShotAssetGallery({
             {/* 素材列表 */}
             <ScrollArea className="h-[400px]">
               {isLoadingAssets ? (
-                <div className="flex items-center justify-center h-40">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                </div>
+                <ShotAssetSelectorSkeleton count={6} />
               ) : filteredAssets.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -465,9 +463,7 @@ export function ShotAssetGallery({
                             sizes="200px"
                           />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          </div>
+                          <AssetThumbnailSkeleton />
                         )}
 
                         {isLinked && (

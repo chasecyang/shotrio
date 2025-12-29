@@ -5,6 +5,7 @@
 // 预设的分镜素材标签
 export const PRESET_SHOT_ASSET_LABELS = [
   "首帧",
+  "尾帧",
   "角色参考",
   "场景参考",
   "道具",

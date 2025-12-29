@@ -10,11 +10,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Maximize2, Loader2 } from "lucide-react";
+import { Trash2, Maximize2 } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AssetThumbnailSkeleton } from "./asset-skeleton";
 
 interface AssetCardProps {
   asset: AssetWithTags;
@@ -90,11 +91,8 @@ export function AssetCard({
           onClick={() => onClick(asset)}
         >
           {isGenerating ? (
-            // 生成中状态
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50">
-              <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-              <span className="text-xs text-muted-foreground mt-2">生成中...</span>
-            </div>
+            // 生成中状态 - 骨架屏
+            <AssetThumbnailSkeleton />
           ) : (
             <Image
               src={asset.thumbnailUrl || asset.imageUrl!}
@@ -268,10 +266,8 @@ export function AssetCard({
         }}
       >
         {isGenerating ? (
-          // 生成中状态
-          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-            <Loader2 className="h-5 w-5 animate-spin text-primary/60" />
-          </div>
+          // 生成中状态 - 骨架屏
+          <AssetThumbnailSkeleton />
         ) : (
           <>
             <Image

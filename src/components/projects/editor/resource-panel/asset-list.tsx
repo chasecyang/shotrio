@@ -2,6 +2,7 @@
 
 import { AssetWithTags } from "@/types/asset";
 import { AssetCard } from "./asset-card";
+import { AssetListSkeleton } from "./asset-skeleton";
 import { Images, Upload, User, MapPin, Package, Sparkles, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -59,14 +60,7 @@ export function AssetList({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-sm text-muted-foreground">加载创作素材中...</p>
-        </div>
-      </div>
-    );
+    return <AssetListSkeleton viewMode={viewMode} count={6} />;
   }
 
   if (assets.length === 0) {

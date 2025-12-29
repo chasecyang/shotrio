@@ -363,13 +363,13 @@ export interface KlingO1Element {
 
 /**
  * Kling O1 Reference-to-Video 输入参数
- * 
+ *
  * 注意：如果要指定起始帧，将其放在 image_urls 的第一位，并在 prompt 中用 @Image1 引用
  */
 export interface KlingO1ReferenceToVideoInput {
   prompt: string;                     // 详细的视频描述，使用 @Element1, @Image1 等引用图片
   elements?: KlingO1Element[];        // 角色/物体元素数组（最多7张图片总计）
-  image_urls?: string[];              // 参考图数组（用于风格、场景、起始帧等）
+  image_urls?: string[];              // 参考图数组（用于风格、场景、氛围等）
   duration?: VideoDuration;           // 视频时长：5秒或10秒
   aspect_ratio?: VideoAspectRatio;    // 宽高比
   negative_prompt?: string;           // 负面提示词
@@ -382,8 +382,8 @@ export interface KlingO1ReferenceToVideoInput {
  * 
  * 支持特性：
  * - 多张参考图组合
- * - 角色一致性（通过 elements）
  * - 起始帧控制
+ * - 角色一致性（通过 elements）
  * - 复杂镜头运动
  * 
  * API 文档: https://fal.ai/models/fal-ai/kling-video/o1/standard/reference-to-video

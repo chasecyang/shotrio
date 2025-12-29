@@ -254,7 +254,7 @@ export const shotAsset = pgTable("shot_asset", {
     .references(() => asset.id, { onDelete: "cascade" }),
   
   // 语义化标签（用于 AI 理解和 prompt 引用）
-  label: text("label").notNull(), // 如 "首帧"、"汤姆-主图"、"厨房场景"
+  label: text("label").notNull(), // 如 "首帧"、"汤姆-主图"、"厨房场景"、"氛围参考"
   order: integer("order").notNull(), // 决定 prompt 中的引用顺序
   
   createdAt: timestamp("created_at").defaultNow().notNull(),

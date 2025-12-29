@@ -126,34 +126,47 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_shot_video",
-    description: `使用 Kling O1 Reference-to-Video API 为分镜生成视频。需要提供完整的视频生成参数。
+    description: `使用 Kling O1 Reference-to-Video API 为分镜生成视频。
 
-**Kling O1 参数结构说明：**
+## 完整示例
+假设 Assets 包含以下图片：
+- "温室废墟-鸟瞰" (首帧) → image_urls[0]
+- "汤姆-正面照" → elements[0].frontal_image_url  
+- "汤姆-背面照" → elements[0].reference_image_urls[0]
+- "魔法石-特写" → elements[1].frontal_image_url
+- "温室内部风格参考" → image_urls[1]
 
-1. **prompt**（必填）：详细的视频描述。可以使用 @Element1, @Image1 等引用图片。
-
-2. **elements**（可选）：角色/物体元素数组，用于保持角色一致性。
-   每个元素包含：
-   - frontal_image_url: 主图URL（如角色正面图）
-   - reference_image_urls: 参考图URL数组（如侧面、动作等）
-   
-   在 prompt 中使用 @Element1, @Element2 引用这些元素。
-
-3. **image_urls**（可选）：参考图URL数组，用于：
-   - 起始帧：放在第一位，在 prompt 中用 @Image1 引用（如 "Take @Image1 as the start frame..."）
-   - 风格/场景参考：其他位置，用 @Image2, @Image3 等引用
-   
-   注意：elements + image_urls 总数最多 7 张图片
-
-4. **duration**（可选）："5" 或 "10"，默认 "5"
-
-5. **aspect_ratio**（可选）："16:9", "9:16" 或 "1:1"，默认 "16:9"
-
-**使用建议：**
-- 先用 query_shots 查询分镜关联的素材，获取 imageUrl 和 label
-- 根据 label 的语义，将图片分类为 elements 或 image_urls
-- 如果有起始帧，将其放在 image_urls 的第一位
-- 在 prompt 中使用对应的引用占位符`,
+生成的配置：
+\`\`\`json
+{
+  "shotId": "shot-123",
+  "klingO1Config": {
+    "prompt": "Take @Image1 as the start frame. Start with a high-angle satellite view of the ancient greenhouse ruin surrounded by nature. The camera swoops down and flies inside the building, revealing the character from @Element1 standing in the sun-drenched center. The camera then seamlessly transitions into a smooth 180-degree orbit around the character, moving to the back view. As the open backpack comes into focus, the camera continues to push forward, zooming deep inside the bag to reveal the glowing stone from @Element2 nestled inside. Cinematic lighting, hopeful atmosphere, 35mm lens. Make sure to keep it as the style of @Image2.",
+    "image_urls": [
+      "https://v3b.fal.media/files/b/koala/v9COzzH23FGBYdGLgbK3u.png",
+      "https://v3b.fal.media/files/b/elephant/5Is2huKQFSE7A7c5uUeUF.png"
+    ],
+    "elements": [
+      {
+        "frontal_image_url": "https://v3b.fal.media/files/b/panda/MQp-ghIqshvMZROKh9lW3.png",
+        "reference_image_urls": [
+          "https://v3b.fal.media/files/b/kangaroo/YMpmQkYt9xugpOTQyZW0O.png",
+          "https://v3b.fal.media/files/b/zebra/d6ywajNyJ6bnpa_xBue-K.png"
+        ]
+      },
+      {
+        "frontal_image_url": "https://v3b.fal.media/files/b/koala/gSnsA7HJlgcaTyR5Ujj2H.png",
+        "reference_image_urls": [
+          "https://v3b.fal.media/files/b/kangaroo/EBF4nWihspyv4pp6hgj7D.png"
+        ]
+      }
+    ],
+    "duration": "5",
+    "aspect_ratio": "16:9"
+  }
+}
+\`\`\`
+`,
     displayName: "生成分镜视频",
     parameters: {
       type: "object",
@@ -165,13 +178,13 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         klingO1Config: {
           type: "object",
           description: `Kling O1 API 完整配置。包含：
-- prompt: 视频描述（必填）
-- elements: 角色元素数组（可选）
-- image_urls: 参考图URL数组（可选，起始帧放第一位）
-- duration: "5" 或 "10"（可选）
-- aspect_ratio: "16:9"/"9:16"/"1:1"（可选）
+- prompt: 电影化视频描述（必填，英文，在描述中自然嵌入 @Element1/@Image1 等占位符）
+- elements: 角色/物体元素数组（可选，每个 element 包含 frontal_image_url 和可选的 reference_image_urls）
+- image_urls: 首帧/风格/场景/氛围参考图URL数组（可选，第一张通常作为首帧）
+- duration: "5" 或 "10"（可选，默认 "5"）
+- aspect_ratio: "16:9"/"9:16"/"1:1"（可选，默认 "16:9"）
 
-注意：elements + image_urls 总数最多 7 张图片`,
+注意：elements 和 image_urls 中的图片总数最多 7 张`,
         },
       },
       required: ["shotId", "klingO1Config"],

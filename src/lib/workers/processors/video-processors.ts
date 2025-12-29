@@ -73,7 +73,6 @@ export async function processShotVideoGeneration(jobData: Job, workerToken: stri
       prompt: klingO1Config.prompt,
       elementsCount: klingO1Config.elements?.length || 0,
       globalImagesCount: klingO1Config.image_urls?.length || 0,
-      hasStartFrame: !!klingO1Config.start_frame,
       duration: klingO1Config.duration,
       aspectRatio: klingO1Config.aspect_ratio,
     });
