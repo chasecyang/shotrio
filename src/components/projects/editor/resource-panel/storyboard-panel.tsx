@@ -97,6 +97,15 @@ export function StoryboardPanel() {
                           fill
                           className="object-cover"
                         />
+                        {/* 多图片数量徽章 */}
+                        {shot.shotAssets && shot.shotAssets.length > 1 && (
+                          <Badge 
+                            variant="secondary"
+                            className="absolute top-1 left-1 h-4 px-1 text-[9px] bg-black/70 text-white border-0"
+                          >
+                            {shot.shotAssets.length}
+                          </Badge>
+                        )}
                         {/* 视频标识 */}
                         {shot.videoUrl && (
                           <div className="absolute bottom-1 right-1 bg-primary rounded px-1 py-0.5">

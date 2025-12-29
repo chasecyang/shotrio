@@ -130,7 +130,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 
 **Kling O1 参数结构说明：**
 
-1. **prompt**（必填）：详细的运动描述。可以使用 @Element1, @Image1 等引用图片。
+1. **prompt**（必填）：详细的视频描述。可以使用 @Element1, @Image1 等引用图片。
 
 2. **elements**（可选）：角色/物体元素数组，用于保持角色一致性。
    每个元素包含：
@@ -165,7 +165,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         klingO1Config: {
           type: "object",
           description: `Kling O1 API 完整配置。包含：
-- prompt: 运动描述（必填）
+- prompt: 视频描述（必填）
 - elements: 角色元素数组（可选）
 - image_urls: 参考图URL数组（可选，起始帧放第一位）
 - duration: "5" 或 "10"（可选）

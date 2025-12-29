@@ -19,7 +19,7 @@ import type { ShotVideoGenerationInput } from "@/types/job";
  * 2. 创建 job 任务（触发 worker 处理）
  * 
  * 注意：Agent 需要直接提供完整的 Kling O1 配置，包括：
- * - prompt: 运动描述
+ * - prompt: 视频描述
  * - elements: 角色元素（可选）
  * - image_urls: 全局参考图（可选）
  * - start_frame: 起始帧（可选）

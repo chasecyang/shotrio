@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { randomUUID } from "crypto";
 import type { NewShotAsset, ShotAssetWithAsset } from "@/types/project";
+import { MAX_SHOT_ASSETS } from "@/lib/constants/shot-asset-labels";
 
 /**
  * 添加分镜关联素材
@@ -43,13 +44,19 @@ export async function addShotAsset(data: {
       throw new Error("素材不存在");
     }
 
+    // 检查分镜关联素材数量是否已达上限
+    const existingAssets = await db.query.shotAsset.findMany({
+      where: eq(shotAsset.shotId, data.shotId),
+      orderBy: [asc(shotAsset.order)],
+    });
+
+    if (existingAssets.length >= MAX_SHOT_ASSETS) {
+      throw new Error(`每个分镜最多只能关联${MAX_SHOT_ASSETS}张图片`);
+    }
+
     // 如果没有指定 order，自动分配到最后
     let order = data.order;
     if (order === undefined) {
-      const existingAssets = await db.query.shotAsset.findMany({
-        where: eq(shotAsset.shotId, data.shotId),
-        orderBy: [asc(shotAsset.order)],
-      });
       order = existingAssets.length > 0
         ? Math.max(...existingAssets.map((a) => a.order)) + 1
         : 0;
@@ -249,6 +256,11 @@ export async function batchAddShotAssets(data: {
       where: eq(shotAsset.shotId, data.shotId),
       orderBy: [asc(shotAsset.order)],
     });
+    
+    // 检查添加后是否超过上限
+    if (existingAssets.length + data.assets.length > MAX_SHOT_ASSETS) {
+      throw new Error(`每个分镜最多只能关联${MAX_SHOT_ASSETS}张图片`);
+    }
     
     let nextOrder = existingAssets.length > 0
       ? Math.max(...existingAssets.map((a) => a.order)) + 1

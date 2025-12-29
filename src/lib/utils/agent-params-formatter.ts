@@ -4,6 +4,34 @@
  */
 
 /**
+ * Kling O1 配置展示结构
+ */
+export interface KlingO1ConfigDisplay {
+  prompt: string;              // 完整prompt
+  promptHighlights?: {         // @label占位符高亮信息
+    label: string;
+    imageUrl?: string;
+  }[];
+  images: {                    // 所有关联图片
+    imageUrl: string;
+    label: string;             // 从shotAssets或推断
+    type: 'element' | 'reference' | 'start_frame';
+    apiReference: string;      // API引用标识，如 @Image1, @Element1
+  }[];
+  duration: string;            // "5秒" 或 "10秒"
+  aspectRatio: string;         // "16:9"等
+}
+
+/**
+ * Prompt解析结果
+ */
+export interface PromptPart {
+  text: string;
+  isReference: boolean;
+  label?: string;
+}
+
+/**
  * 参数键名中文映射
  */
 const PARAM_KEY_LABELS: Record<string, string> = {
@@ -488,3 +516,147 @@ export function formatParametersForConfirmation(
   });
 }
 
+/**
+ * 解析Prompt中的@label引用
+ */
+export function parsePromptReferences(prompt: string): PromptPart[] {
+  // 匹配 @标签名 模式 (支持中文、字母、数字、连字符、下划线)
+  const regex = /@([\u4e00-\u9fa5\w-]+)/g;
+  const parts: PromptPart[] = [];
+  let lastIndex = 0;
+  
+  let match;
+  while ((match = regex.exec(prompt)) !== null) {
+    // 添加普通文本
+    if (match.index > lastIndex) {
+      parts.push({
+        text: prompt.slice(lastIndex, match.index),
+        isReference: false
+      });
+    }
+    
+    // 添加引用
+    parts.push({
+      text: match[0], // 包含@符号
+      isReference: true,
+      label: match[1]
+    });
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // 添加剩余文本
+  if (lastIndex < prompt.length) {
+    parts.push({
+      text: prompt.slice(lastIndex),
+      isReference: false
+    });
+  }
+  
+  return parts;
+}
+
+/**
+ * 从Kling O1 Config中提取所有图片及其标签
+ * 注意：这是一个简化版本，不查询数据库
+ * 实际使用时应该从shotAssets映射URL到label
+ */
+export function extractImagesFromKlingO1Config(
+  config: {
+    prompt?: string;
+    elements?: Array<{
+      frontal_image_url: string;
+      reference_image_urls?: string[];
+    }>;
+    image_urls?: string[];
+  },
+  urlToLabelMap?: Map<string, string>
+): KlingO1ConfigDisplay['images'] {
+  const images: KlingO1ConfigDisplay['images'] = [];
+  
+  // 从elements中提取图片
+  if (config.elements) {
+    config.elements.forEach((element, elementIndex) => {
+      const elementNumber = elementIndex + 1;
+      
+      // 主图
+      images.push({
+        imageUrl: element.frontal_image_url,
+        label: urlToLabelMap?.get(element.frontal_image_url) || `角色${elementNumber}-主图`,
+        type: 'element',
+        apiReference: `@Element${elementNumber}`
+      });
+      
+      // 参考图（element的参考图也算在同一个element下）
+      if (element.reference_image_urls) {
+        element.reference_image_urls.forEach((url, refIndex) => {
+          images.push({
+            imageUrl: url,
+            label: urlToLabelMap?.get(url) || `角色${elementNumber}-参考${refIndex + 1}`,
+            type: 'element',
+            apiReference: `@Element${elementNumber}`
+          });
+        });
+      }
+    });
+  }
+  
+  // 从image_urls中提取图片
+  if (config.image_urls) {
+    config.image_urls.forEach((url, index) => {
+      const imageNumber = index + 1;
+      const label = urlToLabelMap?.get(url) || (index === 0 ? '起始帧' : `参考图${index}`);
+      images.push({
+        imageUrl: url,
+        label,
+        type: index === 0 ? 'start_frame' : 'reference',
+        apiReference: `@Image${imageNumber}`
+      });
+    });
+  }
+  
+  return images;
+}
+
+/**
+ * 格式化Kling O1配置为可展示的结构
+ * 这是简化版本，不需要异步查询数据库
+ */
+export function formatKlingO1ConfigSync(
+  config: {
+    prompt?: string;
+    elements?: Array<{
+      frontal_image_url: string;
+      reference_image_urls?: string[];
+    }>;
+    image_urls?: string[];
+    duration?: string;
+    aspect_ratio?: string;
+  },
+  urlToLabelMap?: Map<string, string>
+): KlingO1ConfigDisplay {
+  const prompt = config.prompt || '';
+  
+  // 解析prompt中的引用
+  const parts = parsePromptReferences(prompt);
+  const promptHighlights = parts
+    .filter(p => p.isReference && p.label)
+    .map(p => ({ label: p.label! }));
+  
+  // 提取所有图片
+  const images = extractImagesFromKlingO1Config(config, urlToLabelMap);
+  
+  // 格式化duration
+  const duration = config.duration ? `${config.duration}秒` : '5秒';
+  
+  // 格式化aspect_ratio
+  const aspectRatio = config.aspect_ratio || '16:9';
+  
+  return {
+    prompt,
+    promptHighlights: promptHighlights.length > 0 ? promptHighlights : undefined,
+    images,
+    duration,
+    aspectRatio
+  };
+}

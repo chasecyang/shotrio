@@ -14,16 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { 
   updateShot as updateShotAction, 
 } from "@/lib/actions/project";
-import { addShotAsset, removeShotAsset } from "@/lib/actions/project/shot-asset";
 import { generateShotVideo } from "@/lib/actions/video/generate";
 import { toast } from "sonner";
 import {
@@ -35,8 +28,8 @@ import {
   Loader2,
   RefreshCw,
   PlayIcon,
-  ImagePlus,
-  X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   EditableField,
@@ -52,10 +45,9 @@ import {
 import { useEditor } from "../editor-context";
 import { Progress } from "@/components/ui/progress";
 import { refreshShot } from "@/lib/actions/project/refresh";
-import { queryAssets } from "@/lib/actions/asset";
-import { AssetWithTags } from "@/types/asset";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { ShotAssetGallery } from "./shot-asset-gallery";
 
 interface ShotEditorProps {
   shot: ShotDetail;
@@ -76,19 +68,13 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoGenerationJobId, setVideoGenerationJobId] = useState<string | null>(null);
   
-  // 素材选择器状态
-  const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
-  const [assets, setAssets] = useState<AssetWithTags[]>([]);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isUpdatingAsset, setIsUpdatingAsset] = useState(false);
+  // 主预览区当前显示的图片索引
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
-  // 获取第一张关联素材
-  const firstAsset = shot.shotAssets?.[0];
-  const hasImage = !!firstAsset?.asset?.imageUrl;
-  
-  // 拖拽状态
-  const [isDragOver, setIsDragOver] = useState(false);
+  // 获取关联的素材列表
+  const shotAssets = shot.shotAssets || [];
+  const hasImage = shotAssets.length > 0 && !!shotAssets[0]?.asset?.imageUrl;
+  const currentPreviewAsset = shotAssets[currentPreviewIndex];
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -96,44 +82,14 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const shotSizeOptions = getShotSizeOptions();
   const cameraMovementOptions = getCameraMovementOptions();
 
-  // 加载素材列表
+  // 重置预览索引当素材列表变化时
   useEffect(() => {
-    if (isAssetSelectorOpen && project?.id) {
-      console.log("[Shot Editor] Loading assets for project:", project.id);
-      setIsLoadingAssets(true);
-      queryAssets({
-        projectId: project.id,
-        limit: 100,
-      })
-        .then((result) => {
-          console.log("[Shot Editor] Assets loaded:", result.assets.length, "assets");
-          setAssets(result.assets);
-          if (result.assets.length === 0) {
-            console.warn("[Shot Editor] No assets found for project:", project.id);
-          }
-        })
-        .catch((error) => {
-          console.error("[Shot Editor] 加载素材失败:", error);
-          toast.error("加载素材失败");
-        })
-        .finally(() => {
-          setIsLoadingAssets(false);
-        });
-    } else {
-      console.log("[Shot Editor] Not loading assets:", {
-        isAssetSelectorOpen,
-        projectId: project?.id,
-      });
+    if (currentPreviewIndex >= shotAssets.length && shotAssets.length > 0) {
+      setCurrentPreviewIndex(shotAssets.length - 1);
+    } else if (shotAssets.length === 0) {
+      setCurrentPreviewIndex(0);
     }
-  }, [isAssetSelectorOpen, project?.id]);
-
-  // 筛选素材
-  const filteredAssets = useMemo(() => {
-    if (!searchQuery) return assets;
-    return assets.filter((asset) =>
-      asset.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [assets, searchQuery]);
+  }, [shotAssets.length, currentPreviewIndex]);
 
   // 监听视频生成任务
   const { jobs } = useEditor();
@@ -220,7 +176,6 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   // 检查是否有正在进行的视频生成任务
   useEffect(() => {
     const activeTask = videoGenerationTasks.find((task) => {
-      // 检查任务状态：pending 或 processing
       if ((task.status !== "processing" && task.status !== "pending") || !task.inputData) return false;
       try {
         const inputData = JSON.parse(task.inputData);
@@ -231,13 +186,11 @@ export function ShotEditor({ shot }: ShotEditorProps) {
     });
     
     if (activeTask) {
-      // 有活动任务时，设置状态和 jobId
       setIsGeneratingVideo(true);
       if (activeTask.id) {
         setVideoGenerationJobId(activeTask.id);
       }
     } else {
-      // 没有活动任务时，重置状态
       setIsGeneratingVideo(false);
       setVideoGenerationJobId(null);
     }
@@ -256,150 +209,34 @@ export function ShotEditor({ shot }: ShotEditorProps) {
       if (result.success && result.jobId) {
         setVideoGenerationJobId(result.jobId);
         toast.success(tToast("success.videoTaskStarted"));
-        // 不在这里重置状态，等待 useEffect 检测到任务后再处理
       } else {
         toast.error(result.error || "启动失败");
-        setIsGeneratingVideo(false); // 失败时才重置
+        setIsGeneratingVideo(false);
       }
     } catch {
       toast.error(tToast("error.generationFailed"));
-      setIsGeneratingVideo(false); // 出错时才重置
+      setIsGeneratingVideo(false);
     }
   };
 
-  // 添加或更新分镜素材
-  const updateShotAsset = async (assetId: string) => {
-    setIsUpdatingAsset(true);
-    try {
-      // 如果已有素材，先删除
-      if (firstAsset) {
-        await removeShotAsset(firstAsset.id);
-      }
-      
-      // 添加新素材（作为首帧）
-      const result = await addShotAsset({
-        shotId: shot.id,
-        assetId,
-        label: "首帧",
-        order: 0,
-      });
-
-      if (result.success) {
-        toast.success(tToast("success.assetApplied"));
-        
-        // 刷新分镜数据
-        const refreshResult = await refreshShot(shot.id);
-        if (refreshResult.success && refreshResult.shot) {
-          updateShot(refreshResult.shot);
-        }
-      } else {
-        toast.error(result.error || "应用素材失败");
-      }
-    } catch (error) {
-      console.error("应用素材失败:", error);
-      toast.error("应用素材失败");
-    } finally {
-      setIsUpdatingAsset(false);
+  // 处理画廊更新后的回调
+  const handleGalleryUpdate = async () => {
+    const refreshResult = await refreshShot(shot.id);
+    if (refreshResult.success && refreshResult.shot) {
+      updateShot(refreshResult.shot);
     }
   };
 
-  // 处理选择素材（从对话框）
-  const handleSelectAsset = async (assetId: string) => {
-    await updateShotAsset(assetId);
-    setIsAssetSelectorOpen(false);
+  // 切换预览图片
+  const handlePrevImage = () => {
+    setCurrentPreviewIndex((prev) => (prev > 0 ? prev - 1 : shotAssets.length - 1));
   };
 
-  // 处理清除素材
-  const handleClearAsset = async () => {
-    if (!firstAsset) return;
-    
-    setIsUpdatingAsset(true);
-    try {
-      const result = await removeShotAsset(firstAsset.id);
-
-      if (result.success) {
-        toast.success("已清除素材");
-        
-        // 刷新分镜数据
-        const refreshResult = await refreshShot(shot.id);
-        if (refreshResult.success && refreshResult.shot) {
-          updateShot(refreshResult.shot);
-        }
-      } else {
-        toast.error(result.error || "清除失败");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("清除失败");
-    } finally {
-      setIsUpdatingAsset(false);
-    }
+  const handleNextImage = () => {
+    setCurrentPreviewIndex((prev) => (prev < shotAssets.length - 1 ? prev + 1 : 0));
   };
 
-  // 处理打开素材选择器
-  const handleOpenAssetSelector = () => {
-    if (!project?.id) {
-      toast.error("项目信息加载中，请稍后再试");
-      console.error("[Shot Editor] Cannot open asset selector: project not loaded");
-      return;
-    }
-    setIsAssetSelectorOpen(true);
-  };
-
-  // 处理重新加载素材
-  const handleReloadAssets = () => {
-    if (!project?.id) {
-      toast.error("项目信息加载中，请稍后再试");
-      return;
-    }
-    console.log("[Shot Editor] Manual reload assets triggered");
-    setIsLoadingAssets(true);
-    queryAssets({ projectId: project.id, limit: 100 })
-      .then((result) => {
-        console.log("[Shot Editor] Assets reloaded:", result.assets.length, "assets");
-        setAssets(result.assets);
-      })
-      .catch((error) => {
-        console.error("[Shot Editor] 重新加载素材失败:", error);
-        toast.error("加载素材失败");
-      })
-      .finally(() => {
-        setIsLoadingAssets(false);
-      });
-  };
-
-  // 处理素材拖拽放置
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-
-    try {
-      const data = e.dataTransfer.getData("application/json");
-      if (!data) return;
-
-      const { assetId } = JSON.parse(data);
-      if (!assetId) return;
-
-      await updateShotAsset(assetId);
-    } catch (error) {
-      console.error("解析拖拽数据失败:", error);
-    }
-  };
-
-  // 监听视频生成任务完成状态（只用于显示提示和重置 UI 状态）
+  // 监听视频生成任务完成状态
   useEffect(() => {
     const relevantJob = videoGenerationTasks.find((task) => {
       if (!task.inputData) return false;
@@ -431,227 +268,199 @@ export function ShotEditor({ shot }: ShotEditorProps) {
   const videoGenerationMessage = currentVideoTask?.progressMessage || "正在生成视频...";
 
   return (
-    <>
-      <ScrollArea className="h-full">
-        <div className="p-6 space-y-6 @container">
-          {/* 顶部：分镜预览图 */}
-          <div className="flex flex-col @[640px]:flex-row gap-6">
-            {/* 大图预览 */}
-            <div className="w-full @[640px]:w-80 shrink-0">
-            <div 
-              className={cn(
-                "aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative group transition-all",
-                isDragOver && "border-primary ring-2 ring-primary/50 bg-primary/5"
-              )}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {firstAsset?.asset?.imageUrl ? (
-                <>
-                  <Image
-                    src={firstAsset.asset.imageUrl}
-                    alt={`分镜 ${shot.order}`}
-                    fill
-                    className="object-contain"
-                    sizes="320px"
-                  />
-                  {/* 拖拽悬停提示 */}
-                  {isDragOver && (
-                    <div className="absolute inset-0 bg-primary/10 backdrop-blur-sm flex items-center justify-center z-10">
-                      <div className="text-center px-4">
-                        <ImagePlus className="w-12 h-12 mx-auto mb-2 text-primary" />
-                        <p className="text-sm font-medium text-primary">释放以替换图片</p>
-                      </div>
-                    </div>
-                  )}
-                  {/* 悬停操作按钮 */}
-                  {!isDragOver && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={handleOpenAssetSelector}
-                        disabled={isUpdatingAsset}
-                      >
-                        <ImagePlus className="w-4 h-4 mr-1.5" />
-                        更换素材
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={handleClearAsset}
-                        disabled={isUpdatingAsset}
-                      >
-                        <X className="w-4 h-4 mr-1.5" />
-                        清除
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* 拖拽悬停提示 */}
-                  {isDragOver ? (
-                    <div className="absolute inset-0 bg-primary/10 backdrop-blur-sm flex items-center justify-center z-10">
-                      <div className="text-center px-4">
-                        <ImagePlus className="w-12 h-12 mx-auto mb-2 text-primary" />
-                        <p className="text-sm font-medium text-primary">释放以添加图片</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted-foreground p-6">
-                      <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm mb-3">暂无图片</p>
-                      <Button
-                        size="sm"
-                        onClick={handleOpenAssetSelector}
-                        disabled={isUpdatingAsset}
-                      >
-                        <ImagePlus className="w-4 h-4 mr-1.5" />
-                        选择素材
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+    <ScrollArea className="h-full">
+      <div className="p-6 space-y-6 @container">
+        {/* 标题栏 */}
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="font-mono text-lg px-3 py-1">
+            #{shot.order}
+          </Badge>
+          <h2 className="text-xl font-semibold">分镜编辑</h2>
+        </div>
 
-            {/* 视频预览区域 */}
-            <div className="mt-3 space-y-2">
-              {shot.videoUrl ? (
-                <>
-                  <video
-                    src={shot.videoUrl}
-                    controls
-                    className="w-full rounded-lg border"
-                  />
-                  <div className="flex gap-2">
+        {/* 主预览区 */}
+        <div className="space-y-4">
+          <div className="aspect-video bg-muted rounded-lg overflow-hidden border flex items-center justify-center relative group">
+            {currentPreviewAsset?.asset?.imageUrl ? (
+              <>
+                <Image
+                  src={currentPreviewAsset.asset.imageUrl}
+                  alt={`分镜 ${shot.order} - ${currentPreviewAsset.label}`}
+                  fill
+                  className="object-contain"
+                  sizes="800px"
+                />
+                
+                {/* 图片指示器和切换按钮 */}
+                {shotAssets.length > 1 && (
+                  <>
+                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded text-xs font-medium">
+                      {currentPreviewIndex + 1} / {shotAssets.length}
+                    </div>
+                    
+                    {/* 左右切换按钮 */}
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="flex-1 gap-1.5"
-                      onClick={handleGenerateVideo}
-                      disabled={isGeneratingVideo}
+                      variant="secondary"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={handlePrevImage}
                     >
-                      {isGeneratingVideo ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      )}
-                      重新生成视频
+                      <ChevronLeft className="w-4 h-4" />
                     </Button>
-                  </div>
-                </>
-              ) : isGeneratingVideo ? (
-                <div className="text-center p-6 border rounded-lg bg-muted/30">
-                  <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin text-primary" />
-                  <p className="text-sm font-medium mb-2">{videoGenerationMessage}</p>
-                  <Progress value={videoGenerationProgress} className="w-full max-w-[200px] mx-auto" />
-                  <p className="text-xs text-muted-foreground mt-2">{videoGenerationProgress}%</p>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={handleNextImage}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+
+                {/* 标签显示 */}
+                <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded text-xs">
+                  {currentPreviewAsset.label}
                 </div>
-              ) : hasImage ? (
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground p-6">
+                <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm mb-3">暂无图片</p>
+                <p className="text-xs">在下方画廊中添加图片</p>
+              </div>
+            )}
+          </div>
+
+          {/* 视频预览区域 */}
+          <div className="space-y-2">
+            {shot.videoUrl ? (
+              <>
+                <video
+                  src={shot.videoUrl}
+                  controls
+                  className="w-full rounded-lg border"
+                />
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full gap-1.5"
                   onClick={handleGenerateVideo}
+                  disabled={isGeneratingVideo}
                 >
-                  <PlayIcon className="w-3.5 h-3.5" />
-                  <Sparkles className="w-3.5 h-3.5" />
-                  生成视频
+                  {isGeneratingVideo ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  重新生成视频
                 </Button>
-              ) : null}
-            </div>
+              </>
+            ) : isGeneratingVideo ? (
+              <div className="text-center p-6 border rounded-lg bg-muted/30">
+                <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin text-primary" />
+                <p className="text-sm font-medium mb-2">{videoGenerationMessage}</p>
+                <Progress value={videoGenerationProgress} className="w-full max-w-[200px] mx-auto" />
+                <p className="text-xs text-muted-foreground mt-2">{videoGenerationProgress}%</p>
+              </div>
+            ) : hasImage ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-1.5"
+                onClick={handleGenerateVideo}
+              >
+                <PlayIcon className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5" />
+                生成视频
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* 图片画廊 */}
+        <ShotAssetGallery
+          shotId={shot.id}
+          projectId={project?.id || ""}
+          shotAssets={shotAssets}
+          onUpdate={handleGalleryUpdate}
+        />
+
+        {/* 景别和运镜选择器 */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-1.5">
+              <Maximize2 className="w-4 h-4 text-muted-foreground" />
+              景别
+            </label>
+            <Select
+              value={formData.shotSize}
+              onValueChange={(value) =>
+                setFormData({ ...formData, shotSize: value as ShotSize })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="选择景别" />
+              </SelectTrigger>
+              <SelectContent>
+                {shotSizeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* 右侧：基本信息 */}
-          <div className="flex-1 space-y-4">
-            {/* 标题栏 */}
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="font-mono text-lg px-3 py-1">
-                #{shot.order}
-              </Badge>
-              <h2 className="text-xl font-semibold">分镜编辑</h2>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-1.5">
+              <Video className="w-4 h-4 text-muted-foreground" />
+              运镜
+            </label>
+            <Select
+              value={formData.cameraMovement}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  cameraMovement: value as CameraMovement,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="选择运镜" />
+              </SelectTrigger>
+              <SelectContent>
+                {cameraMovementOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-            {/* 景别和运镜选择器 */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1.5">
-                  <Maximize2 className="w-4 h-4 text-muted-foreground" />
-                  景别
-                </label>
-                <Select
-                  value={formData.shotSize}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, shotSize: value as ShotSize })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择景别" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shotSizeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-1.5">
-                  <Video className="w-4 h-4 text-muted-foreground" />
-                  运镜
-                </label>
-                <Select
-                  value={formData.cameraMovement}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      cameraMovement: value as CameraMovement,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择运镜" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cameraMovementOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* 时长 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                时长
-              </label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={formData.duration}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      duration: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="w-24"
-                />
-                <span className="text-sm text-muted-foreground">秒</span>
-              </div>
-            </div>
+        {/* 时长 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            时长
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={formData.duration}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  duration: parseFloat(e.target.value) || 0,
+                })
+              }
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">秒</span>
           </div>
         </div>
 
@@ -675,111 +484,5 @@ export function ShotEditor({ shot }: ShotEditorProps) {
         </div>
       </div>
     </ScrollArea>
-
-    {/* 素材选择对话框 */}
-    <Dialog open={isAssetSelectorOpen} onOpenChange={setIsAssetSelectorOpen}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>选择分镜素材</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* 搜索框 */}
-          <div className="relative">
-            <ImageIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索素材..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-
-          {/* 素材网格 */}
-          <ScrollArea className="h-[400px] pr-4">
-            {isLoadingAssets ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredAssets.length === 0 ? (
-              <div className="text-center py-12 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">
-                    {searchQuery ? "未找到匹配的素材" : "暂无素材"}
-                  </p>
-                  {!searchQuery && assets.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      请先在左侧&ldquo;创作素材&rdquo;面板中上传或生成素材
-                    </p>
-                  )}
-                </div>
-                {!searchQuery && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReloadAssets}
-                    disabled={isLoadingAssets}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    重新加载
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {filteredAssets.map((asset) => {
-                  const isSelected = firstAsset?.assetId === asset.id;
-                  return (
-                    <button
-                      key={asset.id}
-                      onClick={() => !isUpdatingAsset && handleSelectAsset(asset.id)}
-                      disabled={!asset.imageUrl || isUpdatingAsset}
-                      className={`
-                        relative group aspect-square rounded-lg overflow-hidden
-                        border-2 transition-all
-                        ${isSelected
-                          ? "border-primary ring-2 ring-primary/20"
-                          : "border-transparent hover:border-muted-foreground/20"
-                        }
-                        ${!asset.imageUrl && "opacity-50 cursor-not-allowed"}
-                        ${isUpdatingAsset && "cursor-wait"}
-                      `}
-                    >
-                      {asset.imageUrl ? (
-                        <Image
-                          src={asset.imageUrl}
-                          alt={asset.name}
-                          fill
-                          className="object-cover"
-                          sizes="160px"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
-                      
-                      {/* 选中标记 */}
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                          <ImageIcon className="h-3 w-3" />
-                        </div>
-                      )}
-
-                      {/* 名称 */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                        <p className="text-xs text-white truncate">{asset.name}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
-      </DialogContent>
-    </Dialog>
-    </>
   );
 }
-

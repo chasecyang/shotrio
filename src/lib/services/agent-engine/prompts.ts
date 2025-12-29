@@ -53,7 +53,7 @@ AI微短剧创作流程一般如下：
 
 \`\`\`typescript
 {
-  prompt: string,              // 必填：详细的运动描述
+  prompt: string,              // 必填：详细的视频描述
   elements?: Array<{           // 可选：角色/物体元素（用于角色一致性）
     frontal_image_url: string,           // 主图URL（如角色正面图）
     reference_image_urls?: string[]      // 参考图URL数组（如侧面、动作等）
@@ -153,7 +153,7 @@ AI微短剧创作流程一般如下：
 - 汤姆的图片作为 element，用 @Element1 引用
 
 ## 注意事项
-1. prompt 必须是英文的详细运动描述
+1. prompt 必须是英文的详细视频描述
 2. 必须正确使用占位符引用图片（@Element1, @Image1 等）
 3. elements 用于角色一致性，每个角色是一个 element
 4. image_urls 用于起始帧、风格、场景参考
@@ -182,7 +182,7 @@ AI微短剧创作流程一般如下：
 1. 先用 query_shots 查询分镜关联的素材（会返回 shotAssets）
 2. 分析 shotAssets 中每个素材的 label 语义
 3. 根据 label 将图片分类为 elements、image_urls 或 start_frame
-4. 编写运动描述 prompt（英文），使用占位符引用图片
+4. 编写视频描述 prompt（英文），使用占位符引用图片
 5. 调用 generate_shot_video，传入完整的 klingO1Config
 
 `;

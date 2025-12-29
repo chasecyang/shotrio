@@ -3,9 +3,16 @@
 import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2, Film, Camera, Clock } from "lucide-react";
+import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2, Film, Camera, Clock, Video } from "lucide-react";
 import type { PendingActionInfo } from "@/lib/services/agent-engine";
-import { formatParametersForConfirmation, ENUM_VALUE_LABELS } from "@/lib/utils/agent-params-formatter";
+import { 
+  formatParametersForConfirmation, 
+  ENUM_VALUE_LABELS,
+  type KlingO1ConfigDisplay,
+  type PromptPart,
+  parsePromptReferences,
+  formatKlingO1ConfigSync
+} from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
 import Image from "next/image";
@@ -16,6 +23,191 @@ interface PendingActionMessageProps {
   onConfirm: (actionId: string) => void;
   onCancel: (actionId: string) => void;
   currentBalance?: number;
+}
+
+// Prompt高亮组件
+function PromptWithHighlights({ 
+  prompt
+}: { 
+  prompt: string;
+}) {
+  const parts = parsePromptReferences(prompt);
+  
+  return (
+    <div className="whitespace-pre-wrap text-xs leading-relaxed">
+      {parts.map((part, i) => 
+        part.isReference ? (
+          <span key={i} className="font-medium text-primary bg-primary/10 px-1 rounded">
+            {part.text}
+          </span>
+        ) : (
+          <span key={i}>{part.text}</span>
+        )
+      )}
+    </div>
+  );
+}
+
+// 图片缩略图组件
+function ImageThumbnail({ 
+  image 
+}: { 
+  image: { imageUrl: string; label: string; type: string; apiReference: string } 
+}) {
+  const [imageError, setImageError] = useState(false);
+  
+  const getTypeIcon = () => {
+    switch (image.type) {
+      case 'element':
+        return <Camera className="h-3 w-3 text-white" />;
+      case 'start_frame':
+        return <Film className="h-3 w-3 text-white" />;
+      case 'reference':
+        return <ImageIcon className="h-3 w-3 text-white" />;
+      default:
+        return null;
+    }
+  };
+
+  const getTypeLabel = () => {
+    switch (image.type) {
+      case 'element':
+        return '角色';
+      case 'start_frame':
+        return '起始帧';
+      case 'reference':
+        return '参考';
+      default:
+        return '';
+    }
+  };
+  
+  return (
+    <div className="space-y-1">
+      <div className="relative group aspect-square rounded border overflow-hidden bg-muted">
+        {!imageError ? (
+          <Image 
+            src={image.imageUrl}
+            alt={image.label}
+            fill
+            className="object-cover"
+            sizes="80px"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+          </div>
+        )}
+        {/* 类型标识 */}
+        <div className="absolute top-1 right-1 bg-black/60 rounded px-1 py-0.5">
+          <div className="flex items-center gap-0.5">
+            {getTypeIcon()}
+            <span className="text-[9px] text-white font-medium">{getTypeLabel()}</span>
+          </div>
+        </div>
+      </div>
+      {/* Label标签 */}
+      <div className="text-[10px] text-center text-muted-foreground truncate px-0.5" title={image.label}>
+        {image.label}
+      </div>
+    </div>
+  );
+}
+
+// 参数项组件
+function ParamItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-medium text-muted-foreground">{label}:</span>
+      <span className="text-xs text-foreground">{value}</span>
+    </div>
+  );
+}
+
+// Kling O1 配置展示组件
+function KlingO1ConfigDisplay({ config }: { config: KlingO1ConfigDisplay }) {
+  // 按API引用分组图片
+  const groupedImages = useMemo(() => {
+    const groups: Record<string, typeof config.images> = {};
+    config.images.forEach(img => {
+      const ref = img.apiReference;
+      if (!groups[ref]) {
+        groups[ref] = [];
+      }
+      groups[ref].push(img);
+    });
+    return groups;
+  }, [config.images]);
+
+  // 按顺序排列分组（Element1, Element2..., Image1, Image2...）
+  const sortedGroups = useMemo(() => {
+    return Object.entries(groupedImages).sort(([a], [b]) => {
+      const getOrder = (ref: string) => {
+        const match = ref.match(/@(Element|Image)(\d+)/);
+        if (!match) return 999;
+        const type = match[1] === 'Element' ? 0 : 1; // Element优先
+        const num = parseInt(match[2]);
+        return type * 1000 + num;
+      };
+      return getOrder(a) - getOrder(b);
+    });
+  }, [groupedImages]);
+
+  return (
+    <div className="space-y-3">
+      {/* Prompt区域 */}
+      {config.prompt && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+            <Video className="h-3.5 w-3.5" />
+            视频描述
+          </div>
+          <div className="bg-background/50 border border-border/50 rounded-md p-2.5 max-h-32 overflow-y-auto">
+            <PromptWithHighlights prompt={config.prompt} />
+          </div>
+        </div>
+      )}
+      
+      {/* 关联图片 - 按分组横向展示 */}
+      {config.images.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+            <ImageIcon className="h-3.5 w-3.5" />
+            关联图片 ({config.images.length}张)
+          </div>
+          {/* 横向滚动容器 */}
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+            {sortedGroups.map(([apiRef, images]) => (
+              <div key={apiRef} className="flex-shrink-0">
+                {/* 分组标题 */}
+                <div className="text-[10px] font-medium text-primary mb-1 font-mono">
+                  {apiRef}
+                  {images.length > 1 && <span className="text-muted-foreground ml-1">({images.length}张)</span>}
+                </div>
+                {/* 该分组的图片 - 横向排列 */}
+                <div className="flex gap-2">
+                  {images.map((img, index) => (
+                    <div key={`${img.imageUrl}-${index}`} className="w-20">
+                      <ImageThumbnail image={img} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* 其他参数 */}
+      <div className="bg-background/50 border border-border/50 rounded-md p-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <ParamItem label="时长" value={config.duration} />
+          <ParamItem label="宽高比" value={config.aspectRatio} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // 素材预览组件（支持自动刷新）
@@ -176,17 +368,18 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const isGenerateAssets = action.functionCall.name === "generate_assets";
   const isCreateShots = action.functionCall.name === "create_shots";
   const isUpdateShots = action.functionCall.name === "update_shots";
+  const isGenerateShotVideo = action.functionCall.name === "generate_shot_video";
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
-    if (isGenerateAssets || isCreateShots || isUpdateShots) {
+    if (isGenerateAssets || isCreateShots || isUpdateShots || isGenerateShotVideo) {
       // 这些操作需要单独处理数组
       return [];
     } else {
       // 其他操作：使用标准格式化
       return formatParametersForConfirmation(action.functionCall.arguments);
     }
-  }, [action.functionCall.arguments, isGenerateAssets, isCreateShots, isUpdateShots]);
+  }, [action.functionCall.arguments, isGenerateAssets, isCreateShots, isUpdateShots, isGenerateShotVideo]);
 
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
@@ -348,6 +541,26 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       return null;
     }
   }, [isUpdateShots, action.functionCall.arguments]);
+
+  // 解析视频生成的klingO1Config
+  const klingO1ConfigDisplay = useMemo(() => {
+    if (!isGenerateShotVideo) return null;
+    
+    try {
+      const klingO1Config = action.functionCall.arguments.klingO1Config;
+      
+      if (!klingO1Config || typeof klingO1Config !== 'object') {
+        return null;
+      }
+      
+      // 使用formatKlingO1ConfigSync格式化配置
+      // 注意：这里没有URL到label的映射，会使用默认标签
+      return formatKlingO1ConfigSync(klingO1Config);
+    } catch (error) {
+      console.error("解析klingO1Config失败:", error);
+      return null;
+    }
+  }, [isGenerateShotVideo, action.functionCall.arguments]);
 
   return (
     <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
@@ -526,6 +739,37 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                   </div>
                 ))}
               </div>
+            ) : (
+              /* Fallback: 如果解析失败，使用标准格式化 */
+              formattedParams.length > 0 && (
+                <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
+                  <div className="space-y-1.5">
+                    {formattedParams.map((param) => (
+                      <div key={param.key} className="space-y-1.5">
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-medium text-muted-foreground shrink-0">
+                            {param.label}:
+                          </span>
+                          <span className="text-xs text-foreground break-words">
+                            {param.value}
+                          </span>
+                        </div>
+                        {/* 如果是素材引用参数，显示图片预览 */}
+                        {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
+                          <div className="pl-0 pt-1">
+                            <AssetPreview assetIds={param.assetIds} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )
+          ) : isGenerateShotVideo ? (
+            /* 生成分镜视频：显示Kling O1配置 */
+            klingO1ConfigDisplay ? (
+              <KlingO1ConfigDisplay config={klingO1ConfigDisplay} />
             ) : (
               /* Fallback: 如果解析失败，使用标准格式化 */
               formattedParams.length > 0 && (
