@@ -12,6 +12,7 @@ import {
   deleteConversation,
 } from "@/lib/actions/conversation/crud";
 import { toast } from "sonner";
+import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
 
 /**
  * 对话信息
@@ -268,8 +269,15 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     try {
       const result = await getConversation(conversationId);
       if (result.success && result.messages) {
-        // 检查是否有恢复的待批准操作
-        if (result.messages.some(msg => msg.pendingAction)) {
+        // 检查是否有待批准操作（从消息历史推导）
+        const messages = result.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          tool_calls: msg.toolCalls,
+          tool_call_id: msg.toolCallId,
+        }));
+        
+        if (isAwaitingApproval(messages as any[])) {
           toast.info("检测到未完成的操作，已为您恢复", { duration: 3000 });
         }
         

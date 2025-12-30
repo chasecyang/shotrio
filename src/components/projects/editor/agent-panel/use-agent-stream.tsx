@@ -14,7 +14,7 @@ import type { AgentStreamEvent } from "@/lib/services/agent-engine";
 
 interface UseAgentStreamOptions {
   onFirstAssistantMessage?: () => void;
-  onPendingAction?: (pendingAction: unknown) => void;
+  onPendingAction?: () => void;
   onComplete?: () => void;
   onError?: (error: string) => void;
 }
@@ -104,15 +104,6 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                 // 更新当前messageId
                 streamStateRef.current.messageId = messageId;
                 
-                // 清除其他消息的 pendingAction（恢复对话时的兜底逻辑）
-                agent.state.messages.forEach(msg => {
-                  if (msg.id !== messageId && msg.pendingAction) {
-                    agent.updateMessage(msg.id, {
-                      pendingAction: undefined,
-                    });
-                  }
-                });
-                
                 // 检查是否已经有这个消息（恢复对话时）
                 const existingMessage = agent.state.messages.find(m => m.id === messageId);
                 if (existingMessage) {
@@ -123,7 +114,6 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                   
                   agent.updateMessage(messageId, {
                     isStreaming: true,
-                    pendingAction: undefined, // 清除pendingAction
                   });
                 } else {
                   // 创建新消息（正常场景）
@@ -228,28 +218,17 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
               }
 
               case "interrupt": {
-                // 需要用户确认
+                // 需要用户确认（前端会从消息历史推导 approval 信息）
                 const messageId = streamStateRef.current.messageId;
-                if (!messageId || !event.data.pendingAction) break;
+                if (!messageId) break;
                 
-                // 从 state 中查找当前消息（需要检查是否重复）
-                const currentMessage = agent.state.messages.find(m => m.id === messageId);
-                
-                // 检查是否已经存在相同的 pendingAction（通过 id 判断）
-                const existingPendingActionId = currentMessage?.pendingAction?.id;
-                const newPendingActionId = event.data.pendingAction.id;
-                
-                // 如果 pendingAction 已存在且 id 相同，跳过更新
-                if (existingPendingActionId === newPendingActionId) {
-                  console.log("[Agent Stream] pendingAction 已存在，跳过重复设置:", newPendingActionId);
-                  break;
-                }
-                
+                // 标记消息流结束
                 agent.updateMessage(messageId, {
-                  pendingAction: event.data.pendingAction,
                   isStreaming: false,
                 });
-                options.onPendingAction?.(event.data.pendingAction);
+                
+                // 触发回调
+                options.onPendingAction?.();
                 break;
               }
 

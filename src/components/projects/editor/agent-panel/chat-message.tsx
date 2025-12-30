@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useState } from "react";
-import type { AgentMessage } from "@/types/agent";
+import { memo, useState, useMemo, useEffect } from "react";
+import type { AgentMessage, FunctionCall } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
 import { DisplayStepCard } from "./display-step-card";
@@ -10,6 +10,9 @@ import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
 import { useAgentStream } from "./use-agent-stream";
 import { toast } from "sonner";
+import { getFunctionDefinition } from "@/lib/actions/agent/functions";
+import { estimateActionCredits } from "@/lib/actions/credits/estimate";
+import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 interface ChatMessageProps {
   message: AgentMessage;
@@ -31,34 +34,78 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   
-  // 判断是否为分镜相关操作
-  const isShotRelatedAction = message.pendingAction?.functionCall?.name && 
-    ['create_shots', 'update_shots', 'delete_shots'].includes(
-      message.pendingAction.functionCall.name
-    );
-
-  // 判断是否为项目/剧集相关操作
-  const isProjectRelatedAction = message.pendingAction?.functionCall?.name && 
-    ['update_episode', 'set_art_style'].includes(
-      message.pendingAction.functionCall.name
-    );
+  // 从当前消息推导 approval 信息
+  const approvalInfo = useMemo(() => {
+    if (message.role !== "assistant" || !message.toolCalls) {
+      return null;
+    }
+    
+    // 检查是否有未执行的需要确认的 tool call
+    for (const tc of message.toolCalls) {
+      // 检查是否已有对应的 tool message
+      const hasToolMsg = agent.state.messages.some(
+        m => m.role === "tool" && m.toolCallId === tc.id
+      );
+      
+      if (hasToolMsg) continue; // 已执行
+      
+      // 检查是否需要确认
+      const funcDef = getFunctionDefinition(tc.function.name);
+      if (funcDef?.needsConfirmation) {
+        return {
+          toolCall: tc,
+          funcDef,
+        };
+      }
+    }
+    
+    return null;
+  }, [message, agent.state.messages]);
+  
+  // 异步获取积分估算
+  const [creditCost, setCreditCost] = useState<CreditCost | undefined>();
+  
+  useEffect(() => {
+    if (!approvalInfo) {
+      setCreditCost(undefined);
+      return;
+    }
+    
+    const estimate = async () => {
+      try {
+        const args = JSON.parse(approvalInfo.toolCall.function.arguments);
+        const functionCall: FunctionCall = {
+          id: approvalInfo.toolCall.id,
+          name: approvalInfo.toolCall.function.name,
+          displayName: approvalInfo.funcDef.displayName,
+          parameters: args,
+          category: approvalInfo.funcDef.category,
+          needsConfirmation: true,
+        };
+        
+        const result = await estimateActionCredits([functionCall]);
+        if (result.success && result.creditCost) {
+          setCreditCost(result.creditCost);
+        }
+      } catch (error) {
+        console.error("估算积分失败:", error);
+      }
+    };
+    
+    estimate();
+  }, [approvalInfo]);
 
   // 使用 Agent Stream Hook（仅用于恢复对话）
   const { resumeConversation } = useAgentStream();
 
   // Handle pending action confirmation
   const handleConfirmAction = async () => {
-    if (!message.pendingAction || !agent.state.currentConversationId || isConfirming) return;
+    if (!approvalInfo || !agent.state.currentConversationId || isConfirming) return;
 
     setIsConfirming(true);
 
     try {
       console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId);
-
-      // 立即清除 pendingAction，不等后端事件
-      agent.updateMessage(message.id, {
-        pendingAction: undefined,
-      });
 
       toast.success("操作已确认，Agent 正在继续...");
 
@@ -78,14 +125,14 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   };
 
   const handleCancelAction = async () => {
-    if (!message.pendingAction || !agent.state.currentConversationId || isRejecting) return;
+    if (!approvalInfo || !agent.state.currentConversationId || isRejecting) return;
 
     setIsRejecting(true);
     
     try {
       console.log("[Agent] 用户拒绝操作");
 
-      const toolCallId = message.pendingAction.functionCall.id;
+      const toolCallId = approvalInfo.toolCall.id;
 
       // 立即创建拒绝的 tool message（客户端预测，避免显示"执行中"状态）
       agent.addMessage({
@@ -97,11 +144,6 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
           userRejected: true,
         }),
         toolCallId: toolCallId,
-      });
-
-      // 清除 pendingAction，让确认卡片消失
-      agent.updateMessage(message.id, {
-        pendingAction: undefined,
       });
 
       toast.info("操作已拒绝，Agent 正在回应...");
@@ -125,7 +167,6 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   // 使用新的 useMessageDisplay hook 构建展示步骤
   const displays = useMessageDisplay(agent.state.messages);
   const currentDisplay = displays.find(d => d.messageId === message.id);
-  const hasPendingAction = message.pendingAction !== undefined;
 
   return (
     <div className="w-full px-4 py-2">
@@ -168,10 +209,18 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
             </div>
           )}
 
-          {/* Pending Action (待确认操作) */}
-          {hasPendingAction && (
+          {/* Pending Action (待确认操作) - 从 approvalInfo 推导 */}
+          {approvalInfo && (
             <PendingActionMessage
-              action={message.pendingAction!}
+              functionCall={{
+                id: approvalInfo.toolCall.id,
+                name: approvalInfo.toolCall.function.name,
+                displayName: approvalInfo.funcDef.displayName,
+                arguments: JSON.parse(approvalInfo.toolCall.function.arguments),
+                category: approvalInfo.funcDef.category,
+              }}
+              message={message.content || ""}
+              creditCost={creditCost}
               onConfirm={handleConfirmAction}
               onCancel={handleCancelAction}
               currentBalance={currentBalance}

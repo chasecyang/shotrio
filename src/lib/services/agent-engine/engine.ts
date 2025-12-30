@@ -6,7 +6,6 @@ import OpenAI from "openai";
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 import { executeFunction } from "@/lib/actions/agent/executor";
 import { collectContext } from "@/lib/actions/agent/context-collector";
-import { estimateActionCredits } from "@/lib/actions/credits/estimate";
 import type { AgentContext, FunctionCall } from "@/types/agent";
 import db from "@/lib/db";
 import { conversation } from "@/lib/db/schemas/project";
@@ -16,7 +15,6 @@ import type {
   AgentStreamEvent,
   AgentEngineConfig,
   ConversationState,
-  PendingActionInfo,
   Message,
 } from "./types";
 import { buildSystemPrompt } from "./prompts";
@@ -31,6 +29,7 @@ import {
   loadConversationState,
   saveToolMessage,
 } from "./state-manager";
+import { getPendingToolCall } from "./approval-utils";
 
 /**
  * Agent 引擎类
@@ -138,134 +137,83 @@ export class AgentEngine {
   ): AsyncGenerator<AgentStreamEvent> {
     console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`);
 
-    // 加载对话状态
+    // 1. 加载对话状态
     const state = await loadConversationState(conversationId);
     if (!state) {
       yield { type: "error", data: "无法加载对话状态" };
       return;
     }
 
-    // 状态一致性验证
-    if (approved && !state.pendingAction) {
+    // 2. 从消息历史推导待执行的 tool call
+    const pendingToolCall = getPendingToolCall(state.messages);
+    
+    if (!pendingToolCall) {
       yield { type: "error", data: "没有待执行的操作" };
       return;
     }
 
-    // 更新对话状态为活跃
+    // 3. 获取 function 定义
+    const funcDef = getFunctionDefinition(pendingToolCall.function.name);
+    if (!funcDef) {
+      yield { type: "error", data: `未知的工具: ${pendingToolCall.function.name}` };
+      return;
+    }
+
+    // 4. 更新对话状态为活跃
     await updateConversationStatus(conversationId, "active");
 
-    // 处理用户决定
-    if (!approved) {
-      // 用户拒绝，为所有 tool_calls 添加拒绝消息
-      // 找到最后一条 assistant 消息
-      const lastAssistantMessage = [...state.messages]
-        .reverse()
-        .find(m => m.role === "assistant");
+    // 5. 发送复用的 assistant 消息 ID
+    yield { type: "assistant_message_id", data: state.assistantMessageId! };
 
-      if (lastAssistantMessage?.tool_calls && lastAssistantMessage.tool_calls.length > 0) {
-        // 为所有 tool_calls 创建拒绝的 tool message
-        console.log(`[AgentEngine] 为 ${lastAssistantMessage.tool_calls.length} 个 tool_calls 添加拒绝消息`);
-        
-        // 批量创建拒绝消息
-        const rejectionContent = JSON.stringify({
+    // 6. 处理用户决定
+    if (approved) {
+      // 用户同意：执行 tool
+      console.log("[AgentEngine] 用户同意，执行 tool");
+      yield* this.executeTool(state, pendingToolCall, funcDef);
+    } else {
+      // 用户拒绝：添加 rejection 消息
+      console.log("[AgentEngine] 用户拒绝");
+      
+      const rejectionContent = JSON.stringify({
+        success: false,
+        error: "用户拒绝了此操作",
+        userRejected: true,
+      });
+
+      // 添加 tool message（墓碑标记）
+      const toolMessage: Message = {
+        role: "tool",
+        content: rejectionContent,
+        tool_call_id: pendingToolCall.id,
+      };
+      state.messages.push(toolMessage);
+      
+      // 保存到数据库
+      await saveToolMessage(
+        state.conversationId,
+        pendingToolCall.id,
+        rejectionContent
+      );
+
+      // 发送 tool_call_end 事件
+      yield {
+        type: "tool_call_end",
+        data: {
+          id: pendingToolCall.id,
+          name: pendingToolCall.function.name,
           success: false,
           error: "用户拒绝了此操作",
-          userRejected: true,
-        });
-
-        // 并行保存所有 tool messages
-        const savePromises = lastAssistantMessage.tool_calls.map(async (toolCall) => {
-          // 1. 添加 tool message（墓碑标记）
-          const toolMessage: Message = {
-            role: "tool",
-            content: rejectionContent,
-            tool_call_id: toolCall.id,
-          };
-          state.messages.push(toolMessage);
-          
-          // 2. 保存 tool 消息到数据库
-          await saveToolMessage(
-            state.conversationId,
-            toolMessage.tool_call_id!,
-            toolMessage.content
-          );
-
-          return toolCall;
-        });
-
-        // 等待所有保存完成
-        const rejectedToolCalls = await Promise.all(savePromises);
-
-        // 3. 发送所有 tool_call_end 事件
-        for (const toolCall of rejectedToolCalls) {
-          yield {
-            type: "tool_call_end",
-            data: {
-              id: toolCall.id,
-              name: toolCall.function.name,
-              success: false,
-              error: "用户拒绝了此操作",
-            },
-          };
-        }
-      } else if (state.pendingAction) {
-        // 降级逻辑：如果没有找到 assistant 消息的 tool_calls，使用 pendingAction
-        console.warn("[AgentEngine] 未找到 assistant 消息的 tool_calls，使用 pendingAction 降级处理");
-        
-        const rejectedToolCallId = state.pendingAction.functionCall.id;
-        const rejectedToolCallName = state.pendingAction.functionCall.name;
-
-        // 1. 添加 tool message（墓碑标记）
-        const toolMessage: Message = {
-          role: "tool",
-          content: JSON.stringify({
-            success: false,
-            error: "用户拒绝了此操作",
-            userRejected: true,
-          }),
-          tool_call_id: rejectedToolCallId,
-        };
-        state.messages.push(toolMessage);
-        
-        // 保存 tool 消息到数据库
-        await saveToolMessage(
-          state.conversationId,
-          toolMessage.tool_call_id!,
-          toolMessage.content
-        );
-
-        // 2. 发送 tool_call_end 事件
-        yield {
-          type: "tool_call_end",
-          data: {
-            id: rejectedToolCallId,
-            name: rejectedToolCallName,
-            success: false,
-            error: "用户拒绝了此操作",
-          },
-        };
-      }
-      
-      // 3. 创建新的 assistant message（拒绝后的新响应）
-      const newAssistantMessageId = await createAssistantMessage(state.conversationId);
-      state.assistantMessageId = newAssistantMessageId;
-      
-      // 4. 发送新的 assistant_message_id 事件
-      yield { type: "assistant_message_id", data: newAssistantMessageId };
-      
-      // 5. 继续执行循环（让 AI 根据拒绝做出回应）
-      yield* this.executeConversationLoop(state);
-    } else {
-      // 用户同意，执行 pendingAction
-      // 发送 assistant 消息ID（复用已有消息）
-      yield { type: "assistant_message_id", data: state.assistantMessageId! };
-      
-      if (state.pendingAction) {
-        yield* this.executeToolAndContinue(state);
-      } else {
-        yield { type: "error", data: "没有待执行的操作" };
-      }
+        },
+      };
     }
+
+    // 7. 创建新 assistant 消息，继续对话
+    const newAssistantMessageId = await createAssistantMessage(state.conversationId);
+    state.assistantMessageId = newAssistantMessageId;
+    yield { type: "assistant_message_id", data: newAssistantMessageId };
+
+    // 8. 继续执行循环
+    yield* this.executeConversationLoop(state);
   }
 
   /**
@@ -444,42 +392,6 @@ export class AgentEngine {
       if (funcDef.needsConfirmation) {
         console.log("[AgentEngine] 需要用户确认");
 
-        // 估算积分
-        let creditCost;
-        try {
-          const functionCall: FunctionCall = {
-            id: toolCall.id || `fc-${Date.now()}`,
-            name: toolCall.function.name,
-            displayName: funcDef.displayName,
-            parameters: toolCallArgs as Record<string, unknown>,
-            category: funcDef.category,
-            needsConfirmation: funcDef.needsConfirmation,
-          };
-          const estimateResult = await estimateActionCredits([functionCall]);
-          if (estimateResult.success && estimateResult.creditCost) {
-            creditCost = estimateResult.creditCost;
-          }
-        } catch (error) {
-          console.error("[AgentEngine] 估算积分失败:", error);
-        }
-
-        // 创建 pendingAction
-        const pendingAction: PendingActionInfo = {
-          id: `action-${Date.now()}`,
-          functionCall: {
-            id: toolCall.id || `fc-${Date.now()}`,
-            name: toolCall.function.name,
-            displayName: funcDef.displayName,
-            arguments: toolCallArgs as Record<string, unknown>,
-            category: funcDef.category,
-          },
-          message: currentContent || `准备执行: ${funcDef.displayName || toolCall.function.name}`,
-          creditCost,
-          createdAt: new Date(),
-        };
-
-        state.pendingAction = pendingAction;
-
         // 批量保存：合并多个数据库操作
         await Promise.all([
           saveAssistantResponse(
@@ -490,12 +402,11 @@ export class AgentEngine {
           updateConversationStatus(state.conversationId, "awaiting_approval"),
         ]);
 
-        // 发送中断事件
+        // 发送简化的中断事件（前端会从消息历史推导 approval 信息）
         yield {
           type: "interrupt",
           data: {
             action: "approval_required",
-            pendingAction,
           },
         };
 
@@ -531,40 +442,6 @@ export class AgentEngine {
     }
   }
 
-  /**
-   * 执行工具并继续
-   */
-  private async *executeToolAndContinue(
-    state: ConversationState
-  ): AsyncGenerator<AgentStreamEvent> {
-    if (!state.pendingAction) {
-      yield { type: "error", data: "没有待执行的操作" };
-      return;
-    }
-
-    // 找到对应的 AI 消息和 tool_call
-    const lastAIMessage = [...state.messages].reverse().find(m => m.role === "assistant");
-    if (!lastAIMessage || !lastAIMessage.tool_calls || lastAIMessage.tool_calls.length === 0) {
-      yield { type: "error", data: "无法找到工具调用信息" };
-      return;
-    }
-
-    const toolCall = lastAIMessage.tool_calls[0];
-    const funcDef = getFunctionDefinition(toolCall.function.name);
-    if (!funcDef) {
-      yield { type: "error", data: `未知的工具: ${toolCall.function.name}` };
-      return;
-    }
-
-    // 执行工具
-    yield* this.executeTool(state, toolCall, funcDef);
-
-    // 清除 pendingAction
-    state.pendingAction = undefined;
-
-    // 继续执行循环
-    yield* this.executeConversationLoop(state);
-  }
 
   /**
    * 执行单个工具

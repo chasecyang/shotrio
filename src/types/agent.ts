@@ -1,10 +1,7 @@
 // AI Agent 系统类型定义
-// 
-// 注意：PendingAction 的实际定义在 lib/services/agent-engine.ts 中
 
 import type { Job } from "./job";
 import type { SelectedResource } from "@/components/projects/editor/editor-context";
-import type { PendingActionInfo } from "@/lib/services/agent-engine";
 
 /**
  * Agent 消息角色
@@ -37,7 +34,7 @@ export type FunctionCategory = "read" | "generation" | "modification" | "deletio
 /**
  * Agent 消息
  * 
- * 注意：运行时状态（isStreaming、isInterrupted、pendingAction）
+ * 注意：运行时状态（isStreaming、isInterrupted）
  * 不作为消息的持久化字段，而是通过 stream 事件管理
  */
 export interface AgentMessage {
@@ -56,7 +53,6 @@ export interface AgentMessage {
   // 这些字段通过 stream 事件动态设置
   isStreaming?: boolean;
   isInterrupted?: boolean;
-  pendingAction?: PendingActionInfo;
 }
 
 /**

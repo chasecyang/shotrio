@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
+import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
 
 interface AgentPanelProps {
   projectId: string;
@@ -96,15 +97,20 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
     const userMessages = agent.state.messages.filter(m => m.role === "user");
     const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
-    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
     
     // 必须是第一次对话：一条用户消息，一条助手消息
     if (userMessages.length !== 1 || assistantMessages.length !== 1) {
       return false;
     }
     
-    // 不能有待确认的操作
-    if (hasPendingAction) {
+    // 不能有待确认的操作（从消息历史推导）
+    const messages = agent.state.messages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      tool_calls: msg.toolCalls,
+      tool_call_id: msg.toolCallId,
+    }));
+    if (isAwaitingApproval(messages as any[])) {
       return false;
     }
     
@@ -171,7 +177,15 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     
     const userMessages = agent.state.messages.filter(m => m.role === "user");
     const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
-    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
+    
+    // 从消息历史推导是否有待批准操作
+    const messages = agent.state.messages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      tool_calls: msg.toolCalls,
+      tool_call_id: msg.toolCallId,
+    }));
+    const hasPendingAction = isAwaitingApproval(messages as any[]);
     
     console.log(`[AgentPanel] ${source} 检查标题生成条件:`, {
       conversationId,
@@ -285,7 +299,15 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
     const userMessages = agent.state.messages.filter(m => m.role === "user");
     const assistantMessages = agent.state.messages.filter(m => m.role === "assistant");
-    const hasPendingAction = assistantMessages.some(m => m.pendingAction);
+    
+    // 从消息历史推导是否有待批准操作
+    const messages = agent.state.messages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      tool_calls: msg.toolCalls,
+      tool_call_id: msg.toolCallId,
+    }));
+    const hasPendingAction = isAwaitingApproval(messages as any[]);
     
     console.log("[AgentPanel] Fallback: 检查标题生成条件:", {
       conversationId: firstUserMessageRef.current.conversationId,
@@ -321,13 +343,16 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     agent.setLoading(true);
 
     try {
-      // 检查是否有 pendingAction，如果有则先拒绝
-      const lastAssistantMessage = agent.state.messages
-        .filter(m => m.role === "assistant")
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+      // 检查是否有待批准操作，如果有则先拒绝（从消息历史推导）
+      const messages = agent.state.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        tool_calls: msg.toolCalls,
+        tool_call_id: msg.toolCallId,
+      }));
       
-      if (lastAssistantMessage?.pendingAction && agent.state.currentConversationId) {
-        console.log("[AgentPanel] 检测到 pendingAction，先拒绝操作");
+      if (isAwaitingApproval(messages as any[]) && agent.state.currentConversationId) {
+        console.log("[AgentPanel] 检测到待批准操作，先拒绝");
         // 步骤1：纯粹拒绝
         await resumeConversation(agent.state.currentConversationId, false);
         // 不 return，继续执行发送消息逻辑

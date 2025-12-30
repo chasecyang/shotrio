@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2, Film, Camera, Clock, Video } from "lucide-react";
-import type { PendingActionInfo } from "@/lib/services/agent-engine";
+import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
   formatParametersForConfirmation, 
   ENUM_VALUE_LABELS,
@@ -19,9 +19,17 @@ import Image from "next/image";
 import { useEditor } from "../editor-context";
 
 interface PendingActionMessageProps {
-  action: PendingActionInfo;
-  onConfirm: (actionId: string) => void;
-  onCancel: (actionId: string) => void;
+  functionCall: {
+    id: string;
+    name: string;
+    displayName?: string;
+    arguments: Record<string, unknown>;
+    category: string;
+  };
+  message: string;
+  creditCost?: CreditCost;
+  onConfirm: (id: string) => void;
+  onCancel: (id: string) => void;
   currentBalance?: number;
 }
 
@@ -345,28 +353,28 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
 }
 
 export const PendingActionMessage = memo(function PendingActionMessage({
-  action,
+  functionCall,
+  message,
+  creditCost,
   onConfirm,
   onCancel,
   currentBalance,
 }: PendingActionMessageProps) {
   const t = useTranslations();
-  const totalCost = action.creditCost?.total || 0;
+  const totalCost = creditCost?.total || 0;
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
 
-  // 在 Agent 架构中，PendingActionInfo 只在需要确认时存在
-  // 不需要 status 字段，因为它的存在本身就表示 "pending" 状态
   const borderColor = "border-primary/20";
   const bgColor = "bg-accent/30";
   const iconBg = "bg-primary/10";
   const iconColor = "text-primary";
 
   // 判断操作类型
-  const isGenerateAssets = action.functionCall.name === "generate_assets";
-  const isCreateShots = action.functionCall.name === "create_shots";
-  const isUpdateShots = action.functionCall.name === "update_shots";
-  const isGenerateShotVideo = action.functionCall.name === "generate_shot_video";
+  const isGenerateAssets = functionCall.name === "generate_assets";
+  const isCreateShots = functionCall.name === "create_shots";
+  const isUpdateShots = functionCall.name === "update_shots";
+  const isGenerateShotVideo = functionCall.name === "generate_shot_video";
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
@@ -375,16 +383,16 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       return [];
     } else {
       // 其他操作：使用标准格式化
-      return formatParametersForConfirmation(action.functionCall.arguments);
+      return formatParametersForConfirmation(functionCall.arguments);
     }
-  }, [action.functionCall.arguments, isGenerateAssets, isCreateShots, isUpdateShots, isGenerateShotVideo]);
+  }, [functionCall.arguments, isGenerateAssets, isCreateShots, isUpdateShots, isGenerateShotVideo]);
 
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
     if (!isGenerateAssets) return null;
     
     try {
-      const assetsArg = action.functionCall.arguments.assets;
+      const assetsArg = functionCall.arguments.assets;
       let assetsArray: Array<Record<string, unknown>>;
 
       // 兼容数组和JSON字符串
@@ -431,14 +439,14 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("解析assets数组失败:", error);
       return null;
     }
-  }, [isGenerateAssets, action.functionCall.arguments]);
+  }, [isGenerateAssets, functionCall.arguments]);
 
   // 解析创建分镜的shots数组
   const parsedShots = useMemo(() => {
     if (!isCreateShots) return null;
     
     try {
-      const shotsArg = action.functionCall.arguments.shots;
+      const shotsArg = functionCall.arguments.shots;
       let shotsArray: Array<Record<string, unknown>>;
 
       // 兼容数组和JSON字符串
@@ -481,14 +489,14 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("解析shots数组失败:", error);
       return null;
     }
-  }, [isCreateShots, action.functionCall.arguments]);
+  }, [isCreateShots, functionCall.arguments]);
 
   // 解析修改分镜的updates数组
   const parsedShotUpdates = useMemo(() => {
     if (!isUpdateShots) return null;
     
     try {
-      const updatesArg = action.functionCall.arguments.updates;
+      const updatesArg = functionCall.arguments.updates;
       let updatesArray: Array<Record<string, unknown>>;
 
       // 兼容数组和JSON字符串
@@ -538,14 +546,14 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("解析updates数组失败:", error);
       return null;
     }
-  }, [isUpdateShots, action.functionCall.arguments]);
+  }, [isUpdateShots, functionCall.arguments]);
 
   // 解析视频生成的klingO1Config
   const klingO1ConfigDisplay = useMemo(() => {
     if (!isGenerateShotVideo) return null;
     
     try {
-      const klingO1Config = action.functionCall.arguments.klingO1Config;
+      const klingO1Config = functionCall.arguments.klingO1Config;
       
       if (!klingO1Config || typeof klingO1Config !== 'object') {
         return null;
@@ -558,7 +566,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("解析klingO1Config失败:", error);
       return null;
     }
-  }, [isGenerateShotVideo, action.functionCall.arguments]);
+  }, [isGenerateShotVideo, functionCall.arguments]);
 
   return (
     <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
@@ -570,7 +578,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {action.functionCall.displayName || action.functionCall.name}
+              {functionCall.displayName || functionCall.name}
             </p>
           </div>
         </div>
@@ -849,7 +857,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           {/* Action Buttons */}
           <div className="flex gap-2">
             <Button
-              onClick={() => onCancel(action.id)}
+              onClick={() => onCancel(functionCall.id)}
               variant="ghost"
               size="sm"
               className="h-7 px-3 text-xs"
@@ -858,7 +866,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
               {t('editor.agent.pendingAction.reject')}
             </Button>
             <Button
-              onClick={() => onConfirm(action.id)}
+              onClick={() => onConfirm(functionCall.id)}
               disabled={insufficientBalance}
               size="sm"
               className="h-7 px-3 text-xs"

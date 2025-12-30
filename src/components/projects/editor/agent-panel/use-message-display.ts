@@ -79,8 +79,8 @@ export function useMessageDisplay(messages: AgentMessage[]) {
               status = "failed";
               error = "解析响应失败";
             }
-          } else if (msg.pendingAction && msg.pendingAction.functionCall.id === toolCall.id) {
-            // 没有响应，但有 pendingAction 且 ID 匹配，说明等待用户确认
+          } else if (funcDef?.needsConfirmation) {
+            // 没有响应，但函数需要确认，说明等待用户确认
             status = "awaiting_confirmation";
           }
           

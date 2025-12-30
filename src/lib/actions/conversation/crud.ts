@@ -13,7 +13,6 @@ import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq, and, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { AgentMessage, AgentMessageRole, AgentContext } from "@/types/agent";
-import { derivePendingActionFromMessages } from "@/lib/services/agent-engine/state-manager";
 
 /**
  * 创建新对话
@@ -161,26 +160,8 @@ export async function getConversation(conversationId: string) {
       return message;
     });
 
-    // 从消息历史推导 pendingAction（修复刷新后待批准消失的 bug）
-    if (conv.status === "awaiting_approval") {
-      const pendingAction = await derivePendingActionFromMessages(messages, conv.status, true);
-
-      if (pendingAction) {
-        // 找到最后一条 assistant 消息并附加 pendingAction
-        const lastAssistantIdx = messages.findLastIndex(m => m.role === "assistant");
-        if (lastAssistantIdx !== -1) {
-          messages[lastAssistantIdx].pendingAction = pendingAction;
-          console.log("[getConversation] 已恢复 pendingAction:", pendingAction.functionCall.name);
-        }
-      } else {
-        // 状态不一致，自动修复
-        console.warn("[getConversation] 状态不一致，修复: awaiting_approval -> active");
-        await db.update(conversation)
-          .set({ status: "active", updatedAt: new Date() })
-          .where(eq(conversation.id, conversationId));
-      }
-    }
-
+    // pendingAction 在前端推导，不在服务端设置
+    
     return {
       success: true,
       conversation: {
