@@ -145,7 +145,13 @@ export class AgentEngine {
       return;
     }
 
-    // 更新对话状态
+    // 状态一致性验证
+    if (approved && !state.pendingAction) {
+      yield { type: "error", data: "没有待执行的操作" };
+      return;
+    }
+
+    // 更新对话状态为活跃
     await updateConversationStatus(conversationId, "active");
 
     // 处理用户决定

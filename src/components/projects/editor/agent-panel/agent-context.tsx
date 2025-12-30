@@ -268,15 +268,19 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     try {
       const result = await getConversation(conversationId);
       if (result.success && result.messages) {
+        // 检查是否有恢复的待批准操作
+        if (result.messages.some(msg => msg.pendingAction)) {
+          toast.info("检测到未完成的操作，已为您恢复", { duration: 3000 });
+        }
+        
         dispatch({ type: "LOAD_HISTORY", payload: result.messages });
         dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
-        // 加载已有对话时，退出新对话模式
         dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
       } else {
         toast.error(result.error || "加载对话失败");
       }
     } catch (error) {
-      console.error("加载对话失败:", error);
+      console.error("[Agent] 加载对话失败:", error);
       toast.error("加载对话失败");
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });

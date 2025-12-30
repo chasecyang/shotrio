@@ -8,7 +8,8 @@ import { eq } from "drizzle-orm";
 import { collectContext } from "@/lib/actions/agent/context-collector";
 import { buildSystemPrompt } from "./prompts";
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
-import type { AgentContext } from "@/types/agent";
+import { estimateActionCredits } from "@/lib/actions/credits/estimate";
+import type { AgentContext, AgentMessage, FunctionCall } from "@/types/agent";
 import type { ConversationState, Message, PendingActionInfo } from "./types";
 
 /**
@@ -117,24 +118,29 @@ export async function saveConversationContext(
     .where(eq(conversation.id, conversationId));
 }
 
+
 /**
  * 加载对话状态（从数据库重建）
  */
 export async function loadConversationState(conversationId: string): Promise<ConversationState | null> {
-  // 1. 查询对话基本信息和所有消息
-  const conv = await db.query.conversation.findFirst({
-    where: eq(conversation.id, conversationId),
-    with: {
-      messages: {
-        orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+  try {
+    // 1. 查询对话基本信息和所有消息
+    const conv = await db.query.conversation.findFirst({
+      where: eq(conversation.id, conversationId),
+      with: {
+        messages: {
+          orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+        },
       },
-    },
-  });
+    });
 
-  if (!conv) {
-    return null;
-  }
+    if (!conv) {
+      console.error("[loadConversationState] 对话不存在:", conversationId);
+      return null;
+    }
 
+    console.log(`[loadConversationState] 加载对话: ${conversationId}, 状态: ${conv.status}, 消息数: ${conv.messages.length}`);
+  
   try {
     // 2. 重建消息历史
     const messages: Message[] = [];
@@ -210,6 +216,15 @@ export async function loadConversationState(conversationId: string): Promise<Con
     
     // 5. 从消息历史推导 pendingAction（Event Sourcing）
     const pendingAction = derivePendingAction(messages, conv.status);
+    
+    // 状态不一致检查和修复（异步，不阻塞返回）
+    if (!pendingAction && conv.status === "awaiting_approval") {
+      console.warn("[loadConversationState] 状态不一致，修复: awaiting_approval -> active");
+      db.update(conversation)
+        .set({ status: "active", updatedAt: new Date() })
+        .where(eq(conversation.id, conversationId))
+        .catch(err => console.error("[loadConversationState] 修复状态失败:", err));
+    }
 
     return {
       conversationId,
@@ -219,28 +234,22 @@ export async function loadConversationState(conversationId: string): Promise<Con
       assistantMessageId: lastAssistantMsg?.id,
     };
   } catch (error) {
-    console.error("[AgentEngine] 加载对话状态失败:", error);
+    console.error("[loadConversationState] 加载失败:", error);
+    return null;
+  }
+  } catch (error) {
+    console.error("[loadConversationState] 查询失败:", error);
     return null;
   }
 }
 
 /**
- * 从消息历史推导 pendingAction（Event Sourcing）
- * 
- * 规则：
- * 1. 只有 status === "awaiting_approval" 时才可能有 pending
- * 2. 找到最后一条 assistant 消息的 tool_calls
- * 3. 如果 tool call 没有对应的 tool message，且 needsConfirmation === true，则为 pending
+ * 核心推导逻辑：从消息中找到待确认的 tool call
  */
-export function derivePendingAction(
-  messages: Message[],
-  conversationStatus: string
-): PendingActionInfo | undefined {
-  // 关键检查1：只有等待确认状态才检查
-  if (conversationStatus !== "awaiting_approval") {
-    return undefined;
-  }
-
+function findPendingToolCall(messages: Array<AgentMessage | Message>): {
+  toolCall: { id: string; function: { name: string; arguments: string } };
+  assistantContent: string;
+} | null {
   // 找到最后一条 assistant 消息
   const lastAssistant = messages
     .filter(m => m.role === "assistant")
@@ -250,47 +259,115 @@ export function derivePendingAction(
       return timeB - timeA;
     })[0];
 
-  if (!lastAssistant?.tool_calls?.length) {
-    return undefined;
+  if (!lastAssistant?.toolCalls?.length) {
+    return null;
   }
 
-  // 找出没有对应 tool message 的 tool call
-  const pendingToolCall = lastAssistant.tool_calls.find(tc => {
-    // 检查是否有对应的 tool message（墓碑标记）
+  // 找出没有对应 tool message 且需要确认的 tool call
+  const pendingToolCall = lastAssistant.toolCalls.find(tc => {
     const hasToolMessage = messages.some(m => 
-      m.role === "tool" && 
-      m.tool_call_id === tc.id
+      m.role === "tool" && m.toolCallId === tc.id
     );
+    if (hasToolMessage) return false;
     
-    if (hasToolMessage) {
-      return false; // 已经有 tool message，不是 pending
-    }
-    
-    // 关键检查2：只有需要确认的 function 才算 pending
     const funcDef = getFunctionDefinition(tc.function.name);
     return funcDef?.needsConfirmation === true;
   });
 
   if (!pendingToolCall) {
-    return undefined;
+    return null;
   }
 
-  // 重建 PendingActionInfo
-  const funcDef = getFunctionDefinition(pendingToolCall.function.name);
-  const args = JSON.parse(pendingToolCall.function.arguments);
+  return {
+    toolCall: pendingToolCall,
+    assistantContent: lastAssistant.content || "",
+  };
+}
+
+/**
+ * 构建 PendingActionInfo
+ */
+function buildPendingAction(
+  toolCall: { id: string; function: { name: string; arguments: string } },
+  assistantContent: string
+): PendingActionInfo {
+  const funcDef = getFunctionDefinition(toolCall.function.name);
+  let args: Record<string, unknown>;
+  try {
+    args = JSON.parse(toolCall.function.arguments);
+  } catch {
+    args = {};
+  }
   
   return {
-    id: pendingToolCall.id,
+    id: toolCall.id,
     functionCall: {
-      id: pendingToolCall.id,
-      name: pendingToolCall.function.name,
+      id: toolCall.id,
+      name: toolCall.function.name,
       displayName: funcDef?.displayName,
       arguments: args,
       category: funcDef?.category || "generation",
     },
-    message: lastAssistant.content || `准备执行: ${funcDef?.displayName || pendingToolCall.function.name}`,
-    // creditCost 不推导，由前端重新计算
+    message: assistantContent || `准备执行: ${funcDef?.displayName || toolCall.function.name}`,
     createdAt: new Date(),
   };
+}
+
+/**
+ * 从消息历史推导 pendingAction（异步版本，支持积分计算）
+ */
+export async function derivePendingActionFromMessages(
+  messages: Array<AgentMessage | Message>,
+  conversationStatus: string,
+  recalculateCreditCost: boolean = false
+): Promise<PendingActionInfo | undefined> {
+  if (conversationStatus !== "awaiting_approval") {
+    return undefined;
+  }
+
+  const result = findPendingToolCall(messages);
+  if (!result) {
+    return undefined;
+  }
+
+  const pendingAction = buildPendingAction(result.toolCall, result.assistantContent);
+
+  // 重新计算积分成本
+  if (recalculateCreditCost) {
+    try {
+      const funcDef = getFunctionDefinition(result.toolCall.function.name);
+      const functionCall: FunctionCall = {
+        id: result.toolCall.id,
+        name: result.toolCall.function.name,
+        displayName: funcDef?.displayName,
+        parameters: pendingAction.functionCall.arguments,
+        category: funcDef?.category || "generation",
+        needsConfirmation: funcDef?.needsConfirmation || false,
+      };
+      const estimateResult = await estimateActionCredits([functionCall]);
+      if (estimateResult.success && estimateResult.creditCost) {
+        pendingAction.creditCost = estimateResult.creditCost;
+      }
+    } catch (error) {
+      console.error("[derivePendingAction] 估算积分失败:", error);
+    }
+  }
+
+  return pendingAction;
+}
+
+/**
+ * 从消息历史推导 pendingAction（同步版本，向后兼容）
+ */
+export function derivePendingAction(
+  messages: Message[],
+  conversationStatus: string
+): PendingActionInfo | undefined {
+  if (conversationStatus !== "awaiting_approval") {
+    return undefined;
+  }
+
+  const result = findPendingToolCall(messages);
+  return result ? buildPendingAction(result.toolCall, result.assistantContent) : undefined;
 }
 

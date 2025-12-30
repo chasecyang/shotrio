@@ -13,6 +13,7 @@ import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq, and, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { AgentMessage, AgentMessageRole, AgentContext } from "@/types/agent";
+import { derivePendingActionFromMessages } from "@/lib/services/agent-engine/state-manager";
 
 /**
  * 创建新对话
@@ -160,8 +161,25 @@ export async function getConversation(conversationId: string) {
       return message;
     });
 
-    // pendingAction 现在通过 derivePendingAction 从消息历史推导
-    // 前端加载对话时会自动计算，无需从数据库读取
+    // 从消息历史推导 pendingAction（修复刷新后待批准消失的 bug）
+    if (conv.status === "awaiting_approval") {
+      const pendingAction = await derivePendingActionFromMessages(messages, conv.status, true);
+
+      if (pendingAction) {
+        // 找到最后一条 assistant 消息并附加 pendingAction
+        const lastAssistantIdx = messages.findLastIndex(m => m.role === "assistant");
+        if (lastAssistantIdx !== -1) {
+          messages[lastAssistantIdx].pendingAction = pendingAction;
+          console.log("[getConversation] 已恢复 pendingAction:", pendingAction.functionCall.name);
+        }
+      } else {
+        // 状态不一致，自动修复
+        console.warn("[getConversation] 状态不一致，修复: awaiting_approval -> active");
+        await db.update(conversation)
+          .set({ status: "active", updatedAt: new Date() })
+          .where(eq(conversation.id, conversationId));
+      }
+    }
 
     return {
       success: true,
@@ -178,9 +196,24 @@ export async function getConversation(conversationId: string) {
     };
   } catch (error) {
     console.error("[Conversation] 获取对话详情失败:", error);
+    
+    // 提供更详细的错误信息
+    let errorMessage = "获取对话详情失败";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      console.error("[Conversation] 错误堆栈:", error.stack);
+      
+      // 特定错误类型的处理
+      if (error.message.includes("database")) {
+        errorMessage = "数据库连接失败，请稍后重试";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "请求超时，请检查网络连接";
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : "获取对话详情失败",
+      error: errorMessage,
     };
   }
 }

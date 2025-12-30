@@ -129,20 +129,21 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
 
   return (
     <div className="w-full px-4 py-2">
-      {/* Timestamp */}
-      <div className="flex items-center justify-end mb-1.5">
-        <span className="text-xs text-muted-foreground">
-          {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
-      </div>
-
       {isUser ? (
         /* User Message */
-        <div className="rounded-lg bg-accent/50 backdrop-blur-sm border border-border/50 px-3 py-2 break-words w-full">
-          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+        <div className="space-y-1.5">
+          {/* Timestamp - only for user messages */}
+          <div className="flex items-center justify-end">
+            <span className="text-xs text-muted-foreground">
+              {new Date(message.timestamp).toLocaleTimeString("zh-CN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+          <div className="rounded-lg bg-accent/50 backdrop-blur-sm border border-border/50 px-3 py-2 break-words w-full">
+            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+          </div>
         </div>
       ) : (
         /* AI Message */
