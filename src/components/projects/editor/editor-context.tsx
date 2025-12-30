@@ -155,6 +155,9 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           // 如果当前选中的剧集不存在，重置为第一个剧集或 null
           validSelectedEpisodeId = action.payload.episodes[0]?.id || null;
         }
+      } else {
+        // 如果没有选中剧集但项目有剧集，自动选择第一个
+        validSelectedEpisodeId = action.payload.episodes[0]?.id || null;
       }
       
       return {

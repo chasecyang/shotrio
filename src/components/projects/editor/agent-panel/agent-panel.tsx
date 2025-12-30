@@ -194,11 +194,16 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
+    onFirstAssistantMessage: () => {
+      // 收到第一条 AI 响应时立即生成标题
+      console.log("[AgentPanel] 收到首条 assistant 消息，尝试生成标题");
+      tryGenerateTitle("onFirstAssistantMessage");
+    },
     onComplete: () => {
       // 设置 loading 状态为 false（由 context 统一管理）
       agent.setLoading(false);
       
-      // 尝试生成标题（主要路径）
+      // 兜底方案：如果之前没生成成功，这里再尝试
       tryGenerateTitle("onComplete");
       
       // 延迟刷新对话列表

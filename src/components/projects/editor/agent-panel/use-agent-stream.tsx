@@ -13,6 +13,7 @@ import { useAgent } from "./agent-context";
 import type { AgentStreamEvent } from "@/lib/services/agent-engine";
 
 interface UseAgentStreamOptions {
+  onFirstAssistantMessage?: () => void;
   onPendingAction?: (pendingAction: unknown) => void;
   onComplete?: () => void;
   onError?: (error: string) => void;
@@ -44,6 +45,9 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
     content: "",
     toolCalls: [],
   });
+  
+  // 标记是否已触发首条消息回调，避免重复触发
+  const firstAssistantMessageTriggeredRef = useRef<boolean>(false);
 
   /**
    * 处理流式响应
@@ -58,6 +62,9 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
       content: "",
       toolCalls: [],
     };
+    
+    // 重置首条消息触发标记
+    firstAssistantMessageTriggeredRef.current = false;
 
     // 添加超时保护（5分钟）
     const timeoutId = setTimeout(() => {
@@ -130,6 +137,13 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                     content: "",
                     isStreaming: true,
                   });
+                  
+                  // 触发首条 assistant 消息回调（只触发一次）
+                  if (!firstAssistantMessageTriggeredRef.current && options.onFirstAssistantMessage) {
+                    console.log("[Agent Stream] 触发首条 assistant 消息回调");
+                    firstAssistantMessageTriggeredRef.current = true;
+                    options.onFirstAssistantMessage();
+                  }
                 }
                 break;
               }
