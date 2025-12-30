@@ -128,12 +128,37 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     name: "generate_shot_video",
     description: `使用 Kling O1 Reference-to-Video API 为分镜生成视频。
 
+⚠️ 重要限制（参数会被自动校验）：
+1. **图片总数限制**：elements 和 image_urls 中的图片总数不能超过 7 张
+   - elements 中每个角色的 frontal_image_url + reference_image_urls 都计入总数
+   - 超过限制会导致校验失败，请减少图片数量
+
+2. **elements 要求**：每个 element 必须包含至少一张 reference_image_urls
+   - 如果角色只有一张图片，必须放到 image_urls 中，不要使用 elements
+   - 错误示例：elements: [{ frontal_image_url: "xxx.png" }]  // 缺少 reference_image_urls
+   - 正确做法：image_urls: ["xxx.png"]
+
+3. **prompt 要求**：必须详细描述镜头运动和画面内容（至少10个字符）
+   - 使用英文描述
+   - 在描述中自然嵌入 @Element1、@Image1 等占位符引用图片
+
+4. **duration**：只能是字符串 "5" 或 "10"（不是数字）
+
+5. **aspect_ratio**：只能是 "16:9"、"9:16" 或 "1:1"
+
+💡 最佳实践：
+- 先用 query_shots 查询分镜的关联素材（shotAssets）
+- 根据素材数量合理分配到 elements 和 image_urls
+- 多角度的角色用 elements（需要至少2张图），单图场景用 image_urls
+
 ## 完整示例
-假设 Assets 包含以下图片：
+假设 Assets 包含以下图片（共7张）：
 - "温室废墟-鸟瞰" (首帧) → image_urls[0]
 - "汤姆-正面照" → elements[0].frontal_image_url  
 - "汤姆-背面照" → elements[0].reference_image_urls[0]
+- "汤姆-侧面照" → elements[0].reference_image_urls[1]
 - "魔法石-特写" → elements[1].frontal_image_url
+- "魔法石-发光" → elements[1].reference_image_urls[0]
 - "温室内部风格参考" → image_urls[1]
 
 生成的配置：

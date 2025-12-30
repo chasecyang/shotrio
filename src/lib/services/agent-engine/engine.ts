@@ -389,6 +389,41 @@ export class AgentEngine {
         },
       };
 
+      // 🆕 对需要确认的 function 先进行参数校验
+      if (funcDef.needsConfirmation) {
+        console.log("[AgentEngine] 需要确认的 function，先进行参数校验");
+        
+        const { validateFunctionParameters } = await import("@/lib/actions/agent/validation");
+        const validationResult = await validateFunctionParameters(
+          toolCall.function.name,
+          toolCall.function.arguments
+        );
+        
+        if (!validationResult.valid) {
+          console.log("[AgentEngine] 参数校验失败，返回错误给 AI:", validationResult.errors);
+          
+          // 保存 assistant message（包含 tool_calls）
+          await saveAssistantResponse(
+            state.assistantMessageId!,
+            currentContent,
+            aiMessage.tool_calls
+          );
+          
+          // 执行失败的 tool（返回错误给 AI，让它修正）
+          yield* this.executeToolWithError(state, toolCall, funcDef, validationResult.errors);
+          
+          // 继续对话循环，让 AI 看到错误并修正参数
+          continue;
+        }
+        
+        console.log("[AgentEngine] 参数校验通过，请求用户确认");
+        
+        // 如果有警告，记录日志
+        if (validationResult.warnings && validationResult.warnings.length > 0) {
+          console.log("[AgentEngine] 参数校验警告:", validationResult.warnings);
+        }
+      }
+
       // 检查是否需要确认
       if (funcDef.needsConfirmation) {
         console.log("[AgentEngine] 需要用户确认");
@@ -443,6 +478,51 @@ export class AgentEngine {
     }
   }
 
+
+  /**
+   * 执行失败的工具（参数校验失败）
+   * 直接返回错误给 AI，不实际执行
+   */
+  private async *executeToolWithError(
+    state: ConversationState,
+    toolCall: { id?: string; function: { name: string; arguments: string } },
+    funcDef: { displayName?: string; description: string; category: "read" | "generation" | "modification" | "deletion"; needsConfirmation: boolean },
+    errors: string[]
+  ): AsyncGenerator<AgentStreamEvent> {
+    console.log(`[AgentEngine] 返回参数校验错误: ${errors.join("; ")}`);
+
+    const errorMessage = `参数校验失败:\n${errors.map(e => `- ${e}`).join("\n")}`;
+
+    // 创建错误 tool message
+    const toolMessage: Message = {
+      role: "tool",
+      content: JSON.stringify({
+        success: false,
+        error: errorMessage,
+      }),
+      tool_call_id: toolCall.id || `fc-${Date.now()}`,
+    };
+
+    state.messages.push(toolMessage);
+
+    // 保存 tool 消息到数据库
+    await saveToolMessage(
+      state.conversationId,
+      toolMessage.tool_call_id!,
+      toolMessage.content
+    );
+
+    // 发送 tool_call_end 事件
+    yield {
+      type: "tool_call_end",
+      data: {
+        id: toolCall.id || `fc-${Date.now()}`,
+        name: toolCall.function.name,
+        success: false,
+        error: errorMessage,
+      },
+    };
+  }
 
   /**
    * 执行单个工具
