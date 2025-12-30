@@ -294,7 +294,7 @@ export function hasAssetTag(asset: AssetWithTags, tagValue: string): boolean {
 /**
  * 计算Asset的状态
  */
-export function getAssetStatus(asset: Asset): AssetStatus {
+export function getAssetStatus(asset: { imageUrl?: string | null }): AssetStatus {
   return asset.imageUrl ? "completed" : "generating";
 }
 

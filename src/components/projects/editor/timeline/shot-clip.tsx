@@ -11,6 +11,8 @@ import { formatDuration } from "@/lib/utils/shot-utils";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { updateShot } from "@/lib/actions/project/shot";
+import { toast } from "sonner";
 
 interface ShotClipProps {
   shot: ShotDetail;

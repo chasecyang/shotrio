@@ -42,7 +42,7 @@ export function ShotPlaybackPlayer({
   const firstAsset = currentShot?.shotAssets?.[0]?.asset;
 
   // 根据分镜内容确定类型
-  const contentType = currentShot?.videoUrl 
+  const contentType = currentShot?.currentVideo?.videoUrl 
     ? "video" 
     : firstAsset?.imageUrl 
     ? "image" 
@@ -123,10 +123,10 @@ export function ShotPlaybackPlayer({
     <div className="relative w-full h-full bg-black flex items-center justify-center">
       {/* 内容显示区域 */}
       <div className="w-full h-full flex items-center justify-center">
-        {contentType === "video" && currentShot.videoUrl && (
+        {contentType === "video" && currentShot.currentVideo?.videoUrl && (
           <video
             ref={videoRef}
-            src={currentShot.videoUrl}
+            src={currentShot.currentVideo.videoUrl}
             className="max-w-full max-h-full object-contain"
             autoPlay
             onEnded={handleVideoEnded}

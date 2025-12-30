@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { buildVideoPrompt, getKlingDuration } from "@/lib/utils/motion-prompt";
-import type { ShotVideoGenerationInput } from "@/types/job";
+import { createShotVideoGeneration } from "@/lib/actions/project/shot-video";
+import type { KlingO1ReferenceToVideoInput } from "@/lib/services/fal.service";
 
 /**
  * 生成单个分镜的视频
@@ -57,23 +58,24 @@ export async function generateShotVideo(shotId: string): Promise<{
 
     const duration = getKlingDuration(shotData.duration || 3000);
 
-    // 创建视频生成任务
-    const { createJob } = await import("@/lib/actions/job");
-    const episode = shotData.episode && 'projectId' in shotData.episode ? shotData.episode : null;
-    const result = await createJob({
-      userId: session.user.id,
-      projectId: episode?.projectId || "",
-      type: "shot_video_generation",
-      inputData: {
-        shotId,
-        imageUrl: firstAsset.imageUrl,
-        prompt: videoPrompt,
-        duration,
-        regenerate: false,
-      } as ShotVideoGenerationInput,
+    // 构建 Kling O1 配置
+    const klingO1Config: KlingO1ReferenceToVideoInput = {
+      prompt: videoPrompt,
+      elements: [
+        {
+          frontal_image_url: firstAsset.imageUrl,
+        },
+      ],
+      duration,
+    };
+
+    // 使用新架构创建视频生成任务
+    const result = await createShotVideoGeneration({
+      shotId,
+      klingO1Config,
     });
 
-    if (!result.success || !result.jobId) {
+    if (!result.success || !result.data?.jobId) {
       return {
         success: false,
         error: result.error || "创建任务失败",
@@ -82,7 +84,7 @@ export async function generateShotVideo(shotId: string): Promise<{
 
     return {
       success: true,
-      jobId: result.jobId,
+      jobId: result.data.jobId,
     };
   } catch (error) {
     console.error("生成分镜视频失败:", error);
@@ -93,51 +95,3 @@ export async function generateShotVideo(shotId: string): Promise<{
   }
 }
 
-/**
- * 更新分镜视频 URL (手动调用，通常由 worker 自动更新)
- */
-export async function updateShotVideo(shotId: string, videoUrl: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  try {
-    // 验证权限
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, shotId),
-      with: {
-        episode: {
-          with: {
-            project: true,
-          },
-        },
-      },
-    });
-
-    if (!shotData) {
-      return { success: false, error: "分镜不存在" };
-    }
-
-    const episodeData = shotData.episode as { project?: { userId?: string } } | null;
-    if (episodeData?.project?.userId !== session.user.id) {
-      return { success: false, error: "无权限操作" };
-    }
-
-    // 更新视频URL
-    await db
-      .update(shot)
-      .set({
-        videoUrl,
-        updatedAt: new Date(),
-      })
-      .where(eq(shot.id, shotId));
-
-    return { success: true };
-  } catch (error) {
-    console.error("更新视频URL失败:", error);
-    return { success: false, error: "服务器错误" };
-  }
-}

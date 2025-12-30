@@ -61,6 +61,7 @@ export async function getExportableShots(
             project: true,
           },
         },
+        currentVideo: true,
       },
     });
 
@@ -117,12 +118,22 @@ export async function getExportableShots(
 
     // 筛选出有视频的分镜
     const exportableShots = allShots
-      .filter((s) => s.videoUrl)
-      .map((s) => ({
-        id: s.id,
-        order: s.order,
-        videoUrl: s.videoUrl as string,
-      }))
+      .filter((s) => {
+        const currentVideo = Array.isArray(s.currentVideo) 
+          ? s.currentVideo[0] 
+          : s.currentVideo;
+        return currentVideo?.videoUrl;
+      })
+      .map((s) => {
+        const currentVideo = Array.isArray(s.currentVideo)
+          ? s.currentVideo[0]
+          : s.currentVideo;
+        return {
+          id: s.id,
+          order: s.order,
+          videoUrl: currentVideo!.videoUrl as string,
+        };
+      })
       .sort((a, b) => a.order - b.order); // 按照 order 排序
 
     const skippedCount = allShots.length - exportableShots.length;

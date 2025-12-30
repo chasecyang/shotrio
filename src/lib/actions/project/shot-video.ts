@@ -52,6 +52,24 @@ export async function createShotVideoGeneration(data: {
       throw new Error("分镜不存在");
     }
 
+    // 处理可能是数组的 episode
+    const episodeData = Array.isArray(shotData.episode) 
+      ? shotData.episode[0] 
+      : shotData.episode;
+    
+    if (!episodeData) {
+      throw new Error("无法获取剧集信息");
+    }
+
+    // 处理可能是数组的 project
+    const projectData = Array.isArray(episodeData.project)
+      ? episodeData.project[0]
+      : episodeData.project;
+
+    if (!projectData) {
+      throw new Error("无法获取项目信息");
+    }
+
     // 创建 shot_video 记录（存储 Kling O1 配置）
     const newShotVideo: NewShotVideo = {
       id: randomUUID(),
@@ -72,7 +90,7 @@ export async function createShotVideoGeneration(data: {
 
     const jobResult = await createJob({
       userId: session.user.id,
-      projectId: shotData.episode.project.id,
+      projectId: projectData.id,
       type: "shot_video_generation",
       inputData: jobInput,
     });
@@ -87,7 +105,7 @@ export async function createShotVideoGeneration(data: {
       success: true,
       data: {
         shotVideo: created,
-        jobId: jobResult.data?.id,
+        jobId: jobResult.jobId,
       },
     };
   } catch (error) {
@@ -198,7 +216,16 @@ export async function getCurrentShotVideo(shotId: string): Promise<ShotVideo | n
       },
     });
 
-    return shotData?.currentVideo || null;
+    if (!shotData?.currentVideo) {
+      return null;
+    }
+
+    // 处理可能是数组的 currentVideo
+    const currentVideo = Array.isArray(shotData.currentVideo)
+      ? shotData.currentVideo[0]
+      : shotData.currentVideo;
+
+    return currentVideo || null;
   } catch (error) {
     console.error("查询当前视频版本失败:", error);
     return null;
@@ -294,6 +321,24 @@ export async function retryShotVideoGeneration(videoId: string) {
       throw new Error("分镜不存在");
     }
 
+    // 处理可能是数组的 episode
+    const episodeData = Array.isArray(shotData.episode) 
+      ? shotData.episode[0] 
+      : shotData.episode;
+    
+    if (!episodeData) {
+      throw new Error("无法获取剧集信息");
+    }
+
+    // 处理可能是数组的 project
+    const projectData = Array.isArray(episodeData.project)
+      ? episodeData.project[0]
+      : episodeData.project;
+
+    if (!projectData) {
+      throw new Error("无法获取项目信息");
+    }
+
     // 重置状态
     await db
       .update(shotVideo)
@@ -311,7 +356,7 @@ export async function retryShotVideoGeneration(videoId: string) {
 
     const jobResult = await createJob({
       userId: session.user.id,
-      projectId: shotData.episode.project.id,
+      projectId: projectData.id,
       type: "shot_video_generation",
       inputData: jobInput,
     });
@@ -323,7 +368,7 @@ export async function retryShotVideoGeneration(videoId: string) {
     return {
       success: true,
       data: {
-        jobId: jobResult.data?.id,
+        jobId: jobResult.jobId,
       },
     };
   } catch (error) {
