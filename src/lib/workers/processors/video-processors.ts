@@ -282,7 +282,11 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     const episodeData = await db.query.episode.findFirst({
       where: eq(episode.id, episodeId),
       with: {
-        shots: true,
+        shots: {
+          with: {
+            currentVideo: true,
+          },
+        },
       },
     });
 
@@ -291,7 +295,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     }
 
     // 过滤出有视频的分镜
-    const shotsWithVideo = episodeData.shots.filter((s) => s.videoUrl);
+    const shotsWithVideo = episodeData.shots.filter((s) => s.currentVideo?.videoUrl);
 
     if (shotsWithVideo.length === 0) {
       throw new Error("该剧集没有已生成的视频");
@@ -321,7 +325,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     // 基础实现：返回视频列表供前端处理
     const videoList = shotsWithVideo.map((shot) => ({
       order: shot.order,
-      videoUrl: shot.videoUrl!,
+      videoUrl: shot.currentVideo!.videoUrl!,
       duration: shot.duration || 3000,
       dialogues: [], // TODO: 从数据库加载对话数据
     }));

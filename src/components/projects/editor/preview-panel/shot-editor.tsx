@@ -334,10 +334,10 @@ export function ShotEditor({ shot }: ShotEditorProps) {
 
           {/* 视频预览区域 */}
           <div className="space-y-2">
-            {shot.videoUrl ? (
+            {shot.currentVideo?.videoUrl ? (
               <>
                 <video
-                  src={shot.videoUrl}
+                  src={shot.currentVideo.videoUrl}
                   controls
                   className="w-full rounded-lg border"
                 />

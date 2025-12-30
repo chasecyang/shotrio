@@ -167,7 +167,7 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
                   </Badge>
                 )}
                 {/* 视频标识 */}
-                {shot.videoUrl && (
+                {shot.currentVideo?.videoUrl && (
                   <div className="absolute bottom-0.5 right-0.5 bg-primary rounded px-1 py-0.5">
                     <Video className="w-2.5 h-2.5 text-primary-foreground" />
                   </div>
@@ -220,13 +220,13 @@ export function ShotClip({ shot, isSelected, pixelsPerMs, onClick }: ShotClipPro
             </span>
             {/* 内容状态图标 */}
             <div className="flex items-center gap-0.5 ml-auto">
-              {shot.videoUrl && (
+              {shot.currentVideo?.videoUrl && (
                 <Video className="w-3 h-3 text-primary" />
               )}
-              {!shot.videoUrl && firstAsset?.imageUrl && (
+              {!shot.currentVideo?.videoUrl && firstAsset?.imageUrl && (
                 <ImageIcon className="w-3 h-3 text-blue-500" />
               )}
-              {!shot.videoUrl && !firstAsset?.imageUrl && (
+              {!shot.currentVideo?.videoUrl && !firstAsset?.imageUrl && (
                 <FileText className="w-3 h-3 text-muted-foreground/50" />
               )}
             </div>

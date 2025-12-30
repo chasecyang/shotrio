@@ -107,7 +107,7 @@ export function StoryboardPanel() {
                           </Badge>
                         )}
                         {/* 视频标识 */}
-                        {shot.videoUrl && (
+                        {shot.currentVideo?.videoUrl && (
                           <div className="absolute bottom-1 right-1 bg-primary rounded px-1 py-0.5">
                             <Video className="w-2.5 h-2.5 text-primary-foreground" />
                           </div>
@@ -130,7 +130,7 @@ export function StoryboardPanel() {
                       </div>
                       {/* 内容状态 */}
                       <div className="ml-auto flex items-center gap-1">
-                        {shot.videoUrl ? (
+                        {shot.currentVideo?.videoUrl ? (
                           <Video className="w-3.5 h-3.5 text-primary" />
                         ) : firstAsset?.imageUrl ? (
                           <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
