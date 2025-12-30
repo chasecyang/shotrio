@@ -385,6 +385,7 @@ export class AgentEngine {
           id: toolCall.id || `fc-${Date.now()}`,
           name: toolCall.function.name,
           displayName: funcDef.displayName,
+          arguments: toolCall.function.arguments,
         },
       };
 

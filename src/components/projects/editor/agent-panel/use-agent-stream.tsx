@@ -157,13 +157,13 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                 
                 console.log("[Agent Stream] Tool 调用开始:", event.data.name, "ID:", event.data.id);
                 
-                // 使用后端提供的真实 tool call ID
+                // 使用后端提供的真实 tool call ID 和参数
                 const newToolCall = {
                   id: event.data.id,
                   type: "function" as const,
                   function: {
                     name: event.data.name,
-                    arguments: "{}",
+                    arguments: event.data.arguments,
                   },
                 };
                 
