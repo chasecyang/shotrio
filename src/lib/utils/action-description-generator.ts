@@ -33,59 +33,57 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       case "query_context":
         return "查询项目上下文";
 
-      case "query_assets":
+      case "query_assets": {
+        const parts: string[] = [];
+        if (parameters.assetType === "image") {
+          parts.push("查询图片资产");
+        } else if (parameters.assetType === "video") {
+          parts.push("查询视频资产");
+        } else {
+          parts.push("查询资产库");
+        }
         if (parameters.tags) {
           const tags = Array.isArray(parameters.tags) ? parameters.tags.join(",") : String(parameters.tags);
-          return `查询素材：${tags}`;
+          parts.push(`标签：${tags}`);
         }
-        return "查询素材库";
-
-      case "query_videos":
-        if (parameters.videoIds && Array.isArray(parameters.videoIds)) {
-          return `查询 ${parameters.videoIds.length} 个视频详情`;
-        }
-        return "查询视频列表";
+        return parts.join(" - ");
+      }
 
       // ============================================
       // 创作类操作
       // ============================================
 
-      case "generate_assets": {
+      case "generate_image_asset": {
         const assets = parameters.assets as Array<{ name?: string; prompt?: string }>;
         const count = assets?.length || 0;
         if (count === 1 && assets[0]) {
-          const parts: string[] = ["生成素材"];
+          const parts: string[] = ["生成图片资产"];
           if (assets[0].name) {
             parts.push(assets[0].name);
           }
           return parts.join(" - ");
         }
-        return count > 0 ? `生成 ${count} 个素材` : "生成素材";
+        return count > 0 ? `生成 ${count} 个图片资产` : "生成图片资产";
+      }
+
+      case "generate_video_asset": {
+        const title = parameters.title as string | undefined;
+        if (title) {
+          return `生成视频资产 - ${title}`;
+        }
+        return "生成视频资产";
       }
 
       // ============================================
       // 修改类操作
       // ============================================
-      case "update_videos": {
-        const updates = parameters.updates as Array<{ videoId: string; title?: string; prompt?: string }>;
-        const count = updates?.length || 0;
-        if (count === 1 && updates[0]) {
-          const parts: string[] = ["修改视频"];
-          if (updates[0].title) {
-            parts.push(updates[0].title);
-          }
-          return parts.join(" - ");
-        }
-        return count > 0 ? `修改 ${count} 个视频` : "修改视频";
-      }
-
-      case "update_assets": {
+      case "update_asset": {
         const updates = parameters.updates as Array<{ assetId: string; name?: string }>;
         const count = updates?.length || 0;
         if (count === 1 && updates[0] && updates[0].name) {
-          return `修改素材 - ${updates[0].name}`;
+          return `修改资产 - ${updates[0].name}`;
         }
-        return count > 0 ? `修改 ${count} 个素材` : "修改素材";
+        return count > 0 ? `修改 ${count} 个资产` : "修改资产";
       }
 
       case "set_art_style":
@@ -94,16 +92,10 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       // ============================================
       // 删除类操作
       // ============================================
-      case "delete_videos": {
-        const videoIds = parameters.videoIds as string[];
-        const count = videoIds?.length || 0;
-        return count > 0 ? `删除 ${count} 个视频` : "删除视频";
-      }
-
-      case "delete_assets": {
+      case "delete_asset": {
         const assetIds = parameters.assetIds as string[];
         const count = assetIds?.length || 0;
-        return count > 0 ? `删除 ${count} 个素材` : "删除素材";
+        return count > 0 ? `删除 ${count} 个资产` : "删除资产";
       }
 
       default:

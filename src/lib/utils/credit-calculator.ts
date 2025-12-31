@@ -59,7 +59,7 @@ export function estimateFunctionCallCredits(
 
   try {
     switch (name) {
-      case "generate_assets": {
+      case "generate_image_asset": {
         // 素材生成（单个或批量）
         const assets = parameters.assets as Array<{ numImages?: number }>;
         
@@ -77,7 +77,7 @@ export function estimateFunctionCallCredits(
         };
       }
 
-      case "generate_video": {
+      case "generate_video_asset": {
         // 视频生成
         const klingConfig = parameters.klingO1Config as { duration?: string };
         const duration = klingConfig?.duration === "10" ? 10 : 5;

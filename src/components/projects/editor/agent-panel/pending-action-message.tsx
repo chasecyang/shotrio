@@ -371,8 +371,8 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const iconColor = "text-primary";
 
   // 判断操作类型
-  const isGenerateAssets = functionCall.name === "generate_assets";
-  const isGenerateVideo = functionCall.name === "generate_video";
+  const isGenerateAssets = functionCall.name === "generate_image_asset";
+  const isGenerateVideo = functionCall.name === "generate_video_asset";
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {

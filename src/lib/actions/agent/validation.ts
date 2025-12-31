@@ -21,23 +21,20 @@ export async function validateFunctionParameters(
     const params = JSON.parse(argumentsJson);
 
     switch (functionName) {
-      case "generate_video":
+      case "generate_video_asset":
         return validateGenerateVideoParams(params);
 
       // 未来可扩展其他 function 的校验
-      case "generate_assets":
+      case "generate_image_asset":
         return validateGenerateAssetsParams(params);
 
       // 其他 function 暂不校验（默认通过）
       case "query_context":
       case "query_assets":
-      case "query_videos":
       case "update_episode":
-      case "update_videos":
-      case "update_assets":
+      case "update_asset":
       case "set_art_style":
-      case "delete_videos":
-      case "delete_assets":
+      case "delete_asset":
         return { valid: true, errors: [], warnings: [] };
 
       default:
@@ -57,7 +54,7 @@ export async function validateFunctionParameters(
 }
 
 /**
- * 校验 generate_video 参数
+ * 校验 generate_video_asset 参数
  */
 function validateGenerateVideoParams(params: any): ValidationResult {
   const errors: string[] = [];
@@ -89,7 +86,7 @@ function validateGenerateVideoParams(params: any): ValidationResult {
 }
 
 /**
- * 校验 generate_assets 参数
+ * 校验 generate_image_asset 参数
  * TODO: 实现完整校验
  */
 function validateGenerateAssetsParams(params: any): ValidationResult {

@@ -41,9 +41,9 @@ interface AgentPanelProps {
 // 判断是否为视频相关操作
 function isVideoRelatedFunction(functionName: string): boolean {
   const videoRelatedFunctions = [
-    'generate_video',
-    'update_videos',
-    'delete_videos',
+    'generate_video_asset',
+    'update_asset',
+    'delete_asset',
   ];
   return videoRelatedFunctions.includes(functionName);
 }

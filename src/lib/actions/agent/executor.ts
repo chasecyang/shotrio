@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 // 导入所有需要的 actions
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
+import { replaceAssetTags } from "../asset/tags";
 import { createJob } from "../job";
 import type { AssetImageGenerationInput } from "@/types/job";
 import { getSystemArtStyles } from "../art-style/queries";
@@ -24,8 +25,6 @@ import { analyzeAssetsByType } from "../asset/stats";
 import { 
   getVideoAssets,
   createVideoAsset,
-  updateVideoAsset,
-  deleteVideoAssets,
 } from "../asset/crud";
 
 /**
@@ -139,8 +138,10 @@ export async function executeFunction(
 
       case "query_assets": {
         const tagArray = parameters.tags as string[] | undefined;
+        const assetType = parameters.assetType as "image" | "video" | undefined;
         const queryResult = await queryAssets({
           projectId,
+          assetType,
           tagFilters: tagArray,
           limit: (parameters.limit as number) || 20,
         });
@@ -149,6 +150,8 @@ export async function executeFunction(
         const completedCount = queryResult.assets.filter(a => a.status === "completed").length;
         const generatingCount = queryResult.assets.filter(a => a.status === "generating").length;
 
+        const typeLabel = assetType === "image" ? "图片资产" : assetType === "video" ? "视频资产" : "资产";
+        
         result = {
           functionCallId: functionCall.id,
           success: true,
@@ -158,56 +161,8 @@ export async function executeFunction(
             completed: completedCount,
             generating: generatingCount,
             message: queryResult.assets.length === 0 
-              ? "素材库为空，没有找到任何素材" 
-              : `找到 ${queryResult.total} 个素材（${completedCount} 个已完成，${generatingCount} 个生成中）`,
-          },
-        };
-        break;
-      }
-
-      case "query_videos": {
-        const videoIds = parameters.videoIds as string[] | undefined;
-        const tags = parameters.tags as string[] | undefined;
-
-        const videosResult = await getVideoAssets(projectId, {
-          tags,
-          orderBy: "created",
-        });
-        
-        if (!videosResult.success) {
-          result = {
-            functionCallId: functionCall.id,
-            success: false,
-            error: videosResult.error || "查询视频失败",
-          };
-          break;
-        }
-
-        let videos = videosResult.videos || [];
-        
-        // 按 videoIds 筛选
-        if (videoIds && videoIds.length > 0) {
-          videos = videos.filter(v => videoIds.includes(v.id));
-        }
-
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: { 
-            videos: videos.map(v => ({
-              id: v.id,
-              prompt: v.prompt,
-              name: v.name,
-              status: v.status,
-              videoUrl: v.videoUrl,
-              thumbnailUrl: v.thumbnailUrl,
-              duration: v.duration,
-              tags: v.tags.map(t => t.tagValue),
-              order: v.order,
-              sourceAssetIds: v.sourceAssetIds,
-              createdAt: v.createdAt,
-            })),
-            total: videos.length,
+              ? `${typeLabel}库为空，没有找到任何${typeLabel}` 
+              : `找到 ${queryResult.total} 个${typeLabel}（${completedCount} 个已完成，${generatingCount} 个生成中）`,
           },
         };
         break;
@@ -217,7 +172,7 @@ export async function executeFunction(
       // 创作类
       // ============================================
 
-      case "generate_assets": {
+      case "generate_image_asset": {
         const assets = parameters.assets as Array<{
           name?: string;
           prompt: string;
@@ -305,7 +260,7 @@ export async function executeFunction(
         break;
       }
 
-      case "generate_video": {
+      case "generate_video_asset": {
         const prompt = parameters.prompt as string;
         const title = parameters.title as string | undefined;
         const referenceAssetIds = parameters.referenceAssetIds as string[] | undefined;
@@ -388,51 +343,7 @@ export async function executeFunction(
       // ============================================
       // 修改类
       // ============================================
-      case "update_videos": {
-        const updates = parameters.updates as Array<{
-          videoId: string;
-          prompt?: string;
-          name?: string;
-          order?: number;
-        }>;
-
-        const results = [];
-        
-        for (const update of updates) {
-          const { videoId, ...updateData } = update;
-          const updateResult = await updateVideoAsset(videoId, updateData);
-          
-          if (updateResult.success) {
-            results.push({
-              videoId,
-              success: true,
-            });
-          } else {
-            results.push({
-              videoId,
-              success: false,
-              error: updateResult.error,
-            });
-          }
-        }
-
-        const successCount = results.filter(r => r.success).length;
-        const failedCount = results.length - successCount;
-
-        result = {
-          functionCallId: functionCall.id,
-          success: failedCount === 0,
-          data: {
-            results,
-            successCount,
-            failedCount,
-            message: `已更新 ${successCount} 个视频${failedCount > 0 ? `，${failedCount} 个失败` : ""}`,
-          },
-        };
-        break;
-      }
-
-      case "update_assets": {
+      case "update_asset": {
         const updates = parameters.updates as Array<{
           assetId: string;
           name?: string;
@@ -442,13 +353,46 @@ export async function executeFunction(
         const updateResults: Array<{ assetId: string; success: boolean; error?: string }> = [];
 
         for (const update of updates) {
-          const { assetId, ...fields } = update;
-          const updateResult = await updateAsset(assetId, fields);
-          updateResults.push({
-            assetId,
-            success: updateResult.success,
-            error: updateResult.error,
-          });
+          const { assetId, name, tags } = update;
+          
+          try {
+            // 更新 name（如果提供）
+            if (name !== undefined) {
+              const nameUpdateResult = await updateAsset(assetId, { name });
+              if (!nameUpdateResult.success) {
+                updateResults.push({
+                  assetId,
+                  success: false,
+                  error: nameUpdateResult.error,
+                });
+                continue;
+              }
+            }
+
+            // 更新 tags（如果提供）
+            if (tags !== undefined) {
+              const tagsUpdateResult = await replaceAssetTags(assetId, tags);
+              if (!tagsUpdateResult.success) {
+                updateResults.push({
+                  assetId,
+                  success: false,
+                  error: tagsUpdateResult.error,
+                });
+                continue;
+              }
+            }
+
+            updateResults.push({
+              assetId,
+              success: true,
+            });
+          } catch (error) {
+            updateResults.push({
+              assetId,
+              success: false,
+              error: error instanceof Error ? error.message : "更新失败",
+            });
+          }
         }
 
         const successCount = updateResults.filter(r => r.success).length;
@@ -485,31 +429,7 @@ export async function executeFunction(
       // ============================================
       // 删除类
       // ============================================
-      case "delete_videos": {
-        const videoIds = parameters.videoIds as string[];
-
-        const deleteResult = await deleteVideoAssets(videoIds);
-
-        if (deleteResult.success) {
-          result = {
-            functionCallId: functionCall.id,
-            success: true,
-            data: {
-              deletedCount: deleteResult.deletedCount,
-              message: `已删除 ${deleteResult.deletedCount} 个视频`,
-            },
-          };
-        } else {
-          result = {
-            functionCallId: functionCall.id,
-            success: false,
-            error: deleteResult.error || "删除视频失败",
-          };
-        }
-        break;
-      }
-
-      case "delete_assets": {
+      case "delete_asset": {
         const assetIds = parameters.assetIds as string[];
         const deleteResults: Array<{ assetId: string; success: boolean; error?: string }> = [];
 

@@ -1,11 +1,6 @@
 /**
  * Agent Function 工具定义
  * 
- * 重构后的设计原则：
- * 1. 视频片段为核心 - 直接操作视频，不再通过分镜
- * 2. Agent 可理解视频内容 - 通过 prompt 字段
- * 3. 灵活的视频生成 - 支持从零生成或基于素材生成
- * 4. 简化的工作流 - 生成→预览→调整→导出
  */
 
 import type { FunctionDefinition } from "@/types/agent";
@@ -43,11 +38,15 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "query_assets",
-    description: "查询项目素材库。支持按标签精确筛选角色、场景、道具等。适合在需要引用现有素材时使用。",
-    displayName: "查询素材库",
+    description: "查询项目资产库（图片和视频）。支持按类型和标签筛选。适合在需要引用现有素材或视频时使用。",
+    displayName: "查询资产库",
     parameters: {
       type: "object",
       properties: {
+        assetType: {
+          type: "string",
+          description: "资产类型筛选：'image' 或 'video'。不提供则返回所有类型",
+        },
         tags: {
           type: "array",
           description: "标签筛选数组，如 ['角色','男性'] 或 ['场景','室外']",
@@ -61,34 +60,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     category: "read",
     needsConfirmation: false,
   },
-  {
-    name: "query_videos",
-    description: "查询项目的视频列表。返回所有视频的详细信息，包括 prompt（视频内容描述）、状态、时长、参考素材等。Agent 可以通过 prompt 理解视频内容，用于剪辑和组合。",
-    displayName: "查询视频列表",
-    parameters: {
-      type: "object",
-      properties: {
-        videoIds: {
-          type: "array",
-          description: "可选：指定视频ID数组，只查询这些视频。如果不提供则返回所有视频",
-        },
-        tags: {
-          type: "array",
-          description: "可选：按标签筛选视频",
-        },
-      },
-    },
-    category: "read",
-    needsConfirmation: false,
-  },
 
   // ============================================
   // 创作类工具（生成/创建，需要确认）
   // ============================================
   {
-    name: "generate_assets",
-    description: "生成素材图片（支持单个或批量）。可以是从零生成，也可以基于现有素材进行图生图。适合创建角色、场景、道具等视觉素材。",
-    displayName: "生成素材",
+    name: "generate_image_asset",
+    description: "生成图片资产（支持单个或批量）。可以是从零生成，也可以基于现有素材进行图生图。适合创建角色、场景、道具等视觉素材。",
+    displayName: "生成图片资产",
     parameters: {
       type: "object",
       properties: {
@@ -103,8 +82,8 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "generate_video",
-    description: `使用 Kling O1 Reference-to-Video API 生成视频片段。
+    name: "generate_video_asset",
+    description: `使用 Kling O1 Reference-to-Video API 生成视频资产。
 
 ⚠️ 重要限制（参数会被自动校验）：
 1. **图片总数限制**：elements 和 image_urls 中的图片总数不能超过 7 张
@@ -175,7 +154,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 }
 \`\`\`
 `,
-    displayName: "生成视频",
+    displayName: "生成视频资产",
     parameters: {
       type: "object",
       properties: {
@@ -223,26 +202,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // 修改类工具（需要确认）
   // ============================================
   {
-    name: "update_videos",
-    description: "修改视频信息（支持单个或批量）。可以修改 prompt（内容描述）、title、tags、order 等。修改 prompt 会影响 Agent 对视频内容的理解。",
-    displayName: "修改视频",
-    parameters: {
-      type: "object",
-      properties: {
-        updates: {
-          type: "array",
-          description: "更新数组，每项包含 videoId（必填）和要修改的字段（prompt, title, tags, order）",
-        },
-      },
-      required: ["updates"],
-    },
-    category: "modification",
-    needsConfirmation: true,
-  },
-  {
-    name: "update_assets",
-    description: "修改素材信息（支持单个或批量）。可以修改名称和标签。",
-    displayName: "修改素材",
+    name: "update_asset",
+    description: "修改资产信息（支持单个或批量）。只允许修改 name（名称）和 tags（标签），不允许修改 prompt 等生成配置字段。适用于图片和视频资产。",
+    displayName: "修改资产",
     parameters: {
       type: "object",
       properties: {
@@ -278,32 +240,15 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // 删除类工具（需要确认）
   // ============================================
   {
-    name: "delete_videos",
-    description: "删除视频（支持单个或批量）。删除后无法恢复，请谨慎使用。",
-    displayName: "删除视频",
-    parameters: {
-      type: "object",
-      properties: {
-        videoIds: {
-          type: "array",
-          description: "要删除的视频ID数组",
-        },
-      },
-      required: ["videoIds"],
-    },
-    category: "deletion",
-    needsConfirmation: true,
-  },
-  {
-    name: "delete_assets",
-    description: "删除素材（支持单个或批量）。删除后无法恢复。",
-    displayName: "删除素材",
+    name: "delete_asset",
+    description: "删除资产（支持单个或批量）。可删除图片或视频资产。删除后无法恢复，请谨慎使用。",
+    displayName: "删除资产",
     parameters: {
       type: "object",
       properties: {
         assetIds: {
           type: "array",
-          description: "要删除的素材ID数组",
+          description: "要删除的资产ID数组",
         },
       },
       required: ["assetIds"],

@@ -33,21 +33,15 @@ export function formatFunctionResult(
           return queryData.message;
         }
         if (queryData.total !== undefined) {
-          return `找到 ${queryData.total} 个素材`;
+          return `找到 ${queryData.total} 个资产`;
         }
         return "查询完成";
-      }
-
-      case "query_videos": {
-        const videosData = data as { videos?: unknown[]; total?: number };
-        const count = videosData.total ?? (videosData.videos?.length || 0);
-        return `查询到 ${count} 个视频`;
       }
 
       // ============================================
       // 创作类
       // ============================================
-      case "generate_video": {
+      case "generate_video_asset": {
         const videoData = data as { videoId?: string; title?: string };
         if (videoData.title) {
           return `已创建视频: ${videoData.title}`;
@@ -55,7 +49,7 @@ export function formatFunctionResult(
         return "已创建视频生成任务";
       }
 
-      case "generate_assets": {
+      case "generate_image_asset": {
         const batchData = data as { createdCount?: number; assetIds?: string[]; totalCount?: number };
         if (batchData.createdCount !== undefined) {
           return `已创建 ${batchData.createdCount} 个生成任务`;
@@ -63,26 +57,18 @@ export function formatFunctionResult(
         if (batchData.assetIds) {
           return `已创建 ${batchData.assetIds.length} 个生成任务`;
         }
-        return "已创建素材生成任务";
+        return "已创建图片生成任务";
       }
 
       // ============================================
       // 修改类
       // ============================================
-      case "update_videos": {
+      case "update_asset": {
         const updateData = data as { updated?: number; total?: number };
         if (updateData.updated !== undefined) {
-          return `已更新 ${updateData.updated} 个视频`;
+          return `已更新 ${updateData.updated} 个资产`;
         }
-        return "已更新视频";
-      }
-
-      case "update_assets": {
-        const updateData = data as { updated?: number; total?: number };
-        if (updateData.updated !== undefined) {
-          return `已更新 ${updateData.updated} 个素材`;
-        }
-        return "已更新素材";
+        return "已更新资产";
       }
 
       case "set_art_style": {
@@ -92,16 +78,10 @@ export function formatFunctionResult(
       // ============================================
       // 删除类
       // ============================================
-      case "delete_videos": {
-        const deleteData = data as { deleted?: number };
-        const count = deleteData.deleted ?? (Array.isArray(parameters.videoIds) ? (parameters.videoIds as string[]).length : 1);
-        return `已删除 ${count} 个视频`;
-      }
-
-      case "delete_assets": {
+      case "delete_asset": {
         const deleteData = data as { deleted?: number };
         const count = deleteData.deleted ?? (Array.isArray(parameters.assetIds) ? (parameters.assetIds as string[]).length : 1);
-        return `已删除 ${count} 个素材`;
+        return `已删除 ${count} 个资产`;
       }
 
       default:
