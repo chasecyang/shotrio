@@ -7,7 +7,6 @@ import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, Upload, Images, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetUploadDialog } from "./resource-panel/asset-upload-dialog";
@@ -178,7 +177,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
       </div>
 
       {/* 素材网格 */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-auto">
         <div className="p-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -226,7 +225,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* 上传对话框 */}
       <AssetUploadDialog

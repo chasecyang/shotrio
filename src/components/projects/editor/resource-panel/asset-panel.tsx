@@ -210,8 +210,8 @@ export function AssetPanel({ userId }: AssetPanelProps) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-3 flex-1 overflow-hidden flex flex-col">
-        {/* 工具栏 */}
+      {/* 工具栏 */}
+      <div className="p-3 shrink-0">
         <AssetToolbar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -225,21 +225,21 @@ export function AssetPanel({ userId }: AssetPanelProps) {
           onDeselectAll={handleDeselectAll}
           onBatchDelete={handleBatchDelete}
         />
+      </div>
 
-        {/* 素材列表 */}
-        <div className="flex-1 overflow-auto" style={{ containerType: 'inline-size' }}>
-          <AssetList
-            assets={assets}
-            viewMode={viewMode}
-            isLoading={isLoading}
-            selectedAssetId={selectedAssetId}
-            selectedAssetIds={selectedAssetIds}
-            onDelete={handleDelete}
-            onClick={handleAssetClick}
-            onSelectChange={handleSelectChange}
-            onUpload={() => setUploadDialogOpen(true)}
-          />
-        </div>
+      {/* 素材列表 */}
+      <div className="flex-1 overflow-auto px-3 pb-3" style={{ containerType: 'inline-size' }}>
+        <AssetList
+          assets={assets}
+          viewMode={viewMode}
+          isLoading={isLoading}
+          selectedAssetId={selectedAssetId}
+          selectedAssetIds={selectedAssetIds}
+          onDelete={handleDelete}
+          onClick={handleAssetClick}
+          onSelectChange={handleSelectChange}
+          onUpload={() => setUploadDialogOpen(true)}
+        />
       </div>
 
       {/* 上传对话框 */}

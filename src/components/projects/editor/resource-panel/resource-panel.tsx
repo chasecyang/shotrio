@@ -66,11 +66,11 @@ export function ResourcePanel() {
           </TabsList>
         </div>
 
-        <TabsContent value="assets" className="flex-1 mt-0 overflow-hidden">
+        <TabsContent value="assets" className="flex-1 mt-0 overflow-hidden min-h-0">
           <AssetPanel userId={session.user.id} />
         </TabsContent>
 
-        <TabsContent value="agent" className="flex-1 mt-0 overflow-hidden">
+        <TabsContent value="agent" className="flex-1 mt-0 overflow-hidden min-h-0">
           <ScrollArea className="h-full">
             <ConversationList
               currentConversationId={agent.state.currentConversationId}

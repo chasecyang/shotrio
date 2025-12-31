@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Settings } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "next/navigation";
@@ -25,7 +26,7 @@ export function EditorHeader({
   user,
 }: EditorHeaderProps) {
   const router = useRouter();
-  const { dispatch } = useEditor();
+  const { state, dispatch } = useEditor();
 
   const handleSettingsClick = () => {
     // 更新 URL 参数
@@ -37,9 +38,12 @@ export function EditorHeader({
     });
   };
 
+  // 检查是否在查看设置页面
+  const isSettingsActive = state.selectedResource?.type === "settings";
+
   return (
     <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 gap-4 shrink-0">
-      {/* 左侧：Logo + 项目切换 */}
+      {/* 左侧：Logo + 项目切换 + 项目设置 */}
       <div className="flex items-center gap-3 min-w-0">
         <Link 
           href="/projects" 
@@ -56,11 +60,30 @@ export function EditorHeader({
           projects={projects}
           currentProjectId={projectId}
         />
+        
+        {/* 项目设置按钮 */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`h-8 w-8 ${isSettingsActive ? 'bg-accent' : ''}`}
+                onClick={handleSettingsClick}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>项目设置</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="flex-1" />
 
-      {/* 右侧：积分 + 后台任务 + 设置 + 用户菜单 */}
+      {/* 右侧：积分 + 后台任务 + 用户菜单 */}
       <div className="flex items-center gap-2">
         {/* 积分显示 */}
         <EditorCreditsButton />
@@ -69,16 +92,6 @@ export function EditorHeader({
 
         {/* 后台任务 */}
         <BackgroundTasks />
-
-        {/* 设置 */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8"
-          onClick={handleSettingsClick}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
 
         <Separator orientation="vertical" className="h-6" />
 

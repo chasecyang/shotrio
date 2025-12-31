@@ -227,6 +227,9 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                   isStreaming: false,
                 });
                 
+                // 🆕 关键修复：等待用户确认时，停止显示"正在创作"
+                agent.setLoading(false);
+                
                 // 触发回调
                 options.onPendingAction?.();
                 break;
@@ -240,6 +243,10 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                     isStreaming: false,
                   });
                 }
+                
+                // 🆕 兜底机制：确保 isLoading 被设置为 false
+                agent.setLoading(false);
+                
                 options.onComplete?.();
                 break;
               }
