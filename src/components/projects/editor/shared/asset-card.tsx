@@ -120,33 +120,33 @@ export function AssetCard({
             <Video className="h-12 w-12 text-muted-foreground" />
           </div>
         )}
+        {/* 复选框 - 始终渲染同一个元素，避免 hover 时的抽动 */}
+        {onSelectChange && !isGenerating && !isFailed && (isBatchSelected || isHovered) && (
+          <div
+            className="absolute top-2 left-2 z-10 cursor-pointer transition-transform hover:scale-110"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectChange(asset.id, !isBatchSelected);
+            }}
+          >
+            <Checkbox
+              checked={isBatchSelected}
+              onCheckedChange={(checked) => {
+                onSelectChange(asset.id, checked === true);
+              }}
+              className="bg-background/90 backdrop-blur-sm border-2 shadow-lg hover:bg-background transition-colors cursor-pointer"
+            />
+          </div>
+        )}
         {/* 悬停遮罩（仅在有内容时显示操作按钮） */}
         {isHovered && !isGenerating && !isFailed && (
-          <div className="absolute inset-0 animate-in fade-in duration-200">
-            {/* 左上角复选框 */}
-            {onSelectChange && (
-              <div
-                className="absolute top-2 left-2 z-10 cursor-pointer transition-transform hover:scale-110"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectChange(asset.id, !isBatchSelected);
-                }}
-              >
-                <Checkbox
-                  checked={isBatchSelected}
-                  onCheckedChange={(checked) => {
-                    onSelectChange(asset.id, checked === true);
-                  }}
-                  className="bg-background/90 backdrop-blur-sm border-2 shadow-lg hover:bg-background transition-colors cursor-pointer"
-                />
-              </div>
-            )}
+          <div className="absolute inset-0 animate-in fade-in duration-200 pointer-events-none">
             {/* 左上角放大按钮（仅非批量选择模式） */}
             {!onSelectChange && !isVideo && (
               <Button
                 size="sm"
                 variant="secondary"
-                className="absolute top-2 left-2 h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer"
+                className="absolute top-2 left-2 h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer pointer-events-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   onClick(asset);
@@ -160,7 +160,7 @@ export function AssetCard({
               <Button
                 size="sm"
                 variant="destructive"
-                className="absolute top-2 right-2 h-7 w-7 p-0 shadow-lg cursor-pointer"
+                className="absolute top-2 right-2 h-7 w-7 p-0 shadow-lg cursor-pointer pointer-events-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(asset);
@@ -169,21 +169,6 @@ export function AssetCard({
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
-          </div>
-        )}
-        {/* 非 hover 时也显示复选框（如果已选中且有图片） */}
-        {!isHovered && isBatchSelected && onSelectChange && !isGenerating && (
-          <div
-            className="absolute top-2 left-2 z-10 animate-in fade-in duration-200 cursor-pointer transition-transform hover:scale-110"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectChange(asset.id, false);
-            }}
-          >
-            <Checkbox
-              checked={true}
-              className="bg-background/90 backdrop-blur-sm border-2 shadow-lg hover:bg-background transition-colors cursor-pointer"
-            />
           </div>
         )}
       </div>
