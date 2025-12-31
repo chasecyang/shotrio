@@ -424,6 +424,18 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* New Conversation Button */}
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleCreateNewConversation}
+            className="shrink-0"
+            title={t('editor.agent.panel.newConversation')}
+            aria-label={t('editor.agent.panel.newConversation')}
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Messages - with proper overflow handling */}
