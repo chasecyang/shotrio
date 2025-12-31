@@ -101,7 +101,7 @@ function EditorLayoutInner({
       {/* 主内容区：左右分栏 - AI 对话 + 素材展示 */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* 左侧：AI 对话面板 */}
-        <ResizablePanel defaultSize={50} minSize={30} maxSize={70}>
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={60}>
           <div className="h-full overflow-hidden border-r">
             <AgentPanel projectId={project.id} />
           </div>
@@ -110,7 +110,7 @@ function EditorLayoutInner({
         <ResizableHandle withHandle />
 
         {/* 右侧：素材展示面板 */}
-        <ResizablePanel defaultSize={50} minSize={30}>
+        <ResizablePanel defaultSize={70} minSize={40}>
           <div className="h-full overflow-hidden">
             <AssetGalleryPanel 
               userId={user.id}
