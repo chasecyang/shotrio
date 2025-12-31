@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Maximize2 } from "lucide-react";
+import { Trash2, Maximize2, Video, Play } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
@@ -40,8 +40,19 @@ export function AssetCard({
   const [isDragging, setIsDragging] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  // 检查素材是否正在生成中（没有图片）
-  const isGenerating = !asset.imageUrl;
+  // 检查资产类型
+  const isVideo = asset.assetType === "video";
+  
+  // 检查资产是否正在生成中
+  const isGenerating = asset.status === "processing" || asset.status === "pending";
+  
+  // 检查资产是否失败
+  const isFailed = asset.status === "failed";
+  
+  // 获取显示 URL（视频用 thumbnailUrl，图片用 imageUrl）
+  const displayUrl = isVideo 
+    ? asset.thumbnailUrl || asset.videoUrl
+    : asset.thumbnailUrl || asset.imageUrl;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -56,8 +67,8 @@ export function AssetCard({
     setIsDragging(false);
   };
 
-  // 共用的 Lightbox 组件（仅当有图片时才渲染）
-  const lightbox = asset.imageUrl ? (
+  // 共用的 Lightbox 组件（仅当有图片时才渲染，视频暂不支持）
+  const lightbox = !isVideo && asset.imageUrl ? (
     <ImageLightbox
       open={lightboxOpen}
       onOpenChange={setLightboxOpen}
@@ -93,17 +104,38 @@ export function AssetCard({
           {isGenerating ? (
             // 生成中状态 - 骨架屏
             <AssetThumbnailSkeleton />
+          ) : isFailed ? (
+            // 失败状态
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10">
+              <Video className="h-12 w-12 text-destructive mb-2" />
+              <span className="text-xs text-destructive">生成失败</span>
+            </div>
+          ) : displayUrl ? (
+            <>
+              <Image
+                src={displayUrl}
+                alt={asset.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+              {/* 视频播放图标 */}
+              {isVideo && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-black/50 rounded-full p-3 backdrop-blur-sm">
+                    <Play className="h-6 w-6 text-white fill-white" />
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
-            <Image
-              src={asset.thumbnailUrl || asset.imageUrl!}
-              alt={asset.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-            />
+            // 无缩略图 - 显示默认图标
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+              <Video className="h-12 w-12 text-muted-foreground" />
+            </div>
           )}
-          {/* 悬停遮罩（仅在有图片时显示操作按钮） */}
-          {isHovered && !isGenerating && (
+          {/* 悬停遮罩（仅在有内容时显示操作按钮） */}
+          {isHovered && !isGenerating && !isFailed && (
             <div className="absolute inset-0 animate-in fade-in duration-200">
               {/* 左上角复选框 */}
               {onSelectChange && (
@@ -123,21 +155,23 @@ export function AssetCard({
                   />
                 </div>
               )}
-              {/* 左上角放大按钮 */}
-              <Button
-                size="sm"
-                variant="secondary"
-                className={cn(
-                  "absolute h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer",
-                  onSelectChange ? "top-2 right-2" : "top-2 left-2"
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxOpen(true);
-                }}
-              >
-                <Maximize2 className="h-3.5 w-3.5" />
-              </Button>
+              {/* 左上角放大按钮（仅图片支持） */}
+              {!isVideo && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className={cn(
+                    "absolute h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer",
+                    onSelectChange ? "top-2 right-2" : "top-2 left-2"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxOpen(true);
+                  }}
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
               {/* 右上角删除按钮（仅在非批量选择模式下显示） */}
               {!onSelectChange && (
                 <Button
@@ -181,201 +215,241 @@ export function AssetCard({
               {asset.name}
             </h4>
           </div>
-          {/* 标签区域 - 单行显示，支持 hover 查看全部 */}
-          {asset.tags.length > 0 ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                      {asset.tags.slice(0, 2).map((tag) => (
+          {/* 标签和信息区域 - 单行显示，支持 hover 查看全部 */}
+          <div className="flex items-center gap-1.5">
+            {/* 视频类型标签 */}
+            {isVideo && (
+              <Badge variant="default" className="text-xs px-2 py-0 shrink-0 gap-1">
+                <Video className="h-3 w-3" />
+                视频
+              </Badge>
+            )}
+            {/* 视频时长 */}
+            {isVideo && asset.duration && (
+              <Badge variant="secondary" className="text-xs px-2 py-0 shrink-0">
+                {Math.round(asset.duration / 1000)}秒
+              </Badge>
+            )}
+            {/* 状态标签 */}
+            {isGenerating && (
+              <Badge variant="secondary" className="text-xs px-2 py-0 shrink-0">
+                生成中
+              </Badge>
+            )}
+            {isFailed && (
+              <Badge variant="destructive" className="text-xs px-2 py-0 shrink-0">
+                失败
+              </Badge>
+            )}
+            {/* 标签 */}
+            {asset.tags.length > 0 ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                        {asset.tags.slice(0, 1).map((tag) => (
+                          <Badge
+                            key={tag.id}
+                            variant="outline"
+                            className="text-xs px-2 py-0 shrink-0"
+                          >
+                            {tag.tagValue}
+                          </Badge>
+                        ))}
+                      </div>
+                      {asset.tags.length > 1 && (
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          +{asset.tags.length - 1}
+                        </span>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <div className="flex flex-wrap gap-1.5">
+                      {asset.tags.map((tag) => (
                         <Badge
                           key={tag.id}
                           variant="secondary"
-                          className="text-xs px-2 py-0 shrink-0"
+                          className="text-xs"
                         >
                           {tag.tagValue}
                         </Badge>
                       ))}
                     </div>
-                    {asset.tags.length > 2 && (
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        +{asset.tags.length - 2}
-                      </span>
-                    )}
-                    {asset.usageCount > 0 && (
-                      <Badge variant="outline" className="text-xs ml-auto shrink-0">
-                        {asset.usageCount}次
-                      </Badge>
-                    )}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <div className="flex flex-wrap gap-1.5">
-                    {asset.tags.map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {tag.tagValue}
-                      </Badge>
-                    ))}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            asset.usageCount > 0 && (
-              <Badge variant="outline" className="text-xs w-fit">
-                使用 {asset.usageCount}次
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+            {asset.usageCount > 0 && (
+              <Badge variant="outline" className="text-xs ml-auto shrink-0">
+                {asset.usageCount}次
               </Badge>
-            )
-          )}
+            )}
+          </div>
         </div>
-        </div>
-      </>
+
+        {/* Prompt 显示区域 */}
+        {asset.prompt && (
+          <div className="px-3 pb-2">
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {asset.prompt}
+            </p>
+          </div>
+        )}
+      </div>
+    </>
     );
   }
 
-  // 列表视图
+  // List 视图
   return (
     <>
       {lightbox}
       <div
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={cn(
-        "group flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-move",
-        "hover:border-primary/40 hover:bg-accent/50",
-        isDragging && "opacity-50",
-        isSelected && "border-primary ring-2 ring-primary/20 bg-primary/5",
-        isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5"
-      )}
-      onClick={() => onClick(asset)}
-    >
-      {/* 缩略图 */}
-      <div 
-        className="relative w-12 h-12 rounded-md overflow-hidden bg-muted/30 shrink-0 group/thumb"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (!isGenerating) setLightboxOpen(true);
-        }}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={cn(
+          "group flex items-center gap-3 px-3 py-2 border-b transition-colors cursor-move",
+          "hover:bg-accent/50",
+          isDragging && "opacity-50",
+          isSelected && "bg-primary/5 border-l-2 border-l-primary",
+          isBatchSelected && "bg-primary/5 border-l-2 border-l-primary/60"
+        )}
       >
-        {isGenerating ? (
-          // 生成中状态 - 骨架屏
-          <AssetThumbnailSkeleton />
-        ) : (
-          <>
-            <Image
-              src={asset.thumbnailUrl || asset.imageUrl!}
-              alt={asset.name}
-              fill
-              className="object-cover"
-              sizes="48px"
-            />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
-              <Maximize2 className="h-4 w-4 text-white" />
-            </div>
-          </>
-        )}
-      </div>
-      {/* 信息 */}
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium truncate">{asset.name}</h4>
-        {/* 标签区域 - 单行显示，支持 hover 查看全部 */}
-        {asset.tags.length > 0 ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    {asset.tags.slice(0, 1).map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        variant="secondary"
-                        className="text-xs px-1.5 py-0 shrink-0"
-                      >
-                        {tag.tagValue}
-                      </Badge>
-                    ))}
-                  </div>
-                  {asset.tags.length > 1 && (
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      +{asset.tags.length - 1}
-                    </span>
-                  )}
-                  {asset.usageCount > 0 && (
-                    <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                      {asset.usageCount}次
-                    </span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <div className="flex flex-wrap gap-1.5">
-                  {asset.tags.map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      variant="secondary"
-                      className="text-xs"
-                    >
-                      {tag.tagValue}
-                    </Badge>
-                  ))}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          asset.usageCount > 0 && (
-            <span className="text-xs text-muted-foreground mt-0.5">
-              {asset.usageCount}次
-            </span>
-          )
-        )}
-      </div>
-
-      {/* 复选框（列表视图） */}
-      {onSelectChange && (
-        <div
-          className={cn(
-            "shrink-0 cursor-pointer transition-all hover:scale-110",
-            isHovered || isBatchSelected ? "opacity-100" : "opacity-0"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectChange(asset.id, !isBatchSelected);
-          }}
-        >
-          <Checkbox
-            checked={isBatchSelected}
-            onCheckedChange={(checked) => {
-              onSelectChange(asset.id, checked === true);
-            }}
-            className="bg-background border-2 hover:bg-accent transition-colors cursor-pointer"
-          />
-        </div>
-      )}
-      {/* 操作按钮 */}
-      {isHovered && !onSelectChange && (
-        <div className="flex items-center gap-1 shrink-0 animate-in fade-in slide-in-from-right-2 duration-200">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0 text-destructive cursor-pointer"
+        {/* 批量选择复选框 */}
+        {onSelectChange && (
+          <div
+            className="shrink-0 cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(asset);
+              onSelectChange(asset.id, !isBatchSelected);
             }}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+            <Checkbox
+              checked={isBatchSelected}
+              onCheckedChange={(checked) => {
+                onSelectChange(asset.id, checked === true);
+              }}
+              className="cursor-pointer"
+            />
+          </div>
+        )}
+
+        {/* 缩略图 */}
+        <div
+          className="relative w-20 h-14 bg-muted/30 rounded overflow-hidden shrink-0 cursor-pointer"
+          onClick={() => onClick(asset)}
+        >
+          {isGenerating ? (
+            <AssetThumbnailSkeleton />
+          ) : isFailed ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
+              <Video className="h-6 w-6 text-destructive" />
+            </div>
+          ) : displayUrl ? (
+            <>
+              <Image
+                src={displayUrl}
+                alt={asset.name}
+                fill
+                className="object-cover"
+                sizes="80px"
+              />
+              {isVideo && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-black/50 rounded-full p-1.5 backdrop-blur-sm">
+                    <Play className="h-3 w-3 text-white fill-white" />
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+              <Video className="h-6 w-6 text-muted-foreground" />
+            </div>
+          )}
         </div>
-      )}
+
+        {/* 信息区域 */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onClick(asset)}>
+          <h4 className="text-sm font-medium truncate">{asset.name}</h4>
+          {/* 标签区域 - 单行显示，支持 hover 查看全部 */}
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {/* 视频类型标签 */}
+            {isVideo && (
+              <Badge variant="default" className="text-xs px-1.5 py-0 shrink-0 gap-0.5">
+                <Video className="h-2.5 w-2.5" />
+                视频
+              </Badge>
+            )}
+            {/* 视频时长 */}
+            {isVideo && asset.duration && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0 shrink-0">
+                {Math.round(asset.duration / 1000)}秒
+              </Badge>
+            )}
+            {/* 状态标签 */}
+            {isGenerating && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0 shrink-0">
+                生成中
+              </Badge>
+            )}
+            {isFailed && (
+              <Badge variant="destructive" className="text-xs px-1.5 py-0 shrink-0">
+                失败
+              </Badge>
+            )}
+            {/* 标签 */}
+            {asset.tags.length > 0 ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                        {asset.tags.slice(0, 1).map((tag) => (
+                          <Badge
+                            key={tag.id}
+                            variant="outline"
+                            className="text-xs px-1.5 py-0 shrink-0"
+                          >
+                            {tag.tagValue}
+                          </Badge>
+                        ))}
+                      </div>
+                      {asset.tags.length > 1 && (
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          +{asset.tags.length - 1}
+                        </span>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <div className="flex flex-wrap gap-1.5">
+                      {asset.tags.map((tag) => (
+                        <Badge
+                          key={tag.id}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {tag.tagValue}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+            {asset.usageCount > 0 && (
+              <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                {asset.usageCount}次
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );

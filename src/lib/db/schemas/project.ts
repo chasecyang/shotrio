@@ -12,10 +12,13 @@ export const projectStatusEnum = pgEnum("project_status", [
   "archived",
 ]);
 
-// 视频生成状态
-export const videoStatusEnum = pgEnum("video_status", [
+// 资产类型枚举
+export const assetTypeEnum = pgEnum("asset_type", ["image", "video"]);
+
+// 资产状态枚举（统一的状态管理）
+export const assetStatusEnum = pgEnum("asset_status", [
   "pending",
-  "processing",
+  "processing", 
   "completed",
   "failed",
 ]);
@@ -109,7 +112,7 @@ export const project = pgTable("project", {
     .notNull(),
 });
 
-// 2. 资产表 (Asset) - 统一的图片资产管理
+// 2. 资产表 (Asset) - 统一的资产管理（图片和视频）
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const asset: any = pgTable("asset", {
   id: text("id").primaryKey(),
@@ -123,14 +126,24 @@ export const asset: any = pgTable("asset", {
   // 基本信息
   name: text("name").notNull(), // 资产名称，如 "张三-正面-愤怒"
   
-  // 图片资源（可为空，表示素材正在生成中）
-  imageUrl: text("image_url"), // 图片URL
+  // 资产类型
+  assetType: assetTypeEnum("asset_type").default("image").notNull(),
+  
+  // 图片字段（图片类型必填）
+  imageUrl: text("image_url"), // 图片URL - 改为可选
   thumbnailUrl: text("thumbnail_url"), // 缩略图URL
+  
+  // 视频字段（视频类型必填）
+  videoUrl: text("video_url"), // 视频URL
+  duration: integer("duration"), // 视频时长（毫秒）
   
   // 生成信息
   prompt: text("prompt"), // 生成用的prompt
   seed: integer("seed"), // 固定seed
   modelUsed: text("model_used"), // 使用的模型
+  
+  // 生成配置（主要用于视频）
+  generationConfig: text("generation_config"), // JSON配置
   
   // 派生关系
   sourceAssetIds: text("source_asset_ids").array(), // 多个源素材ID（用于图生图）
@@ -138,6 +151,13 @@ export const asset: any = pgTable("asset", {
   
   // 灵活的元数据字段（JSON）
   meta: text("meta"), // JSON字符串，存储类型特定的元数据
+  
+  // 状态管理（统一）
+  status: assetStatusEnum("status").default("completed").notNull(),
+  errorMessage: text("error_message"),
+  
+  // 组织和排序
+  order: integer("order"), // 用于排序
   
   // 统计信息
   usageCount: integer("usage_count").default(0).notNull(),
@@ -181,45 +201,7 @@ export const episode = pgTable("episode", {
     .notNull(),
 });
 
-// 4. 视频表 (Video) - 视频片段，直接属于项目
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const video: any = pgTable("video", {
-  id: text("id").primaryKey(),
-  projectId: text("project_id")
-    .notNull()
-    .references(() => project.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  
-  // 视频内容描述（AI 可理解）
-  prompt: text("prompt").notNull(), // 视频的完整描述
-  title: text("title"), // 可选的标题/标签
-  
-  // 生成配置
-  referenceAssetIds: text("reference_asset_ids").array(), // 参考图片ID数组
-  generationConfig: text("generation_config"), // JSON: 存储模型参数、宽高比等完整配置
-  
-  // 生成结果
-  videoUrl: text("video_url"), // 视频URL
-  thumbnailUrl: text("thumbnail_url"), // 缩略图URL
-  duration: integer("duration"), // 实际视频时长（毫秒）
-  status: videoStatusEnum("status").default("pending").notNull(),
-  errorMessage: text("error_message"),
-  
-  // 组织和排序（可选，用于UI展示）
-  order: integer("order"), // 用户可以排序，但不强制
-  tags: text("tags").array(), // 标签，方便分类
-  
-  // 元数据
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-// 5. 任务表 (Job) - 异步任务队列
+// 4. 任务表 (Job) - 异步任务队列
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const job: any = pgTable("job", {
   id: text("id").primaryKey(),
@@ -278,9 +260,8 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     fields: [project.styleId],
     references: [artStyle.id],
   }),
-  assets: many(asset),
+  assets: many(asset), // 包含图片和视频
   episodes: many(episode),
-  videos: many(video),
   jobs: many(job),
   conversations: many(conversation),
 }));
@@ -308,17 +289,6 @@ export const episodeRelations = relations(episode, ({ one }) => ({
   project: one(project, {
     fields: [episode.projectId],
     references: [project.id],
-  }),
-}));
-
-export const videoRelations = relations(video, ({ one }) => ({
-  project: one(project, {
-    fields: [video.projectId],
-    references: [project.id],
-  }),
-  user: one(user, {
-    fields: [video.userId],
-    references: [user.id],
   }),
 }));
 

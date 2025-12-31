@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { AgentContext } from "@/types/agent";
 import { getProjectDetail } from "@/lib/actions/project/base";
-import { refreshProjectVideos } from "@/lib/actions/project/refresh";
+import { getVideoAssets } from "@/lib/actions/asset/crud";
 import { queryAssets } from "@/lib/actions/asset/queries";
 import { analyzeAssetsByType, getTopTagStats } from "@/lib/actions/asset/stats";
 
@@ -72,7 +72,7 @@ export async function collectContext(context: AgentContext, projectId: string): 
 
     // 3. 项目视频
     if (project) {
-      const videosResult = await refreshProjectVideos(project.id);
+      const videosResult = await getVideoAssets(project.id, { orderBy: "created" });
       if (videosResult.success && videosResult.videos && videosResult.videos.length > 0) {
         parts.push(`# 项目视频`);
         parts.push(`总视频数: ${videosResult.videos.length}`);

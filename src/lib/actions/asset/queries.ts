@@ -44,6 +44,11 @@ export async function queryAssets(
     // 构建查询条件
     const conditions = [eq(asset.projectId, filter.projectId)];
 
+    // 资产类型筛选
+    if (filter.assetType) {
+      conditions.push(eq(asset.assetType, filter.assetType));
+    }
+
     // 如果有标签筛选，需要使用子查询
     if (filter.tagFilters && filter.tagFilters.length > 0) {
       // 查找匹配所有标签的资产ID
@@ -117,9 +122,12 @@ export async function queryAssets(
 /**
  * 获取项目的所有资产（不分页，用于选择器等场景）
  */
-export async function getProjectAssets(
-  projectId: string
-): Promise<AssetWithTags[]> {
+export async function getProjectAssets(filter: {
+  projectId: string;
+  assetType?: "image" | "video"; // 新增类型过滤
+  tagFilters?: string[];
+  orderBy?: "created" | "order";
+}): Promise<AssetWithTags[]> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -131,7 +139,7 @@ export async function getProjectAssets(
     // 验证项目权限
     const projectData = await db.query.project.findFirst({
       where: and(
-        eq(project.id, projectId),
+        eq(project.id, filter.projectId),
         eq(project.userId, session.user.id)
       ),
     });
@@ -140,12 +148,45 @@ export async function getProjectAssets(
       return [];
     }
 
+    // 构建查询条件
+    const conditions = [eq(asset.projectId, filter.projectId)];
+    
+    if (filter.assetType) {
+      conditions.push(eq(asset.assetType, filter.assetType));
+    }
+
+    // 标签筛选
+    if (filter.tagFilters && filter.tagFilters.length > 0) {
+      const matchingAssetIds = await db
+        .selectDistinct({ assetId: assetTag.assetId })
+        .from(assetTag)
+        .where(inArray(assetTag.tagValue, filter.tagFilters))
+        .groupBy(assetTag.assetId)
+        .having(sql`COUNT(DISTINCT ${assetTag.tagValue}) = ${filter.tagFilters.length}`);
+
+      if (matchingAssetIds.length > 0) {
+        conditions.push(
+          inArray(
+            asset.id,
+            matchingAssetIds.map(r => r.assetId)
+          )
+        );
+      } else {
+        return [];
+      }
+    }
+
+    // 排序
+    const orderBy = filter.orderBy === "order" 
+      ? [asset.order, desc(asset.createdAt)]
+      : [desc(asset.createdAt)];
+
     const assets = await db.query.asset.findMany({
-      where: eq(asset.projectId, projectId),
+      where: and(...conditions),
       with: {
         tags: true,
       },
-      orderBy: [desc(asset.createdAt)],
+      orderBy,
     });
 
     // 为每个asset添加status字段

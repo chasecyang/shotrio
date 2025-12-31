@@ -7,6 +7,11 @@ import type { AspectRatio } from "@/lib/services/fal.service";
 // ===== 基础类型 =====
 
 /**
+ * 资产类型枚举（数据库层面）
+ */
+export type AssetTypeEnum = "image" | "video";
+
+/**
  * 资产派生类型
  */
 export type DerivationType = 
@@ -18,7 +23,7 @@ export type DerivationType =
   | "composite";   // 合成
 
 /**
- * 资产类型值（用于分类）
+ * 资产类型值（用于分类/标签）
  */
 export type AssetType = 
   | "character"    // 角色图
@@ -28,11 +33,13 @@ export type AssetType =
   | "reference";   // 参考图
 
 /**
- * 资产状态（运行时计算字段）
+ * 资产状态
  */
 export type AssetStatus = 
-  | "completed"    // 图片已生成完成（有imageUrl）
-  | "generating";  // 图片正在生成中（imageUrl为null）
+  | "pending"      // 等待处理
+  | "processing"   // 处理中
+  | "completed"    // 已完成
+  | "failed";      // 失败
 
 // ===== Meta数据结构 =====
 
@@ -88,6 +95,20 @@ export interface GenerationParams {
 }
 
 /**
+ * 视频配置（用于生成）
+ */
+export interface VideoGenerationConfig {
+  prompt: string;
+  elements?: Array<{
+    frontal_image_url: string;
+    reference_image_urls?: string[];
+  }>;
+  image_urls?: string[];
+  duration?: "5" | "10";
+  aspect_ratio?: "16:9" | "9:16" | "1:1";
+}
+
+/**
  * 完整的meta数据结构
  */
 export interface AssetMeta {
@@ -112,14 +133,24 @@ export interface Asset {
   // 基本信息
   name: string;
   
-  // 图片资源（可为空，表示素材正在生成中）
+  // 资产类型
+  assetType: AssetTypeEnum;
+  
+  // 图片字段（图片类型必填）
   imageUrl: string | null;
   thumbnailUrl: string | null;
+  
+  // 视频字段（视频类型必填）
+  videoUrl: string | null;
+  duration: number | null; // 毫秒
   
   // 生成信息
   prompt: string | null;
   seed: number | null;
   modelUsed: string | null;
+  
+  // 生成配置（主要用于视频）
+  generationConfig: string | null; // JSON
   
   // 派生关系
   sourceAssetIds: string[] | null;  // 多个源素材ID（用于图生图）
@@ -128,15 +159,19 @@ export interface Asset {
   // 元数据
   meta: string | null;  // JSON字符串
   
+  // 状态管理（统一）
+  status: AssetStatus;
+  errorMessage: string | null;
+  
+  // 组织和排序
+  order: number | null;
+  
   // 统计
   usageCount: number;
   
   // 时间戳
   createdAt: Date;
   updatedAt: Date;
-  
-  // 运行时计算字段（不在数据库中，由查询函数添加）
-  status?: AssetStatus;
 }
 
 /**
@@ -209,6 +244,7 @@ export interface AssetWithDerivations extends Asset {
  */
 export interface AssetQueryFilter {
   projectId: string;
+  assetType?: AssetTypeEnum;  // 资产类型过滤（image/video）
   tagFilters?: string[];  // 标签值数组，用于类型筛选如 ["角色", "场景"]
   search?: string;
   sourceAssetIds?: string[];  // 按源素材ID过滤（查询派生素材）
@@ -281,10 +317,11 @@ export function hasAssetTag(asset: AssetWithTags, tagValue: string): boolean {
 }
 
 /**
- * 计算Asset的状态
+ * 计算Asset的状态（已废弃，现在status是数据库字段）
+ * @deprecated 现在status是数据库字段，不需要计算
  */
-export function getAssetStatus(asset: { imageUrl?: string | null }): AssetStatus {
-  return asset.imageUrl ? "completed" : "generating";
+export function getAssetStatus(asset: { imageUrl?: string | null; status?: AssetStatus }): AssetStatus {
+  return asset.status || (asset.imageUrl ? "completed" : "processing");
 }
 
 // ===== 素材生成相关类型 =====

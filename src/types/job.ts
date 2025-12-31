@@ -46,7 +46,7 @@ export interface BatchImageGenerationInput {
 }
 
 export interface VideoGenerationInput {
-  videoId: string; // video 记录的 ID
+  assetId: string; // 视频资产的 ID（改为 assetId）
 }
 
 // 素材图片生成输入（新架构：只需要 assetId）

@@ -11,6 +11,11 @@ export {
   getAsset,
   getAssetsByIds,
   incrementAssetUsage,
+  // 视频资产
+  createVideoAsset,
+  getVideoAssets,
+  updateVideoAsset,
+  deleteVideoAssets,
 } from "./crud";
 
 // 查询操作

@@ -16,7 +16,6 @@ import { eq } from "drizzle-orm";
 // 导入所有需要的 actions
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
-import { refreshProjectVideos } from "../project/refresh";
 import { createJob } from "../job";
 import type { AssetImageGenerationInput } from "@/types/job";
 import { getSystemArtStyles } from "../art-style/queries";
@@ -25,11 +24,11 @@ import { analyzeAssetsByType } from "../asset/stats";
 import { updateEpisode } from "../project/episode";
 import type { NewEpisode } from "@/types/project";
 import { 
-  getProjectVideos, 
-  createVideoGeneration, 
-  updateVideo, 
-  deleteVideos 
-} from "../video";
+  getVideoAssets,
+  createVideoAsset,
+  updateVideoAsset,
+  deleteVideoAssets,
+} from "../asset/crud";
 
 /**
  * 执行单个 function call
@@ -99,7 +98,8 @@ export async function executeFunction(
 
         // 包含视频列表
         if (includeVideos) {
-          const videos = await getProjectVideos(projectId, "created");
+          const videosResult = await getVideoAssets(projectId, { orderBy: "created" });
+          const videos = videosResult.videos || [];
           const completedVideos = videos.filter(v => v.status === "completed");
           const processingVideos = videos.filter(v => v.status === "processing" || v.status === "pending");
           
@@ -110,10 +110,10 @@ export async function executeFunction(
             list: videos.map(v => ({
               id: v.id,
               prompt: v.prompt,
-              title: v.title,
+              name: v.name,
               status: v.status,
               duration: v.duration,
-              tags: v.tags,
+              tags: v.tags.map(t => t.tagValue),
               order: v.order,
             })),
           };
@@ -188,7 +188,10 @@ export async function executeFunction(
         const videoIds = parameters.videoIds as string[] | undefined;
         const tags = parameters.tags as string[] | undefined;
 
-        const videosResult = await refreshProjectVideos(projectId);
+        const videosResult = await getVideoAssets(projectId, {
+          tags,
+          orderBy: "created",
+        });
         
         if (!videosResult.success) {
           result = {
@@ -205,13 +208,6 @@ export async function executeFunction(
         if (videoIds && videoIds.length > 0) {
           videos = videos.filter(v => videoIds.includes(v.id));
         }
-        
-        // 按 tags 筛选
-        if (tags && tags.length > 0) {
-          videos = videos.filter(v => 
-            v.tags && v.tags.some(tag => tags.includes(tag))
-          );
-        }
 
         result = {
           functionCallId: functionCall.id,
@@ -220,14 +216,14 @@ export async function executeFunction(
             videos: videos.map(v => ({
               id: v.id,
               prompt: v.prompt,
-              title: v.title,
+              name: v.name,
               status: v.status,
               videoUrl: v.videoUrl,
               thumbnailUrl: v.thumbnailUrl,
               duration: v.duration,
-              tags: v.tags,
+              tags: v.tags.map(t => t.tagValue),
               order: v.order,
-              referenceAssetIds: v.referenceAssetIds,
+              sourceAssetIds: v.sourceAssetIds,
               createdAt: v.createdAt,
             })),
             total: videos.length,
@@ -371,12 +367,12 @@ export async function executeFunction(
           const normalizedConfig = validationResult.normalizedConfig!;
           
           // 创建视频生成任务
-          const generateResult = await createVideoGeneration({
+          const generateResult = await createVideoAsset({
             projectId,
+            name: title || prompt,
             prompt,
-            title,
             referenceAssetIds,
-            klingO1Config: normalizedConfig,
+            generationConfig: normalizedConfig,
             order,
             tags,
           });
@@ -386,7 +382,7 @@ export async function executeFunction(
               functionCallId: functionCall.id,
               success: true,
               data: {
-                videoId: generateResult.data?.video.id,
+                assetId: generateResult.data?.asset.id,
                 jobId: generateResult.data?.jobId,
                 message: "视频生成任务已创建",
               },
@@ -445,8 +441,7 @@ export async function executeFunction(
         const updates = parameters.updates as Array<{
           videoId: string;
           prompt?: string;
-          title?: string;
-          tags?: string[];
+          name?: string;
           order?: number;
         }>;
 
@@ -454,7 +449,7 @@ export async function executeFunction(
         
         for (const update of updates) {
           const { videoId, ...updateData } = update;
-          const updateResult = await updateVideo(videoId, updateData);
+          const updateResult = await updateVideoAsset(videoId, updateData);
           
           if (updateResult.success) {
             results.push({
@@ -542,7 +537,7 @@ export async function executeFunction(
       case "delete_videos": {
         const videoIds = parameters.videoIds as string[];
 
-        const deleteResult = await deleteVideos(videoIds);
+        const deleteResult = await deleteVideoAssets(videoIds);
 
         if (deleteResult.success) {
           result = {

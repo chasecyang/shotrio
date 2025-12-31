@@ -20,5 +20,5 @@ export {
   deleteEpisode,
 } from "./episode";
 
-// 导出视频操作 (通过 actions/video 模块)
-// 注意: 视频相关操作现在统一在 @/lib/actions/video 中
+// 注意: 视频相关操作现在统一在 @/lib/actions/asset 中
+// 使用 createVideoAsset, getVideoAssets, updateVideoAsset, deleteVideoAssets

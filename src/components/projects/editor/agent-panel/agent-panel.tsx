@@ -228,7 +228,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       if (lastMessage?.toolCalls) {
         const toolName = lastMessage.toolCalls[0]?.function.name;
         if (toolName && isVideoRelatedFunction(toolName)) {
-          setTimeout(() => window.dispatchEvent(new CustomEvent("videos-changed")), 200);
+          // 视频操作现在触发统一的资产变更事件
+          setTimeout(() => window.dispatchEvent(new CustomEvent("asset-created")), 200);
         }
         if (toolName && isProjectRelatedFunction(toolName)) {
           setTimeout(() => window.dispatchEvent(new CustomEvent("project-changed")), 200);

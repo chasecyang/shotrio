@@ -1,8 +1,8 @@
 "use server";
 
 import db from "@/lib/db";
-import { video } from "@/lib/db/schemas/project";
-import { eq } from "drizzle-orm";
+import { asset } from "@/lib/db/schemas/project";
+import { eq, and } from "drizzle-orm";
 import { generateReferenceToVideo, type KlingO1ReferenceToVideoInput } from "@/lib/services/fal.service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
@@ -18,13 +18,13 @@ import type {
 import { verifyProjectOwnership } from "../utils/validation";
 
 /**
- * 处理视频生成任务（新架构：使用 video 表）
+ * 处理视频生成任务（新架构：使用 asset 表）
  */
 export async function processVideoGeneration(jobData: Job, workerToken: string): Promise<void> {
   const input: VideoGenerationInput = JSON.parse(jobData.inputData || "{}");
-  const { videoId } = input;
+  const { assetId } = input; // 改为 assetId
 
-  console.log(`[Worker] 开始生成视频: Video ${videoId}`);
+  console.log(`[Worker] 开始生成视频: Asset ${assetId}`);
 
   try {
     // 验证项目所有权
@@ -47,21 +47,24 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    // 1. 查询 video 记录
-    const videoData = await db.query.video.findFirst({
-      where: eq(video.id, videoId),
+    // 1. 查询 asset 记录（assetType='video'）
+    const assetData = await db.query.asset.findFirst({
+      where: and(
+        eq(asset.id, assetId),
+        eq(asset.assetType, "video")
+      ),
     });
 
-    if (!videoData) {
-      throw new Error("视频记录不存在");
+    if (!assetData) {
+      throw new Error("视频资产不存在");
     }
 
-    if (!videoData.generationConfig) {
+    if (!assetData.generationConfig) {
       throw new Error("视频生成配置不存在");
     }
 
     // 2. 解析 Kling O1 配置
-    const klingO1Config: KlingO1ReferenceToVideoInput = JSON.parse(videoData.generationConfig);
+    const klingO1Config: KlingO1ReferenceToVideoInput = JSON.parse(assetData.generationConfig);
 
     console.log(`[Worker] Kling O1 配置:`, {
       prompt: klingO1Config.prompt,
@@ -71,7 +74,12 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       aspectRatio: klingO1Config.aspect_ratio,
     });
 
-    // 3. 计算积分消费
+    // 3. 更新状态为 processing
+    await db.update(asset)
+      .set({ status: "processing" })
+      .where(eq(asset.id, assetId));
+
+    // 4. 计算积分消费
     const videoDuration = parseInt(klingO1Config.duration || "5");
     const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
     
@@ -84,14 +92,14 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    // 4. 扣除积分
+    // 5. 扣除积分
     const spendResult = await spendCredits({
       userId: jobData.userId,
       amount: creditsNeeded,
       description: `生成 ${videoDuration}秒 视频（Kling O1）`,
       metadata: {
         jobId: jobData.id,
-        videoId,
+        assetId,
         projectId: jobData.projectId,
         duration: videoDuration,
         costPerSecond: CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND,
@@ -113,7 +121,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    // 5. 调用 Kling O1 API
+    // 6. 调用 Kling O1 API
     console.log(`[Worker] 调用 Kling O1 API`);
     console.log(`[Worker] 完整配置:`, JSON.stringify(klingO1Config, null, 2));
     
@@ -135,21 +143,21 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           description: `视频生成失败，退还积分`,
           metadata: {
             jobId: jobData.id,
-            videoId,
+            assetId,
             originalTransactionId: transactionId,
             reason: "generation_failed",
           },
         });
       }
       
-      // 更新 video 状态
+      // 更新 asset 状态
       await db
-        .update(video)
+        .update(asset)
         .set({
           status: "failed",
           errorMessage: error instanceof Error ? error.message : "生成失败",
         })
-        .where(eq(video.id, videoId));
+        .where(eq(asset.id, assetId));
       
       throw error;
     }
@@ -169,10 +177,10 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    // 6. 上传视频到 R2
+    // 7. 上传视频到 R2
     const uploadResult = await uploadVideoFromUrl(
       videoResult.video.url,
-      `video-${videoId}-${Date.now()}.mp4`,
+      `video-${assetId}-${Date.now()}.mp4`,
       jobData.userId
     );
 
@@ -182,15 +190,16 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     console.log(`[Worker] 视频已上传: ${uploadResult.url}`);
 
-    // 7. 更新 video 记录
+    // 8. 更新 asset 记录
     await db
-      .update(video)
+      .update(asset)
       .set({
         videoUrl: uploadResult.url,
-        duration: videoDuration,
+        thumbnailUrl: videoResult.video.thumbnail || null,
+        duration: videoDuration * 1000, // 转换为毫秒
         status: "completed",
       })
-      .where(eq(video.id, videoId));
+      .where(eq(asset.id, assetId));
 
     const result: VideoGenerationResult = {
       videoUrl: uploadResult.url,
@@ -205,19 +214,19 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    console.log(`[Worker] 视频生成完成: Video ${videoId}`);
+    console.log(`[Worker] 视频生成完成: Asset ${assetId}`);
   } catch (error) {
     console.error(`[Worker] 生成视频失败:`, error);
     
-    // 更新 video 状态为失败
+    // 更新 asset 状态为失败
     try {
       await db
-        .update(video)
+        .update(asset)
         .set({
           status: "failed",
           errorMessage: error instanceof Error ? error.message : "未知错误",
         })
-        .where(eq(video.id, videoId));
+        .where(eq(asset.id, assetId));
     } catch (updateError) {
       console.error(`[Worker] 更新失败状态失败:`, updateError);
     }
@@ -258,9 +267,12 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       workerToken
     );
 
-    // 获取所有视频
-    const videos = await db.query.video.findMany({
-      where: (video, { inArray }) => inArray(video.id, videoIds),
+    // 获取所有视频资产
+    const videos = await db.query.asset.findMany({
+      where: (asset, { inArray, and, eq }) => and(
+        inArray(asset.id, videoIds),
+        eq(asset.assetType, "video")
+      ),
     });
 
     if (videos.length === 0) {
@@ -288,8 +300,8 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       .map((id) => completedVideos.find((v) => v.id === id))
       .filter((v): v is NonNullable<typeof v> => v !== undefined);
 
-    // 计算总时长
-    const totalDuration = sortedVideos.reduce((sum, v) => sum + (v.duration || 0), 0);
+    // 计算总时长（duration 现在是毫秒，需要转换为秒）
+    const totalDuration = sortedVideos.reduce((sum, v) => sum + ((v.duration || 0) / 1000), 0);
 
     await updateJobProgress(
       {
@@ -305,7 +317,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       videoId: v.id,
       order: index + 1,
       videoUrl: v.videoUrl!,
-      duration: v.duration || 0,
+      duration: (v.duration || 0) / 1000, // 转换为秒
     }));
 
     await updateJobProgress(

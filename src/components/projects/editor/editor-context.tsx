@@ -19,13 +19,6 @@ export interface SelectedResource {
   id: string;
 }
 
-// 视频列表过滤状态
-export interface VideoFilterState {
-  searchQuery: string;
-  sortBy: "createdAt" | "updatedAt" | "name";
-  sortOrder: "asc" | "desc";
-}
-
 // 素材生成状态
 export interface AssetGenerationState {
   mode: "text-to-image" | "image-to-image";
@@ -47,9 +40,6 @@ export interface EditorState {
   // 当前选中的资源（用于右侧预览区）
   selectedResource: SelectedResource | null;
   
-  // 视频列表过滤状态
-  videoFilter: VideoFilterState;
-  
   // 加载状态
   isLoading: boolean;
 
@@ -65,7 +55,6 @@ type EditorAction =
   | { type: "SET_ACTIVE_RESOURCE_TAB"; payload: ResourceTabType }
   | { type: "SELECT_RESOURCE"; payload: SelectedResource | null }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_VIDEO_FILTER"; payload: Partial<VideoFilterState> }
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
   | { type: "ADD_GENERATION_HISTORY"; payload: GenerationHistoryItem }
@@ -77,11 +66,6 @@ const initialState: EditorState = {
   selectedEpisodeId: null,
   activeResourceTab: "episodes",
   selectedResource: null,
-  videoFilter: {
-    searchQuery: "",
-    sortBy: "createdAt",
-    sortOrder: "desc",
-  },
   isLoading: true,
   assetGeneration: {
     mode: "text-to-image",
@@ -148,15 +132,6 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         isLoading: action.payload,
-      };
-
-    case "SET_VIDEO_FILTER":
-      return {
-        ...state,
-        videoFilter: {
-          ...state.videoFilter,
-          ...action.payload,
-        },
       };
 
     case "SET_ASSET_GENERATION_MODE":
