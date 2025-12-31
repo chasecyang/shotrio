@@ -18,10 +18,15 @@ export function formatFunctionResult(
       // 查询类
       // ============================================
       case "query_context": {
-        const contextData = data as { episode?: unknown; videos?: unknown[]; assets?: { total?: number }; artStyles?: unknown[] };
+        const contextData = data as { 
+          episode?: unknown; 
+          videos?: { total?: number; completed?: number; processing?: number; list?: unknown[] }; 
+          assets?: { total?: number }; 
+          artStyles?: unknown[] 
+        };
         const parts: string[] = [];
         if (contextData.episode) parts.push("剧集");
-        if (contextData.videos) parts.push(`视频(${contextData.videos.length})`);
+        if (contextData.videos) parts.push(`视频(${contextData.videos.total || 0})`);
         if (contextData.assets) parts.push(`素材(${contextData.assets.total || 0})`);
         if (contextData.artStyles) parts.push("美术风格");
         return parts.length > 0 ? `已查询: ${parts.join("、")}` : "已查询项目上下文";
