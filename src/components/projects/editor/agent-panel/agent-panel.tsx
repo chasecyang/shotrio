@@ -42,6 +42,7 @@ interface AgentPanelProps {
 function isVideoRelatedFunction(functionName: string): boolean {
   const videoRelatedFunctions = [
     'generate_video_asset',
+    'generate_image_asset',
     'update_asset',
     'delete_asset',
   ];
