@@ -357,4 +357,3 @@ async function processAssetImageGenerationInternal(
     );
   }
 }
-}

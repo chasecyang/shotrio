@@ -260,12 +260,12 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Lightbox */}
-      {lightboxAsset && (
+      {/* Lightbox - 仅支持图片类型 */}
+      {lightboxAsset && lightboxAsset.assetType !== "video" && lightboxAsset.imageUrl && (
         <ImageLightbox
           open={lightboxOpen}
           onOpenChange={setLightboxOpen}
-          src={lightboxAsset.imageUrl || ""}
+          src={lightboxAsset.imageUrl}
           alt={lightboxAsset.name}
           downloadFilename={lightboxAsset.name}
         />

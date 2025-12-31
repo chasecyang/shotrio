@@ -159,7 +159,6 @@ export async function loadConversationState(conversationId: string): Promise<Con
         console.warn("[AgentEngine] 解析保存的上下文失败，使用默认值:", e);
         agentContext = {
           projectId: conv.projectId,
-          selectedEpisodeId: null,
           recentJobs: [],
         };
       }
@@ -167,7 +166,6 @@ export async function loadConversationState(conversationId: string): Promise<Con
       // 旧对话没有保存上下文，使用默认值
       agentContext = {
         projectId: conv.projectId,
-        selectedEpisodeId: null,
         recentJobs: [],
       };
     }

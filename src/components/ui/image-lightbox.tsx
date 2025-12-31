@@ -31,6 +31,13 @@ export function ImageLightbox({
   const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  // 如果 src 为空，不打开对话框
+  React.useEffect(() => {
+    if (open && !src) {
+      onOpenChange(false);
+    }
+  }, [open, src, onOpenChange]);
+
   // Reset state when dialog opens/closes
   React.useEffect(() => {
     if (open) {
@@ -38,6 +45,11 @@ export function ImageLightbox({
       setPosition({ x: 0, y: 0 });
     }
   }, [open]);
+
+  // 如果没有有效的 src，不渲染任何内容
+  if (!src) {
+    return null;
+  }
 
   const handleZoomIn = () => {
     setScale((prev) => Math.min(prev + ZOOM_STEP, MAX_SCALE));

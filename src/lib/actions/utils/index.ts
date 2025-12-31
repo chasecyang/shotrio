@@ -8,19 +8,11 @@
 export {
   requireAuth,
   requireProjectAccess,
-  requireEpisodeAccess,
-  requireShotAccess,
   requireAuthAndProject,
-  requireAuthAndEpisode,
-  requireAuthAndShot,
 } from "./auth";
 
 // 任务创建
 export {
-  validateEpisodeHasScript,
-  validateProjectHasScripts,
-  createExtractionTaskForProject,
-  createTaskForEpisode,
   createImageGenerationTask,
 } from "./task";
 

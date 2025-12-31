@@ -148,7 +148,7 @@ export async function executeFunction(
 
         // 统计状态
         const completedCount = queryResult.assets.filter(a => a.status === "completed").length;
-        const generatingCount = queryResult.assets.filter(a => a.status === "generating").length;
+        const processingCount = queryResult.assets.filter(a => a.status === "processing").length;
 
         const typeLabel = assetType === "image" ? "图片资产" : assetType === "video" ? "视频资产" : "资产";
         
@@ -159,10 +159,10 @@ export async function executeFunction(
             assets: queryResult.assets,
             total: queryResult.total,
             completed: completedCount,
-            generating: generatingCount,
+            processing: processingCount,
             message: queryResult.assets.length === 0 
               ? `${typeLabel}库为空，没有找到任何${typeLabel}` 
-              : `找到 ${queryResult.total} 个${typeLabel}（${completedCount} 个已完成，${generatingCount} 个生成中）`,
+              : `找到 ${queryResult.total} 个${typeLabel}（${completedCount} 个已完成，${processingCount} 个处理中）`,
           },
         };
         break;

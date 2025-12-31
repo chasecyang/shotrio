@@ -219,7 +219,6 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       .update(asset)
       .set({
         videoUrl: uploadResult.url,
-        thumbnailUrl: videoResult.video.thumbnail || null,
         duration: videoDuration * 1000, // 转换为毫秒
         status: "completed",
       })

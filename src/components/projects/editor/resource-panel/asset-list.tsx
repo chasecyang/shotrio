@@ -62,17 +62,9 @@ export function AssetList({
       }
     });
   };
-  const { state, selectResource } = useEditor();
+  const { state } = useEditor();
   const t = useTranslations("projects.assets");
   const { project } = state;
-
-  // 打开 AI 创作编辑器
-  const handleOpenAssetGeneration = () => {
-    selectResource({
-      type: "asset-generation",
-      id: project?.id || "",
-    });
-  };
 
   if (isLoading) {
     return <AssetListSkeleton viewMode={viewMode} count={6} />;
@@ -114,11 +106,7 @@ export function AssetList({
 
           {/* 操作按钮 */}
           <div className="flex gap-2 pt-2">
-            <Button onClick={handleOpenAssetGeneration} className="flex-1" size="sm">
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              {t("empty.actionAI")}
-            </Button>
-            <Button onClick={onUpload} variant="outline" className="flex-1" size="sm">
+            <Button onClick={onUpload} className="flex-1" size="sm">
               <Upload className="w-4 h-4 mr-1.5" />
               {t("empty.action")}
             </Button>
