@@ -226,7 +226,6 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                 <AssetCard
                   key={asset.id}
                   asset={asset}
-                  viewMode="grid"
                   isSelected={false}
                   isBatchSelected={selectedAssetIds.has(asset.id)}
                   onDelete={handleDelete}
