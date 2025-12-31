@@ -535,8 +535,7 @@ export function MediaViewer({
                     alt={asset.name}
                     className={cn(
                       "max-w-[90%] max-h-[90vh] object-contain select-none",
-                      scale > 1 ? "cursor-grab" : "cursor-zoom-in",
-                      isDragging && "cursor-grabbing"
+                      isDragging ? "cursor-grabbing" : scale > 1 ? "cursor-grab" : "cursor-default"
                     )}
                     style={{
                       transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
