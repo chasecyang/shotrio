@@ -33,6 +33,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AgentPanelProps {
   projectId: string;
@@ -426,16 +431,22 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
           </div>
 
           {/* New Conversation Button */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleCreateNewConversation}
-            className="shrink-0"
-            title={t('editor.agent.panel.newConversation')}
-            aria-label={t('editor.agent.panel.newConversation')}
-          >
-            <MessageSquarePlus className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleCreateNewConversation}
+                className="shrink-0"
+                aria-label={t('editor.agent.panel.newConversation')}
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('editor.agent.panel.newConversation')}</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Messages - with proper overflow handling */}
