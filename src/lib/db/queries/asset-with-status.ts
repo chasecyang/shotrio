@@ -36,7 +36,7 @@ export async function getAssetWithStatus(
   // 查询最新的关联job
   const latestJob = await db.query.job.findFirst({
     where: and(
-      sql`${job.inputData}->>'assetId' = ${assetId}`,
+      sql`(${job.inputData})::jsonb->>'assetId' = ${assetId}`,
       inArray(job.type, ['asset_image_generation', 'video_generation'])
     ),
     orderBy: [desc(job.createdAt)],
@@ -89,14 +89,14 @@ export async function queryAssetsWithStatus(
   // 使用子查询获取每个asset的最新job
   const jobsData = await db
     .select({
-      assetId: sql<string>`${job.inputData}->>'assetId'`,
+      assetId: sql<string>`(${job.inputData})::jsonb->>'assetId'`,
       job: job,
-      rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.inputData}->>'assetId' ORDER BY ${job.createdAt} DESC)`,
+      rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY (${job.inputData})::jsonb->>'assetId' ORDER BY ${job.createdAt} DESC)`,
     })
     .from(job)
     .where(
       and(
-        sql`${job.inputData}->>'assetId' IN (${sql.join(assetIds.map(id => sql`${id}`), sql`, `)})`,
+        sql`(${job.inputData})::jsonb->>'assetId' IN (${sql.join(assetIds.map(id => sql`${id}`), sql`, `)})`,
         inArray(job.type, ['asset_image_generation', 'video_generation'])
       )
     );
