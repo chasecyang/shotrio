@@ -96,7 +96,7 @@ export async function createJob(params: CreateJobParams): Promise<{
       currentStep: 0,
       totalSteps: params.totalSteps || null,
       parentJobId: params.parentJobId || null,
-      inputData: JSON.stringify(params.inputData),
+      inputData: params.inputData, // JSONB type, no need to stringify
       progressMessage: null,
       resultData: null,
       errorMessage: null,
@@ -201,7 +201,7 @@ export async function createChildJob(params: CreateJobParams): Promise<{
       currentStep: 0,
       totalSteps: params.totalSteps || null,
       parentJobId: params.parentJobId || null,
-      inputData: JSON.stringify(params.inputData),
+      inputData: params.inputData, // JSONB type, no need to stringify
       progressMessage: null,
       resultData: null,
       errorMessage: null,

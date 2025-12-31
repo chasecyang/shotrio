@@ -7,8 +7,10 @@ import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Images, Loader2 } from "lucide-react";
+import { Sparkles, Images, Film } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
+import { cn } from "@/lib/utils";
 import { AssetUploadDialog } from "./shared/asset-upload-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -29,7 +31,7 @@ interface AssetGalleryPanelProps {
 }
 
 export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGalleryPanelProps) {
-  const { state } = useEditor();
+  const { state, setMode } = useEditor();
   const { project } = state;
 
   const [assets, setAssets] = useState<AssetWithRuntimeStatus[]>([]);
@@ -186,9 +188,32 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <Images className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">素材库</h3>
+        <div className="flex items-center gap-3">
+          {/* 模式切换器 */}
+          <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-1">
+            <button
+              onClick={() => setMode("asset-management")}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                "hover:bg-background/60",
+                "bg-background text-foreground shadow-sm"
+              )}
+            >
+              <Images className="h-4 w-4" />
+              <span>素材库</span>
+            </button>
+            <button
+              onClick={() => setMode("editing")}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                "hover:bg-background/60",
+                "text-muted-foreground"
+              )}
+            >
+              <Film className="h-4 w-4" />
+              <span>视频剪辑</span>
+            </button>
+          </div>
           <span className="text-xs text-muted-foreground">({assets.length})</span>
         </div>
         <div className="flex items-center gap-2">
@@ -208,8 +233,19 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
       <div className="flex-1 overflow-auto">
         <div className="p-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div
+              className="grid gap-3"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              }}
+            >
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-video w-full rounded-lg" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
             </div>
           ) : assets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">

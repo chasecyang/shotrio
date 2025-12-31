@@ -215,7 +215,7 @@ export async function completeJob(
       .set({
         status: "completed",
         progress: 100,
-        resultData: JSON.stringify(params.resultData),
+        resultData: params.resultData, // JSONB type, no need to stringify
         completedAt: new Date(),
         updatedAt: new Date(),
       })

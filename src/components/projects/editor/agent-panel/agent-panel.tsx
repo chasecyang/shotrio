@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, Square, ArrowDown, ChevronDown, MessageSquarePlus, Trash2, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
-import { createConversation, updateConversationTitle } from "@/lib/actions/conversation/crud";
+import { createConversation, updateConversationTitle, saveInterruptMessage } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
 import { 
@@ -211,10 +211,20 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
   // 发送消息
   const handleSend = useCallback(async () => {
-    if (!input.trim() || agent.state.isLoading) return;
+    if (!input.trim()) return;
 
     const userMessage = input.trim();
     setInput("");
+
+    // 如果正在加载（流式输出中），先中断
+    if (agent.state.isLoading) {
+      console.log("[AgentPanel] 用户打断流式输出");
+      abort(); // 中断当前流
+      
+      // 等待一小段时间确保流已停止
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
     agent.setLoading(true);
 
     try {
@@ -226,11 +236,31 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         tool_call_id: msg.toolCallId,
       }));
       
-      if (isAwaitingApproval(messages as any[]) && agent.state.currentConversationId) {
-        console.log("[AgentPanel] 检测到待批准操作，先拒绝");
-        // 步骤1：纯粹拒绝
+      const hasAwaitingApproval = isAwaitingApproval(messages as any[]);
+      
+      if (hasAwaitingApproval && agent.state.currentConversationId) {
+        console.log("[AgentPanel] 检测到待批准操作，用户发送新消息视为拒绝");
+        
+        // 1. 先保存用户的新消息到数据库
+        const saveResult = await saveInterruptMessage(
+          agent.state.currentConversationId,
+          userMessage
+        );
+        
+        if (saveResult.success && saveResult.messageId) {
+          // 2. 添加用户消息到本地状态
+          agent.addMessage({
+            id: saveResult.messageId,
+            role: "user",
+            content: userMessage,
+          });
+        }
+        
+        // 3. 拒绝操作并继续对话（resumeConversation 会将拒绝消息和用户消息都考虑进去）
         await resumeConversation(agent.state.currentConversationId, false);
-        // 不 return，继续执行发送消息逻辑
+        
+        // 处理完毕，直接返回
+        return;
       }
 
       let conversationId = agent.state.currentConversationId;
@@ -275,13 +305,15 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       console.error("发送消息失败:", error);
       toast.error("发送失败");
     }
-  }, [input, agent, projectId, sendMessage, resumeConversation, t, updateConversationTitleFromMessage]);
+  }, [input, agent, projectId, sendMessage, resumeConversation, t, updateConversationTitleFromMessage, abort]);
 
   // 停止 AI 生成
   const handleStop = useCallback(() => {
+    console.log("[AgentPanel] 用户点击暂停按钮");
     abort();
+    agent.setLoading(false);
     toast.info("已停止 AI 生成");
-  }, [abort]);
+  }, [abort, agent]);
 
   // 处理建议选择
   const handleSelectSuggestion = useCallback((text: string) => {
@@ -298,10 +330,13 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        handleSend();
+        // 只有在有输入内容时才发送
+        if (input.trim()) {
+          handleSend();
+        }
       }
     },
-    [handleSend]
+    [handleSend, input]
   );
 
   // 处理对话删除
@@ -507,25 +542,34 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               onKeyDown={handleKeyDown}
               placeholder={t('editor.agent.chatInput.placeholder')}
               className="min-h-[60px] max-h-[120px] resize-none"
-              disabled={agent.state.isLoading}
             />
-            <Button
-              onClick={agent.state.isLoading ? handleStop : handleSend}
-              disabled={!agent.state.isLoading && !input.trim()}
-              size="icon"
-              variant={agent.state.isLoading ? "destructive" : "default"}
-              className="h-[60px] w-[60px] shrink-0"
-              title={agent.state.isLoading ? t('editor.agent.chatInput.stopGeneration') : t('editor.agent.chatInput.sendMessage')}
-            >
-              {agent.state.isLoading ? (
+            {agent.state.isLoading && !input.trim() ? (
+              <Button
+                onClick={handleStop}
+                size="icon"
+                variant="destructive"
+                className="h-[60px] w-[60px] shrink-0"
+                title={t('editor.agent.chatInput.stopGeneration')}
+              >
                 <Square className="h-5 w-5" />
-              ) : (
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                size="icon"
+                variant={agent.state.isLoading && input.trim() ? "secondary" : "default"}
+                className="h-[60px] w-[60px] shrink-0"
+                title={agent.state.isLoading ? "发送消息并中断当前输出" : t('editor.agent.chatInput.sendMessage')}
+              >
                 <Send className="h-5 w-5" />
-              )}
-            </Button>
+              </Button>
+            )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            {agent.state.isLoading ? t('editor.agent.chatInput.stopToInterrupt') : t('editor.agent.chatInput.enterToSend')}
+            {agent.state.isLoading 
+              ? (input.trim() ? "发送消息将中断当前输出" : t('editor.agent.chatInput.stopToInterrupt'))
+              : t('editor.agent.chatInput.enterToSend')}
           </p>
         </div>
 

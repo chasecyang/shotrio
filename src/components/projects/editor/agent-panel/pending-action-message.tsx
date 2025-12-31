@@ -290,7 +290,7 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
     // 检查是否有我们关心的 assetId
     const shouldRefresh = completedAssetJobs.some((job) => {
       try {
-        const inputData = JSON.parse(job.inputData || "{}");
+        const inputData = job.inputData || {};
         return assetIds.includes(inputData.assetId);
       } catch {
         return false;

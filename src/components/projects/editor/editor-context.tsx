@@ -7,6 +7,10 @@ import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
 import { refreshProject } from "@/lib/actions/project/refresh";
 import type { GenerationHistoryItem } from "@/types/asset";
+import type { TimelineDetail } from "@/types/timeline";
+
+// 编辑器模式
+export type EditorMode = "asset-management" | "editing";
 
 // 素材生成状态
 export interface AssetGenerationState {
@@ -17,8 +21,14 @@ export interface AssetGenerationState {
 
 // 编辑器状态
 export interface EditorState {
+  // 工作模式
+  mode: EditorMode;
+  
   // 项目数据
   project: ProjectDetail | null;
+  
+  // 时间轴数据
+  timeline: TimelineDetail | null;
   
   // 加载状态
   isLoading: boolean;
@@ -32,6 +42,9 @@ type EditorAction =
   | { type: "SET_PROJECT"; payload: ProjectDetail }
   | { type: "UPDATE_PROJECT"; payload: ProjectDetail } // 用于刷新项目数据
   | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_MODE"; payload: EditorMode }
+  | { type: "SET_TIMELINE"; payload: TimelineDetail | null }
+  | { type: "UPDATE_TIMELINE"; payload: TimelineDetail }
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
   | { type: "ADD_GENERATION_HISTORY"; payload: GenerationHistoryItem }
@@ -39,7 +52,9 @@ type EditorAction =
 
 // 初始状态
 const initialState: EditorState = {
+  mode: "asset-management",
   project: null,
+  timeline: null,
   isLoading: true,
   assetGeneration: {
     mode: "text-to-image",
@@ -69,6 +84,24 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         isLoading: action.payload,
+      };
+
+    case "SET_MODE":
+      return {
+        ...state,
+        mode: action.payload,
+      };
+
+    case "SET_TIMELINE":
+      return {
+        ...state,
+        timeline: action.payload,
+      };
+
+    case "UPDATE_TIMELINE":
+      return {
+        ...state,
+        timeline: action.payload,
       };
 
     case "SET_ASSET_GENERATION_MODE":
@@ -120,6 +153,9 @@ interface EditorContextType {
   dispatch: React.Dispatch<EditorAction>;
   // 便捷方法
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
+  setMode: (mode: EditorMode) => void; // 切换编辑器模式
+  setTimeline: (timeline: TimelineDetail | null) => void; // 设置时间轴数据
+  updateTimeline: (timeline: TimelineDetail) => void; // 更新时间轴数据
   // 任务轮询（单例）
   jobs: Job[];
   refreshJobs: () => void;
@@ -193,6 +229,18 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "UPDATE_PROJECT", payload: project });
   }, []);
 
+  const setMode = useCallback((mode: EditorMode) => {
+    dispatch({ type: "SET_MODE", payload: mode });
+  }, []);
+
+  const setTimeline = useCallback((timeline: TimelineDetail | null) => {
+    dispatch({ type: "SET_TIMELINE", payload: timeline });
+  }, []);
+
+  const updateTimeline = useCallback((timeline: TimelineDetail) => {
+    dispatch({ type: "UPDATE_TIMELINE", payload: timeline });
+  }, []);
+
   // 素材生成相关方法
   const setAssetGenerationMode = useCallback((mode: "text-to-image" | "image-to-image") => {
     dispatch({ type: "SET_ASSET_GENERATION_MODE", payload: mode });
@@ -215,6 +263,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       state,
       dispatch,
       updateProject,
+      setMode,
+      setTimeline,
+      updateTimeline,
       setAssetGenerationMode,
       setSelectedSourceAssets,
       addGenerationHistory,
@@ -225,6 +276,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     [
       state,
       updateProject,
+      setMode,
+      setTimeline,
+      updateTimeline,
       setAssetGenerationMode,
       setSelectedSourceAssets,
       addGenerationHistory,

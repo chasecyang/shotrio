@@ -380,6 +380,57 @@ export async function saveMessage(
 }
 
 /**
+ * 保存用户中断消息（当用户在流式输出时发送新消息）
+ */
+export async function saveInterruptMessage(
+  conversationId: string,
+  userMessage: string
+) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    const messageId = `msg_${nanoid()}`;
+
+    await db.insert(conversationMessage).values({
+      id: messageId,
+      conversationId,
+      role: "user",
+      content: userMessage,
+      createdAt: new Date(),
+    });
+
+    // 更新对话的最后活动时间
+    await db
+      .update(conversation)
+      .set({
+        lastActivityAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(conversation.id, conversationId));
+
+    return {
+      success: true,
+      messageId,
+    };
+  } catch (error) {
+    console.error("[Conversation] 保存中断消息失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "保存消息失败",
+    };
+  }
+}
+
+/**
  * 更新消息（用于流式更新）
  */
 export async function updateMessage(

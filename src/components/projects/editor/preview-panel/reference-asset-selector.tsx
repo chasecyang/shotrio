@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { X, Search, Check, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { X, Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithTags } from "@/types/asset";
@@ -101,7 +102,11 @@ export function ReferenceAssetSelector({
       {/* 素材网格 */}
       <ScrollArea className="h-[400px]">
         {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">加载中...</div>
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-lg" />
+            ))}
+          </div>
         ) : filteredAssets.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             {searchQuery ? "未找到匹配的素材" : "暂无素材"}
@@ -132,9 +137,7 @@ export function ReferenceAssetSelector({
                       className="object-cover"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
+                    <Skeleton className="absolute inset-0" />
                   )}
                   
                   {/* 选中标记 */}

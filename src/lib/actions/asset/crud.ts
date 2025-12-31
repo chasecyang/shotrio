@@ -444,7 +444,7 @@ export async function createVideoAsset(data: {
       projectId: data.projectId,
       type: "video_generation",
       status: "pending",
-      inputData: JSON.stringify({ assetId }),
+      inputData: { assetId }, // JSONB type, no need to stringify
       progress: 0,
       currentStep: 0,
     });

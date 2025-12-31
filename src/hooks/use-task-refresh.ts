@@ -93,7 +93,7 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
         // 解析任务输入数据
         let inputData: Record<string, unknown> = {};
         try {
-          inputData = job.inputData ? JSON.parse(job.inputData) : {};
+          inputData = job.inputData || {};
         } catch (error) {
           console.error("解析任务输入数据失败:", error);
           continue;

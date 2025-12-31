@@ -126,7 +126,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     if (currentJob.status === "completed") {
       // 任务完成
       try {
-        const result: AssetImageGenerationResult = JSON.parse(currentJob.resultData || "{}");
+        const result: AssetImageGenerationResult = (currentJob.resultData || {}) as AssetImageGenerationResult;
         setGeneratedAssets(result.assets || []);
         toast.success(`成功生成 ${result.assets?.length || 0} 张图片`);
         

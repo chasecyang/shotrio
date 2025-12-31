@@ -55,7 +55,7 @@ export abstract class BaseProcessor<TInput = unknown, TResult = unknown> {
    * 可以在子类中重写以实现自定义的解析逻辑
    */
   protected parseInput(): TInput {
-    return JSON.parse(this.job.inputData || "{}") as TInput;
+    return (this.job.inputData || {}) as TInput;
   }
 
   /**

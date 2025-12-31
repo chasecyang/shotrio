@@ -22,7 +22,7 @@ import { extractVideoThumbnail } from "@/lib/utils/video-thumbnail";
  * 处理视频生成任务（新架构：使用 asset 表）
  */
 export async function processVideoGeneration(jobData: Job, workerToken: string): Promise<void> {
-  const input: VideoGenerationInput = JSON.parse(jobData.inputData || "{}");
+  const input: VideoGenerationInput = (jobData.inputData || {}) as VideoGenerationInput;
   const { assetId } = input; // 改为 assetId
 
   console.log(`[Worker] 开始生成视频: Asset ${assetId}`);
@@ -273,7 +273,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
  * 实际的FFmpeg合成可以在客户端或使用专门的视频处理服务
  */
 export async function processFinalVideoExport(jobData: Job, workerToken: string): Promise<void> {
-  const input: FinalVideoExportInput = JSON.parse(jobData.inputData || "{}");
+  const input: FinalVideoExportInput = (jobData.inputData || {}) as FinalVideoExportInput;
   const { projectId, videoIds } = input;
 
   console.log(`[Worker] 开始导出成片: Project ${projectId}, ${videoIds.length} 个视频片段`);

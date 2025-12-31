@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, boolean, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./auth";
 
@@ -214,8 +214,8 @@ export const job: any = pgTable("job", {
   progressMessage: text("progress_message"), // 进度描述信息
 
   // 输入和输出数据（JSON格式）
-  inputData: text("input_data"), // JSON string
-  resultData: text("result_data"), // JSON string
+  inputData: jsonb("input_data"), // JSONB type for better performance
+  resultData: jsonb("result_data"), // JSONB type for better performance
   errorMessage: text("error_message"),
 
   // 导入状态（用于提取类任务）
@@ -354,6 +354,90 @@ export const conversationMessageRelations = relations(conversationMessage, ({ on
   conversation: one(conversation, {
     fields: [conversationMessage.conversationId],
     references: [conversation.id],
+  }),
+}));
+
+// 7. 时间轴表 (Timeline) - 视频剪辑时间轴
+export const timeline = pgTable("timeline", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => project.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  
+  // 基本信息
+  title: text("title").notNull().default("未命名剪辑"),
+  description: text("description"),
+  
+  // 时间轴配置
+  duration: integer("duration").default(0).notNull(), // 总时长(毫秒)
+  fps: integer("fps").default(30).notNull(), // 帧率
+  resolution: text("resolution").default("1080x1920"), // 分辨率 (竖屏)
+  
+  // 预留扩展字段
+  metadata: text("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+// 8. 时间轴片段表 (Timeline Clip) - 时间轴上的素材片段
+export const timelineClip = pgTable("timeline_clip", {
+  id: text("id").primaryKey(),
+  timelineId: text("timeline_id")
+    .notNull()
+    .references(() => timeline.id, { onDelete: "cascade" }),
+  assetId: text("asset_id")
+    .notNull()
+    .references(() => asset.id, { onDelete: "cascade" }),
+  
+  // 轨道和位置
+  trackIndex: integer("track_index").default(0).notNull(), // 轨道索引（1期都是0，预留多轨道）
+  startTime: integer("start_time").notNull(), // 在时间轴上的开始时间(ms)
+  duration: integer("duration").notNull(), // 片段在时间轴上的时长(ms)
+  
+  // 素材裁剪
+  trimStart: integer("trim_start").default(0).notNull(), // 素材入点(ms)
+  trimEnd: integer("trim_end"), // 素材出点(ms), null表示到素材结尾
+  
+  // 排序
+  order: integer("order").notNull(), // 在轨道内的排序
+  
+  // 预留扩展字段
+  metadata: text("metadata"), // JSON: 转场效果、音量、滤镜等
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const timelineRelations = relations(timeline, ({ one, many }) => ({
+  project: one(project, {
+    fields: [timeline.projectId],
+    references: [project.id],
+  }),
+  user: one(user, {
+    fields: [timeline.userId],
+    references: [user.id],
+  }),
+  clips: many(timelineClip),
+}));
+
+export const timelineClipRelations = relations(timelineClip, ({ one }) => ({
+  timeline: one(timeline, {
+    fields: [timelineClip.timelineId],
+    references: [timeline.id],
+  }),
+  asset: one(asset, {
+    fields: [timelineClip.assetId],
+    references: [asset.id],
   }),
 }));
 

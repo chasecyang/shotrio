@@ -24,14 +24,20 @@ export async function extractVideoThumbnail(
       const chunks: Buffer[] = [];
 
       ffmpeg(videoUrl)
-        .screenshots({
-          timestamps: ["00:00:00.000"], // 提取第一帧
-          size: "1280x720", // 缩略图尺寸
-        })
+        .inputOptions(["-ss 0"]) // 从第 0 秒开始
         .outputOptions([
+          "-vframes 1", // 只提取一帧
+          "-vf scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2", // 缩放并保持宽高比
           "-f image2pipe", // 输出到管道
           "-vcodec png", // 使用 PNG 格式
         ])
+        .on("start", (commandLine) => {
+          console.log(`[Thumbnail] FFmpeg 命令: ${commandLine}`);
+        })
+        .on("error", (err: Error) => {
+          console.error(`[Thumbnail] FFmpeg 错误:`, err);
+          reject(err);
+        })
         .pipe()
         .on("data", (chunk: Buffer) => {
           chunks.push(chunk);
@@ -105,11 +111,20 @@ export async function extractVideoThumbnailFromFile(
       const chunks: Buffer[] = [];
 
       ffmpeg(videoPath)
-        .screenshots({
-          timestamps: ["00:00:00.000"],
-          size: "1280x720",
+        .inputOptions(["-ss 0"]) // 从第 0 秒开始
+        .outputOptions([
+          "-vframes 1", // 只提取一帧
+          "-vf scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2", // 缩放并保持宽高比
+          "-f image2pipe", // 输出到管道
+          "-vcodec png", // 使用 PNG 格式
+        ])
+        .on("start", (commandLine) => {
+          console.log(`[Thumbnail] FFmpeg 命令: ${commandLine}`);
         })
-        .outputOptions(["-f image2pipe", "-vcodec png"])
+        .on("error", (err: Error) => {
+          console.error(`[Thumbnail] FFmpeg 错误:`, err);
+          reject(err);
+        })
         .pipe()
         .on("data", (chunk: Buffer) => {
           chunks.push(chunk);

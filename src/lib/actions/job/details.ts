@@ -34,8 +34,7 @@ export async function getJobDetails(job: Partial<Job>): Promise<JobDetails> {
   }
 
   try {
-    JSON.parse(job.inputData);
-
+    // inputData is now JSONB, no need to parse
     // 根据任务类型添加额外信息（如需要）
     switch (job.type) {
       default:
