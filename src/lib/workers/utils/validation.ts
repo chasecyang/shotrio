@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/db";
-import { project, episode } from "@/lib/db/schemas/project";
+import { project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 
 /**
@@ -9,9 +9,6 @@ import { eq, and } from "drizzle-orm";
  */
 export const INPUT_LIMITS = {
   MAX_CONTENT_LENGTH: 50000, // 小说内容最大 50,000 字符
-  MAX_EPISODES: 50, // 最多 50 集
-  MIN_EPISODES: 1, // 最少 1 集
-  MAX_EPISODE_IDS: 100, // 最多处理 100 个剧集
 };
 
 /**
@@ -51,23 +48,4 @@ export function sanitizeTextInput(text: string, maxLength: number): string {
   return sanitized;
 }
 
-/**
- * 验证数组中的 ID 是否属于指定项目
- */
-export async function verifyEpisodeOwnership(
-  episodeIds: string[],
-  projectId: string
-): Promise<boolean> {
-  try {
-    const episodes = await db.query.episode.findMany({
-      where: eq(episode.projectId, projectId),
-    });
-    
-    const projectEpisodeIds = new Set(episodes.map((ep) => ep.id));
-    return episodeIds.every((id) => projectEpisodeIds.has(id));
-  } catch (error) {
-    console.error("验证剧集所有权失败:", error);
-    return false;
-  }
-}
 

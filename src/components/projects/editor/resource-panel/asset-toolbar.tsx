@@ -94,7 +94,8 @@ export function AssetToolbar({
           </TooltipTrigger>
           <TooltipContent>AI 创作</TooltipContent>
         </Tooltip>
-        <Tooltip>
+        {/* 暂时隐藏上传功能 */}
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <Button 
               onClick={onUpload} 
@@ -106,7 +107,7 @@ export function AssetToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>上传</TooltipContent>
-        </Tooltip>
+        </Tooltip> */}
       </div>
       </div>
 

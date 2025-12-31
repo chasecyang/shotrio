@@ -165,10 +165,11 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
           <span className="text-xs text-muted-foreground">({assets.length})</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
+          {/* 暂时隐藏上传功能 */}
+          {/* <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-1.5" />
             上传
-          </Button>
+          </Button> */}
           <Button size="sm" onClick={onOpenAssetGeneration}>
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
             AI 生成
@@ -197,10 +198,11 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                   <Sparkles className="w-4 h-4 mr-1.5" />
                   AI 生成
                 </Button>
-                <Button onClick={() => setUploadDialogOpen(true)} variant="outline" size="sm">
+                {/* 暂时隐藏上传功能 */}
+                {/* <Button onClick={() => setUploadDialogOpen(true)} variant="outline" size="sm">
                   <Upload className="w-4 h-4 mr-1.5" />
                   上传素材
-                </Button>
+                </Button> */}
               </div>
             </div>
           ) : (
