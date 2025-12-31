@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { BetaBanner } from "@/components/ui/beta-banner";
 import { EditorProvider } from "./editor-context";
 import { EditorHeader } from "./editor-header";
-import { PreviewPanel } from "./preview-panel/preview-panel";
+import { AgentPanel } from "./agent-panel/agent-panel";
+import { AssetGalleryPanel } from "./asset-gallery-panel";
+import { AssetGenerationDialog } from "./asset-generation-dialog";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
@@ -62,7 +64,6 @@ interface EditorLayoutProps {
   project: ProjectDetail;
   projects: EditorProject[];
   user: EditorUser;
-  resourcePanel: ReactNode;
   initialView?: string;
 }
 
@@ -70,11 +71,13 @@ function EditorLayoutInner({
   project,
   projects,
   user,
-  resourcePanel,
   initialView,
 }: EditorLayoutProps) {
   // 注册键盘快捷键
   useEditorKeyboard();
+  
+  // 素材生成对话框状态
+  const [assetGenerationOpen, setAssetGenerationOpen] = useState(false);
 
   // 处理 URL 参数 - 初始化 settings 视图
   useEffect(() => {
@@ -95,24 +98,34 @@ function EditorLayoutInner({
       {/* Beta Notice - 编辑器专用 */}
       <BetaBanner dismissible storageKey="editor-beta-banner-dismissed" />
 
-      {/* 主内容区：左右分栏 */}
+      {/* 主内容区：左右分栏 - AI 对话 + 素材展示 */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* 资源面板 */}
-        <ResizablePanel defaultSize={35} minSize={25} maxSize={70}>
-          <div className="h-full overflow-auto border-r bg-card">
-            {resourcePanel}
+        {/* 左侧：AI 对话面板 */}
+        <ResizablePanel defaultSize={50} minSize={30} maxSize={70}>
+          <div className="h-full overflow-hidden border-r">
+            <AgentPanel projectId={project.id} />
           </div>
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
-        {/* 预览/编辑区 */}
-        <ResizablePanel defaultSize={65} minSize={30}>
-          <div className="h-full overflow-hidden bg-background">
-            <PreviewPanel />
+        {/* 右侧：素材展示面板 */}
+        <ResizablePanel defaultSize={50} minSize={30}>
+          <div className="h-full overflow-hidden">
+            <AssetGalleryPanel 
+              userId={user.id}
+              onOpenAssetGeneration={() => setAssetGenerationOpen(true)}
+            />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* 素材生成对话框 */}
+      <AssetGenerationDialog
+        open={assetGenerationOpen}
+        onOpenChange={setAssetGenerationOpen}
+        projectId={project.id}
+      />
     </div>
   );
 }

@@ -76,7 +76,7 @@
     "title": "Shotrio",
     "subtitle": "精心创作，AI提效",
     "slogan": "让创作更简单，让故事更精彩",
-    "description": "从剧本到成片，一站式微短剧创作平台。AI 辅助创作，助力内容创作者高效产出优质微短剧作品。",
+    "description": "AI 辅助微短剧创作，助力内容创作者高效产出优质微短剧作品。",
     "getStarted": "开始创作",
     "learnMore": "了解更多",
     "hero": {
@@ -87,11 +87,6 @@
     "features": {
       "title": "完整的创作工具链",
       "subtitle": "精准把控每个环节，AI辅助提升创作效率",
-      "script": {
-        "title": "AI 剧本创作",
-        "description": "智能剧本生成与编辑，支持分集管理。AI 辅助对话创作，让故事更生动精彩。",
-        "badge": "已上线"
-      },
       "assetManagement": {
         "title": "素材管理",
         "description": "统一管理场景、角色、特效等创作素材。支持AI生成和上传，打造专属素材库。",
@@ -99,7 +94,7 @@
       },
       "videoGeneration": {
         "title": "AI 视频生成",
-        "description": "从剧本直接生成视频片段，AI智能剪辑，轻松成片。",
+        "description": "AI智能生成视频片段，轻松剪辑成片。",
         "badge": "已上线"
       },
       "agent": {
@@ -121,18 +116,14 @@
     "workflow": {
       "title": "从构思到成片，掌控每个环节",
       "step1": {
-        "title": "剧本创作",
-        "description": "用 AI 辅助打磨你的剧本创意"
-      },
-      "step2": {
         "title": "角色与场景",
         "description": "精心设计每个角色和场景细节"
       },
-      "step3": {
+      "step2": {
         "title": "视频生成",
-        "description": "AI 从剧本直接生成视频片段"
+        "description": "AI 智能生成视频片段"
       },
-      "step4": {
+      "step3": {
         "title": "智能剪辑",
         "description": "在你的把控下剪辑成高质量成片"
       }
@@ -179,7 +170,6 @@
     "defaultProjectTitle": "我的第一个项目",
     "defaultProjectDescription": "开始我的微短剧创作之旅",
     "nav": {
-      "scripts": "剧本",
       "characters": "角色",
       "scenes": "场景",
       "settings": "设置"
@@ -206,7 +196,7 @@
       "deleteButton": "删除项目",
       "deleteConfirm": "确认删除",
       "deleteConfirmTitle": "确认删除项目？",
-      "deleteConfirmDescription": "此操作无法撤销。项目「{title}」及其所有数据（包括分集、角色、分镜等）将被永久删除。",
+      "deleteConfirmDescription": "此操作无法撤销。项目「{title}」及其所有数据（包括素材、视频等）将被永久删除。",
       "deleteCancel": "取消"
     },
     "assets": {
@@ -348,9 +338,9 @@
         "subtitle": "使用 AI 创作角色、场景、道具等图片素材",
         "guide": {
           "title": "你可以创作：",
-          "character": "角色 - 为剧本中的人物设计形象",
+          "character": "角色 - 为故事中的人物设计形象",
           "scene": "场景 - 创建故事发生的环境和地点",
-          "prop": "道具 - 生成剧情所需的物品和元素"
+          "prop": "道具 - 生成故事所需的物品和元素"
         },
         "form": {
           "assetName": "素材名称",
@@ -418,7 +408,7 @@
       "section2": {
         "title": "我们收集的信息类型",
         "item1": "账户信息：包括您的邮箱地址、用户名等注册信息",
-        "item2": "创作内容：您在平台上创建的项目、剧本、分镜等内容",
+        "item2": "创作内容：您在平台上创建的项目、素材、视频等内容",
         "item3": "使用数据：您使用服务的方式，包括访问时间、使用的功能等",
         "item4": "设备信息：您的设备类型、操作系统、浏览器类型等技术信息"
       },
@@ -574,9 +564,9 @@
     "bonusLabel": "额外赠送 {percent}%",
     "guide": {
       "title": "你可以创作：",
-      "character": "角色 - 为剧本中的人物设计形象",
+      "character": "角色 - 为故事中的人物设计形象",
       "scene": "场景 - 创建故事发生的环境和地点",
-      "prop": "道具 - 生成剧情所需的物品和元素"
+      "prop": "道具 - 生成故事所需的物品和元素"
     },
     "balance": {
       "title": "积分余额",
@@ -1052,11 +1042,7 @@
         "title": "剧集编辑器",
         "episodeNumber": "第 {number} 集",
         "episodeTitle": "剧集标题",
-        "summary": "梗概",
-        "script": "剧本",
-        "scriptPlaceholder": "编写完整的剧本内容，包括场景描述、人物对话、动作等...",
-        "scriptEmptyText": "点击编写剧本内容",
-        "aiButtonTitle": "AI 生成/优化剧本"
+        "summary": "梗概"
       },
       "assetGeneration": {
         "title": "AI 创作素材",

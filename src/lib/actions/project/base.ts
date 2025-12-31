@@ -3,14 +3,13 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { project, artStyle, episode } from "@/lib/db/schemas/project";
+import { project, artStyle } from "@/lib/db/schemas/project";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   type NewProject,
   type ProjectWithStats,
   type ProjectDetail,
-  type NewEpisode,
 } from "@/types/project";
 
 /**
@@ -50,18 +49,6 @@ export async function createProject(data: {
         .where(eq(artStyle.id, data.styleId));
     }
 
-    // 自动创建第1集
-    const newEpisode: NewEpisode = {
-      id: randomUUID(),
-      projectId: created.id,
-      title: "第1集",
-      summary: null,
-      scriptContent: null,
-      order: 1,
-    };
-
-    await db.insert(episode).values(newEpisode);
-
     return { success: true, data: created };
   } catch (error) {
     console.error("创建项目失败:", error);
@@ -88,14 +75,12 @@ export async function getUserProjects(): Promise<ProjectWithStats[]> {
       where: eq(project.userId, session.user.id),
       orderBy: [desc(project.updatedAt)],
       with: {
-        episodes: true,
         assets: true,
       },
     });
 
     return projects.map((p) => ({
       ...p,
-      episodeCount: p.episodes.length,
       assetCount: p.assets.length,
     }));
   } catch (error) {
@@ -124,9 +109,6 @@ export async function getProjectDetail(
         eq(project.userId, session.user.id),
       ),
       with: {
-        episodes: {
-          orderBy: (episodes, { asc }) => [asc(episodes.order)],
-        },
         assets: {
           with: {
             tags: true,

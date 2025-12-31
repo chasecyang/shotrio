@@ -45,32 +45,10 @@ export async function collectContext(context: AgentContext, projectId: string): 
         parts.push(`美术风格: 未设置（建议先设置美术风格以获得更好的图像生成效果）`);
       }
       
-      parts.push(`剧集数量: ${project.episodes.length}`);
       parts.push("");
     }
 
-    // 2. 当前选中的剧集
-    if (context.selectedEpisodeId && project) {
-      const episode = project.episodes.find((ep) => ep.id === context.selectedEpisodeId);
-      if (episode) {
-        parts.push(`# 当前剧集`);
-        parts.push(`剧集ID: ${context.selectedEpisodeId}`);  // ✅ 添加剧集 ID
-        parts.push(`剧集: ${episode.title}`);
-        if (episode.summary) {
-          parts.push(`梗概: ${episode.summary}`);
-        }
-        
-        // 剧本状态（不显示具体内容，需要时可通过 query_script_content 查询）
-        if (episode.scriptContent && episode.scriptContent.trim()) {
-          parts.push(`剧本内容: 已有剧本（${episode.scriptContent.length} 字）`);
-        } else {
-          parts.push(`剧本内容: 暂无`);
-        }
-        parts.push("");
-      }
-    }
-
-    // 3. 项目视频
+    // 2. 项目视频
     if (project) {
       const videosResult = await getVideoAssets(project.id, { orderBy: "created" });
       if (videosResult.success && videosResult.videos && videosResult.videos.length > 0) {
@@ -102,7 +80,7 @@ export async function collectContext(context: AgentContext, projectId: string): 
       }
     }
 
-    // 4. 选中的资源（如素材）
+    // 3. 选中的资源（如素材）
     if (context.selectedResource) {
       parts.push(`# 当前选中资源`);
       parts.push(`类型: ${context.selectedResource.type}`);
@@ -110,7 +88,7 @@ export async function collectContext(context: AgentContext, projectId: string): 
       parts.push("");
     }
 
-    // 5. 项目素材统计
+    // 4. 项目素材统计
     if (project) {
       const assetsResult = await queryAssets({
         projectId,
@@ -146,7 +124,7 @@ export async function collectContext(context: AgentContext, projectId: string): 
       }
     }
 
-    // 6. 最近的任务
+    // 5. 最近的任务
     if (context.recentJobs && context.recentJobs.length > 0) {
       parts.push(`# 最近任务`);
       const recentJobsInfo = context.recentJobs

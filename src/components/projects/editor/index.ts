@@ -2,21 +2,15 @@
 export { EditorLayout } from "./editor-layout";
 export { EditorHeader } from "./editor-header";
 export { EditorProvider, useEditor } from "./editor-context";
-export type { EditorState, SelectedResource, TimelineState } from "./editor-context";
+export type { EditorState, SelectedResource } from "./editor-context";
 
-// Resource panel
-export { ResourcePanel } from "./resource-panel/resource-panel";
-export { EpisodeList } from "./resource-panel/episode-list";
+// Asset Gallery
+export { AssetGalleryPanel } from "./asset-gallery-panel";
+export { AssetGenerationDialog } from "./asset-generation-dialog";
 
-// Preview panel
-export { PreviewPanel } from "./preview-panel/preview-panel";
-export { EpisodeEditor } from "./preview-panel/episode-editor";
-
-// Timeline
-export { TimelineContainer } from "./timeline/timeline-container";
-export { TimelineToolbar } from "./timeline/timeline-toolbar";
-export { TimelineRuler } from "./timeline/timeline-ruler";
-export { TimelineTrack } from "./timeline/timeline-track";
+// Agent Panel
+export { AgentPanel } from "./agent-panel/agent-panel";
+export { AgentProvider } from "./agent-panel";
 
 // Hooks
 export { useEditorKeyboard } from "./use-editor-keyboard";

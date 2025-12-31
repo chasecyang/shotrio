@@ -1,7 +1,6 @@
 "use client";
 
 import { useEditor } from "../editor-context";
-import { EpisodeEditor } from "./episode-editor";
 import { AssetGenerationEditor } from "./asset-generation-editor";
 import { AssetDetailEditor } from "./asset-detail-editor";
 import { ProjectSettingsEditor } from "./project-settings-editor";
@@ -11,7 +10,6 @@ import { AgentErrorBoundary } from "../agent-panel/agent-error-boundary";
 export function PreviewPanel() {
   const { 
     state, 
-    selectedEpisode, 
   } = useEditor();
   const { selectedResource } = state;
 
@@ -31,12 +29,6 @@ export function PreviewPanel() {
   }
 
   switch (selectedResource.type) {
-    case "episode":
-      if (selectedEpisode) {
-        return <EpisodeEditor episode={selectedEpisode} />;
-      }
-      break;
-
     case "asset-generation":
       if (selectedResource.id) {
         return <AssetGenerationEditor projectId={selectedResource.id} />;

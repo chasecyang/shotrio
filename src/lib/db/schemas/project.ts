@@ -27,7 +27,6 @@ export const assetStatusEnum = pgEnum("asset_status", [
 export const jobTypeEnum = pgEnum("job_type", [
   "batch_image_generation", // 批量图像生成
   "asset_image_generation", // 素材图片生成
-  "script_element_extraction", // 剧本元素提取
   "video_generation", // 视频生成
   "final_video_export", // 最终成片导出
 ]);
@@ -182,26 +181,7 @@ export const assetTag = pgTable("asset_tag", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// 3. 剧集表 (Episode) - 每一集短剧
-export const episode = pgTable("episode", {
-  id: text("id").primaryKey(),
-  projectId: text("project_id")
-    .notNull()
-    .references(() => project.id, { onDelete: "cascade" }),
-
-  title: text("title").notNull(),
-  summary: text("summary"), // 本集梗概
-  scriptContent: text("script_content"), // 这一集的完整对话/剧本
-  order: integer("order").notNull(), // 第几集
-
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-// 4. 任务表 (Job) - 异步任务队列
+// 3. 任务表 (Job) - 异步任务队列
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const job: any = pgTable("job", {
   id: text("id").primaryKey(),
@@ -261,7 +241,6 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     references: [artStyle.id],
   }),
   assets: many(asset), // 包含图片和视频
-  episodes: many(episode),
   jobs: many(job),
   conversations: many(conversation),
 }));
@@ -282,13 +261,6 @@ export const assetTagRelations = relations(assetTag, ({ one }) => ({
   asset: one(asset, {
     fields: [assetTag.assetId],
     references: [asset.id],
-  }),
-}));
-
-export const episodeRelations = relations(episode, ({ one }) => ({
-  project: one(project, {
-    fields: [episode.projectId],
-    references: [project.id],
   }),
 }));
 

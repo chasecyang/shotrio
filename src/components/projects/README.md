@@ -18,7 +18,7 @@
 - `preview-panel/` - 预览面板
 - `resource-panel/` - 资源面板（包含剧集、素材列表）
 - `agent-panel/` - AI助手面板
-- 集成了剧本编辑、素材管理、视频生成等功能
+- 集成了素材管理、视频生成等功能
 
 ### `settings/` - 设置相关
 - `project-settings-form.tsx` - 项目设置表单（在编辑器预览区中使用）
@@ -38,7 +38,6 @@
 - `shots-section.tsx` - 旧版分镜管理，分镜概念已移除
 - `timeline/` 目录 - 时间轴组件，随分镜概念移除
 - `image-generation-panel.tsx` - 未使用的图像生成面板
-- `scripts/` 目录 - 旧版剧本管理页面，已集成到编辑器中
 - `project-sidebar.tsx` - 项目侧边栏，功能已整合到编辑器 Header 中
 - `project-header.tsx` - 项目头部，不再需要
 - `app/[lang]/projects/[id]/settings/page.tsx` - 独立设置页面，已整合到编辑器预览区
@@ -49,5 +48,4 @@
 - 2024-12-21: 移除 Sidebar，所有功能整合到编辑器 Header（Logo、项目切换、用户菜单）
 - 2024-12-12: 删除旧版成片页面和相关组件，所有功能已整合到编辑器中
 - 2024-12-12: 删除独立的分镜页面，功能已完全集成到编辑器中
-- 2024-12-12: 删除独立的剧本页面，功能已集成到编辑器中
 - 2024-12-07: 重新组织目录结构，按功能分类组件

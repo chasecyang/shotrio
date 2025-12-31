@@ -10,7 +10,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
-import { episode, conversation } from "@/lib/db/schemas/project";
+import { conversation } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
@@ -21,8 +21,6 @@ import type { AssetImageGenerationInput } from "@/types/job";
 import { getSystemArtStyles } from "../art-style/queries";
 import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
-import { updateEpisode } from "../project/episode";
-import type { NewEpisode } from "@/types/project";
 import { 
   getVideoAssets,
   createVideoAsset,
@@ -73,28 +71,11 @@ export async function executeFunction(
       // 查询类
       // ============================================
       case "query_context": {
-        const episodeId = parameters.episodeId as string | undefined;
         const includeAssets = parameters.includeAssets !== false; // 默认true
         const includeVideos = parameters.includeVideos !== false; // 默认true
         const includeArtStyles = parameters.includeArtStyles !== false; // 默认true
 
         const contextData: Record<string, unknown> = {};
-
-        // 如果提供了episodeId，获取剧本
-        if (episodeId) {
-          const episodeData = await db.query.episode.findFirst({
-            where: eq(episode.id, episodeId),
-          });
-          
-          if (episodeData) {
-            contextData.episode = {
-              id: episodeData.id,
-              title: episodeData.title,
-              scriptContent: episodeData.scriptContent,
-              summary: episodeData.summary,
-            };
-          }
-        }
 
         // 包含视频列表
         if (includeVideos) {
@@ -407,36 +388,6 @@ export async function executeFunction(
       // ============================================
       // 修改类
       // ============================================
-      case "update_episode": {
-        const episodeId = parameters.episodeId as string;
-        const updates: Partial<NewEpisode> = {};
-        
-        if (parameters.title !== undefined) updates.title = parameters.title as string;
-        if (parameters.summary !== undefined) updates.summary = parameters.summary as string || null;
-        if (parameters.scriptContent !== undefined) updates.scriptContent = parameters.scriptContent as string || null;
-        
-        const updateResult = await updateEpisode(episodeId, updates);
-        
-        if (updateResult.success) {
-          result = {
-            functionCallId: functionCall.id,
-            success: true,
-            data: {
-              message: "剧集信息已更新",
-              updatedFields: Object.keys(updates),
-              episode: updateResult.data,
-            },
-          };
-        } else {
-          result = {
-            functionCallId: functionCall.id,
-            success: false,
-            error: updateResult.error || "更新失败",
-          };
-        }
-        break;
-      }
-
       case "update_videos": {
         const updates = parameters.updates as Array<{
           videoId: string;

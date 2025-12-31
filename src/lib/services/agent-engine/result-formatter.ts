@@ -20,7 +20,7 @@ export function formatFunctionResult(
       case "query_context": {
         const contextData = data as { episode?: unknown; videos?: unknown[]; assets?: { total?: number }; artStyles?: unknown[] };
         const parts: string[] = [];
-        if (contextData.episode) parts.push("剧本");
+        if (contextData.episode) parts.push("剧集");
         if (contextData.videos) parts.push(`视频(${contextData.videos.length})`);
         if (contextData.assets) parts.push(`素材(${contextData.assets.total || 0})`);
         if (contextData.artStyles) parts.push("美术风格");

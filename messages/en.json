@@ -160,7 +160,7 @@
     "title": "Shotrio",
     "subtitle": "Craft with Care, Enhance with AI",
     "slogan": "Make creation easier, make stories better",
-    "description": "From script to final cut, an all-in-one micro-drama creation platform. AI-assisted creation to help content creators efficiently produce high-quality micro-drama works.",
+    "description": "AI-assisted micro-drama creation platform to help content creators efficiently produce high-quality micro-drama works.",
     "getStarted": "Start Creating",
     "learnMore": "Learn More",
     "hero": {
@@ -171,11 +171,6 @@
     "features": {
       "title": "Complete Creation Toolchain",
       "subtitle": "Precise control over every step, AI-enhanced efficiency",
-      "script": {
-        "title": "AI Script Writing",
-        "description": "Intelligent script generation and editing with episode management. AI-assisted dialogue creation for more vivid stories.",
-        "badge": "Available Now"
-      },
       "assetManagement": {
         "title": "Asset Management",
         "description": "Manage scenes, characters, and effects in one place. Support AI generation and uploads for your asset library.",
@@ -183,7 +178,7 @@
       },
       "videoGeneration": {
         "title": "AI Video Generation",
-        "description": "Generate video clips directly from scripts, AI-powered editing for easy production.",
+        "description": "AI-powered video clip generation and smart editing for easy production.",
         "badge": "Available Now"
       },
       "agent": {
@@ -205,18 +200,14 @@
     "workflow": {
       "title": "From Concept to Final Cut — Master Every Step",
       "step1": {
-        "title": "Script Writing",
-        "description": "Refine your script ideas with AI assistance"
-      },
-      "step2": {
         "title": "Characters & Scenes",
         "description": "Craft every character and scene detail with care"
       },
-      "step3": {
+      "step2": {
         "title": "Video Generation",
-        "description": "AI generates video clips directly from script"
+        "description": "AI generates video clips intelligently"
       },
-      "step4": {
+      "step3": {
         "title": "Smart Editing",
         "description": "Edit clips into high-quality final videos under your control"
       }
@@ -263,7 +254,6 @@
     "defaultProjectTitle": "My First Project",
     "defaultProjectDescription": "Start my micro-drama creation journey",
     "nav": {
-      "scripts": "Scripts",
       "characters": "Characters",
       "scenes": "Scenes",
       "settings": "Project Settings"
@@ -290,7 +280,7 @@
       "deleteButton": "Delete Project",
       "deleteConfirm": "Confirm Delete",
       "deleteConfirmTitle": "Confirm Project Deletion?",
-      "deleteConfirmDescription": "This action cannot be undone. Project \"{title}\" and all its data (including episodes, characters, storyboards, etc.) will be permanently deleted.",
+      "deleteConfirmDescription": "This action cannot be undone. Project \"{title}\" and all its data (including assets, videos, etc.) will be permanently deleted.",
       "deleteCancel": "Cancel"
     },
     "assets": {
@@ -431,9 +421,9 @@
         "subtitle": "Generate images from text descriptions using AI",
         "guide": {
           "title": "You can create:",
-          "character": "Character - Design character appearances for the script",
+          "character": "Character - Design character appearances for your story",
           "scene": "Scene - Create environments and locations for the story",
-          "prop": "Prop - Generate items and elements needed for the plot"
+          "prop": "Prop - Generate items and elements needed for your story"
         },
         "form": {
           "assetName": "Asset Name",
@@ -501,7 +491,7 @@
       "section2": {
         "title": "Types of Information We Collect",
         "item1": "Account Information: Including your email address, username, and other registration information",
-        "item2": "Creative Content: Projects, scripts, storyboards, and other content you create on the platform",
+        "item2": "Creative Content: Projects, assets, videos, and other content you create on the platform",
         "item3": "Usage Data: How you use our services, including access times and features used",
         "item4": "Device Information: Your device type, operating system, browser type, and other technical information"
       },
@@ -597,7 +587,7 @@
       },
       "videoGeneration": {
         "title": "AI Video Generation",
-        "description": "Transform storyboard scripts into amazing video content",
+        "description": "Generate amazing video content with AI",
         "feature1": "20 credits/sec (with audio)",
         "feature2": "Up to 10 seconds per video",
         "feature3": "No audio: only 12 credits/sec"
@@ -639,9 +629,9 @@
     "bonusLabel": "{percent}% extra bonus",
     "guide": {
       "title": "You can create:",
-      "character": "Character - Design character appearances for the script",
+      "character": "Character - Design character appearances for your story",
       "scene": "Scene - Create environments and locations for the story",
-      "prop": "Prop - Generate items and elements needed for the plot"
+      "prop": "Prop - Generate items and elements needed for your story"
     },
     "balance": {
       "title": "Credit Balance",
@@ -1050,11 +1040,7 @@
         "title": "Episode Editor",
         "episodeNumber": "Episode {number}",
         "episodeTitle": "Episode Title",
-        "summary": "Summary",
-        "script": "Script",
-        "scriptPlaceholder": "Write complete script content, including scene descriptions, character dialogue, actions, etc...",
-        "scriptEmptyText": "Click to write script content",
-        "aiButtonTitle": "AI Generate/Optimize Script"
+        "summary": "Summary"
       },
       "assetGeneration": {
         "title": "AI Asset Generation",

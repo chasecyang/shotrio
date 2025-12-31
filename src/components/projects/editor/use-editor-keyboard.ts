@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useEditor } from "./editor-context";
 
 export function useEditorKeyboard() {
-  const { state } = useEditor();
-  const { selectedEpisodeId } = state;
-
-
-  // 键盘事件处理
+  // 键盘事件处理（预留，目前新布局暂不需要特殊快捷键）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 如果在输入框中，不处理快捷键
@@ -21,48 +16,16 @@ export function useEditorKeyboard() {
         return;
       }
 
+      // 预留快捷键处理逻辑
       switch (e.key) {
-        // 删除
-        case "Delete":
-        case "Backspace":
-        // 方向键选择
-        case "ArrowLeft":
-          e.preventDefault();
-          break;
-
-        case "ArrowRight":
-          e.preventDefault();
-          break;
-
-        // 跳到开头
-        case "Home":
-          e.preventDefault();
-          break;
-
-        // 跳到结尾
-        case "End":
-          e.preventDefault();
-          break;
-
-        // 全选 Ctrl/Cmd + A
-        case "a":
-        case "A":
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-          }
-          break;
-
-        // 取消选择 Escape
         case "Escape":
-          e.preventDefault();
+          // 可以用于关闭对话框等
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    selectedEpisodeId,
-  ]);
+  }, []);
 }
 

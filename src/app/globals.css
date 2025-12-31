@@ -71,7 +71,7 @@
   --radius: 0.5rem;
   
   /* Light Mode: Vintage Paper & Ink */
-  /* 像一本泛黄的剧本 */
+  /* 温暖的纸张质感 */
   --background: oklch(0.97 0.01 85);      /* Warm Paper White */
   --foreground: oklch(0.20 0.03 60);      /* Soft Ink Black (Sepia tone) */
   

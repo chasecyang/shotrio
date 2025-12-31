@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { getProjectDetail, getUserProjects } from "@/lib/actions/project";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
 import { EditorLayout } from "@/components/projects/editor/editor-layout";
-import { ResourcePanel } from "@/components/projects/editor/resource-panel/resource-panel";
 import { EditorSkeleton } from "./loading";
 
 interface EditorPageProps {
@@ -64,7 +63,6 @@ async function EditorWrapper({
         image: user.image,
         role: user.role,
       }}
-      resourcePanel={<ResourcePanel />}
     />
   );
 }

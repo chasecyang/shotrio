@@ -13,12 +13,5 @@ export {
   deleteProject,
 } from "./base";
 
-// 导出剧集操作
-export {
-  createEpisode,
-  updateEpisode,
-  deleteEpisode,
-} from "./episode";
-
 // 注意: 视频相关操作现在统一在 @/lib/actions/asset 中
 // 使用 createVideoAsset, getVideoAssets, updateVideoAsset, deleteVideoAssets

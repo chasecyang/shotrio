@@ -9,12 +9,30 @@ import { TypingIndicator } from "./typing-indicator";
 import { SuggestionCards } from "./suggestion-cards";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Bot, Square, ArrowDown } from "lucide-react";
+import { Send, Bot, Square, ArrowDown, ChevronDown, MessageSquarePlus, Trash2, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface AgentPanelProps {
   projectId: string;
@@ -51,6 +69,9 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const titleGeneratedRef = useRef<Set<string>>(new Set());
   // 保存第一条用户消息，用于生成标题
   const firstUserMessageRef = useRef<{ conversationId: string; message: string } | null>(null);
+  // 对话删除确认对话框
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   
   // 清除 firstUserMessageRef 的辅助函数
   const clearFirstUserMessageRef = useCallback((reason: string) => {
@@ -443,19 +464,130 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     [handleSend]
   );
 
+  // 处理对话删除
+  const handleDeleteClick = (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConversationToDelete(conversationId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (conversationToDelete) {
+      await agent.deleteConversationById(conversationToDelete);
+      setConversationToDelete(null);
+    }
+    setDeleteDialogOpen(false);
+  };
+
+  // 创建新对话
+  const handleCreateNewConversation = async () => {
+    await agent.createNewConversation();
+  };
+
+  // 格式化时间
+  const formatTime = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "刚刚";
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    return new Date(date).toLocaleDateString();
+  };
+
+  // 获取状态配置
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "awaiting_approval":
+        return { Icon: AlertCircle, className: "text-amber-600 dark:text-amber-400" };
+      case "active":
+        return { Icon: Clock, className: "text-blue-500" };
+      case "completed":
+        return { Icon: CheckCircle, className: "text-muted-foreground" };
+      default:
+        return { Icon: MessageSquarePlus, className: "text-muted-foreground" };
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
-        {/* Header */}
+        {/* Header with Conversation Dropdown */}
         <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shrink-0">
               <Bot className="h-4 w-4 text-primary-foreground" />
             </div>
-            <h3 className="text-sm font-semibold">
-              {agent.state.isNewConversation 
-                ? t('editor.agent.panel.newConversation')
-                : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
-            </h3>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex-1 justify-start min-w-0">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold truncate">
+                      {agent.state.isNewConversation 
+                        ? t('editor.agent.panel.newConversation')
+                        : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
+                    </h3>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[320px]">
+                {/* New Conversation Button */}
+                <DropdownMenuItem 
+                  onClick={handleCreateNewConversation}
+                  className="font-medium"
+                >
+                  <MessageSquarePlus className="h-4 w-4 mr-2" />
+                  新建对话
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                
+                {/* Conversation List */}
+                <div className="max-h-[400px] overflow-y-auto">
+                  {agent.state.conversations.length === 0 ? (
+                    <div className="px-2 py-8 text-center text-sm text-muted-foreground">
+                      暂无对话历史
+                    </div>
+                  ) : (
+                    agent.state.conversations.map((conv) => {
+                      const { Icon, className } = getStatusIcon(conv.status);
+                      const isActive = conv.id === agent.state.currentConversationId;
+                      
+                      return (
+                        <DropdownMenuItem
+                          key={conv.id}
+                          onClick={() => agent.loadConversation(conv.id)}
+                          className={cn(
+                            "flex items-start gap-2 py-2 px-2 cursor-pointer",
+                            isActive && "bg-accent"
+                          )}
+                        >
+                          <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", className)} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{conv.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatTime(conv.lastActivityAt)}
+                            </p>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => handleDeleteClick(conv.id, e)}
+                            className="h-6 w-6 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -538,6 +670,24 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             {agent.state.isLoading ? t('editor.agent.chatInput.stopToInterrupt') : t('editor.agent.chatInput.enterToSend')}
           </p>
         </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这个对话吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

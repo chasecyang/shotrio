@@ -19,15 +19,11 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "query_context",
-    description: "查询项目完整上下文，包括剧本内容、视频列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
+    description: "查询项目完整上下文，包括视频列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
     displayName: "查询项目上下文",
     parameters: {
       type: "object",
       properties: {
-        episodeId: {
-          type: "string",
-          description: "剧集ID（可选）。如果提供，会包含该剧集的剧本内容",
-        },
         includeAssets: {
           type: "boolean",
           description: "是否包含素材库信息，默认true",
@@ -226,35 +222,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   // 修改类工具（需要确认）
   // ============================================
-  {
-    name: "update_episode",
-    description: "修改剧集信息，包括标题、梗概、剧本内容。可以完整替换剧本或基于现有内容进行修改。建议先用query_context获取当前内容。",
-    displayName: "修改剧集",
-    parameters: {
-      type: "object",
-      properties: {
-        episodeId: {
-          type: "string",
-          description: "剧集ID",
-        },
-        title: {
-          type: "string",
-          description: "剧集标题（可选）",
-        },
-        summary: {
-          type: "string",
-          description: "剧集梗概（可选，50字以内）",
-        },
-        scriptContent: {
-          type: "string",
-          description: "完整剧本内容（可选）。如需修改剧本，建议先query_context获取当前内容，然后生成新版本",
-        },
-      },
-      required: ["episodeId"],
-    },
-    category: "modification",
-    needsConfirmation: true,
-  },
   {
     name: "update_videos",
     description: "修改视频信息（支持单个或批量）。可以修改 prompt（内容描述）、title、tags、order 等。修改 prompt 会影响 Agent 对视频内容的理解。",
