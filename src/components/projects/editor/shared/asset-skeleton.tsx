@@ -4,12 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface AssetSkeletonProps {
-  viewMode?: "grid" | "list";
   count?: number;
 }
 
 /**
- * 单个素材骨架屏（网格视图）
+ * 单个素材骨架屏
  */
 export function AssetCardSkeleton() {
   return (
@@ -30,49 +29,18 @@ export function AssetCardSkeleton() {
 }
 
 /**
- * 单个素材骨架屏（列表视图）
+ * 素材网格骨架屏
  */
-export function AssetListItemSkeleton() {
-  return (
-    <div className="flex items-center gap-3 p-2.5 rounded-lg border">
-      {/* 缩略图骨架 */}
-      <Skeleton className="w-12 h-12 rounded-md shrink-0" />
-      
-      {/* 信息骨架 */}
-      <div className="flex-1 space-y-1.5">
-        <Skeleton className="h-4 w-32" />
-        <div className="flex gap-1.5">
-          <Skeleton className="h-4 w-16 rounded-full" />
-          <Skeleton className="h-4 w-20 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * 素材列表骨架屏（完整页面）
- */
-export function AssetListSkeleton({ viewMode = "grid", count = 6 }: AssetSkeletonProps) {
+export function AssetListSkeleton({ count = 6 }: AssetSkeletonProps) {
   return (
     <div
-      className={cn(
-        viewMode === "grid"
-          ? "grid gap-3"
-          : "flex flex-col gap-2"
-      )}
+      className="grid gap-3"
       style={{
-        gridTemplateColumns: viewMode === "grid" 
-          ? "repeat(auto-fill, minmax(180px, 1fr))" 
-          : undefined
+        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))"
       }}
     >
       {Array.from({ length: count }).map((_, i) => (
-        viewMode === "grid" ? (
-          <AssetCardSkeleton key={i} />
-        ) : (
-          <AssetListItemSkeleton key={i} />
-        )
+        <AssetCardSkeleton key={i} />
       ))}
     </div>
   );

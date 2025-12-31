@@ -8,6 +8,7 @@ import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Images, Loader2 } from "lucide-react";
+import { retryJob } from "@/lib/actions/job";
 import { AssetUploadDialog } from "./shared/asset-upload-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -163,6 +164,22 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
     loadAssets();
   };
 
+  // 处理重试
+  const handleRetry = async (jobId: string) => {
+    try {
+      const result = await retryJob(jobId);
+      if (result.success) {
+        toast.success("已重新提交任务");
+        await loadAssets();
+      } else {
+        toast.error(result.error || "重试失败");
+      }
+    } catch (error) {
+      console.error("重试失败:", error);
+      toast.error("重试失败");
+    }
+  };
+
   if (!project) return null;
 
   return (
@@ -226,7 +243,6 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                 <AssetCard
                   key={asset.id}
                   asset={asset}
-                  isSelected={false}
                   isBatchSelected={selectedAssetIds.has(asset.id)}
                   onDelete={handleDelete}
                   onClick={handleAssetClick}
@@ -277,6 +293,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
           open={viewerOpen}
           onOpenChange={setViewerOpen}
           asset={viewerAsset}
+          onRetry={handleRetry}
         />
       )}
 

@@ -20,7 +20,8 @@ import {
   Settings,
   Image as ImageIcon,
   Tag as TagIcon,
-  Hash,
+  AlertCircle,
+  RefreshCw,
   Sparkles,
   Calendar,
 } from "lucide-react";
@@ -30,7 +31,7 @@ import { Slider } from "./slider";
 import { ScrollArea } from "./scroll-area";
 import { Badge } from "./badge";
 import { Separator } from "./separator";
-import { AssetWithTags } from "@/types/asset";
+import { AssetWithRuntimeStatus } from "@/types/asset";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -38,7 +39,8 @@ import { toast } from "sonner";
 interface MediaViewerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  asset: AssetWithTags;
+  asset: AssetWithRuntimeStatus;
+  onRetry?: (jobId: string) => Promise<void>;
 }
 
 const MIN_SCALE = 0.5;
@@ -49,9 +51,34 @@ export function MediaViewer({
   open,
   onOpenChange,
   asset,
+  onRetry,
 }: MediaViewerProps) {
   const isVideo = asset.assetType === "video";
   const mediaUrl = isVideo ? asset.videoUrl : asset.imageUrl;
+  const isFailed = asset.runtimeStatus === "failed";
+  const errorMessage = asset.errorMessage || asset.latestJob?.errorMessage || "生成失败，请重试";
+  
+  // 调试信息
+  React.useEffect(() => {
+    if (open) {
+      console.log('MediaViewer - Asset info:', {
+        assetId: asset.id,
+        assetName: asset.name,
+        isFailed,
+        runtimeStatus: asset.runtimeStatus,
+        hasLatestJob: !!asset.latestJob,
+        latestJob: asset.latestJob ? {
+          id: asset.latestJob.id,
+          type: asset.latestJob.type,
+          status: asset.latestJob.status,
+          errorMessage: asset.latestJob.errorMessage,
+        } : null,
+        hasOnRetry: !!onRetry,
+        mediaUrl,
+        errorMessage: asset.errorMessage,
+      });
+    }
+  }, [open, isFailed, asset, onRetry, mediaUrl]);
 
   // 图片相关状态
   const [scale, setScale] = React.useState(1);
@@ -75,7 +102,7 @@ export function MediaViewer({
   const [copiedField, setCopiedField] = React.useState<string | null>(null);
 
   // 源素材状态
-  const [sourceAssets, setSourceAssets] = React.useState<AssetWithTags[]>([]);
+  const [sourceAssets, setSourceAssets] = React.useState<AssetWithRuntimeStatus[]>([]);
   const [loadingSourceAssets, setLoadingSourceAssets] = React.useState(false);
 
   // 解析生成配置
@@ -336,7 +363,33 @@ export function MediaViewer({
     }
   };
 
-  if (!mediaUrl) return null;
+  const handleRetry = async () => {
+    if (!onRetry) {
+      toast.error("重试功能不可用");
+      return;
+    }
+    
+    if (!asset.latestJob?.id) {
+      console.error("无法找到任务信息:", {
+        assetId: asset.id,
+        assetName: asset.name,
+        hasLatestJob: !!asset.latestJob,
+        latestJob: asset.latestJob,
+      });
+      toast.error("无法找到相关任务信息，请查看控制台了解详情");
+      return;
+    }
+    
+    try {
+      console.log("正在重试任务:", asset.latestJob.id);
+      await onRetry(asset.latestJob.id);
+      toast.success("已重新提交任务");
+      onOpenChange(false);
+    } catch (error) {
+      console.error("重试失败:", error);
+      toast.error("重试失败");
+    }
+  };
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -363,12 +416,42 @@ export function MediaViewer({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
-              {isVideo ? (
+              {isFailed ? (
+                /* 失败状态 */
+                <div className="flex flex-col items-center justify-center gap-6 p-8">
+                  {/* 失败图标 */}
+                  <div className="relative">
+                    {/* 脉动红色圆环 */}
+                    <div className="absolute inset-0 rounded-full bg-destructive/20 animate-ping" />
+                    <div className="relative w-24 h-24 rounded-full bg-destructive/10 flex items-center justify-center border-4 border-destructive/30">
+                      <AlertCircle className="w-12 h-12 text-destructive" />
+                    </div>
+                  </div>
+                  
+                  {/* 错误信息 */}
+                  <div className="flex flex-col items-center gap-3 max-w-md text-center">
+                    <h3 className="text-2xl font-bold text-white">生成失败</h3>
+                    <p className="text-base text-white/70 leading-relaxed">
+                      {errorMessage}
+                    </p>
+                    {onRetry && (
+                      <Button
+                        size="lg"
+                        onClick={handleRetry}
+                        className="mt-4 gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        重试生成
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : isVideo ? (
                 <>
                   {/* 视频播放器 */}
                   <video
                     ref={videoRef}
-                    src={mediaUrl}
+                    src={mediaUrl || undefined}
                     className="max-w-full max-h-full object-contain"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
@@ -448,7 +531,7 @@ export function MediaViewer({
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={mediaUrl}
+                    src={mediaUrl || undefined}
                     alt={asset.name}
                     className={cn(
                       "max-w-[calc(100%-400px)] max-h-[85vh] object-contain select-none",
@@ -507,7 +590,7 @@ export function MediaViewer({
             {/* 右侧：信息面板 */}
             <div className="w-[400px] h-full bg-black/60 backdrop-blur-md border-l border-white/10 flex flex-col">
               {/* 头部 */}
-              <div className="p-4 border-b border-white/10">
+              <div className="p-4 border-b border-white/10 shrink-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-white truncate mb-1">
@@ -518,19 +601,37 @@ export function MediaViewer({
                       {formatDate(asset.createdAt)}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 w-9 p-0 text-white/80 hover:text-white hover:bg-white/10"
-                    onClick={handleDownload}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {/* 重试按钮 - 失败状态时显示 */}
+                    {isFailed && onRetry && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 px-3 text-white/80 hover:text-white hover:bg-white/10 gap-2"
+                        onClick={handleRetry}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        重试
+                      </Button>
+                    )}
+                    {/* 下载按钮 - 有媒体URL时显示 */}
+                    {mediaUrl && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-white/80 hover:text-white hover:bg-white/10"
+                        onClick={handleDownload}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* 信息内容 */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 overflow-hidden">
+                <div className="p-4">
                 <div className="space-y-4">
                   {/* Prompt */}
                   {asset.prompt && (
@@ -692,13 +793,14 @@ export function MediaViewer({
                     </>
                   )}
                 </div>
+                </div>
               </ScrollArea>
             </div>
 
-            {/* 关闭按钮 */}
+            {/* 关闭按钮 - 放在顶部中央 */}
             <DialogPrimitive.Close
               className={cn(
-                "fixed top-4 right-4 z-[102]",
+                "fixed top-4 left-1/2 -translate-x-1/2 z-[102]",
                 "h-10 w-10 rounded-full flex items-center justify-center",
                 "bg-black/60 backdrop-blur-md border border-white/10",
                 "text-white/80 hover:text-white hover:bg-white/10",
