@@ -46,10 +46,11 @@ export async function uploadAsset({
       return { success: false, error: uploadResult.error || "上传失败" };
     }
 
-    // 创建资产记录
+    // 创建资产记录（标记为上传类资产）
     const createResult = await createAsset({
       projectId,
       name: assetName.trim(),
+      sourceType: 'uploaded', // ✅ 标记为上传类资产，直接完成，无需job
       imageUrl: uploadResult.url,
       thumbnailUrl: uploadResult.url,
       tags,

@@ -12,6 +12,11 @@ import type { AspectRatio } from "@/lib/services/fal.service";
 export type AssetTypeEnum = "image" | "video";
 
 /**
+ * 资产来源类型
+ */
+export type AssetSourceType = "generated" | "uploaded";
+
+/**
  * 资产类型值（用于分类/标签）
  */
 export type AssetType = 
@@ -22,7 +27,8 @@ export type AssetType =
   | "reference";   // 参考图
 
 /**
- * 资产状态
+ * 资产状态（运行时计算，不再是数据库字段）
+ * 注意：从数据库移除后，状态通过关联的job动态计算
  */
 export type AssetStatus = 
   | "pending"      // 等待处理
@@ -113,6 +119,7 @@ export interface AssetMeta {
 
 /**
  * Asset表的完整类型
+ * 注意：status和errorMessage已从数据库移除，改为从job动态计算
  */
 export interface Asset {
   id: string;
@@ -124,6 +131,9 @@ export interface Asset {
   
   // 资产类型
   assetType: AssetTypeEnum;
+  
+  // 资产来源类型（新增）
+  sourceType: AssetSourceType;
   
   // 图片字段（图片类型必填）
   imageUrl: string | null;
@@ -147,9 +157,9 @@ export interface Asset {
   // 元数据
   meta: string | null;  // JSON字符串
   
-  // 状态管理（统一）
-  status: AssetStatus;
-  errorMessage: string | null;
+  // 注意：以下字段已移除，状态从job动态计算
+  // status: AssetStatus; // ❌ 已移除
+  // errorMessage: string | null; // ❌ 已移除
   
   // 组织和排序
   order: number | null;
@@ -168,6 +178,7 @@ export interface Asset {
 export interface CreateAssetInput {
   projectId: string;
   name: string;
+  sourceType?: AssetSourceType;  // 新增：资产来源类型
   imageUrl?: string;  // 可选，为空表示素材正在生成中
   thumbnailUrl?: string;
   prompt?: string;
@@ -219,6 +230,17 @@ export interface AssetWithTags extends Asset {
 }
 
 /**
+ * 带运行时状态的Asset（查询结果）
+ * 用于前端显示，包含从job计算出的运行时状态
+ */
+export interface AssetWithRuntimeStatus extends Asset {
+  tags: AssetTag[];
+  runtimeStatus: AssetStatus;  // 从job计算得出的状态
+  latestJob?: import("@/types/job").Job | null;  // 关联的最新job（可选）
+  errorMessage?: string | null;  // 从job获取的错误信息
+}
+
+/**
  * 带派生资产的Asset
  */
 export interface AssetWithDerivations extends Asset {
@@ -241,9 +263,10 @@ export interface AssetQueryFilter {
 
 /**
  * 资产查询结果
+ * 注意：现在返回带运行时状态的Asset
  */
 export interface AssetQueryResult {
-  assets: AssetWithTags[];
+  assets: AssetWithRuntimeStatus[];
   total: number;
   hasMore: boolean;
 }
@@ -303,10 +326,12 @@ export function hasAssetTag(asset: AssetWithTags, tagValue: string): boolean {
 }
 
 /**
- * 计算Asset的状态（已废弃，现在status是数据库字段）
- * @deprecated 现在status是数据库字段，不需要计算
+ * 计算Asset的状态（已废弃）
+ * @deprecated 请使用 src/lib/utils/asset-status.ts 中的 calculateAssetStatus 函数
+ * 该函数会根据asset.sourceType和关联的job状态来计算运行时状态
  */
 export function getAssetStatus(asset: { imageUrl?: string | null; status?: AssetStatus }): AssetStatus {
+  // 兼容代码，避免立即报错
   return asset.status || (asset.imageUrl ? "completed" : "processing");
 }
 

@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useEditor } from "./editor-context";
-import { AssetCard } from "./resource-panel/asset-card";
+import { AssetCard } from "./shared/asset-card";
 import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
-import { AssetWithTags } from "@/types/asset";
+import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Upload, Images, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { AssetUploadDialog } from "./resource-panel/asset-upload-dialog";
+import { Sparkles, Images, Loader2 } from "lucide-react";
+import { AssetUploadDialog } from "./shared/asset-upload-dialog";
+import { FloatingActionBar } from "./floating-action-bar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,17 +31,17 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
   const { state } = useEditor();
   const { project } = state;
 
-  const [assets, setAssets] = useState<AssetWithTags[]>([]);
+  const [assets, setAssets] = useState<AssetWithRuntimeStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [assetToDelete, setAssetToDelete] = useState<AssetWithTags | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
 
   // 媒体查看器状态
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerAsset, setViewerAsset] = useState<AssetWithTags | null>(null);
+  const [viewerAsset, setViewerAsset] = useState<AssetWithRuntimeStatus | null>(null);
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -80,13 +80,13 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
   }, [loadAssets]);
 
   // 处理素材点击 - 打开媒体查看器
-  const handleAssetClick = (asset: AssetWithTags) => {
+  const handleAssetClick = (asset: AssetWithRuntimeStatus) => {
     setViewerAsset(asset);
     setViewerOpen(true);
   };
 
   // 处理删除
-  const handleDelete = (asset: AssetWithTags) => {
+  const handleDelete = (asset: AssetWithRuntimeStatus) => {
     if (selectedAssetIds.size > 0) {
       return;
     }
@@ -146,6 +146,16 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
       }
       return next;
     });
+  };
+
+  // 全选
+  const handleSelectAll = () => {
+    setSelectedAssetIds(new Set(assets.map((asset) => asset.id)));
+  };
+
+  // 取消全选
+  const handleDeselectAll = () => {
+    setSelectedAssetIds(new Set());
   };
 
   // 处理上传成功
@@ -268,6 +278,17 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
           open={viewerOpen}
           onOpenChange={setViewerOpen}
           asset={viewerAsset}
+        />
+      )}
+
+      {/* 悬浮操作栏 */}
+      {selectedAssetIds.size > 0 && (
+        <FloatingActionBar
+          selectedCount={selectedAssetIds.size}
+          totalCount={assets.length}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onDelete={handleBatchDelete}
         />
       )}
     </div>

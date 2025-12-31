@@ -15,7 +15,14 @@ export const projectStatusEnum = pgEnum("project_status", [
 // 资产类型枚举
 export const assetTypeEnum = pgEnum("asset_type", ["image", "video"]);
 
+// 资产来源类型枚举
+export const assetSourceTypeEnum = pgEnum("asset_source_type", [
+  "generated", // AI生成
+  "uploaded",  // 用户上传
+]);
+
 // 资产状态枚举（统一的状态管理）
+// 注意：这个枚举保留用于类型定义，但不再作为数据库字段
 export const assetStatusEnum = pgEnum("asset_status", [
   "pending",
   "processing", 
@@ -128,6 +135,9 @@ export const asset: any = pgTable("asset", {
   // 资产类型
   assetType: assetTypeEnum("asset_type").default("image").notNull(),
   
+  // 资产来源类型（新增）
+  sourceType: assetSourceTypeEnum("source_type").default("generated").notNull(),
+  
   // 图片字段（图片类型必填）
   imageUrl: text("image_url"), // 图片URL - 改为可选
   thumbnailUrl: text("thumbnail_url"), // 缩略图URL
@@ -150,9 +160,10 @@ export const asset: any = pgTable("asset", {
   // 灵活的元数据字段（JSON）
   meta: text("meta"), // JSON字符串，存储类型特定的元数据
   
-  // 状态管理（统一）
-  status: assetStatusEnum("status").default("completed").notNull(),
-  errorMessage: text("error_message"),
+  // 注意：status 和 errorMessage 字段已移除
+  // 状态现在从关联的 job 动态计算
+  // status: assetStatusEnum("status").default("completed").notNull(), // ❌ 已移除
+  // errorMessage: text("error_message"), // ❌ 已移除
   
   // 组织和排序
   order: integer("order"), // 用于排序

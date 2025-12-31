@@ -15,6 +15,10 @@ import { revalidatePath } from "next/cache";
 
 /**
  * 内部函数：创建新资产（不需要session，由worker调用）
+ * 
+ * 注意：现在需要指定sourceType（'generated' 或 'uploaded'）
+ * - generated: AI生成的资产，状态从job动态计算
+ * - uploaded: 用户上传的资产，直接视为completed
  */
 export async function createAssetInternal(
   input: CreateAssetInput & { userId: string }
@@ -26,12 +30,13 @@ export async function createAssetInternal(
   try {
     const assetId = randomUUID();
 
-    // 插入资产（imageUrl 可为空，表示正在生成中）
+    // 插入资产
     await db.insert(asset).values({
       id: assetId,
       projectId: input.projectId,
       userId: input.userId,
       name: input.name,
+      sourceType: input.sourceType || 'generated', // 默认为生成类
       imageUrl: input.imageUrl || null,
       thumbnailUrl: input.thumbnailUrl || null,
       prompt: input.prompt || null,
@@ -40,6 +45,7 @@ export async function createAssetInternal(
       sourceAssetIds: input.sourceAssetIds || null,
       meta: input.meta ? JSON.stringify(input.meta) : null,
       usageCount: 0,
+      // 注意：不再设置status字段（已从数据库移除）
     });
 
     // 插入标签
@@ -403,7 +409,7 @@ export async function createVideoAsset(data: {
     const assetId = randomUUID();
     const jobId = randomUUID();
 
-    // 1. 创建 asset 记录（assetType='video', status='pending'）
+    // 1. 创建 asset 记录（assetType='video', sourceType='generated'）
     await db.insert(asset).values({
       id: assetId,
       projectId: data.projectId,
@@ -411,11 +417,12 @@ export async function createVideoAsset(data: {
       name: data.name,
       prompt: data.prompt,
       assetType: "video",
-      status: "pending",
+      sourceType: "generated", // 视频资产都是生成类
       generationConfig: JSON.stringify(data.generationConfig),
       sourceAssetIds: data.referenceAssetIds || null,
       order: data.order || null,
       usageCount: 0,
+      // 注意：不再设置status字段（已从数据库移除）
     });
 
     // 2. 插入标签

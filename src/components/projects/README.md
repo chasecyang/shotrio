@@ -16,8 +16,9 @@
 - `editor-context.tsx` - 编辑器状态管理
 - `editor-layout.tsx` - 编辑器布局
 - `preview-panel/` - 预览面板
-- `resource-panel/` - 资源面板（包含剧集、素材列表）
 - `agent-panel/` - AI助手面板
+- `asset-gallery-panel.tsx` - 素材画廊面板（中央素材展示区）
+- `shared/` - 共享组件（素材卡片、上传对话框等）
 - 集成了素材管理、视频生成等功能
 
 ### `settings/` - 设置相关
@@ -41,8 +42,10 @@
 - `project-sidebar.tsx` - 项目侧边栏，功能已整合到编辑器 Header 中
 - `project-header.tsx` - 项目头部，不再需要
 - `app/[lang]/projects/[id]/settings/page.tsx` - 独立设置页面，已整合到编辑器预览区
+- `resource-panel/` 目录 - 旧版资源面板（带Tab切换），已移除，改用 AssetGalleryPanel
 
 ## 📝 更新记录
+- 2024-12-31: **优化素材库** - 移除旧版 ResourcePanel（带Tab切换），统一使用 AssetGalleryPanel。添加素材多选和底部悬浮操作栏功能。
 - 2024-12-31: **移除分镜概念** - 分镜/Shot/Storyboard概念已完全移除，改为直接使用视频片段（Video）。Agent直接生成视频片段，通过视频片段进行剪辑和组织，流程更流畅。
 - 2024-12-21: 整合设置页面到编辑器预览区，通过 URL 参数 (?view=settings) 控制显示
 - 2024-12-21: 移除 Sidebar，所有功能整合到编辑器 Header（Logo、项目切换、用户菜单）

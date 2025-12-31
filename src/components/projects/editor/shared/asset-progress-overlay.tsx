@@ -239,3 +239,4 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
     </div>
   );
 }
+

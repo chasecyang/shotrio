@@ -39,24 +39,9 @@ export async function processAssetImageGeneration(
   } catch (error) {
     console.error(`[Worker] 图片生成任务失败:`, error);
     
-    // 更新 asset 状态为失败（使用强错误处理）
-    try {
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      console.log(`[Worker] 正在更新 Asset ${assetId} 状态为 failed...`);
-      
-      const updateResult = await db
-        .update(asset)
-        .set({
-          status: "failed",
-          errorMessage: errorMessage,
-        })
-        .where(eq(asset.id, assetId))
-        .returning();
-      
-      console.log(`[Worker] Asset ${assetId} 状态已更新为 failed`, updateResult);
-    } catch (updateError) {
-      console.error(`[Worker] ⚠️ 警告：更新 Asset ${assetId} 失败状态时出错:`, updateError);
-    }
+    // 注意：不再手动更新asset状态，状态从job自动计算
+    // job会在外层被标记为failed，asset状态会自动反映失败
+    // ❌ 已移除：手动更新asset.status和errorMessage
     
     throw error;
   }
@@ -298,14 +283,8 @@ async function processAssetImageGenerationInternal(
         });
       }
       
-      // 更新 asset 状态为失败
-      await db
-        .update(asset)
-        .set({
-          status: "failed",
-          errorMessage: `上传图片失败: ${uploadResult.error || '未知错误'}`,
-        })
-        .where(eq(asset.id, assetId));
+      // 注意：不再手动更新asset状态，状态从job自动计算
+      // ❌ 已移除：手动更新asset.status和errorMessage
       
       throw new Error(`上传图片失败: ${uploadResult.error}`);
     }

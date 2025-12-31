@@ -164,7 +164,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     }, []),
 
     onRefreshAssets: useCallback(async () => {
-      // 触发素材列表刷新事件，AssetPanel 会监听此事件
+      // 触发素材列表刷新事件，AssetGalleryPanel 会监听此事件
       window.dispatchEvent(new CustomEvent("asset-created"));
     }, []),
   });

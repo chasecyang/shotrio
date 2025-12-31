@@ -79,6 +79,7 @@ export async function generateAssetImage(
       projectId,
       userId: session.user.id,
       name: assetName,
+      sourceType: 'generated', // ✅ 标记为生成类资产，状态从job计算
       prompt: prompt.trim(),
       modelUsed: "nano-banana",
       meta: {
@@ -177,6 +178,7 @@ export async function editAssetImage(
       projectId,
       userId: session.user.id,
       name: assetName,
+      sourceType: 'generated', // ✅ 标记为生成类资产
       prompt: editPrompt.trim(),
       modelUsed: "nano-banana",
       sourceAssetIds: sourceAssetIds,

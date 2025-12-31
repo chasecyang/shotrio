@@ -1,6 +1,6 @@
 "use client";
 
-import { AssetWithTags } from "@/types/asset";
+import { AssetWithRuntimeStatus } from "@/types/asset";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +19,12 @@ import { AssetProgressOverlay } from "./asset-progress-overlay";
 import type { Job } from "@/types/job";
 
 interface AssetCardProps {
-  asset: AssetWithTags;
+  asset: AssetWithRuntimeStatus;
   viewMode: "grid" | "list";
   isSelected?: boolean;
   isBatchSelected?: boolean;
-  onDelete: (asset: AssetWithTags) => void;
-  onClick: (asset: AssetWithTags) => void;
+  onDelete: (asset: AssetWithRuntimeStatus) => void;
+  onClick: (asset: AssetWithRuntimeStatus) => void;
   onSelectChange?: (assetId: string, selected: boolean) => void;
   job?: Job;
 }
@@ -45,11 +45,11 @@ export function AssetCard({
   // 检查资产类型
   const isVideo = asset.assetType === "video";
   
-  // 检查资产是否正在生成中
-  const isGenerating = asset.status === "processing" || asset.status === "pending";
+  // 检查资产是否正在生成中（使用运行时状态）
+  const isGenerating = asset.runtimeStatus === "processing" || asset.runtimeStatus === "pending";
   
   // 检查资产是否失败
-  const isFailed = asset.status === "failed";
+  const isFailed = asset.runtimeStatus === "failed";
   
   // 获取显示 URL（视频优先使用 thumbnailUrl，图片使用 imageUrl 或 thumbnailUrl）
   const displayUrl = isVideo 

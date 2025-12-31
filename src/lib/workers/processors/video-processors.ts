@@ -244,14 +244,15 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       // 缩略图生成失败不影响视频本身的可用性
     }
 
-    // 9. 更新 asset 记录
+    // 9. 更新 asset 记录（只更新实际内容，不更新状态）
+    // 注意：状态现在从job动态计算，不需要手动更新
     await db
       .update(asset)
       .set({
         videoUrl: uploadResult.url,
         thumbnailUrl: thumbnailUrl || null,
         duration: videoDuration * 1000, // 转换为毫秒
-        status: "completed",
+        // status: "completed", // ❌ 已移除：状态从job计算
       })
       .where(eq(asset.id, assetId));
 
@@ -272,25 +273,9 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
   } catch (error) {
     console.error(`[Worker] 生成视频失败:`, error);
     
-    // 更新 asset 状态为失败（使用强错误处理）
-    try {
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      console.log(`[Worker] 正在更新 Asset ${assetId} 状态为 failed...`);
-      
-      const updateResult = await db
-        .update(asset)
-        .set({
-          status: "failed",
-          errorMessage: errorMessage,
-        })
-        .where(eq(asset.id, assetId))
-        .returning();
-      
-      console.log(`[Worker] Asset ${assetId} 状态已更新为 failed`, updateResult);
-    } catch (updateError) {
-      console.error(`[Worker] ⚠️ 警告：更新 Asset ${assetId} 失败状态时出错:`, updateError);
-      // 即使更新失败，也要继续抛出原始错误
-    }
+    // 注意：不再手动更新asset状态，状态从job自动计算
+    // job会在外层被标记为failed，asset状态会自动反映失败
+    // ❌ 已移除：手动更新asset.status和errorMessage
     
     throw error;
   }
