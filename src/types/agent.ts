@@ -1,7 +1,6 @@
 // AI Agent 系统类型定义
 
 import type { Job } from "./job";
-import type { SelectedResource } from "@/components/projects/editor/editor-context";
 
 /**
  * Agent 消息角色
@@ -71,7 +70,6 @@ export interface SerializableJobInfo {
 export interface AgentContext {
   projectId: string;
   selectedEpisodeId: string | null;
-  selectedResource: SelectedResource | null;
   recentJobs: SerializableJobInfo[]; // 使用序列化友好的格式
 }
 

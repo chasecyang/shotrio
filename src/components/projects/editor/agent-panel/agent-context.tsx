@@ -353,12 +353,10 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     
     return {
       projectId,
-      selectedResource: editorContext.state.selectedResource,
       recentJobs: serializableJobs,
     };
   }, [
     projectId,
-    editorContext.state.selectedResource,
     editorContext.jobs,
   ]);
 

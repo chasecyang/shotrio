@@ -8,14 +8,6 @@ import type { Job } from "@/types/job";
 import { refreshProject } from "@/lib/actions/project/refresh";
 import type { GenerationHistoryItem } from "@/types/asset";
 
-// 选中资源类型（简化后只保留 asset）
-export type SelectedResourceType = "asset" | null;
-
-export interface SelectedResource {
-  type: SelectedResourceType;
-  id: string;
-}
-
 // 素材生成状态
 export interface AssetGenerationState {
   mode: "text-to-image" | "image-to-image";
@@ -28,9 +20,6 @@ export interface EditorState {
   // 项目数据
   project: ProjectDetail | null;
   
-  // 当前选中的资源（用于 Lightbox 等）
-  selectedResource: SelectedResource | null;
-  
   // 加载状态
   isLoading: boolean;
 
@@ -42,7 +31,6 @@ export interface EditorState {
 type EditorAction =
   | { type: "SET_PROJECT"; payload: ProjectDetail }
   | { type: "UPDATE_PROJECT"; payload: ProjectDetail } // 用于刷新项目数据
-  | { type: "SELECT_RESOURCE"; payload: SelectedResource | null }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
@@ -52,7 +40,6 @@ type EditorAction =
 // 初始状态
 const initialState: EditorState = {
   project: null,
-  selectedResource: null,
   isLoading: true,
   assetGeneration: {
     mode: "text-to-image",
@@ -76,12 +63,6 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         ...state,
         project: action.payload,
         isLoading: false,
-      };
-
-    case "SELECT_RESOURCE":
-      return {
-        ...state,
-        selectedResource: action.payload,
       };
 
     case "SET_LOADING":
@@ -138,7 +119,6 @@ interface EditorContextType {
   state: EditorState;
   dispatch: React.Dispatch<EditorAction>;
   // 便捷方法
-  selectResource: (resource: SelectedResource | null) => void;
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
   // 任务轮询（单例）
   jobs: Job[];
@@ -209,10 +189,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   }, [state.project]);
 
   // 便捷方法
-  const selectResource = useCallback((resource: SelectedResource | null) => {
-    dispatch({ type: "SELECT_RESOURCE", payload: resource });
-  }, []);
-
   const updateProject = useCallback((project: ProjectDetail) => {
     dispatch({ type: "UPDATE_PROJECT", payload: project });
   }, []);
@@ -238,7 +214,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     () => ({
       state,
       dispatch,
-      selectResource,
       updateProject,
       setAssetGenerationMode,
       setSelectedSourceAssets,
@@ -249,7 +224,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     }),
     [
       state,
-      selectResource,
       updateProject,
       setAssetGenerationMode,
       setSelectedSourceAssets,

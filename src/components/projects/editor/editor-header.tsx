@@ -1,17 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Settings } from "lucide-react";
 import { Link } from "@/i18n/routing";
-import { useRouter } from "next/navigation";
-import { useEditor } from "./editor-context";
 import { BackgroundTasks } from "../layout/background-tasks";
 import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 import { EditorCreditsButton } from "./editor-credits-button";
 import { BetaBadge } from "@/components/ui/beta-badge";
+import { ProjectSettingsDialog } from "./project-settings-dialog";
 import type { EditorProject, EditorUser } from "./editor-types";
 
 interface EditorHeaderProps {
@@ -25,21 +25,7 @@ export function EditorHeader({
   projects,
   user,
 }: EditorHeaderProps) {
-  const router = useRouter();
-  const { state, dispatch } = useEditor();
-
-  const handleSettingsClick = () => {
-    // 更新 URL 参数
-    router.push(`/projects/${projectId}/editor?view=settings`);
-    // 同时更新 editor state
-    dispatch({
-      type: "SELECT_RESOURCE",
-      payload: { type: "settings", id: projectId },
-    });
-  };
-
-  // 检查是否在查看设置页面
-  const isSettingsActive = state.selectedResource?.type === "settings";
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 gap-4 shrink-0">
@@ -68,8 +54,8 @@ export function EditorHeader({
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className={`h-8 w-8 ${isSettingsActive ? 'bg-accent' : ''}`}
-                onClick={handleSettingsClick}
+                className="h-8 w-8"
+                onClick={() => setSettingsOpen(true)}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -98,6 +84,12 @@ export function EditorHeader({
         {/* 用户菜单 */}
         <UserNav user={user} variant="default" />
       </div>
+
+      {/* 项目设置弹窗 */}
+      <ProjectSettingsDialog 
+        open={settingsOpen} 
+        onOpenChange={setSettingsOpen} 
+      />
     </header>
   );
 }

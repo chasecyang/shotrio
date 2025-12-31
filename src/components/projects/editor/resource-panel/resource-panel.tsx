@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
 
 export function ResourcePanel() {
-  const { state, dispatch, setActiveResourceTab } = useEditor();
+  const { state } = useEditor();
   const { project } = state;
   const agent = useAgent();
   const searchParams = useSearchParams();
@@ -20,28 +20,15 @@ export function ResourcePanel() {
   // 从 URL 参数读取默认标签页
   const defaultTab = searchParams.get("tab") || "assets";
 
-  // Tab切换处理
-  const handleTabChange = (value: string) => {
-    setActiveResourceTab(value as "assets" | "agent");
-  };
-
   // Agent 对话处理函数
   const handleSelectConversation = async (conversationId: string) => {
     if (!project) return;
     await agent.loadConversation(conversationId);
-    dispatch({
-      type: "SELECT_RESOURCE",
-      payload: { type: "agent", id: project.id },
-    });
   };
 
   const handleCreateConversation = async () => {
     if (!project) return;
     await agent.createNewConversation();
-    dispatch({
-      type: "SELECT_RESOURCE",
-      payload: { type: "agent", id: project.id },
-    });
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -52,7 +39,7 @@ export function ResourcePanel() {
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue={defaultTab} onValueChange={handleTabChange} className="h-full flex flex-col">
+      <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
         <div className="px-3 pt-3 shrink-0">
           <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="assets" className="text-xs gap-1">

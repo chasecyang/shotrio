@@ -24,11 +24,8 @@ interface AssetPanelProps {
 }
 
 export function AssetPanel({ userId }: AssetPanelProps) {
-  const { state, selectResource } = useEditor();
-  const { project, selectedResource } = state;
-
-  // 获取当前选中的素材 ID
-  const selectedAssetId = selectedResource?.type === "asset" ? selectedResource.id : null;
+  const { state, jobs } = useEditor();
+  const { project } = state;
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [assets, setAssets] = useState<AssetWithTags[]>([]);
@@ -100,12 +97,9 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     };
   }, [loadAssets]);
 
-  // 处理素材点击 - 在编辑区域显示素材详情
+  // 处理素材点击 - 预留用于未来功能扩展
   const handleAssetClick = (asset: AssetWithTags) => {
-    selectResource({
-      type: "asset",
-      id: asset.id,
-    });
+    // 当前版本暂无操作，预留接口
   };
 
   // 处理删除 - 显示确认对话框（单个删除）
@@ -146,11 +140,6 @@ export function AssetPanel({ userId }: AssetPanelProps) {
       if (result.success) {
         const count = deletedIds.length;
         toast.success(`已删除 ${count} 个素材`);
-        
-        // 如果删除的是当前选中的素材，清除选中状态
-        if (selectedAssetId && deletedIds.includes(selectedAssetId)) {
-          selectResource(null);
-        }
         
         // 清除选中状态
         setSelectedAssetIds(new Set());
@@ -198,12 +187,9 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     loadAssets();
   };
 
-  // 打开 AI 创作编辑器
+  // 打开 AI 创作编辑器 - 通过 AssetToolbar 回调
   const handleOpenAssetGeneration = () => {
-    selectResource({
-      type: "asset-generation",
-      id: project?.id || "",
-    });
+    // AssetToolbar 会处理这个操作
   };
 
   if (!project) return null;
@@ -233,12 +219,12 @@ export function AssetPanel({ userId }: AssetPanelProps) {
           assets={assets}
           viewMode={viewMode}
           isLoading={isLoading}
-          selectedAssetId={selectedAssetId}
           selectedAssetIds={selectedAssetIds}
           onDelete={handleDelete}
           onClick={handleAssetClick}
           onSelectChange={handleSelectChange}
           onUpload={() => setUploadDialogOpen(true)}
+          jobs={jobs}
         />
       </div>
 

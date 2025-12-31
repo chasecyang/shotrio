@@ -2,7 +2,7 @@
 export { EditorLayout } from "./editor-layout";
 export { EditorHeader } from "./editor-header";
 export { EditorProvider, useEditor } from "./editor-context";
-export type { EditorState, SelectedResource } from "./editor-context";
+export type { EditorState } from "./editor-context";
 
 // Asset Gallery
 export { AssetGalleryPanel } from "./asset-gallery-panel";

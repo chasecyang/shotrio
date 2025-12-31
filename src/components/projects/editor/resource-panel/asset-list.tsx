@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useEditor } from "../editor-context";
 import { useTranslations } from "next-intl";
+import type { Job } from "@/types/job";
 
 interface AssetListProps {
   assets: AssetWithTags[];
@@ -19,6 +20,7 @@ interface AssetListProps {
   onClick: (asset: AssetWithTags) => void;
   onSelectChange?: (assetId: string, selected: boolean) => void;
   onUpload: () => void;
+  jobs?: Job[];
 }
 
 // 空状态卡片项
@@ -46,7 +48,20 @@ export function AssetList({
   onClick,
   onSelectChange,
   onUpload,
+  jobs = [],
 }: AssetListProps) {
+  // 为每个 asset 查找对应的 job（通过 inputData 中的 assetId）
+  const findJobForAsset = (assetId: string): Job | undefined => {
+    return jobs.find((job) => {
+      if (!job.inputData) return false;
+      try {
+        const inputData = JSON.parse(job.inputData);
+        return inputData.assetId === assetId;
+      } catch {
+        return false;
+      }
+    });
+  };
   const { state, selectResource } = useEditor();
   const t = useTranslations("projects.assets");
   const { project } = state;
@@ -126,18 +141,22 @@ export function AssetList({
           : undefined
       }}
     >
-      {assets.map((asset) => (
-        <AssetCard
-          key={asset.id}
-          asset={asset}
-          viewMode={viewMode}
-          isSelected={selectedAssetId === asset.id}
-          isBatchSelected={selectedAssetIds.has(asset.id)}
-          onDelete={onDelete}
-          onClick={onClick}
-          onSelectChange={onSelectChange}
-        />
-      ))}
+      {assets.map((asset) => {
+        const job = findJobForAsset(asset.id);
+        return (
+          <AssetCard
+            key={asset.id}
+            asset={asset}
+            viewMode={viewMode}
+            isSelected={selectedAssetId === asset.id}
+            isBatchSelected={selectedAssetIds.has(asset.id)}
+            onDelete={onDelete}
+            onClick={onClick}
+            onSelectChange={onSelectChange}
+            job={job}
+          />
+        );
+      })}
     </div>
   );
 }

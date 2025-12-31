@@ -185,6 +185,30 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
     );
 
     if (!uploadResult.success || !uploadResult.url) {
+      // 上传失败，退还积分
+      if (transactionId) {
+        await refundCredits({
+          userId: jobData.userId,
+          amount: creditsNeeded,
+          description: `视频上传失败，退还积分`,
+          metadata: {
+            jobId: jobData.id,
+            assetId,
+            originalTransactionId: transactionId,
+            reason: "upload_failed",
+          },
+        });
+      }
+      
+      // 更新 asset 状态为失败
+      await db
+        .update(asset)
+        .set({
+          status: "failed",
+          errorMessage: `上传视频失败: ${uploadResult.error || '未知错误'}`,
+        })
+        .where(eq(asset.id, assetId));
+      
       throw new Error(`上传视频失败: ${uploadResult.error || '未知错误'}`);
     }
 
@@ -218,17 +242,24 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
   } catch (error) {
     console.error(`[Worker] 生成视频失败:`, error);
     
-    // 更新 asset 状态为失败
+    // 更新 asset 状态为失败（使用强错误处理）
     try {
-      await db
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
+      console.log(`[Worker] 正在更新 Asset ${assetId} 状态为 failed...`);
+      
+      const updateResult = await db
         .update(asset)
         .set({
           status: "failed",
-          errorMessage: error instanceof Error ? error.message : "未知错误",
+          errorMessage: errorMessage,
         })
-        .where(eq(asset.id, assetId));
+        .where(eq(asset.id, assetId))
+        .returning();
+      
+      console.log(`[Worker] Asset ${assetId} 状态已更新为 failed`, updateResult);
     } catch (updateError) {
-      console.error(`[Worker] 更新失败状态失败:`, updateError);
+      console.error(`[Worker] ⚠️ 警告：更新 Asset ${assetId} 失败状态时出错:`, updateError);
+      // 即使更新失败，也要继续抛出原始错误
     }
     
     throw error;

@@ -79,13 +79,6 @@ function EditorLayoutInner({
   // 素材生成对话框状态
   const [assetGenerationOpen, setAssetGenerationOpen] = useState(false);
 
-  // 处理 URL 参数 - 初始化 settings 视图
-  useEffect(() => {
-    if (initialView === "settings") {
-      // TODO: 实现设置视图的初始化逻辑
-    }
-  }, [initialView, project.id]);
-
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* 顶部工具栏 */}

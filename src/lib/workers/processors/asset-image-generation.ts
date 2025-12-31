@@ -34,6 +34,40 @@ export async function processAssetImageGeneration(
     throw new Error("Job 格式错误：缺少 assetId");
   }
 
+  try {
+    await processAssetImageGenerationInternal(jobData, workerToken, assetId);
+  } catch (error) {
+    console.error(`[Worker] 图片生成任务失败:`, error);
+    
+    // 更新 asset 状态为失败（使用强错误处理）
+    try {
+      const errorMessage = error instanceof Error ? error.message : "未知错误";
+      console.log(`[Worker] 正在更新 Asset ${assetId} 状态为 failed...`);
+      
+      const updateResult = await db
+        .update(asset)
+        .set({
+          status: "failed",
+          errorMessage: errorMessage,
+        })
+        .where(eq(asset.id, assetId))
+        .returning();
+      
+      console.log(`[Worker] Asset ${assetId} 状态已更新为 failed`, updateResult);
+    } catch (updateError) {
+      console.error(`[Worker] ⚠️ 警告：更新 Asset ${assetId} 失败状态时出错:`, updateError);
+    }
+    
+    throw error;
+  }
+}
+
+async function processAssetImageGenerationInternal(
+  jobData: Job,
+  workerToken: string,
+  assetId: string
+): Promise<void> {
+
   // 从 asset 读取所有生成信息
   await updateJobProgress(
     {
@@ -207,6 +241,15 @@ export async function processAssetImageGeneration(
       });
     }
     
+    // 更新 asset 状态为失败
+    await db
+      .update(asset)
+      .set({
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "生成失败",
+      })
+      .where(eq(asset.id, assetId));
+    
     throw error;
   }
 
@@ -241,6 +284,29 @@ export async function processAssetImageGeneration(
     });
 
     if (!uploadResult.success || !uploadResult.url) {
+      // 上传失败，退还积分
+      if (transactionId) {
+        await refundCredits({
+          userId: jobData.userId,
+          amount: totalCreditsNeeded,
+          description: `图片上传失败，退还积分`,
+          metadata: {
+            jobId: jobData.id,
+            originalTransactionId: transactionId,
+            reason: "upload_failed",
+          },
+        });
+      }
+      
+      // 更新 asset 状态为失败
+      await db
+        .update(asset)
+        .set({
+          status: "failed",
+          errorMessage: `上传图片失败: ${uploadResult.error || '未知错误'}`,
+        })
+        .where(eq(asset.id, assetId));
+      
       throw new Error(`上传图片失败: ${uploadResult.error}`);
     }
 
@@ -290,4 +356,5 @@ export async function processAssetImageGeneration(
       `上传图片失败: ${error instanceof Error ? error.message : "未知错误"}`
     );
   }
+}
 }

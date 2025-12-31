@@ -16,6 +16,8 @@ import Image from "next/image";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssetThumbnailSkeleton } from "./asset-skeleton";
+import { AssetProgressOverlay } from "./asset-progress-overlay";
+import type { Job } from "@/types/job";
 
 interface AssetCardProps {
   asset: AssetWithTags;
@@ -25,6 +27,7 @@ interface AssetCardProps {
   onDelete: (asset: AssetWithTags) => void;
   onClick: (asset: AssetWithTags) => void;
   onSelectChange?: (assetId: string, selected: boolean) => void;
+  job?: Job;
 }
 
 export function AssetCard({
@@ -35,6 +38,7 @@ export function AssetCard({
   onDelete,
   onClick,
   onSelectChange,
+  job,
 }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -102,14 +106,17 @@ export function AssetCard({
           onClick={() => onClick(asset)}
         >
           {isGenerating ? (
-            // 生成中状态 - 骨架屏
-            <AssetThumbnailSkeleton />
+            // 生成中状态 - 显示骨架屏和进度覆盖层
+            <>
+              <AssetThumbnailSkeleton />
+              <AssetProgressOverlay job={job} asset={asset} />
+            </>
           ) : isFailed ? (
-            // 失败状态
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10">
-              <Video className="h-12 w-12 text-destructive mb-2" />
-              <span className="text-xs text-destructive">生成失败</span>
-            </div>
+            // 失败状态 - 显示失败覆盖层
+            <>
+              <div className="absolute inset-0 bg-muted/50" />
+              <AssetProgressOverlay asset={asset} job={job} />
+            </>
           ) : displayUrl ? (
             <>
               <Image
@@ -345,11 +352,15 @@ export function AssetCard({
           onClick={() => onClick(asset)}
         >
           {isGenerating ? (
-            <AssetThumbnailSkeleton />
+            <>
+              <AssetThumbnailSkeleton />
+              <AssetProgressOverlay job={job} asset={asset} />
+            </>
           ) : isFailed ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
-              <Video className="h-6 w-6 text-destructive" />
-            </div>
+            <>
+              <div className="absolute inset-0 bg-muted/50" />
+              <AssetProgressOverlay asset={asset} job={job} />
+            </>
           ) : displayUrl ? (
             <>
               <Image

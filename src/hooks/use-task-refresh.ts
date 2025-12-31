@@ -22,19 +22,21 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
   // 素材生成
   asset_image_generation: {
     type: "asset",
-    refreshOn: ["completed"],
+    refreshOn: ["processing", "completed", "failed"],
+    debounce: 500, // 防抖500ms，避免过于频繁刷新
   },
 
   // 视频生成
   video_generation: {
-    type: "video",
-    refreshOn: ["completed"],
+    type: "asset",
+    refreshOn: ["processing", "completed", "failed"],
+    debounce: 500, // 防抖500ms，避免过于频繁刷新
   },
 
   // 最终导出
   final_video_export: {
     type: "video",
-    refreshOn: ["completed"],
+    refreshOn: ["completed", "failed"],
   },
 };
 

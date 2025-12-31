@@ -80,15 +80,7 @@ export async function collectContext(context: AgentContext, projectId: string): 
       }
     }
 
-    // 3. 选中的资源（如素材）
-    if (context.selectedResource) {
-      parts.push(`# 当前选中资源`);
-      parts.push(`类型: ${context.selectedResource.type}`);
-      parts.push(`ID: ${context.selectedResource.id}`);
-      parts.push("");
-    }
-
-    // 4. 项目素材统计
+    // 3. 项目素材统计
     if (project) {
       const assetsResult = await queryAssets({
         projectId,

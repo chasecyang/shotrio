@@ -160,7 +160,6 @@ export async function loadConversationState(conversationId: string): Promise<Con
         agentContext = {
           projectId: conv.projectId,
           selectedEpisodeId: null,
-          selectedResource: null,
           recentJobs: [],
         };
       }
@@ -169,7 +168,6 @@ export async function loadConversationState(conversationId: string): Promise<Con
       agentContext = {
         projectId: conv.projectId,
         selectedEpisodeId: null,
-        selectedResource: null,
         recentJobs: [],
       };
     }
