@@ -226,14 +226,8 @@ async function processAssetImageGenerationInternal(
       });
     }
     
-    // 更新 asset 状态为失败
-    await db
-      .update(asset)
-      .set({
-        status: "failed",
-        errorMessage: error instanceof Error ? error.message : "生成失败",
-      })
-      .where(eq(asset.id, assetId));
+    // 注意：不再手动更新asset状态，状态从job自动计算
+    // job会在外层被标记为failed，asset状态会自动反映失败
     
     throw error;
   }

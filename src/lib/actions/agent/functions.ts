@@ -66,14 +66,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "generate_image_asset",
-    description: "生成图片资产（支持单个或批量）。可以是从零生成，也可以基于现有素材进行图生图。适合创建角色、场景、道具等视觉素材。",
+    description: "生成图片素材（支持单个或批量）。可从零生成，也可用 sourceAssetIds 图生图。注意：生成角色/物体多视角时，要么生成三视图（turnaround sheet），要么先生成主视角，再用图生图衍生其他角度。禁止并行生成多个独立视角。",
     displayName: "生成图片资产",
     parameters: {
       type: "object",
       properties: {
         assets: {
           type: "array",
-          description: "素材数组，每个素材包含: prompt（必填，英文描述，用完整句子）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图生图）",
+          description: "素材数组。每个素材包含: prompt（必填，英文，完整句子）、name（可选）、tags（可选，数组）、sourceAssetIds（可选，图生图时使用）。生成三视图时 prompt 需包含「turnaround sheet, three views in one image」。",
         },
       },
       required: ["assets"],

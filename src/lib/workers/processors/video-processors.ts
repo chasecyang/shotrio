@@ -75,12 +75,10 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       aspectRatio: klingO1Config.aspect_ratio,
     });
 
-    // 3. 更新状态为 processing
-    await db.update(asset)
-      .set({ status: "processing" })
-      .where(eq(asset.id, assetId));
+    // 注意：不需要手动更新asset状态为processing
+    // 状态从关联的job动态计算，job已经在startJob时被设置为processing
 
-    // 4. 计算积分消费
+    // 3. 计算积分消费
     const videoDuration = parseInt(klingO1Config.duration || "5");
     const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
     
@@ -151,14 +149,8 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         });
       }
       
-      // 更新 asset 状态
-      await db
-        .update(asset)
-        .set({
-          status: "failed",
-          errorMessage: error instanceof Error ? error.message : "生成失败",
-        })
-        .where(eq(asset.id, assetId));
+      // 注意：不再手动更新asset状态，状态从job自动计算
+      // job会在外层被标记为failed，asset状态会自动反映失败
       
       throw error;
     }
@@ -201,14 +193,8 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         });
       }
       
-      // 更新 asset 状态为失败
-      await db
-        .update(asset)
-        .set({
-          status: "failed",
-          errorMessage: `上传视频失败: ${uploadResult.error || '未知错误'}`,
-        })
-        .where(eq(asset.id, assetId));
+      // 注意：不再手动更新asset状态，状态从job自动计算
+      // job会在外层被标记为failed，asset状态会自动反映失败
       
       throw new Error(`上传视频失败: ${uploadResult.error || '未知错误'}`);
     }
