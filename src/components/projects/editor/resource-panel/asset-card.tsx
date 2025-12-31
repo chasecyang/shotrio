@@ -53,9 +53,9 @@ export function AssetCard({
   // 检查资产是否失败
   const isFailed = asset.status === "failed";
   
-  // 获取显示 URL（视频用 thumbnailUrl，图片用 imageUrl）
+  // 获取显示 URL（视频优先使用 thumbnailUrl，图片使用 imageUrl 或 thumbnailUrl）
   const displayUrl = isVideo 
-    ? asset.thumbnailUrl || asset.videoUrl
+    ? asset.thumbnailUrl // 视频只使用 thumbnailUrl，不使用 videoUrl（videoUrl 不是图片）
     : asset.thumbnailUrl || asset.imageUrl;
 
   const handleDragStart = (e: React.DragEvent) => {

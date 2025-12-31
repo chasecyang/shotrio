@@ -34,10 +34,11 @@ export const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
 
 // 资产分类枚举（适用于所有用户资产）
 export enum AssetCategory {
-  AVATARS = "avatars",   // 头像图片
-  VIDEOS = "videos",     // 视频
-  PROJECTS = "projects", // 项目图片
-  OTHER = "other",       // 其他
+  AVATARS = "avatars",       // 头像图片
+  VIDEOS = "videos",         // 视频
+  PROJECTS = "projects",     // 项目图片
+  THUMBNAILS = "thumbnails", // 视频缩略图
+  OTHER = "other",           // 其他
 }
 
 // 保持向后兼容

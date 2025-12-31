@@ -16,6 +16,7 @@ import type {
   FinalVideoExportResult,
 } from "@/types/job";
 import { verifyProjectOwnership } from "../utils/validation";
+import { extractVideoThumbnail } from "@/lib/utils/video-thumbnail";
 
 /**
  * 处理视频生成任务（新架构：使用 asset 表）
@@ -214,11 +215,41 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     console.log(`[Worker] 视频已上传: ${uploadResult.url}`);
 
-    // 8. 更新 asset 记录
+    // 8. 提取视频缩略图（不阻塞流程）
+    let thumbnailUrl: string | undefined;
+    try {
+      await updateJobProgress(
+        {
+          jobId: jobData.id,
+          progress: 90,
+          progressMessage: "生成视频缩略图...",
+        },
+        workerToken
+      );
+
+      const thumbnailResult = await extractVideoThumbnail(
+        uploadResult.url,
+        jobData.userId
+      );
+
+      if (thumbnailResult.success && thumbnailResult.thumbnailUrl) {
+        thumbnailUrl = thumbnailResult.thumbnailUrl;
+        console.log(`[Worker] 缩略图生成成功: ${thumbnailUrl}`);
+      } else {
+        console.warn(`[Worker] 缩略图生成失败: ${thumbnailResult.error}`);
+        // 缩略图生成失败不影响视频本身的可用性
+      }
+    } catch (thumbnailError) {
+      console.error(`[Worker] 缩略图生成异常:`, thumbnailError);
+      // 缩略图生成失败不影响视频本身的可用性
+    }
+
+    // 9. 更新 asset 记录
     await db
       .update(asset)
       .set({
         videoUrl: uploadResult.url,
+        thumbnailUrl: thumbnailUrl || null,
         duration: videoDuration * 1000, // 转换为毫秒
         status: "completed",
       })
