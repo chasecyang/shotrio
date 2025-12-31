@@ -534,7 +534,7 @@ export function MediaViewer({
                     src={mediaUrl || undefined}
                     alt={asset.name}
                     className={cn(
-                      "max-w-[calc(100%-400px)] max-h-[85vh] object-contain select-none",
+                      "max-w-[90%] max-h-[90vh] object-contain select-none",
                       scale > 1 ? "cursor-grab" : "cursor-zoom-in",
                       isDragging && "cursor-grabbing"
                     )}
