@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { Trash2, Maximize2, Video, Play } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
-import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssetThumbnailSkeleton } from "./asset-skeleton";
 import { AssetProgressOverlay } from "./asset-progress-overlay";
@@ -42,7 +41,6 @@ export function AssetCard({
 }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // 检查资产类型
   const isVideo = asset.assetType === "video";
@@ -71,22 +69,9 @@ export function AssetCard({
     setIsDragging(false);
   };
 
-  // 共用的 Lightbox 组件（仅当有图片时才渲染，视频暂不支持）
-  const lightbox = !isVideo && asset.imageUrl ? (
-    <ImageLightbox
-      open={lightboxOpen}
-      onOpenChange={setLightboxOpen}
-      src={asset.imageUrl}
-      alt={asset.name}
-      downloadFilename={`${asset.name}.png`}
-    />
-  ) : null;
-
   if (viewMode === "grid") {
     return (
-      <>
-        {lightbox}
-        <div
+      <div
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -162,18 +147,15 @@ export function AssetCard({
                   />
                 </div>
               )}
-              {/* 左上角放大按钮（仅图片支持） */}
-              {!isVideo && (
+              {/* 左上角放大按钮（仅非批量选择模式） */}
+              {!onSelectChange && !isVideo && (
                 <Button
                   size="sm"
                   variant="secondary"
-                  className={cn(
-                    "absolute h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer",
-                    onSelectChange ? "top-2 right-2" : "top-2 left-2"
-                  )}
+                  className="absolute top-2 left-2 h-7 w-7 p-0 bg-black/50 backdrop-blur-sm border-0 text-white/80 hover:text-white hover:bg-black/70 shadow-lg cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setLightboxOpen(true);
+                    onClick(asset);
                   }}
                 >
                   <Maximize2 className="h-3.5 w-3.5" />
@@ -305,15 +287,12 @@ export function AssetCard({
           </div>
         )}
       </div>
-    </>
     );
   }
 
   // List 视图
   return (
-    <>
-      {lightbox}
-      <div
+    <div
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -462,7 +441,6 @@ export function AssetCard({
           </div>
         </div>
       </div>
-    </>
   );
 }
 

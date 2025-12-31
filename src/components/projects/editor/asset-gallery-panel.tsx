@@ -20,8 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ImageLightbox } from "@/components/ui/image-lightbox";
-import { VideoPlayerDialog } from "@/components/ui/video-player-dialog";
+import { MediaViewer } from "@/components/ui/media-viewer";
 
 interface AssetGalleryPanelProps {
   userId: string;
@@ -40,13 +39,9 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
 
-  // Lightbox 状态（图片）
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxAsset, setLightboxAsset] = useState<AssetWithTags | null>(null);
-
-  // 视频播放器状态
-  const [videoPlayerOpen, setVideoPlayerOpen] = useState(false);
-  const [videoAsset, setVideoAsset] = useState<AssetWithTags | null>(null);
+  // 媒体查看器状态
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerAsset, setViewerAsset] = useState<AssetWithTags | null>(null);
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -84,15 +79,10 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
     };
   }, [loadAssets]);
 
-  // 处理素材点击 - 根据类型打开 Lightbox 或视频播放器
+  // 处理素材点击 - 打开媒体查看器
   const handleAssetClick = (asset: AssetWithTags) => {
-    if (asset.assetType === "video") {
-      setVideoAsset(asset);
-      setVideoPlayerOpen(true);
-    } else {
-      setLightboxAsset(asset);
-      setLightboxOpen(true);
-    }
+    setViewerAsset(asset);
+    setViewerOpen(true);
   };
 
   // 处理删除
@@ -272,26 +262,12 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Lightbox - 仅支持图片类型 */}
-      {lightboxAsset && lightboxAsset.assetType !== "video" && lightboxAsset.imageUrl && (
-        <ImageLightbox
-          open={lightboxOpen}
-          onOpenChange={setLightboxOpen}
-          src={lightboxAsset.imageUrl}
-          alt={lightboxAsset.name}
-          downloadFilename={lightboxAsset.name}
-        />
-      )}
-
-      {/* 视频播放器 - 仅支持视频类型 */}
-      {videoAsset && videoAsset.assetType === "video" && videoAsset.videoUrl && (
-        <VideoPlayerDialog
-          open={videoPlayerOpen}
-          onOpenChange={setVideoPlayerOpen}
-          src={videoAsset.videoUrl}
-          alt={videoAsset.name}
-          downloadFilename={videoAsset.name}
-          duration={videoAsset.duration ? videoAsset.duration / 1000 : undefined}
+      {/* 媒体查看器 - 支持图片和视频 */}
+      {viewerAsset && (
+        <MediaViewer
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+          asset={viewerAsset}
         />
       )}
     </div>

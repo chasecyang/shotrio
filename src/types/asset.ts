@@ -12,17 +12,6 @@ import type { AspectRatio } from "@/lib/services/fal.service";
 export type AssetTypeEnum = "image" | "video";
 
 /**
- * 资产派生类型
- */
-export type DerivationType = 
-  | "generate"     // 直接生成
-  | "img2img"      // 图生图
-  | "inpaint"      // 局部重绘
-  | "edit"         // 编辑
-  | "remix"        // 混合
-  | "composite";   // 合成
-
-/**
  * 资产类型值（用于分类/标签）
  */
 export type AssetType = 
@@ -154,7 +143,6 @@ export interface Asset {
   
   // 派生关系
   sourceAssetIds: string[] | null;  // 多个源素材ID（用于图生图）
-  derivationType: DerivationType | null;
   
   // 元数据
   meta: string | null;  // JSON字符串
@@ -186,7 +174,6 @@ export interface CreateAssetInput {
   seed?: number;
   modelUsed?: string;
   sourceAssetIds?: string[];  // 多个源素材ID（用于图生图）
-  derivationType?: DerivationType;
   meta?: AssetMeta;
   tags?: string[];  // 简化为标签值数组
 }
@@ -269,7 +256,6 @@ export interface AssetQueryResult {
 export interface CreateDerivedAssetInput {
   projectId: string;
   sourceAssetIds: string[];  // 源素材ID数组
-  derivationType: DerivationType;
   name: string;
   imageUrl: string;
   thumbnailUrl?: string;

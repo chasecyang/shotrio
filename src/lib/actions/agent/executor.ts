@@ -201,7 +201,6 @@ export async function executeFunction(
               tags: assetData.tags,
               modelUsed: "nano-banana",
               sourceAssetIds: assetData.sourceAssetIds,
-              derivationType: assetData.sourceAssetIds ? "img2img" : "generate",
               meta: {
                 generationParams: {
                   aspectRatio: "16:9" as "16:9" | "1:1" | "9:16",

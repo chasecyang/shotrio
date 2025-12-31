@@ -74,7 +74,6 @@ export async function createDerivedAsset(
       seed: input.seed || null,
       modelUsed: input.modelUsed || null,
       sourceAssetIds: input.sourceAssetIds,
-      derivationType: input.derivationType,
       meta: Object.keys(metaData).length > 0 ? JSON.stringify(metaData) : null,
       usageCount: 0,
     });

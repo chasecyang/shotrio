@@ -81,7 +81,6 @@ export async function generateAssetImage(
       name: assetName,
       prompt: prompt.trim(),
       modelUsed: "nano-banana",
-      derivationType: "generate",
       meta: {
         generationParams: {
           aspectRatio: aspectRatio as "16:9" | "1:1" | "9:16",
@@ -181,7 +180,6 @@ export async function editAssetImage(
       prompt: editPrompt.trim(),
       modelUsed: "nano-banana",
       sourceAssetIds: sourceAssetIds,
-      derivationType: "img2img",
       meta: {
         generationParams: {
           aspectRatio: aspectRatio as "16:9" | "1:1" | "9:16",

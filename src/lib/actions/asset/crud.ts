@@ -38,7 +38,6 @@ export async function createAssetInternal(
       seed: input.seed || null,
       modelUsed: input.modelUsed || null,
       sourceAssetIds: input.sourceAssetIds || null,
-      derivationType: input.derivationType || null,
       meta: input.meta ? JSON.stringify(input.meta) : null,
       usageCount: 0,
     });

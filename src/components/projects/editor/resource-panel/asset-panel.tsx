@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { MediaViewer } from "@/components/ui/media-viewer";
 
 interface AssetPanelProps {
   userId: string;
@@ -43,6 +44,10 @@ export function AssetPanel({ userId }: AssetPanelProps) {
 
   // 批量选择状态
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+
+  // 媒体查看器状态
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerAsset, setViewerAsset] = useState<AssetWithTags | null>(null);
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -97,9 +102,10 @@ export function AssetPanel({ userId }: AssetPanelProps) {
     };
   }, [loadAssets]);
 
-  // 处理素材点击 - 预留用于未来功能扩展
+  // 处理素材点击 - 打开媒体查看器
   const handleAssetClick = (asset: AssetWithTags) => {
-    // 当前版本暂无操作，预留接口
+    setViewerAsset(asset);
+    setViewerOpen(true);
   };
 
   // 处理删除 - 显示确认对话框（单个删除）
@@ -260,6 +266,15 @@ export function AssetPanel({ userId }: AssetPanelProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 媒体查看器 - 支持图片和视频 */}
+      {viewerAsset && (
+        <MediaViewer
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+          asset={viewerAsset}
+        />
+      )}
     </div>
   );
 }

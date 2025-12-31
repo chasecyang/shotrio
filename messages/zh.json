@@ -247,7 +247,6 @@
         "addTag": "添加标签",
         "addTagPlaceholder": "添加标签...",
         "derivedFrom": "派生来源",
-        "derivationType": "派生类型",
         "delete": "删除",
         "derive": "派生",
         "close": "关闭",
@@ -1000,7 +999,6 @@
       "derive": {
         "title": "派生新创作素材",
         "sourceAsset": "源素材",
-        "derivationType": "派生类型",
         "types": {
           "img2img": {
             "label": "图生图",

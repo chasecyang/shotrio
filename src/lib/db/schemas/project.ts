@@ -146,7 +146,6 @@ export const asset: any = pgTable("asset", {
   
   // 派生关系
   sourceAssetIds: text("source_asset_ids").array(), // 多个源素材ID（用于图生图）
-  derivationType: text("derivation_type"), // 'generate' | 'img2img' | 'inpaint' | 'edit' | 'remix' | 'composite'
   
   // 灵活的元数据字段（JSON）
   meta: text("meta"), // JSON字符串，存储类型特定的元数据

@@ -331,7 +331,6 @@
         "addTag": "Add Tag",
         "addTagPlaceholder": "Add tag...",
         "derivedFrom": "Derived From",
-        "derivationType": "Derivation Type",
         "delete": "Delete",
         "derive": "Derive",
         "close": "Close",
@@ -998,7 +997,6 @@
       "derive": {
         "title": "Derive New Asset",
         "sourceAsset": "Source Asset",
-        "derivationType": "Derivation Type",
         "types": {
           "img2img": {
             "label": "Image to Image",
