@@ -3,19 +3,14 @@
 /**
  * 积分估算 Server Action
  * 
- * 查询数据库获取实际参数，计算准确的积分消耗
+ * 计算 function calls 的积分消耗
  */
 
-import db from "@/lib/db";
-import { shot } from "@/lib/db/schemas/project";
-import { inArray } from "drizzle-orm";
 import type { FunctionCall } from "@/types/agent";
 import { calculateTotalCredits, type CreditCost } from "@/lib/utils/credit-calculator";
 
 /**
  * 估算一组function calls的积分消耗
- * 
- * 会查询数据库获取shot的duration等实际数据
  */
 export async function estimateActionCredits(
   functionCalls: FunctionCall[]
@@ -25,40 +20,8 @@ export async function estimateActionCredits(
   error?: string;
 }> {
   try {
-    // 收集需要查询的shot IDs
-    const shotIdsToQuery = new Set<string>();
-
-    // 暂时不需要查询shot数据，因为generate_shot_video使用klingO1Config中的duration
-    // 如果将来需要支持其他需要查询shot的功能，可以在这里添加
-
-    // 查询shot数据
-    const shotDurations: Record<string, number> = {};
-
-    if (shotIdsToQuery.size > 0) {
-      const shots = await db.query.shot.findMany({
-        where: inArray(shot.id, Array.from(shotIdsToQuery)),
-        columns: {
-          id: true,
-          duration: true,
-        },
-      });
-
-      shots.forEach((s) => {
-        shotDurations[s.id] = s.duration || 3000; // 默认3秒
-      });
-
-      // 对于没有查询到的shot，使用保守估算（10秒）
-      shotIdsToQuery.forEach((shotId) => {
-        if (!shotDurations[shotId]) {
-          shotDurations[shotId] = 10000; // 保守估算10秒
-        }
-      });
-    }
-
     // 计算积分
-    const creditCost = calculateTotalCredits(functionCalls, {
-      shotDurations,
-    });
+    const creditCost = calculateTotalCredits(functionCalls);
 
     return {
       success: true,

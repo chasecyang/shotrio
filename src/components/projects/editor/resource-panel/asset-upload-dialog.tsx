@@ -174,7 +174,6 @@ export function AssetUploadDialog({
     { value: "character", label: tAsset("character") },
     { value: "scene", label: tAsset("scene") },
     { value: "prop", label: tAsset("prop") },
-    { value: "storyboard", label: tAsset("storyboard") },
     { value: "effect", label: tAsset("effect") },
     { value: "reference", label: tAsset("reference") },
   ];

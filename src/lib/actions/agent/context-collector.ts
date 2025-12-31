@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { AgentContext } from "@/types/agent";
 import { getProjectDetail } from "@/lib/actions/project/base";
-import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
+import { refreshProjectVideos } from "@/lib/actions/project/refresh";
 import { queryAssets } from "@/lib/actions/asset/queries";
 import { analyzeAssetsByType, getTopTagStats } from "@/lib/actions/asset/stats";
 
@@ -70,36 +70,36 @@ export async function collectContext(context: AgentContext, projectId: string): 
       }
     }
 
-    // 3. 选中的分镜
-    if (context.selectedShotIds && context.selectedShotIds.length > 0 && context.selectedEpisodeId) {
-      parts.push(`# 选中的分镜`);
-      parts.push(`已选中 ${context.selectedShotIds.length} 个分镜`);
-      
-      const result = await refreshEpisodeShots(context.selectedEpisodeId);
-      if (result.success && result.shots) {
-        const selectedShots = result.shots.filter((s) =>
-          context.selectedShotIds.includes(s.id)
-        );
+    // 3. 项目视频
+    if (project) {
+      const videosResult = await refreshProjectVideos(project.id);
+      if (videosResult.success && videosResult.videos && videosResult.videos.length > 0) {
+        parts.push(`# 项目视频`);
+        parts.push(`总视频数: ${videosResult.videos.length}`);
         
-        // 只显示前 5 个分镜的详情
-        const shotsToShow = selectedShots.slice(0, 5);
-        parts.push(`\n分镜详情（前${shotsToShow.length}个）:`);
-        shotsToShow.forEach((shot) => {
-          parts.push(`- 分镜 #${shot.order}: ${shot.description || "无描述"}`);
-          parts.push(`  景别: ${shot.shotSize}, 运镜: ${shot.cameraMovement}, 时长: ${shot.duration}ms`);
-          if (shot.shotAssets && shot.shotAssets.length > 0) {
-            parts.push(`  状态: 已关联 ${shot.shotAssets.length} 个素材`);
+        // 显示前5个视频的信息
+        const videosToShow = videosResult.videos.slice(0, 5);
+        parts.push(`\n最近视频（前${videosToShow.length}个）:`);
+        videosToShow.forEach((video) => {
+          parts.push(`- ${video.name || "未命名视频"}`);
+          if (video.prompt) {
+            const truncatedPrompt = video.prompt.length > 50 
+              ? video.prompt.slice(0, 50) + "..." 
+              : video.prompt;
+            parts.push(`  描述: ${truncatedPrompt}`);
           }
-          if (shot.currentVideo?.videoUrl) {
-            parts.push(`  状态: 已生成视频`);
+          if (video.videoUrl) {
+            parts.push(`  状态: 已生成`);
+          } else {
+            parts.push(`  状态: 待生成`);
           }
         });
         
-        if (selectedShots.length > 5) {
-          parts.push(`...还有 ${selectedShots.length - 5} 个分镜`);
+        if (videosResult.videos.length > 5) {
+          parts.push(`...还有 ${videosResult.videos.length - 5} 个视频`);
         }
+        parts.push("");
       }
-      parts.push("");
     }
 
     // 4. 选中的资源（如素材）

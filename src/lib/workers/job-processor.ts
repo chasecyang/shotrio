@@ -7,7 +7,6 @@ import { registry } from "./processor-registry";
 // 导入各个处理器
 import {
   processVideoGeneration,
-  processShotVideoGeneration,
   processFinalVideoExport,
 } from "./processors/video-processors";
 import { processAssetImageGeneration } from "./processors/asset-image-generation";
@@ -20,7 +19,6 @@ export function registerAllProcessors(): void {
   registry.registerAll({
     asset_image_generation: processAssetImageGeneration,
     video_generation: processVideoGeneration,
-    shot_video_generation: processShotVideoGeneration,
     final_video_export: processFinalVideoExport,
   });
 

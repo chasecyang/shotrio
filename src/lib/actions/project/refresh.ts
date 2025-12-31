@@ -3,16 +3,16 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { shot } from "@/lib/db/schemas/project";
-import { eq, asc } from "drizzle-orm";
-import type { ShotDetail } from "@/types/project";
+import { video } from "@/lib/db/schemas/project";
+import { eq, desc } from "drizzle-orm";
+import type { Video } from "@/types/project";
 
 /**
- * 刷新单个 shot 数据
+ * 刷新单个视频数据
  */
-export async function refreshShot(shotId: string): Promise<{
+export async function refreshVideo(videoId: string): Promise<{
   success: boolean;
-  shot?: ShotDetail;
+  video?: Video;
   error?: string;
 }> {
   const session = await auth.api.getSession({
@@ -23,29 +23,20 @@ export async function refreshShot(shotId: string): Promise<{
   }
 
   try {
-    const shotData = await db.query.shot.findFirst({
-      where: eq(shot.id, shotId),
-      with: {
-        shotAssets: {
-          with: {
-            asset: true,
-          },
-          orderBy: (shotAsset, { asc }) => [asc(shotAsset.order)],
-        },
-        currentVideo: true,
-      },
+    const videoData = await db.query.video.findFirst({
+      where: eq(video.id, videoId),
     });
 
-    if (!shotData) {
-      return { success: false, error: "分镜不存在" };
+    if (!videoData) {
+      return { success: false, error: "视频不存在" };
     }
 
     return {
       success: true,
-      shot: shotData as ShotDetail,
+      video: videoData as Video,
     };
   } catch (error) {
-    console.error("刷新分镜数据失败:", error);
+    console.error("刷新视频数据失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "刷新失败",
@@ -54,11 +45,11 @@ export async function refreshShot(shotId: string): Promise<{
 }
 
 /**
- * 刷新剧集的所有 shots（包含关联的素材）
+ * 刷新项目的所有视频
  */
-export async function refreshEpisodeShots(episodeId: string): Promise<{
+export async function refreshProjectVideos(projectId: string): Promise<{
   success: boolean;
-  shots?: ShotDetail[];
+  videos?: Video[];
   error?: string;
 }> {
   const session = await auth.api.getSession({
@@ -69,26 +60,17 @@ export async function refreshEpisodeShots(episodeId: string): Promise<{
   }
 
   try {
-    const shots = await db.query.shot.findMany({
-      where: eq(shot.episodeId, episodeId),
-      orderBy: [asc(shot.order)],
-      with: {
-        shotAssets: {
-          with: {
-            asset: true,
-          },
-          orderBy: (shotAsset, { asc }) => [asc(shotAsset.order)],
-        },
-        currentVideo: true,
-      },
+    const videos = await db.query.video.findMany({
+      where: eq(video.projectId, projectId),
+      orderBy: [desc(video.createdAt)],
     });
 
     return {
       success: true,
-      shots: shots as ShotDetail[],
+      videos: videos as Video[],
     };
   } catch (error) {
-    console.error("刷新剧集分镜数据失败:", error);
+    console.error("刷新项目视频数据失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "刷新失败",

@@ -31,9 +31,6 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       // 查询类操作
       // ============================================
       case "query_context":
-        if (parameters.episodeId) {
-          return "查询项目上下文（含剧本和分镜）";
-        }
         return "查询项目上下文";
 
       case "query_assets":
@@ -43,32 +40,15 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         }
         return "查询素材库";
 
-      case "query_shots":
-        if (parameters.shotIds && Array.isArray(parameters.shotIds)) {
-          return `查询 ${parameters.shotIds.length} 个分镜详情`;
+      case "query_videos":
+        if (parameters.videoIds && Array.isArray(parameters.videoIds)) {
+          return `查询 ${parameters.videoIds.length} 个视频详情`;
         }
-        return "查询分镜列表";
+        return "查询视频列表";
 
       // ============================================
       // 创作类操作
       // ============================================
-      case "create_shots": {
-        const shots = parameters.shots as Array<{ shotSize?: string; description?: string }>;
-        const count = shots?.length || 0;
-        if (count === 1 && shots[0]) {
-          const parts: string[] = ["创建分镜"];
-          if (shots[0].shotSize) {
-            const translated = ENUM_VALUE_LABELS.shotSize?.[shots[0].shotSize];
-            parts.push(translated || shots[0].shotSize);
-          }
-          if (shots[0].description) {
-            const desc = shots[0].description.slice(0, 20);
-            parts.push(desc.length < shots[0].description.length ? `${desc}...` : desc);
-          }
-          return parts.join(" - ");
-        }
-        return count > 0 ? `创建 ${count} 个分镜` : "创建分镜";
-      }
 
       case "generate_assets": {
         const assets = parameters.assets as Array<{ name?: string; prompt?: string }>;
@@ -86,28 +66,17 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       // ============================================
       // 修改类操作
       // ============================================
-      case "update_shots": {
-        const updates = parameters.updates as Array<{ shotId: string; shotSize?: string; duration?: number }>;
+      case "update_videos": {
+        const updates = parameters.updates as Array<{ videoId: string; title?: string; prompt?: string }>;
         const count = updates?.length || 0;
         if (count === 1 && updates[0]) {
-          const parts: string[] = ["修改分镜"];
-          const updateFields: string[] = [];
-          
-          if (updates[0].shotSize) {
-            const translated = ENUM_VALUE_LABELS.shotSize?.[updates[0].shotSize];
-            updateFields.push(translated || updates[0].shotSize);
-          }
-          if (updates[0].duration) {
-            const seconds = Number(updates[0].duration) / 1000;
-            updateFields.push(`${seconds}秒`);
-          }
-          
-          if (updateFields.length > 0) {
-            parts.push(updateFields.join(" · "));
+          const parts: string[] = ["修改视频"];
+          if (updates[0].title) {
+            parts.push(updates[0].title);
           }
           return parts.join(" - ");
         }
-        return count > 0 ? `修改 ${count} 个分镜` : "修改分镜";
+        return count > 0 ? `修改 ${count} 个视频` : "修改视频";
       }
 
       case "update_assets": {
@@ -125,10 +94,10 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       // ============================================
       // 删除类操作
       // ============================================
-      case "delete_shots": {
-        const shotIds = parameters.shotIds as string[];
-        const count = shotIds?.length || 0;
-        return count > 0 ? `删除 ${count} 个分镜` : "删除分镜";
+      case "delete_videos": {
+        const videoIds = parameters.videoIds as string[];
+        const count = videoIds?.length || 0;
+        return count > 0 ? `删除 ${count} 个视频` : "删除视频";
       }
 
       case "delete_assets": {

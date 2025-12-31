@@ -372,20 +372,18 @@ export const PendingActionMessage = memo(function PendingActionMessage({
 
   // 判断操作类型
   const isGenerateAssets = functionCall.name === "generate_assets";
-  const isCreateShots = functionCall.name === "create_shots";
-  const isUpdateShots = functionCall.name === "update_shots";
-  const isGenerateShotVideo = functionCall.name === "generate_shot_video";
+  const isGenerateVideo = functionCall.name === "generate_video";
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
-    if (isGenerateAssets || isCreateShots || isUpdateShots || isGenerateShotVideo) {
+    if (isGenerateAssets || isGenerateVideo) {
       // 这些操作需要单独处理数组
       return [];
     } else {
       // 其他操作：使用标准格式化
       return formatParametersForConfirmation(functionCall.arguments);
     }
-  }, [functionCall.arguments, isGenerateAssets, isCreateShots, isUpdateShots, isGenerateShotVideo]);
+  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo]);
 
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
@@ -441,116 +439,9 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }
   }, [isGenerateAssets, functionCall.arguments]);
 
-  // 解析创建分镜的shots数组
-  const parsedShots = useMemo(() => {
-    if (!isCreateShots) return null;
-    
-    try {
-      const shotsArg = functionCall.arguments.shots;
-      let shotsArray: Array<Record<string, unknown>>;
-
-      // 兼容数组和JSON字符串
-      if (Array.isArray(shotsArg)) {
-        shotsArray = shotsArg;
-      } else if (typeof shotsArg === "string") {
-        shotsArray = JSON.parse(shotsArg);
-      } else {
-        return null;
-      }
-
-      if (!Array.isArray(shotsArray)) return null;
-
-      return shotsArray.map((shot: Record<string, unknown>, index: number) => {
-        const description = shot.description || "-";
-        const shotSize = shot.shotSize as string || "-";
-        const cameraMovement = shot.cameraMovement as string || "static";
-        // Agent传的是秒，直接使用，不需要除以1000
-        const durationSeconds = typeof shot.duration === "number" ? shot.duration : 3;
-        const order = typeof shot.order === "number" ? shot.order : index + 1;
-        const visualPrompt = shot.visualPrompt as string || "";
-        
-        // 翻译枚举值
-        const shotSizeLabel = ENUM_VALUE_LABELS.shotSize?.[shotSize] || shotSize;
-        const cameraMovementLabel = ENUM_VALUE_LABELS.cameraMovement?.[cameraMovement] || cameraMovement;
-
-        return {
-          order,
-          description: description as string,
-          shotSize: shotSize as string,
-          shotSizeLabel,
-          cameraMovement: cameraMovement as string,
-          cameraMovementLabel,
-          duration: durationSeconds * 1000, // 保留毫秒字段用于内部计算（如果需要）
-          durationSeconds, // 直接用秒显示
-          visualPrompt: visualPrompt as string,
-        };
-      });
-    } catch (error) {
-      console.error("解析shots数组失败:", error);
-      return null;
-    }
-  }, [isCreateShots, functionCall.arguments]);
-
-  // 解析修改分镜的updates数组
-  const parsedShotUpdates = useMemo(() => {
-    if (!isUpdateShots) return null;
-    
-    try {
-      const updatesArg = functionCall.arguments.updates;
-      let updatesArray: Array<Record<string, unknown>>;
-
-      // 兼容数组和JSON字符串
-      if (Array.isArray(updatesArg)) {
-        updatesArray = updatesArg;
-      } else if (typeof updatesArg === "string") {
-        updatesArray = JSON.parse(updatesArg);
-      } else {
-        return null;
-      }
-
-      if (!Array.isArray(updatesArray)) return null;
-
-      return updatesArray.map((update: Record<string, unknown>) => {
-        const shotId = update.shotId as string || "-";
-        const changes: Array<{ key: string; label: string; value: string }> = [];
-
-        // 收集所有修改项
-        if (update.description !== undefined) {
-          changes.push({ key: "description", label: "描述", value: String(update.description) });
-        }
-        if (update.shotSize !== undefined) {
-          const shotSize = update.shotSize as string;
-          const label = ENUM_VALUE_LABELS.shotSize?.[shotSize] || shotSize;
-          changes.push({ key: "shotSize", label: "景别", value: label });
-        }
-        if (update.cameraMovement !== undefined) {
-          const cameraMovement = update.cameraMovement as string;
-          const label = ENUM_VALUE_LABELS.cameraMovement?.[cameraMovement] || cameraMovement;
-          changes.push({ key: "cameraMovement", label: "运镜", value: label });
-        }
-        if (update.duration !== undefined) {
-          // Agent传的是秒，直接显示
-          const durationSeconds = typeof update.duration === "number" ? update.duration : 3;
-          changes.push({ key: "duration", label: "时长", value: `${durationSeconds}秒` });
-        }
-        if (update.visualPrompt !== undefined) {
-          changes.push({ key: "visualPrompt", label: "视觉提示词", value: String(update.visualPrompt) });
-        }
-
-        return {
-          shotId,
-          changes,
-        };
-      });
-    } catch (error) {
-      console.error("解析updates数组失败:", error);
-      return null;
-    }
-  }, [isUpdateShots, functionCall.arguments]);
-
   // 解析视频生成的klingO1Config
   const klingO1ConfigDisplay = useMemo(() => {
-    if (!isGenerateShotVideo) return null;
+    if (!isGenerateVideo) return null;
     
     try {
       const klingO1Config = functionCall.arguments.klingO1Config;
@@ -566,7 +457,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("解析klingO1Config失败:", error);
       return null;
     }
-  }, [isGenerateShotVideo, functionCall.arguments]);
+  }, [isGenerateVideo, functionCall.arguments]);
 
   return (
     <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
@@ -643,137 +534,8 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 </div>
               )
             )
-          ) : isCreateShots ? (
-            /* 创建分镜：横向滚动显示 */
-            parsedShots && parsedShots.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-                {parsedShots.map((shot, index) => (
-                  <div key={index} className="flex-shrink-0 w-72 rounded-md bg-background/50 border border-border/50 p-2.5">
-                    <div className="space-y-2">
-                      {/* 分镜编号 */}
-                      <div className="flex items-center gap-2 pb-1.5 border-b border-border/30">
-                        <Film className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-semibold text-foreground">分镜 #{shot.order}</span>
-                      </div>
-                      
-                      {/* 分镜参数 */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <Camera className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">景别:</span>
-                          <span className="text-xs text-foreground">{shot.shotSizeLabel}</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Camera className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">运镜:</span>
-                          <span className="text-xs text-foreground">{shot.cameraMovementLabel}</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">时长:</span>
-                          <span className="text-xs text-foreground">{shot.durationSeconds}秒</span>
-                        </div>
-                      </div>
-                      
-                      {/* 描述 */}
-                      {shot.description && shot.description !== "-" && (
-                        <div className="pt-1.5 border-t border-border/30">
-                          <span className="text-xs font-medium text-muted-foreground block mb-1">描述:</span>
-                          <p className="text-xs text-foreground break-words line-clamp-3">{shot.description}</p>
-                        </div>
-                      )}
-                      
-                      {/* 视觉提示词（如果有） */}
-                      {shot.visualPrompt && (
-                        <div className="pt-1.5 border-t border-border/30">
-                          <span className="text-xs font-medium text-muted-foreground block mb-1">视觉提示:</span>
-                          <p className="text-xs text-muted-foreground break-words line-clamp-2">{shot.visualPrompt}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* Fallback: 如果解析失败，使用标准格式化 */
-              formattedParams.length > 0 && (
-                <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
-                  <div className="space-y-1.5">
-                    {formattedParams.map((param) => (
-                      <div key={param.key} className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-muted-foreground shrink-0">
-                          {param.label}:
-                        </span>
-                        <span className="text-xs text-foreground break-words">
-                          {param.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            )
-          ) : isUpdateShots ? (
-            /* 修改分镜：横向滚动显示 */
-            parsedShotUpdates && parsedShotUpdates.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-                {parsedShotUpdates.map((update, index) => (
-                  <div key={index} className="flex-shrink-0 w-72 rounded-md bg-background/50 border border-border/50 p-2.5">
-                    <div className="space-y-2">
-                      {/* 分镜ID标题 */}
-                      <div className="flex items-center gap-2 pb-1.5 border-b border-border/30">
-                        <Film className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-semibold text-foreground truncate">分镜</span>
-                      </div>
-                      
-                      {/* 修改项列表 */}
-                      <div className="space-y-1.5">
-                        {update.changes.map((change, changeIndex) => (
-                          <div key={changeIndex} className="flex items-start gap-2">
-                            <span className="text-xs font-medium text-muted-foreground shrink-0">
-                              {change.label}:
-                            </span>
-                            <span className="text-xs text-foreground break-words line-clamp-2">
-                              {change.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* Fallback: 如果解析失败，使用标准格式化 */
-              formattedParams.length > 0 && (
-                <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
-                  <div className="space-y-1.5">
-                    {formattedParams.map((param) => (
-                      <div key={param.key} className="space-y-1.5">
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-medium text-muted-foreground shrink-0">
-                            {param.label}:
-                          </span>
-                          <span className="text-xs text-foreground break-words">
-                            {param.value}
-                          </span>
-                        </div>
-                        {/* 如果是素材引用参数，显示图片预览 */}
-                        {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-                          <div className="pl-0 pt-1">
-                            <AssetPreview assetIds={param.assetIds} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            )
-          ) : isGenerateShotVideo ? (
-            /* 生成分镜视频：显示Kling O1配置 */
+          ) : isGenerateVideo ? (
+            /* 生成视频：显示Kling O1配置 */
             klingO1ConfigDisplay ? (
               <KlingO1ConfigDisplay config={klingO1ConfigDisplay} />
             ) : (

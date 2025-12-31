@@ -21,25 +21,22 @@ export async function validateFunctionParameters(
     const params = JSON.parse(argumentsJson);
 
     switch (functionName) {
-      case "generate_shot_video":
-        return validateGenerateShotVideoParams(params);
+      case "generate_video":
+        return validateGenerateVideoParams(params);
 
       // 未来可扩展其他 function 的校验
       case "generate_assets":
         return validateGenerateAssetsParams(params);
 
-      case "create_shots":
-        return validateCreateShotsParams(params);
-
       // 其他 function 暂不校验（默认通过）
       case "query_context":
       case "query_assets":
-      case "query_shots":
+      case "query_videos":
       case "update_episode":
-      case "update_shots":
+      case "update_videos":
       case "update_assets":
       case "set_art_style":
-      case "delete_shots":
+      case "delete_videos":
       case "delete_assets":
         return { valid: true, errors: [], warnings: [] };
 
@@ -60,14 +57,14 @@ export async function validateFunctionParameters(
 }
 
 /**
- * 校验 generate_shot_video 参数
+ * 校验 generate_video 参数
  */
-function validateGenerateShotVideoParams(params: any): ValidationResult {
+function validateGenerateVideoParams(params: any): ValidationResult {
   const errors: string[] = [];
 
   // 检查必填参数
-  if (!params.shotId) {
-    errors.push("缺少必填参数 shotId");
+  if (!params.prompt) {
+    errors.push("缺少必填参数 prompt");
   }
 
   if (!params.klingO1Config) {
@@ -78,7 +75,7 @@ function validateGenerateShotVideoParams(params: any): ValidationResult {
   // 校验 klingO1Config
   const configValidation = validateKlingO1Config(params.klingO1Config);
 
-  // 如果有 shotId 错误，合并到结果中
+  // 如果有 prompt 错误，合并到结果中
   if (errors.length > 0) {
     return {
       valid: false,
@@ -125,55 +122,6 @@ function validateGenerateAssetsParams(params: any): ValidationResult {
     // 检查 sourceAssetIds 格式
     if (asset.sourceAssetIds && !Array.isArray(asset.sourceAssetIds)) {
       errors.push(`assets[${index}].sourceAssetIds 必须是数组类型`);
-    }
-  });
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-  };
-}
-
-/**
- * 校验 create_shots 参数
- * TODO: 实现完整校验
- */
-function validateCreateShotsParams(params: any): ValidationResult {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  if (!params.episodeId) {
-    errors.push("缺少必填参数 episodeId");
-  }
-
-  if (!params.shots || !Array.isArray(params.shots)) {
-    errors.push("缺少必填参数 shots（数组类型）");
-    return { valid: false, errors, warnings };
-  }
-
-  if (params.shots.length === 0) {
-    errors.push("shots 数组不能为空");
-    return { valid: false, errors, warnings };
-  }
-
-  // 检查每个 shot
-  params.shots.forEach((shot: any, index: number) => {
-    if (!shot.shotSize) {
-      errors.push(`shots[${index}] 缺少必填参数 shotSize`);
-    }
-
-    if (!shot.description || typeof shot.description !== 'string') {
-      errors.push(`shots[${index}] 缺少必填参数 description`);
-    } else if (shot.description.trim().length < 5) {
-      warnings.push(`shots[${index}].description 较短（少于 5 个字符），建议补充更多细节`);
-    }
-
-    // 检查 duration 格式（如果提供）
-    if (shot.duration !== undefined) {
-      if (typeof shot.duration !== 'number' || shot.duration <= 0) {
-        errors.push(`shots[${index}].duration 必须是正数（单位：秒）`);
-      }
     }
   });
 

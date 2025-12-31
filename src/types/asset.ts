@@ -24,7 +24,6 @@ export type AssetType =
   | "character"    // 角色图
   | "scene"        // 场景图
   | "prop"         // 道具图
-  | "storyboard"   // 分镜图
   | "effect"       // 特效图
   | "reference";   // 参考图
 
@@ -67,15 +66,6 @@ export interface PropMeta {
   category?: string;          // 分类
 }
 
-/**
- * 分镜类型的meta数据
- */
-export interface StoryboardMeta {
-  shotId?: string;            // 关联的分镜ID
-  composition?: string;       // 构图方式
-  lighting?: string;          // 光照
-  sourceAssets?: string[];    // 使用的源素材ID列表
-}
 
 /**
  * 编辑参数（用于派生图片）
@@ -104,7 +94,6 @@ export interface AssetMeta {
   character?: CharacterMeta;
   scene?: SceneMeta;
   prop?: PropMeta;
-  storyboard?: StoryboardMeta;
   editParams?: EditParams;
   generationParams?: GenerationParams;  // 生成参数
   custom?: Record<string, unknown>;

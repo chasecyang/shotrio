@@ -12,7 +12,6 @@ export const PRESET_TAGS = [
   "角色",
   "场景", 
   "道具",
-  "分镜",
   "特效",
   "参考",
 ] as const;

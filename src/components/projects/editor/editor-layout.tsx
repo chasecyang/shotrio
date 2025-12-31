@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect } from "react";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -8,21 +8,16 @@ import {
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { BetaBanner } from "@/components/ui/beta-banner";
-import { EditorProvider, useEditor } from "./editor-context";
+import { EditorProvider } from "./editor-context";
 import { EditorHeader } from "./editor-header";
 import { PreviewPanel } from "./preview-panel/preview-panel";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
-import { createShot, deleteShot } from "@/lib/actions/project";
-import { refreshEpisodeShots } from "@/lib/actions/project/refresh";
-import { getExportableShots } from "@/lib/actions/video/export";
-import { toast } from "sonner";
 import { Monitor, ArrowLeft } from "lucide-react";
 import { AgentProvider } from "./agent-panel";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import JSZip from "jszip";
 import type { EditorProject, EditorUser } from "./editor-types";
 
 // 移动端提示组件
@@ -78,208 +73,15 @@ function EditorLayoutInner({
   resourcePanel,
   initialView,
 }: EditorLayoutProps) {
-  const { state, dispatch } = useEditor();
-  const t = useTranslations("editor.timeline");
-
   // 注册键盘快捷键
   useEditorKeyboard();
 
   // 处理 URL 参数 - 初始化 settings 视图
   useEffect(() => {
     if (initialView === "settings") {
-      dispatch({
-        type: "SELECT_RESOURCE",
-        payload: { type: "settings", id: project.id },
-      });
+      // TODO: 实现设置视图的初始化逻辑
     }
-  }, [initialView, project.id, dispatch]);
-
-  // 导出视频的 loading 状态
-  const [isExportingVideos, setIsExportingVideos] = useState(false);
-
-  // 加载分镜数据
-  useEffect(() => {
-    async function loadShots() {
-      if (!state.selectedEpisodeId) {
-        dispatch({ type: "SET_SHOTS", payload: [] });
-        return;
-      }
-
-      dispatch({ type: "SET_LOADING", payload: true });
-      try {
-        const result = await refreshEpisodeShots(state.selectedEpisodeId);
-        if (result.success && result.shots) {
-          // 只在成功时才更新分镜列表
-          dispatch({ type: "SET_SHOTS", payload: result.shots });
-        } else {
-          // 刷新失败时不清空现有分镜数据，只显示错误提示
-          console.error("加载分镜失败:", result.error);
-          toast.error(result.error || t("errors.loadShotsFailed"));
-        }
-      } catch (error) {
-        // 刷新失败时不清空现有分镜数据，只显示错误提示
-        console.error("加载分镜失败:", error);
-        toast.error(t("errors.loadShotsFailed"));
-      } finally {
-        dispatch({ type: "SET_LOADING", payload: false });
-      }
-    }
-
-    loadShots();
-    // dispatch 是稳定的引用，不需要添加到依赖数组
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selectedEpisodeId]);
-
-  // 添加分镜
-  const handleAddShot = async () => {
-    if (!state.selectedEpisodeId) return;
-
-    try {
-      const newOrder = state.shots.length + 1;
-      const result = await createShot({
-        episodeId: state.selectedEpisodeId,
-        order: newOrder,
-        shotSize: "medium_shot",
-        duration: 3000,
-      });
-
-      if (result.success) {
-        toast.success(t("success.shotAdded"));
-        // 重新加载分镜
-        const refreshResult = await refreshEpisodeShots(state.selectedEpisodeId);
-        if (refreshResult.success && refreshResult.shots) {
-          dispatch({ type: "SET_SHOTS", payload: refreshResult.shots });
-        }
-      } else {
-        toast.error(result.error || t("errors.addShotFailed"));
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(t("errors.addShotFailed"));
-    }
-  };
-
-  // 删除选中分镜
-  const handleDeleteShots = async () => {
-    if (state.selectedShotIds.length === 0) return;
-
-    try {
-      for (const shotId of state.selectedShotIds) {
-        await deleteShot(shotId);
-      }
-      toast.success(t("success.shotsDeleted", { count: state.selectedShotIds.length }));
-      dispatch({ type: "CLEAR_SHOT_SELECTION" });
-      
-      // 重新加载分镜
-      if (state.selectedEpisodeId) {
-        const result = await refreshEpisodeShots(state.selectedEpisodeId);
-        if (result.success && result.shots) {
-          dispatch({ type: "SET_SHOTS", payload: result.shots });
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(t("errors.deleteShotsFailed"));
-    }
-  };
-
-  // 批量导出视频
-  const handleExportVideos = async () => {
-    if (state.selectedShotIds.length === 0) {
-      toast.error(t("errors.selectShotsForExport"));
-      return;
-    }
-
-    setIsExportingVideos(true);
-    const toastId = toast.loading(t("loading.preparingExport"));
-
-    try {
-      // 1. 获取可导出的分镜数据
-      const result = await getExportableShots(state.selectedShotIds);
-      
-      if (!result.success || !result.shots || result.shots.length === 0) {
-        toast.error(result.error || t("errors.noExportableVideos"), { id: toastId });
-        setIsExportingVideos(false);
-        return;
-      }
-
-      // 显示跳过信息
-      if (result.skippedCount > 0) {
-        toast.info(t("info.skippedShots", { count: result.skippedCount }), { id: toastId });
-      }
-
-      // 2. 创建 ZIP
-      const zip = new JSZip();
-      const totalVideos = result.shots.length;
-
-      // 3. 下载并添加每个视频到 ZIP
-      for (let i = 0; i < result.shots.length; i++) {
-        const shotData = result.shots[i];
-        
-        toast.loading(t("loading.packingVideo", { current: i + 1, total: totalVideos }), { id: toastId });
-
-        try {
-          // 下载视频文件
-          const response = await fetch(shotData.videoUrl);
-          if (!response.ok) {
-            throw new Error(t("errors.downloadFailed", { message: response.statusText }));
-          }
-          
-          const blob = await response.blob();
-          
-          // 生成文件名: shot-001.mp4
-          const filename = `shot-${String(shotData.order).padStart(3, '0')}.mp4`;
-          
-          // 添加到 ZIP
-          zip.file(filename, blob);
-        } catch (error) {
-          console.error(`下载视频失败 (Shot ${shotData.order}):`, error);
-          toast.warning(t("warning.shotDownloadFailed", { order: shotData.order }), { id: toastId });
-        }
-      }
-
-      // 4. 生成 ZIP 并下载
-      toast.loading(t("loading.generatingZip"), { id: toastId });
-      const zipBlob = await zip.generateAsync({ 
-        type: 'blob',
-        compression: "DEFLATE",
-        compressionOptions: {
-          level: 6
-        }
-      });
-
-      // 5. 触发浏览器下载
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      
-      // 获取当前剧集信息生成更友好的文件名
-      const currentEpisode = state.project?.episodes.find(
-        ep => ep.id === state.selectedEpisodeId
-      );
-      const episodeName = currentEpisode 
-        ? `第${currentEpisode.order}集` 
-        : 'shots';
-      
-      a.download = `${episodeName}-分镜视频-${Date.now()}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      // 6. 显示成功消息
-      toast.success(t("success.videosExported", { count: totalVideos }), { id: toastId });
-      
-    } catch (error) {
-      console.error("导出视频失败:", error);
-      toast.error(
-        error instanceof Error ? error.message : t("errors.exportFailed"),
-        { id: toastId }
-      );
-    } finally {
-      setIsExportingVideos(false);
-    }
-  };
+  }, [initialView, project.id]);
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -307,12 +109,7 @@ function EditorLayoutInner({
         {/* 预览/编辑区 */}
         <ResizablePanel defaultSize={65} minSize={30}>
           <div className="h-full overflow-hidden bg-background">
-            <PreviewPanel
-              onAddShot={handleAddShot}
-              onDeleteShots={handleDeleteShots}
-              onExportVideos={handleExportVideos}
-              isExportingVideos={isExportingVideos}
-            />
+            <PreviewPanel />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

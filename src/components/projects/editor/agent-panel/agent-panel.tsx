@@ -20,14 +20,14 @@ interface AgentPanelProps {
   projectId: string;
 }
 
-// 判断是否为分镜相关操作
-function isShotRelatedFunction(functionName: string): boolean {
-  const shotRelatedFunctions = [
-    'create_shots',
-    'update_shots',
-    'delete_shots',
+// 判断是否为视频相关操作
+function isVideoRelatedFunction(functionName: string): boolean {
+  const videoRelatedFunctions = [
+    'generate_video',
+    'update_videos',
+    'delete_videos',
   ];
-  return shotRelatedFunctions.includes(functionName);
+  return videoRelatedFunctions.includes(functionName);
 }
 
 // 判断是否为项目/剧集相关操作（需要刷新项目数据）
@@ -227,8 +227,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       const lastMessage = agent.state.messages[agent.state.messages.length - 1];
       if (lastMessage?.toolCalls) {
         const toolName = lastMessage.toolCalls[0]?.function.name;
-        if (toolName && isShotRelatedFunction(toolName)) {
-          setTimeout(() => window.dispatchEvent(new CustomEvent("shots-changed")), 200);
+        if (toolName && isVideoRelatedFunction(toolName)) {
+          setTimeout(() => window.dispatchEvent(new CustomEvent("videos-changed")), 200);
         }
         if (toolName && isProjectRelatedFunction(toolName)) {
           setTimeout(() => window.dispatchEvent(new CustomEvent("project-changed")), 200);
@@ -365,7 +365,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         const result = await createConversation({ 
           projectId,
           title: t('editor.agent.panel.newConversation'), // 临时标题，稍后会被AI生成的标题替换
-          context: agent.currentContext // 保存当前上下文（选中的剧集、分镜等）
+          context: agent.currentContext // 保存当前上下文（选中的剧集、资源等）
         });
         
         if (!result.success || !result.conversationId) {

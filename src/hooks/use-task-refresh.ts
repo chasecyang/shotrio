@@ -8,7 +8,7 @@ import type { Job } from "@/types/job";
  */
 interface RefreshStrategy {
   /** 资源类型 */
-  type: "shot" | "character" | "scene" | "episode" | "project" | "asset";
+  type: "video" | "project" | "asset";
   /** 触发刷新的状态 */
   refreshOn: Array<"completed" | "failed" | "processing" | "pending" | "cancelled">;
   /** 是否需要延迟刷新（避免过于频繁） */
@@ -19,24 +19,6 @@ interface RefreshStrategy {
  * 任务类型 -> 刷新策略映射
  */
 const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
-  // 图片生成
-  shot_image_generation: {
-    type: "shot",
-    refreshOn: ["completed"],
-  },
-  character_image_generation: {
-    type: "character",
-    refreshOn: ["completed"],
-  },
-  scene_image_generation: {
-    type: "scene",
-    refreshOn: ["completed"],
-  },
-  batch_image_generation: {
-    type: "episode",
-    refreshOn: ["completed"],
-  },
-
   // 素材生成
   asset_image_generation: {
     type: "asset",
@@ -44,24 +26,14 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
   },
 
   // 视频生成
-  shot_video_generation: {
-    type: "shot",
+  video_generation: {
+    type: "video",
     refreshOn: ["completed"],
   },
 
-  // 提取任务
-  character_extraction: {
-    type: "project",
-    refreshOn: ["completed"],
-  },
-  scene_extraction: {
-    type: "project",
-    refreshOn: ["completed"],
-  },
-
-  // TTS
-  shot_tts_generation: {
-    type: "shot",
+  // 最终导出
+  final_video_export: {
+    type: "video",
     refreshOn: ["completed"],
   },
 };
@@ -72,14 +44,8 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
 export interface RefreshCallbacks {
   /** 任务列表（从外部传入，避免创建新的轮询实例） */
   jobs: Job[];
-  /** 刷新单个 shot */
-  onRefreshShot?: (shotId: string) => Promise<void>;
-  /** 刷新单个角色 */
-  onRefreshCharacter?: (characterId: string, projectId: string) => Promise<void>;
-  /** 刷新单个场景 */
-  onRefreshScene?: (sceneId: string, projectId: string) => Promise<void>;
-  /** 刷新剧集的所有 shots */
-  onRefreshEpisode?: (episodeId: string) => Promise<void>;
+  /** 刷新单个视频 */
+  onRefreshVideo?: (videoId: string) => Promise<void>;
   /** 刷新整个项目 */
   onRefreshProject?: (projectId: string) => Promise<void>;
   /** 刷新素材列表 */
@@ -200,27 +166,9 @@ async function executeRefresh(
 ) {
   try {
     switch (type) {
-      case "shot":
-        if (callbacks.onRefreshShot && inputData.shotId) {
-          await callbacks.onRefreshShot(inputData.shotId as string);
-        }
-        break;
-
-      case "character":
-        if (callbacks.onRefreshCharacter && inputData.characterId && job.projectId) {
-          await callbacks.onRefreshCharacter(inputData.characterId as string, job.projectId);
-        }
-        break;
-
-      case "scene":
-        if (callbacks.onRefreshScene && inputData.sceneId && job.projectId) {
-          await callbacks.onRefreshScene(inputData.sceneId as string, job.projectId);
-        }
-        break;
-
-      case "episode":
-        if (callbacks.onRefreshEpisode && inputData.episodeId) {
-          await callbacks.onRefreshEpisode(inputData.episodeId as string);
+      case "video":
+        if (callbacks.onRefreshVideo && inputData.videoId) {
+          await callbacks.onRefreshVideo(inputData.videoId as string);
         }
         break;
 

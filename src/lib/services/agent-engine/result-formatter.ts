@@ -18,10 +18,10 @@ export function formatFunctionResult(
       // 查询类
       // ============================================
       case "query_context": {
-        const contextData = data as { episode?: unknown; shots?: unknown[]; assets?: { total?: number }; artStyles?: unknown[] };
+        const contextData = data as { episode?: unknown; videos?: unknown[]; assets?: { total?: number }; artStyles?: unknown[] };
         const parts: string[] = [];
         if (contextData.episode) parts.push("剧本");
-        if (contextData.shots) parts.push(`分镜(${contextData.shots.length})`);
+        if (contextData.videos) parts.push(`视频(${contextData.videos.length})`);
         if (contextData.assets) parts.push(`素材(${contextData.assets.total || 0})`);
         if (contextData.artStyles) parts.push("美术风格");
         return parts.length > 0 ? `已查询: ${parts.join("、")}` : "已查询项目上下文";
@@ -38,35 +38,21 @@ export function formatFunctionResult(
         return "查询完成";
       }
 
-      case "query_shots": {
-        const shotsData = data as { shots?: unknown[]; total?: number };
-        const count = shotsData.total ?? (shotsData.shots?.length || 0);
-        return `查询到 ${count} 个分镜`;
+      case "query_videos": {
+        const videosData = data as { videos?: unknown[]; total?: number };
+        const count = videosData.total ?? (videosData.videos?.length || 0);
+        return `查询到 ${count} 个视频`;
       }
 
       // ============================================
       // 创作类
       // ============================================
-      case "create_shots": {
-        const batchData = data as { createdCount?: number; shots?: Array<{ description?: string | null; order?: number }> };
-        const createdCount = batchData.createdCount ?? (batchData.shots ? batchData.shots.length : 0);
-        
-        if (createdCount > 0) {
-          // 尝试提取一些描述信息
-          if (batchData.shots && batchData.shots.length > 0) {
-            const firstShot = batchData.shots[0];
-            if (firstShot.description) {
-              const orderInfo = firstShot.order ? ` #${firstShot.order}` : "";
-              if (createdCount === 1) {
-                return `已创建分镜${orderInfo}: ${firstShot.description}`;
-              } else {
-                return `已创建 ${createdCount} 个分镜，首个分镜${orderInfo}: ${firstShot.description}`;
-              }
-            }
-          }
-          return `已创建 ${createdCount} 个分镜`;
+      case "generate_video": {
+        const videoData = data as { videoId?: string; title?: string };
+        if (videoData.title) {
+          return `已创建视频: ${videoData.title}`;
         }
-        return "创建分镜完成";
+        return "已创建视频生成任务";
       }
 
       case "generate_assets": {
@@ -83,12 +69,12 @@ export function formatFunctionResult(
       // ============================================
       // 修改类
       // ============================================
-      case "update_shots": {
+      case "update_videos": {
         const updateData = data as { updated?: number; total?: number };
         if (updateData.updated !== undefined) {
-          return `已更新 ${updateData.updated} 个分镜`;
+          return `已更新 ${updateData.updated} 个视频`;
         }
-        return "已更新分镜";
+        return "已更新视频";
       }
 
       case "update_assets": {
@@ -106,10 +92,10 @@ export function formatFunctionResult(
       // ============================================
       // 删除类
       // ============================================
-      case "delete_shots": {
+      case "delete_videos": {
         const deleteData = data as { deleted?: number };
-        const count = deleteData.deleted ?? (Array.isArray(parameters.shotIds) ? (parameters.shotIds as string[]).length : 1);
-        return `已删除 ${count} 个分镜`;
+        const count = deleteData.deleted ?? (Array.isArray(parameters.videoIds) ? (parameters.videoIds as string[]).length : 1);
+        return `已删除 ${count} 个视频`;
       }
 
       case "delete_assets": {

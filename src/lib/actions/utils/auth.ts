@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { project, episode, shot } from "@/lib/db/schemas/project";
+import { project, episode } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 
 /**
@@ -70,35 +70,6 @@ export async function requireEpisodeAccess(episodeId: string, userId: string) {
 }
 
 /**
- * 验证用户对分镜的访问权限（通过剧集->项目权限）
- * @throws {Error} 如果分镜不存在或用户无权限
- */
-export async function requireShotAccess(shotId: string, userId: string) {
-  const shotData = await db.query.shot.findFirst({
-    where: eq(shot.id, shotId),
-    with: {
-      episode: {
-        with: {
-          project: true,
-        },
-      },
-    },
-  });
-
-  if (!shotData) {
-    throw new Error("分镜不存在");
-  }
-
-  // 类型断言：episode 和 project 是对象
-  const episodeData = shotData.episode as { project: { userId: string } } | undefined;
-  if (!episodeData || episodeData.project.userId !== userId) {
-    throw new Error("无权限访问该分镜");
-  }
-
-  return shotData;
-}
-
-/**
  * 组合函数：验证登录并验证项目权限
  * 这是最常用的组合，简化代码
  */
@@ -115,14 +86,5 @@ export async function requireAuthAndEpisode(episodeId: string) {
   const { userId } = await requireAuth();
   const episodeData = await requireEpisodeAccess(episodeId, userId);
   return { userId, episodeData };
-}
-
-/**
- * 组合函数：验证登录并验证分镜权限
- */
-export async function requireAuthAndShot(shotId: string) {
-  const { userId } = await requireAuth();
-  const shotData = await requireShotAccess(shotId, userId);
-  return { userId, shotData };
 }
 

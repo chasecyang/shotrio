@@ -354,14 +354,12 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     return {
       projectId,
       selectedEpisodeId: editorContext.state.selectedEpisodeId,
-      selectedShotIds: [...editorContext.state.selectedShotIds],
       selectedResource: editorContext.state.selectedResource,
       recentJobs: serializableJobs,
     };
   }, [
     projectId,
     editorContext.state.selectedEpisodeId,
-    editorContext.state.selectedShotIds,
     editorContext.state.selectedResource,
     editorContext.jobs,
   ]);

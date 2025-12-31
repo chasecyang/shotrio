@@ -16,10 +16,7 @@ const TIMEOUT_CONFIG = {
   default: 10,
   // 视频生成任务可能需要更长时间
   video_generation: 30,
-  shot_video_generation: 30,
   final_video_export: 60,
-  // AI处理任务
-  shot_decomposition: 15, // 分镜拆解，使用reasoning模式
 };
 
 /**

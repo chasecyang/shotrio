@@ -29,17 +29,17 @@ export default async function Home() {
       badgeVariant: "default" as const,
     },
     {
-      icon: Layout,
-      titleKey: "features.storyboard.title",
-      descriptionKey: "features.storyboard.description",
-      badgeKey: "features.storyboard.badge",
-      badgeVariant: "default" as const,
-    },
-    {
       icon: FolderOpen,
       titleKey: "features.assetManagement.title",
       descriptionKey: "features.assetManagement.description",
       badgeKey: "features.assetManagement.badge",
+      badgeVariant: "default" as const,
+    },
+    {
+      icon: Layout,
+      titleKey: "features.videoGeneration.title",
+      descriptionKey: "features.videoGeneration.description",
+      badgeKey: "features.videoGeneration.badge",
       badgeVariant: "default" as const,
     },
     {

@@ -1,11 +1,11 @@
 /**
  * Agent Function 工具定义
  * 
- * 精简版设计原则：
- * 1. 合并批量操作 - 单个function通过数组参数支持批量
- * 2. 统一参数类型 - 使用正确的JSON Schema类型
- * 3. 简化枚举 - 只保留最常用的值
- * 4. 职责清晰 - 每个function只做一件事
+ * 重构后的设计原则：
+ * 1. 视频片段为核心 - 直接操作视频，不再通过分镜
+ * 2. Agent 可理解视频内容 - 通过 prompt 字段
+ * 3. 灵活的视频生成 - 支持从零生成或基于素材生成
+ * 4. 简化的工作流 - 生成→预览→调整→导出
  */
 
 import type { FunctionDefinition } from "@/types/agent";
@@ -15,22 +15,26 @@ import type { FunctionDefinition } from "@/types/agent";
  */
 export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
-  // 查询类工具（只读，直接执行）- 4个
+  // 查询类工具（只读，直接执行）
   // ============================================
   {
     name: "query_context",
-    description: "查询项目完整上下文，包括剧本内容、分镜列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
+    description: "查询项目完整上下文，包括剧本内容、视频列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
     displayName: "查询项目上下文",
     parameters: {
       type: "object",
       properties: {
         episodeId: {
           type: "string",
-          description: "剧集ID（可选）。如果提供，会包含该剧集的剧本内容和分镜列表",
+          description: "剧集ID（可选）。如果提供，会包含该剧集的剧本内容",
         },
         includeAssets: {
           type: "boolean",
           description: "是否包含素材库信息，默认true",
+        },
+        includeVideos: {
+          type: "boolean",
+          description: "是否包含视频列表，默认true",
         },
         includeArtStyles: {
           type: "boolean",
@@ -62,51 +66,29 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: false,
   },
   {
-    name: "query_shots",
-    description: "查询指定剧集的分镜详情。返回完整的分镜信息，包括描述、景别、运镜、时长、关联的素材（shotAssets）等。shotAssets 包含 label 和 imageUrl，用于视频生成时引用。",
-    displayName: "查询分镜详情",
+    name: "query_videos",
+    description: "查询项目的视频列表。返回所有视频的详细信息，包括 prompt（视频内容描述）、状态、时长、参考素材等。Agent 可以通过 prompt 理解视频内容，用于剪辑和组合。",
+    displayName: "查询视频列表",
     parameters: {
       type: "object",
       properties: {
-        episodeId: {
-          type: "string",
-          description: "剧集ID",
-        },
-        shotIds: {
+        videoIds: {
           type: "array",
-          description: "可选：指定分镜ID数组，只查询这些分镜。如果不提供则返回所有分镜",
+          description: "可选：指定视频ID数组，只查询这些视频。如果不提供则返回所有视频",
+        },
+        tags: {
+          type: "array",
+          description: "可选：按标签筛选视频",
         },
       },
-      required: ["episodeId"],
     },
     category: "read",
     needsConfirmation: false,
   },
 
   // ============================================
-  // 创作类工具（生成/创建，需要确认）- 3个
+  // 创作类工具（生成/创建，需要确认）
   // ============================================
-  {
-    name: "create_shots",
-    description: "创建分镜（支持单个或批量）。可以指定order插入到特定位置，可以关联图片（首帧、尾帧、关键帧、角色/场景/道具参考等）。适合从剧本生成分镜脚本、补充新镜头等场景。",
-    displayName: "创建分镜",
-    parameters: {
-      type: "object",
-      properties: {
-        episodeId: {
-          type: "string",
-          description: "剧集ID",
-        },
-        shots: {
-          type: "array",
-          description: "分镜数组，每个分镜包含必填字段(shotSize, description)和可选字段(order, cameraMovement, duration, visualPrompt, assets)。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。默认3秒。\n\n**assets**: 关联图片数组，每项包含 assetId（素材ID）和 label（语义化标签）。label 用于 AI 理解图片用途和在 prompt 中引用。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
-        },
-      },
-      required: ["episodeId", "shots"],
-    },
-    category: "generation",
-    needsConfirmation: true,
-  },
   {
     name: "generate_assets",
     description: "生成素材图片（支持单个或批量）。可以是从零生成，也可以基于现有素材进行图生图。适合创建角色、场景、道具等视觉素材。",
@@ -125,8 +107,8 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "generate_shot_video",
-    description: `使用 Kling O1 Reference-to-Video API 为分镜生成视频。
+    name: "generate_video",
+    description: `使用 Kling O1 Reference-to-Video API 生成视频片段。
 
 ⚠️ 重要限制（参数会被自动校验）：
 1. **图片总数限制**：elements 和 image_urls 中的图片总数不能超过 7 张
@@ -141,15 +123,17 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 3. **prompt 要求**：必须详细描述镜头运动和画面内容（至少10个字符）
    - 使用英文描述
    - 在描述中自然嵌入 @Element1、@Image1 等占位符引用图片
+   - ⚠️ 这个 prompt 非常重要：Agent 将通过它理解视频内容，用于后续的剪辑和组合
 
 4. **duration**：只能是字符串 "5" 或 "10"（不是数字）
 
 5. **aspect_ratio**：只能是 "16:9"、"9:16" 或 "1:1"
 
 💡 最佳实践：
-- 先用 query_shots 查询分镜的关联素材（shotAssets）
+- 先用 query_assets 查询可用素材
 - 根据素材数量合理分配到 elements 和 image_urls
 - 多角度的角色用 elements（需要至少2张图），单图场景用 image_urls
+- prompt 要详细且准确，方便 Agent 理解视频内容
 
 ## 完整示例
 假设 Assets 包含以下图片（共7张）：
@@ -164,7 +148,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 生成的配置：
 \`\`\`json
 {
-  "shotId": "shot-123",
+  "prompt": "A high-angle aerial view of an ancient greenhouse ruin surrounded by overgrown nature. The camera swoops down through the broken glass ceiling and reveals a young man standing in the sunlit center. He wears a weathered backpack. The camera performs a smooth 180-degree orbit around him, transitioning to a back view. As the open backpack comes into focus, the camera pushes forward and zooms deep inside, revealing a glowing magical stone nestled among his belongings. Cinematic lighting with warm golden hour tones, hopeful atmosphere, shot on 35mm film.",
+  "title": "温室废墟发现魔法石",
+  "referenceAssetIds": ["asset-1", "asset-2", "asset-3", "asset-4", "asset-5", "asset-6", "asset-7"],
   "klingO1Config": {
     "prompt": "Take @Image1 as the start frame. Start with a high-angle satellite view of the ancient greenhouse ruin surrounded by nature. The camera swoops down and flies inside the building, revealing the character from @Element1 standing in the sun-drenched center. The camera then seamlessly transitions into a smooth 180-degree orbit around the character, moving to the back view. As the open backpack comes into focus, the camera continues to push forward, zooming deep inside the bag to reveal the glowing stone from @Element2 nestled inside. Cinematic lighting, hopeful atmosphere, 35mm lens. Make sure to keep it as the style of @Image2.",
     "image_urls": [
@@ -188,17 +174,26 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     ],
     "duration": "5",
     "aspect_ratio": "16:9"
-  }
+  },
+  "tags": ["开场", "发现", "魔法"]
 }
 \`\`\`
 `,
-    displayName: "生成分镜视频",
+    displayName: "生成视频",
     parameters: {
       type: "object",
       properties: {
-        shotId: {
+        prompt: {
           type: "string",
-          description: "分镜ID",
+          description: "视频内容的完整描述（中文或英文）。这个描述非常重要，Agent 将通过它理解视频内容，用于后续的剪辑和组合。应该详细描述画面、动作、情绪、氛围等。",
+        },
+        title: {
+          type: "string",
+          description: "视频标题（可选），便于识别和管理",
+        },
+        referenceAssetIds: {
+          type: "array",
+          description: "参考素材ID数组（可选）。这些素材将用于视频生成，需要在 klingO1Config 中引用",
         },
         klingO1Config: {
           type: "object",
@@ -213,15 +208,23 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 
 注意：elements 和 image_urls 中的图片总数最多 7 张`,
         },
+        tags: {
+          type: "array",
+          description: "标签数组（可选），用于分类和筛选，如 ['开场', '动作', '对话']",
+        },
+        order: {
+          type: "number",
+          description: "排序值（可选），用于在视频库中排序",
+        },
       },
-      required: ["shotId", "klingO1Config"],
+      required: ["prompt", "klingO1Config"],
     },
     category: "generation",
     needsConfirmation: true,
   },
 
   // ============================================
-  // 修改类工具（需要确认）- 4个
+  // 修改类工具（需要确认）
   // ============================================
   {
     name: "update_episode",
@@ -253,15 +256,15 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "update_shots",
-    description: "修改分镜属性（支持单个或批量）。可以修改时长、景别、运镜、描述、视觉提示词。",
-    displayName: "修改分镜",
+    name: "update_videos",
+    description: "修改视频信息（支持单个或批量）。可以修改 prompt（内容描述）、title、tags、order 等。修改 prompt 会影响 Agent 对视频内容的理解。",
+    displayName: "修改视频",
     parameters: {
       type: "object",
       properties: {
         updates: {
           type: "array",
-          description: "更新数组，每项包含 shotId（必填）和要修改的字段（duration, shotSize, cameraMovement, description, visualPrompt）。\n\n**duration**: 分镜时长，单位为秒。例如：2表示2秒，5表示5秒，2.5表示2.5秒。\n\nshotSize枚举值: WIDE(远景), FULL(全景), MEDIUM(中景), CLOSE_UP(特写), EXTREME_CLOSE_UP(大特写), EXTREME_LONG_SHOT(大远景)。\n\ncameraMovement枚举值: STATIC(固定), PUSH_IN(推镜头), PULL_OUT(拉镜头), PAN_LEFT(左摇), PAN_RIGHT(右摇), TILT_UP(上摇), TILT_DOWN(下摇), TRACKING(移动跟拍), CRANE_UP(升镜头), CRANE_DOWN(降镜头), ORBIT(环绕), ZOOM_IN(变焦推进), ZOOM_OUT(变焦拉远), HANDHELD(手持)。",
+          description: "更新数组，每项包含 videoId（必填）和要修改的字段（prompt, title, tags, order）",
         },
       },
       required: ["updates"],
@@ -305,28 +308,28 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   // ============================================
-  // 删除类工具（需要确认）- 2个
+  // 删除类工具（需要确认）
   // ============================================
   {
-    name: "delete_shots",
-    description: "删除分镜（支持单个或批量）。删除后无法恢复，请谨慎使用。",
-    displayName: "删除分镜",
+    name: "delete_videos",
+    description: "删除视频（支持单个或批量）。删除后无法恢复，请谨慎使用。",
+    displayName: "删除视频",
     parameters: {
       type: "object",
       properties: {
-        shotIds: {
+        videoIds: {
           type: "array",
-          description: "要删除的分镜ID数组",
+          description: "要删除的视频ID数组",
         },
       },
-      required: ["shotIds"],
+      required: ["videoIds"],
     },
     category: "deletion",
     needsConfirmation: true,
   },
   {
     name: "delete_assets",
-    description: "删除素材（支持单个或批量）。如果素材已被分镜使用，需要先解除关联。删除后无法恢复。",
+    description: "删除素材（支持单个或批量）。删除后无法恢复。",
     displayName: "删除素材",
     parameters: {
       type: "object",
@@ -349,4 +352,3 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 export function getFunctionDefinition(name: string): FunctionDefinition | undefined {
   return AGENT_FUNCTIONS.find((f) => f.name === name);
 }
-

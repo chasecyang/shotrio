@@ -14,10 +14,9 @@ import { episode, conversation } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
 // 导入所有需要的 actions
-import { deleteShot, updateShot, batchCreateShots } from "../project/shot";
 import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
-import { refreshEpisodeShots } from "../project/refresh";
+import { refreshProjectVideos } from "../project/refresh";
 import { createJob } from "../job";
 import type { AssetImageGenerationInput } from "@/types/job";
 import { getSystemArtStyles } from "../art-style/queries";
@@ -25,7 +24,12 @@ import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
 import { updateEpisode } from "../project/episode";
 import type { NewEpisode } from "@/types/project";
-import { mapApiToDb, SHOT_SIZE_ENUM, CAMERA_MOVEMENT_ENUM } from "@/lib/constants/enums";
+import { 
+  getProjectVideos, 
+  createVideoGeneration, 
+  updateVideo, 
+  deleteVideos 
+} from "../video";
 
 /**
  * 执行单个 function call
@@ -72,11 +76,12 @@ export async function executeFunction(
       case "query_context": {
         const episodeId = parameters.episodeId as string | undefined;
         const includeAssets = parameters.includeAssets !== false; // 默认true
+        const includeVideos = parameters.includeVideos !== false; // 默认true
         const includeArtStyles = parameters.includeArtStyles !== false; // 默认true
 
         const contextData: Record<string, unknown> = {};
 
-        // 如果提供了episodeId，获取剧本和分镜
+        // 如果提供了episodeId，获取剧本
         if (episodeId) {
           const episodeData = await db.query.episode.findFirst({
             where: eq(episode.id, episodeId),
@@ -89,13 +94,29 @@ export async function executeFunction(
               scriptContent: episodeData.scriptContent,
               summary: episodeData.summary,
             };
-
-            // 获取分镜列表
-            const shotsResult = await refreshEpisodeShots(episodeId);
-            if (shotsResult.success) {
-              contextData.shots = shotsResult.shots;
-            }
           }
+        }
+
+        // 包含视频列表
+        if (includeVideos) {
+          const videos = await getProjectVideos(projectId, "created");
+          const completedVideos = videos.filter(v => v.status === "completed");
+          const processingVideos = videos.filter(v => v.status === "processing" || v.status === "pending");
+          
+          contextData.videos = {
+            total: videos.length,
+            completed: completedVideos.length,
+            processing: processingVideos.length,
+            list: videos.map(v => ({
+              id: v.id,
+              prompt: v.prompt,
+              title: v.title,
+              status: v.status,
+              duration: v.duration,
+              tags: v.tags,
+              order: v.order,
+            })),
+          };
         }
 
         // 包含素材统计
@@ -163,31 +184,54 @@ export async function executeFunction(
         break;
       }
 
-      case "query_shots": {
-        const episodeId = parameters.episodeId as string;
-        const shotIds = parameters.shotIds as string[] | undefined;
+      case "query_videos": {
+        const videoIds = parameters.videoIds as string[] | undefined;
+        const tags = parameters.tags as string[] | undefined;
 
-        const shotsResult = await refreshEpisodeShots(episodeId);
+        const videosResult = await refreshProjectVideos(projectId);
         
-        if (!shotsResult.success) {
+        if (!videosResult.success) {
           result = {
             functionCallId: functionCall.id,
             success: false,
-            error: shotsResult.error,
+            error: videosResult.error || "查询视频失败",
           };
           break;
         }
 
-        // 如果指定了shotIds，只返回这些分镜
-        let shots = shotsResult.shots || [];
-        if (shotIds && shotIds.length > 0) {
-          shots = shots.filter(s => shotIds.includes(s.id));
+        let videos = videosResult.videos || [];
+        
+        // 按 videoIds 筛选
+        if (videoIds && videoIds.length > 0) {
+          videos = videos.filter(v => videoIds.includes(v.id));
+        }
+        
+        // 按 tags 筛选
+        if (tags && tags.length > 0) {
+          videos = videos.filter(v => 
+            v.tags && v.tags.some(tag => tags.includes(tag))
+          );
         }
 
         result = {
           functionCallId: functionCall.id,
           success: true,
-          data: { shots, total: shots.length },
+          data: { 
+            videos: videos.map(v => ({
+              id: v.id,
+              prompt: v.prompt,
+              title: v.title,
+              status: v.status,
+              videoUrl: v.videoUrl,
+              thumbnailUrl: v.thumbnailUrl,
+              duration: v.duration,
+              tags: v.tags,
+              order: v.order,
+              referenceAssetIds: v.referenceAssetIds,
+              createdAt: v.createdAt,
+            })),
+            total: videos.length,
+          },
         };
         break;
       }
@@ -195,93 +239,6 @@ export async function executeFunction(
       // ============================================
       // 创作类
       // ============================================
-      case "create_shots": {
-        const episodeId = parameters.episodeId as string;
-        const shots = parameters.shots as Array<{
-          shotSize: string;
-          description: string;
-          order?: number;
-          cameraMovement?: string;
-          duration?: number;
-          visualPrompt?: string;
-          assets?: Array<{
-            assetId: string;
-            label: string;
-          }>;
-        }>;
-
-        try {
-          // 验证和转换数据
-          const validatedShots = shots.map((shotData) => ({
-            shotSize: mapApiToDb(shotData.shotSize, SHOT_SIZE_ENUM) as "extreme_long_shot" | "long_shot" | "full_shot" | "medium_shot" | "close_up" | "extreme_close_up",
-            description: shotData.description,
-            order: shotData.order,
-            cameraMovement: shotData.cameraMovement 
-              ? mapApiToDb(shotData.cameraMovement, CAMERA_MOVEMENT_ENUM) as "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "tilt_up" | "tilt_down" | "tracking" | "crane_up" | "crane_down"
-              : undefined,
-            // 将秒转换为毫秒
-            duration: shotData.duration !== undefined ? Math.round(shotData.duration * 1000) : undefined,
-            visualPrompt: shotData.visualPrompt,
-          }));
-
-          // 创建分镜
-          const batchResult = await batchCreateShots({
-            episodeId,
-            shots: validatedShots,
-          });
-
-          if (!batchResult.success || !('data' in batchResult)) {
-            result = {
-              functionCallId: functionCall.id,
-              success: false,
-              error: 'error' in batchResult ? batchResult.error : "创建失败",
-            };
-            break;
-          }
-
-          const createdShots = batchResult.data.shots;
-          
-          // 处理每个分镜的关联图片
-          const { batchAddShotAssets } = await import("../project/shot-asset");
-          const assetsAddResults = [];
-          
-          for (let i = 0; i < createdShots.length; i++) {
-            const shot = createdShots[i];
-            const shotData = shots[i];
-            
-            // 添加关联图片
-            if (shotData.assets && shotData.assets.length > 0) {
-              const addResult = await batchAddShotAssets({
-                shotId: shot.id,
-                assets: shotData.assets,
-              });
-              
-              if (addResult.success) {
-                assetsAddResults.push({
-                  shotId: shot.id,
-                  assetsCount: shotData.assets.length,
-                });
-              }
-            }
-          }
-
-          result = {
-            functionCallId: functionCall.id,
-            success: true,
-            data: {
-              ...batchResult.data,
-              assetsAddResults,
-            },
-          };
-        } catch (error) {
-          result = {
-            functionCallId: functionCall.id,
-            success: false,
-            error: error instanceof Error ? error.message : "参数验证失败",
-          };
-        }
-        break;
-      }
 
       case "generate_assets": {
         const assets = parameters.assets as Array<{
@@ -371,8 +328,12 @@ export async function executeFunction(
         break;
       }
 
-      case "generate_shot_video": {
-        const shotId = parameters.shotId as string;
+      case "generate_video": {
+        const prompt = parameters.prompt as string;
+        const title = parameters.title as string | undefined;
+        const referenceAssetIds = parameters.referenceAssetIds as string[] | undefined;
+        const tags = parameters.tags as string[] | undefined;
+        const order = parameters.order as number | undefined;
         const klingO1Config = parameters.klingO1Config as {
           prompt: string;
           elements?: Array<{
@@ -384,22 +345,21 @@ export async function executeFunction(
           aspect_ratio?: "16:9" | "9:16" | "1:1";
         };
 
-        if (!klingO1Config || !klingO1Config.prompt) {
+        if (!prompt || !klingO1Config || !klingO1Config.prompt) {
           result = {
             functionCallId: functionCall.id,
             success: false,
-            error: "缺少必填参数：klingO1Config.prompt",
+            error: "缺少必填参数：prompt 和 klingO1Config.prompt",
           };
           break;
         }
 
         try {
-          // 防御性校验（理论上不应该走到这里，因为已在 AgentEngine 中校验）
+          // 参数校验
           const { validateKlingO1Config } = await import("@/lib/utils/video-validation");
           const validationResult = validateKlingO1Config(klingO1Config);
           
           if (!validationResult.valid) {
-            console.warn("[Executor] 参数校验失败（防御性检查）", validationResult.errors);
             result = {
               functionCallId: functionCall.id,
               success: false,
@@ -408,15 +368,17 @@ export async function executeFunction(
             break;
           }
           
-          // 使用标准化后的配置
           const normalizedConfig = validationResult.normalizedConfig!;
           
-          console.log("[Executor] 使用标准化配置创建视频任务");
-          
-          const { createShotVideoGeneration } = await import("../project/shot-video");
-          const generateResult = await createShotVideoGeneration({
-            shotId,
+          // 创建视频生成任务
+          const generateResult = await createVideoGeneration({
+            projectId,
+            prompt,
+            title,
+            referenceAssetIds,
             klingO1Config: normalizedConfig,
+            order,
+            tags,
           });
 
           if (generateResult.success) {
@@ -424,9 +386,9 @@ export async function executeFunction(
               functionCallId: functionCall.id,
               success: true,
               data: {
-                shotId,
+                videoId: generateResult.data?.video.id,
                 jobId: generateResult.data?.jobId,
-                videoConfigId: generateResult.data?.shotVideo.id,
+                message: "视频生成任务已创建",
               },
             };
           } else {
@@ -479,62 +441,47 @@ export async function executeFunction(
         break;
       }
 
-      case "update_shots": {
+      case "update_videos": {
         const updates = parameters.updates as Array<{
-          shotId: string;
-          duration?: number;
-          shotSize?: string;
-          cameraMovement?: string;
-          description?: string;
-          visualPrompt?: string;
+          videoId: string;
+          prompt?: string;
+          title?: string;
+          tags?: string[];
+          order?: number;
         }>;
 
-        const updateResults: Array<{ shotId: string; success: boolean; error?: string }> = [];
-
+        const results = [];
+        
         for (const update of updates) {
-          const { shotId, ...fields } = update;
+          const { videoId, ...updateData } = update;
+          const updateResult = await updateVideo(videoId, updateData);
           
-          try {
-            // 转换枚举值
-            const mappedFields: Record<string, unknown> = { ...fields };
-            if (fields.shotSize) {
-              mappedFields.shotSize = mapApiToDb(fields.shotSize, SHOT_SIZE_ENUM);
-            }
-            if (fields.cameraMovement) {
-              mappedFields.cameraMovement = mapApiToDb(fields.cameraMovement, CAMERA_MOVEMENT_ENUM);
-            }
-            // 将秒转换为毫秒
-            if (fields.duration !== undefined) {
-              mappedFields.duration = Math.round(fields.duration * 1000);
-            }
-            
-            const updateResult = await updateShot(shotId, mappedFields);
-            updateResults.push({
-              shotId,
-              success: updateResult.success,
-              error: updateResult.error,
+          if (updateResult.success) {
+            results.push({
+              videoId,
+              success: true,
             });
-          } catch (error) {
-            updateResults.push({
-              shotId,
+          } else {
+            results.push({
+              videoId,
               success: false,
-              error: error instanceof Error ? error.message : "参数验证失败",
+              error: updateResult.error,
             });
           }
         }
 
-        const successCount = updateResults.filter(r => r.success).length;
-        const errors = updateResults.filter(r => !r.success).map(r => `${r.shotId}: ${r.error}`);
+        const successCount = results.filter(r => r.success).length;
+        const failedCount = results.length - successCount;
 
         result = {
           functionCallId: functionCall.id,
-          success: successCount > 0,
+          success: failedCount === 0,
           data: {
-            updated: successCount,
-            total: updates.length,
-            errors: errors.length > 0 ? errors : undefined,
+            results,
+            successCount,
+            failedCount,
+            message: `已更新 ${successCount} 个视频${failedCount > 0 ? `，${failedCount} 个失败` : ""}`,
           },
-          error: successCount === 0 ? `所有更新失败: ${errors.join("; ")}` : undefined,
         };
         break;
       }
@@ -592,18 +539,27 @@ export async function executeFunction(
       // ============================================
       // 删除类
       // ============================================
-      case "delete_shots": {
-        const shotIds = parameters.shotIds as string[];
+      case "delete_videos": {
+        const videoIds = parameters.videoIds as string[];
 
-        for (const shotId of shotIds) {
-          await deleteShot(shotId);
+        const deleteResult = await deleteVideos(videoIds);
+
+        if (deleteResult.success) {
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              deletedCount: deleteResult.deletedCount,
+              message: `已删除 ${deleteResult.deletedCount} 个视频`,
+            },
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: deleteResult.error || "删除视频失败",
+          };
         }
-
-        result = {
-          functionCallId: functionCall.id,
-          success: true,
-          data: { deleted: shotIds.length },
-        };
         break;
       }
 

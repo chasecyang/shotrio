@@ -105,19 +105,3 @@ export function AssetPreviewSkeleton({ count = 2 }: { count?: number }) {
   );
 }
 
-/**
- * Shot素材选择器骨架屏
- */
-export function ShotAssetSelectorSkeleton({ count = 6 }: { count?: number }) {
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="aspect-square rounded-lg border-2 overflow-hidden">
-          <Skeleton className="w-full h-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-

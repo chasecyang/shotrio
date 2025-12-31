@@ -71,7 +71,6 @@ export interface SerializableJobInfo {
 export interface AgentContext {
   projectId: string;
   selectedEpisodeId: string | null;
-  selectedShotIds: string[];
   selectedResource: SelectedResource | null;
   recentJobs: SerializableJobInfo[]; // 使用序列化友好的格式
 }

@@ -102,7 +102,7 @@ export async function createExtractionTaskForProject(params: {
 
 /**
  * 通用的基于单个剧集的任务创建函数
- * 适用于分镜生成等针对单个剧集的任务
+ * 适用于视频生成等针对单个剧集的任务
  */
 export async function createTaskForEpisode(params: {
   episodeId: string;

@@ -4,8 +4,6 @@ export type JobType =
   | "batch_image_generation" // 批量图像生成
   | "asset_image_generation" // 素材图片生成
   | "video_generation" // 视频生成
-  | "shot_video_generation" // 单镜视频生成
-  | "shot_tts_generation" // 单镜TTS生成
   | "final_video_export"; // 最终成片导出
 
 export type JobStatus = 
@@ -48,8 +46,7 @@ export interface BatchImageGenerationInput {
 }
 
 export interface VideoGenerationInput {
-  shotId: string;
-  imageUrl?: string;
+  videoId: string; // video 记录的 ID
 }
 
 // 素材图片生成输入（新架构：只需要 assetId）
@@ -85,49 +82,17 @@ export interface AssetImageGenerationResult {
   errors?: string[];
 }
 
-// 单镜视频生成输入（新架构）
-export interface ShotVideoGenerationInput {
-  shotId: string;
-  videoConfigId: string; // shot_video 记录的 ID
-}
-
-// 单镜视频生成结果
-export interface ShotVideoGenerationResult {
-  shotId: string;
-  videoUrl: string;
-  duration: number;
-}
-
-// 单镜TTS生成输入
-export interface ShotTTSGenerationInput {
-  shotId: string;
-  dialogues: Array<{
-    dialogueId: string;
-    text: string;
-    characterName?: string;
-    emotionTag?: string;
-  }>;
-}
-
-// 单镜TTS生成结果
-export interface ShotTTSGenerationResult {
-  shotId: string;
-  audioFiles: Array<{
-    dialogueId: string;
-    audioUrl: string;
-  }>;
-  finalAudioUrl?: string; // 合并后的音频
-}
 
 // 最终成片导出输入
 export interface FinalVideoExportInput {
-  episodeId: string;
+  projectId: string;
+  videoIds: string[]; // 要导出的视频片段ID列表（按顺序）
   includeAudio?: boolean; // 是否包含音频
   includeSubtitles?: boolean; // 是否包含字幕
   exportQuality?: "draft" | "high"; // 草稿/高清
   transitions?: Array<{
-    fromShotId?: string;
-    toShotId: string;
+    fromVideoId?: string;
+    toVideoId: string;
     type: string;
     duration: number;
   }>;
@@ -135,19 +100,15 @@ export interface FinalVideoExportInput {
 
 // 最终成片导出结果
 export interface FinalVideoExportResult {
-  episodeId: string;
+  projectId: string;
   videoUrl: string;
   duration: number; // 总时长（秒）
   fileSize: number; // 文件大小（字节）
   videoList?: Array<{
+    videoId: string;
     order: number;
     videoUrl: string;
     duration: number;
-    dialogues: Array<{
-      text: string;
-      startTime: number | null;
-      duration: number | null;
-    }>;
   }>;
 }
 

@@ -41,8 +41,8 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   // 基础 ID
   episodeId: "剧集ID",
   projectId: "项目ID",
-  shotId: "分镜ID",
-  shotIds: "分镜列表",
+  videoId: "视频ID",
+  videoIds: "视频列表",
   assetId: "素材ID",
   assetIds: "素材列表",
   sourceAssetIds: "参考图",
@@ -61,11 +61,9 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   assetType: "素材类型",
   autoGenerateImages: "自动生成图片",
 
-  // 分镜属性
+  // 视频属性
   duration: "时长",
-  shotSize: "景别",
-  cameraMovement: "运镜方式",
-  shotOrders: "分镜顺序",
+  aspectRatio: "宽高比",
 
   // 其他
   limit: "数量限制",
@@ -213,14 +211,14 @@ function formatArrayValue(arr: unknown[], key?: string, mode: FormatMode = "deta
     if (key === "sourceAssetIds") {
       return arr.length > 0 ? `${arr.length}张参考图` : "无";
     }
-    // 分镜或素材数组：显示数量
-    if (key === "shots" && arr.length > 0 && typeof arr[0] === "object") {
-      return `${arr.length}个分镜`;
+    // 视频或素材数组：显示数量
+    if (key === "videos" && arr.length > 0 && typeof arr[0] === "object") {
+      return `${arr.length}个视频`;
     }
     if (key === "assets" && arr.length > 0 && typeof arr[0] === "object") {
       return `${arr.length}个素材`;
     }
-    if (key === "shotIds" || key === "assetIds") {
+    if (key === "videoIds" || key === "assetIds") {
       return `${arr.length}项`;
     }
     // 其他数组：显示数量
@@ -285,7 +283,7 @@ export function formatParameters(
 const TECHNICAL_ID_PARAMS = new Set([
   "episodeId",
   "projectId",
-  "shotId",
+  "videoId",
   "styleId",
 ]);
 
@@ -313,12 +311,12 @@ function extractAssetIds(value: unknown): string[] {
  */
 const KEY_PARAMS_PRIORITY = [
   "name",
+  "title",
   "description",
   "prompt",
   "tags",
-  "shotSize",
-  "cameraMovement",
   "duration",
+  "aspectRatio",
   "numImages",
   "reason",
 ];

@@ -176,19 +176,19 @@
         "description": "Intelligent script generation and editing with episode management. AI-assisted dialogue creation for more vivid stories.",
         "badge": "Available Now"
       },
-      "storyboard": {
-        "title": "Storyboard Design",
-        "description": "Visual storyboard editor for precise shot control. Support for professional settings like shot types and camera movements.",
-        "badge": "Available Now"
-      },
       "assetManagement": {
         "title": "Asset Management",
         "description": "Manage scenes, characters, and effects in one place. Support AI generation and uploads for your asset library.",
         "badge": "Available Now"
       },
+      "videoGeneration": {
+        "title": "AI Video Generation",
+        "description": "Generate video clips directly from scripts, AI-powered editing for easy production.",
+        "badge": "Available Now"
+      },
       "agent": {
         "title": "AI Agent Assistant",
-        "description": "Smart assistant to help plan your workflow and generate shots. Beta feature, continuously improving.",
+        "description": "Smart assistant to help plan your workflow and generate videos and assets. Beta feature, continuously improving.",
         "badge": "Beta"
       },
       "voiceMusic": {
@@ -213,12 +213,12 @@
         "description": "Craft every character and scene detail with care"
       },
       "step3": {
-        "title": "Storyboard Design",
-        "description": "Take control of every shot and camera movement"
+        "title": "Video Generation",
+        "description": "AI generates video clips directly from script"
       },
       "step4": {
-        "title": "AI Production",
-        "description": "Generate high-quality videos under your control"
+        "title": "Smart Editing",
+        "description": "Edit clips into high-quality final videos under your control"
       }
     },
     "cta": {
@@ -264,7 +264,6 @@
     "defaultProjectDescription": "Start my micro-drama creation journey",
     "nav": {
       "scripts": "Scripts",
-      "storyboard": "Storyboard",
       "characters": "Characters",
       "scenes": "Scenes",
       "settings": "Project Settings"
@@ -293,29 +292,6 @@
       "deleteConfirmTitle": "Confirm Project Deletion?",
       "deleteConfirmDescription": "This action cannot be undone. Project \"{title}\" and all its data (including episodes, characters, storyboards, etc.) will be permanently deleted.",
       "deleteCancel": "Cancel"
-    },
-    "storyboard": {
-      "selectEpisode": "Select Episode",
-      "pleaseSelectEpisode": "Please select an episode",
-      "episode": "Episode {order}",
-      "shots": "{count} shots",
-      "noEpisodes": {
-        "title": "No Episodes Yet",
-        "description": "Please create episodes in the scripts page first, then add storyboards",
-        "action": "Go to Scripts"
-      },
-      "incompleteEpisode": {
-        "title": "Episode Information Incomplete",
-        "description": "It is recommended to complete the episode information (summary, script) for better creative ideas.",
-        "detail": "",
-        "action": "Edit Script"
-      },
-      "noShots": {
-        "title": "No Shots Yet",
-        "description": "Click the button below to add the first shot for \"{title}\"",
-        "action": "Add Shot"
-      },
-      "addShot": "Add Shot"
     },
     "assets": {
       "title": "Assets",
@@ -348,7 +324,6 @@
         "character": "Character",
         "scene": "Scene",
         "prop": "Prop",
-        "storyboard": "Storyboard",
         "effect": "Effect",
         "reference": "Reference"
       },
@@ -772,8 +747,6 @@
       "batch_image_generation": "Batch Image Generation",
       "asset_image_generation": "Asset Image Generation",
       "video_generation": "Video Generation",
-      "shot_video_generation": "Shot Video Generation",
-      "shot_tts_generation": "Text-to-Speech",
       "final_video_export": "Final Video Export",
       "unknown": "Unknown Task"
     },
@@ -832,7 +805,6 @@
       "tagRemoved": "Tag removed successfully",
       "derivationSubmitted": "Derivation request submitted",
       "projectCreated": "Project created successfully",
-      "shotAdded": "Shot added successfully",
       "taskCancelled": "Task cancelled successfully",
       "taskResubmitted": "Task resubmitted successfully",
       "videoGenerated": "Video generation completed",
@@ -864,14 +836,8 @@
       "deleteFailed": "Delete failed",
       "addTagFailed": "Failed to add tag",
       "removeTagFailed": "Failed to remove tag",
-      "generateShotImageFirst": "Please generate shot image first",
       "generationFailed": "Generation failed",
-      "loadShotsFailed": "Failed to load shots",
-      "addShotFailed": "Failed to add shot",
-      "deleteShotFailed": "Failed to delete shot",
-      "selectShotsForVideo": "Please select shots to generate video",
       "startBatchGenerationFailed": "Failed to start batch generation",
-      "selectShotsForExport": "Please select shots to export",
       "loadConversationsFailed": "Failed to load conversations",
       "loadConversationFailed": "Failed to load conversation",
       "deleteConversationFailed": "Failed to delete conversation",
@@ -879,7 +845,6 @@
       "rejectActionFailed": "Failed to reject action",
       "enterValidCredits": "Please enter valid credits amount",
       "enterValidMaxUses": "Please enter valid max uses",
-      "noShotsToPlay": "No shots to play",
       "loadAssetFailed": "Failed to load asset",
       "saveFailed": "Failed to save",
       "tagCannotBeEmpty": "Tag cannot be empty",
@@ -975,9 +940,9 @@
               "prompt": "Help me generate characters and props that match the story"
             },
             {
-              "title": "Create Shots",
-              "description": "Create storyboard shots based on the plot",
-              "prompt": "Help me create storyboard shots based on the plot"
+              "title": "Generate Videos",
+              "description": "Generate video clips based on the plot",
+              "prompt": "Help me generate video clips based on the plot"
             }
           ]
         }
@@ -1081,14 +1046,6 @@
       }
     },
     "preview": {
-      "shot": {
-        "title": "Shot Editor",
-        "shotNumber": "Shot {number}",
-        "description": "Description",
-        "descriptionPlaceholder": "Describe what happens in this shot...",
-        "duration": "Duration",
-        "durationUnit": "seconds"
-      },
       "episode": {
         "title": "Episode Editor",
         "episodeNumber": "Episode {number}",
@@ -1122,54 +1079,6 @@
         "results": "Generation Results",
         "savedToLibrary": "Images saved to asset library"
       }
-    },
-    "timeline": {
-      "toolbar": {
-        "addShot": "Add Shot",
-        "deleteShot": "Delete Shot",
-        "moveUp": "Move Up",
-        "moveDown": "Move Down",
-        "duplicate": "Duplicate",
-        "play": "Play",
-        "pause": "Pause",
-        "zoom": "Zoom"
-      },
-      "errors": {
-        "loadShotsFailed": "Failed to load shots",
-        "addShotFailed": "Failed to add shot",
-        "deleteShotsFailed": "Failed to delete shots",
-        "applyFailed": "Apply failed",
-        "selectShotsForVideo": "Please select shots to generate video first",
-        "shotsWithoutImages": "{count} shot(s) have no images, please generate images first",
-        "selectShotsForExport": "Please select shots to export first",
-        "noExportableVideos": "No videos to export",
-        "downloadFailed": "Download failed: {message}",
-        "exportFailed": "Export failed, please try again"
-      },
-      "success": {
-        "shotAdded": "Shot added",
-        "shotsDeleted": "Deleted {count} shot(s)",
-        "videosExported": "Successfully exported {count} video(s)"
-      },
-      "loading": {
-        "preparingExport": "Preparing export...",
-        "packingVideo": "Packing videos ({current}/{total})...",
-        "generatingZip": "Generating zip file..."
-      },
-      "info": {
-        "skippedShots": "Skipped {count} shot(s) without videos"
-      },
-      "warning": {
-        "shotDownloadFailed": "Shot {order} download failed, skipped"
-      }
-    },
-    "storyboard": {
-      "selectEpisodeFirst": "Please select an episode first",
-      "noShots": "No shots in this episode yet",
-      "clickToEdit": "Click shot to view details"
-    },
-    "tabs": {
-      "storyboard": "Storyboard"
     }
   }
 }

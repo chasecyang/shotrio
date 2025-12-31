@@ -12,32 +12,12 @@ export const projectStatusEnum = pgEnum("project_status", [
   "archived",
 ]);
 
-// 景别 (分镜的核心参数)
-export const shotSizeEnum = pgEnum("shot_size", [
-  "extreme_long_shot", // 大远景
-  "long_shot", // 远景
-  "full_shot", // 全景
-  "medium_shot", // 中景
-  "close_up", // 特写
-  "extreme_close_up", // 大特写
-]);
-
-// 运镜方式 (摄影机运动)
-export const cameraMovementEnum = pgEnum("camera_movement", [
-  "static", // 固定镜头
-  "push_in", // 推镜头
-  "pull_out", // 拉镜头
-  "pan_left", // 左摇
-  "pan_right", // 右摇
-  "tilt_up", // 上摇
-  "tilt_down", // 下摇
-  "tracking", // 移动跟拍
-  "crane_up", // 升镜头
-  "crane_down", // 降镜头
-  "orbit", // 环绕
-  "zoom_in", // 变焦推进
-  "zoom_out", // 变焦拉远
-  "handheld", // 手持
+// 视频生成状态
+export const videoStatusEnum = pgEnum("video_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
 ]);
 
 // 任务类型
@@ -46,8 +26,6 @@ export const jobTypeEnum = pgEnum("job_type", [
   "asset_image_generation", // 素材图片生成
   "script_element_extraction", // 剧本元素提取
   "video_generation", // 视频生成
-  "shot_video_generation", // 单镜视频生成
-  "shot_tts_generation", // 单镜TTS生成
   "final_video_export", // 最终成片导出
 ]);
 
@@ -73,14 +51,6 @@ export const messageRoleEnum = pgEnum("message_role", [
   "assistant",
   "system",
   "tool", // 用于保存 function 执行结果
-]);
-
-// 视频生成状态
-export const shotVideoStatusEnum = pgEnum("shot_video_status", [
-  "pending",
-  "processing",
-  "completed",
-  "failed",
 ]);
 
 // --- 表定义 ---
@@ -211,73 +181,42 @@ export const episode = pgTable("episode", {
     .notNull(),
 });
 
-// 4. 分镜/镜头表 (Shot) - 最核心的表
-export const shot = pgTable("shot", {
+// 4. 视频表 (Video) - 视频片段，直接属于项目
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const video: any = pgTable("video", {
   id: text("id").primaryKey(),
-  episodeId: text("episode_id")
+  projectId: text("project_id")
     .notNull()
-    .references(() => episode.id, { onDelete: "cascade" }),
-
-  // 排序与属性
-  order: integer("order").notNull(), // 镜号 (1, 2, 3...)
-  shotSize: shotSizeEnum("shot_size").notNull(), // 景别
-  cameraMovement: cameraMovementEnum("camera_movement").default("static"), // 运镜方式
-  duration: integer("duration").default(3000), // 预估时长 (毫秒)
-
-  // 内容描述
-  description: text("description"), // 描述 (包含画面、对话、动作等)
-  visualPrompt: text("visual_prompt"), // 英文 Prompt (给 AI 看)
-
-  // 听觉内容 (Audio)
-  audioPrompt: text("audio_prompt"), // 音效/BGM 提示
-
-  // 生成结果 (Audio)
-  finalAudioUrl: text("final_audio_url"), // 混音后的完整音频
-
-  // 当前使用的视频版本（指向 shot_video 表）
-  currentVideoId: text("current_video_id"),
-
+    .references(() => project.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  
+  // 视频内容描述（AI 可理解）
+  prompt: text("prompt").notNull(), // 视频的完整描述
+  title: text("title"), // 可选的标题/标签
+  
+  // 生成配置
+  referenceAssetIds: text("reference_asset_ids").array(), // 参考图片ID数组
+  generationConfig: text("generation_config"), // JSON: 存储模型参数、宽高比等完整配置
+  
+  // 生成结果
+  videoUrl: text("video_url"), // 视频URL
+  thumbnailUrl: text("thumbnail_url"), // 缩略图URL
+  duration: integer("duration"), // 实际视频时长（毫秒）
+  status: videoStatusEnum("status").default("pending").notNull(),
+  errorMessage: text("error_message"),
+  
+  // 组织和排序（可选，用于UI展示）
+  order: integer("order"), // 用户可以排序，但不强制
+  tags: text("tags").array(), // 标签，方便分类
+  
+  // 元数据
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-});
-
-// 4.1 分镜关联素材表 (Shot Asset) - 分镜可关联多张图片
-export const shotAsset = pgTable("shot_asset", {
-  id: text("id").primaryKey(),
-  shotId: text("shot_id")
-    .notNull()
-    .references(() => shot.id, { onDelete: "cascade" }),
-  assetId: text("asset_id")
-    .notNull()
-    .references(() => asset.id, { onDelete: "cascade" }),
-  
-  // 语义化标签（用于 AI 理解和 prompt 引用）
-  label: text("label").notNull(), // 如 "首帧"、"汤姆-主图"、"厨房场景"、"氛围参考"
-  order: integer("order").notNull(), // 决定 prompt 中的引用顺序
-  
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// 4.2 分镜视频生成记录表 (Shot Video) - 支持多版本生成
-export const shotVideo = pgTable("shot_video", {
-  id: text("id").primaryKey(),
-  shotId: text("shot_id")
-    .notNull()
-    .references(() => shot.id, { onDelete: "cascade" }),
-  
-  // 生成配置（JSON 字符串）
-  // 包含: prompt, additionalAssets, model, duration, aspectRatio 等
-  generationConfig: text("generation_config").notNull(),
-  
-  // 生成结果
-  videoUrl: text("video_url"), // 生成的视频URL
-  status: shotVideoStatusEnum("status").default("pending").notNull(),
-  errorMessage: text("error_message"),
-  
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 5. 任务表 (Job) - 异步任务队列
@@ -341,6 +280,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   }),
   assets: many(asset),
   episodes: many(episode),
+  videos: many(video),
   jobs: many(job),
   conversations: many(conversation),
 }));
@@ -364,45 +304,21 @@ export const assetTagRelations = relations(assetTag, ({ one }) => ({
   }),
 }));
 
-export const episodeRelations = relations(episode, ({ one, many }) => ({
+export const episodeRelations = relations(episode, ({ one }) => ({
   project: one(project, {
     fields: [episode.projectId],
     references: [project.id],
   }),
-  shots: many(shot),
 }));
 
-export const shotRelations = relations(shot, ({ one, many }) => ({
-  episode: one(episode, {
-    fields: [shot.episodeId],
-    references: [episode.id],
+export const videoRelations = relations(video, ({ one }) => ({
+  project: one(project, {
+    fields: [video.projectId],
+    references: [project.id],
   }),
-  // 关联的素材（多张图片）
-  shotAssets: many(shotAsset),
-  // 生成的视频版本
-  shotVideos: many(shotVideo),
-  // 当前使用的视频版本
-  currentVideo: one(shotVideo, {
-    fields: [shot.currentVideoId],
-    references: [shotVideo.id],
-  }),
-}));
-
-export const shotAssetRelations = relations(shotAsset, ({ one }) => ({
-  shot: one(shot, {
-    fields: [shotAsset.shotId],
-    references: [shot.id],
-  }),
-  asset: one(asset, {
-    fields: [shotAsset.assetId],
-    references: [asset.id],
-  }),
-}));
-
-export const shotVideoRelations = relations(shotVideo, ({ one }) => ({
-  shot: one(shot, {
-    fields: [shotVideo.shotId],
-    references: [shot.id],
+  user: one(user, {
+    fields: [video.userId],
+    references: [user.id],
   }),
 }));
 
@@ -425,63 +341,7 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   }),
 }));
 
-// 转场效果枚举
-export const transitionTypeEnum = pgEnum("transition_type", [
-  "none", // 无转场
-  "fade", // 淡入淡出
-  "dissolve", // 溶解
-  "wipe_left", // 左擦除
-  "wipe_right", // 右擦除
-  "wipe_up", // 上擦除
-  "wipe_down", // 下擦除
-  "slide_left", // 左滑动
-  "slide_right", // 右滑动
-  "zoom_in", // 放大
-  "zoom_out", // 缩小
-]);
-
-// 6. 转场效果表 (Shot Transition) - 分镜间的转场配置
-export const shotTransition = pgTable("shot_transition", {
-  id: text("id").primaryKey(),
-  episodeId: text("episode_id")
-    .notNull()
-    .references(() => episode.id, { onDelete: "cascade" }),
-  
-  // 从哪个镜头到哪个镜头（fromShotId可为null表示片头）
-  fromShotId: text("from_shot_id").references(() => shot.id, { onDelete: "cascade" }),
-  toShotId: text("to_shot_id")
-    .notNull()
-    .references(() => shot.id, { onDelete: "cascade" }),
-  
-  // 转场类型和时长
-  transitionType: transitionTypeEnum("transition_type").default("fade").notNull(),
-  duration: integer("duration").default(500), // 转场时长（毫秒）
-  
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-export const shotTransitionRelations = relations(shotTransition, ({ one }) => ({
-  episode: one(episode, {
-    fields: [shotTransition.episodeId],
-    references: [episode.id],
-  }),
-  fromShot: one(shot, {
-    fields: [shotTransition.fromShotId],
-    references: [shot.id],
-    relationName: "transitionFrom",
-  }),
-  toShot: one(shot, {
-    fields: [shotTransition.toShotId],
-    references: [shot.id],
-    relationName: "transitionTo",
-  }),
-}));
-
-// 7. 对话表 (Conversation) - AI 助手对话会话
+// 5. 对话表 (Conversation) - AI 助手对话会话
 export const conversation = pgTable("conversation", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
@@ -497,7 +357,7 @@ export const conversation = pgTable("conversation", {
   
   // Agent 状态存储
   // 对话上下文（JSON 序列化的 AgentContext）
-  context: text("context"), // 用于存储创建对话时的完整上下文信息（选中的剧集、分镜等）
+  context: text("context"), // 用于存储创建对话时的完整上下文信息（选中的剧集、视频等）
   
   // 时间戳
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -508,7 +368,7 @@ export const conversation = pgTable("conversation", {
   lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(), // 最后活动时间
 });
 
-// 8. 对话消息表 (Conversation Message) - 对话中的消息
+// 6. 对话消息表 (Conversation Message) - 对话中的消息
 export const conversationMessage = pgTable("conversation_message", {
   id: text("id").primaryKey(),
   conversationId: text("conversation_id")

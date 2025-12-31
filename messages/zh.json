@@ -92,19 +92,19 @@
         "description": "智能剧本生成与编辑，支持分集管理。AI 辅助对话创作，让故事更生动精彩。",
         "badge": "已上线"
       },
-      "storyboard": {
-        "title": "分镜设计",
-        "description": "可视化分镜编辑器，精准把控每个镜头。支持镜头类型、运镜方式等专业设置。",
-        "badge": "已上线"
-      },
       "assetManagement": {
         "title": "素材管理",
         "description": "统一管理场景、角色、特效等创作素材。支持AI生成和上传，打造专属素材库。",
         "badge": "已上线"
       },
+      "videoGeneration": {
+        "title": "AI 视频生成",
+        "description": "从剧本直接生成视频片段，AI智能剪辑，轻松成片。",
+        "badge": "已上线"
+      },
       "agent": {
         "title": "AI Agent 辅助",
-        "description": "智能助手帮你规划创作流程，生成分镜和素材。Beta功能，持续优化中。",
+        "description": "智能助手帮你规划创作流程，生成视频和素材。Beta功能，持续优化中。",
         "badge": "Beta"
       },
       "voiceMusic": {
@@ -129,12 +129,12 @@
         "description": "精心设计每个角色和场景细节"
       },
       "step3": {
-        "title": "分镜设计",
-        "description": "自主规划每个镜头与运镜方式"
+        "title": "视频生成",
+        "description": "AI 从剧本直接生成视频片段"
       },
       "step4": {
-        "title": "AI 成片",
-        "description": "在你的把控下生成高质量视频"
+        "title": "智能剪辑",
+        "description": "在你的把控下剪辑成高质量成片"
       }
     },
     "cta": {
@@ -180,7 +180,6 @@
     "defaultProjectDescription": "开始我的微短剧创作之旅",
     "nav": {
       "scripts": "剧本",
-      "storyboard": "分镜",
       "characters": "角色",
       "scenes": "场景",
       "settings": "设置"
@@ -209,29 +208,6 @@
       "deleteConfirmTitle": "确认删除项目？",
       "deleteConfirmDescription": "此操作无法撤销。项目「{title}」及其所有数据（包括分集、角色、分镜等）将被永久删除。",
       "deleteCancel": "取消"
-    },
-    "storyboard": {
-      "selectEpisode": "选择剧集",
-      "pleaseSelectEpisode": "请选择剧集",
-      "episode": "第 {order} 集",
-      "shots": "{count} 个分镜",
-      "noEpisodes": {
-        "title": "还没有剧集",
-        "description": "请先在剧本页面创建剧集，然后再添加分镜",
-        "action": "前往剧本"
-      },
-      "incompleteEpisode": {
-        "title": "剧集信息待完善",
-        "description": "建议梳理清楚剧集信息（梗概、钩子、剧本），这样会有更好的创作思路",
-        "detail": "",
-        "action": "去补充"
-      },
-      "noShots": {
-        "title": "还没有分镜",
-        "description": "点击下方按钮为「{title}」添加第一个分镜",
-        "action": "添加分镜"
-      },
-      "addShot": "添加分镜"
     },
     "assets": {
       "title": "创作素材",
@@ -264,7 +240,6 @@
         "character": "角色",
         "scene": "场景",
         "prop": "道具",
-        "storyboard": "分镜",
         "effect": "特效",
         "reference": "参考"
       },
@@ -528,8 +503,6 @@
       "batch_image_generation": "批量图像生成",
       "asset_image_generation": "素材图片生成",
       "video_generation": "视频生成",
-      "shot_video_generation": "单镜视频生成",
-      "shot_tts_generation": "语音合成",
       "final_video_export": "最终成片导出",
       "unknown": "未知任务"
     },
@@ -833,7 +806,6 @@
       "tagRemoved": "标签已删除",
       "derivationSubmitted": "派生请求已提交",
       "projectCreated": "项目创建成功",
-      "shotAdded": "分镜已添加",
       "taskCancelled": "任务已取消",
       "taskResubmitted": "任务已重新提交",
       "videoGenerated": "视频生成完成",
@@ -865,14 +837,8 @@
       "deleteFailed": "删除失败",
       "addTagFailed": "添加标签失败",
       "removeTagFailed": "删除标签失败",
-      "generateShotImageFirst": "请先生成分镜图片",
       "generationFailed": "生成失败",
-      "loadShotsFailed": "加载分镜失败",
-      "addShotFailed": "添加分镜失败",
-      "deleteShotFailed": "删除分镜失败",
-      "selectShotsForVideo": "请先选择要生成视频的分镜",
       "startBatchGenerationFailed": "启动批量生成失败",
-      "selectShotsForExport": "请先选择要导出的分镜",
       "loadConversationsFailed": "加载对话列表失败",
       "loadConversationFailed": "加载对话失败",
       "deleteConversationFailed": "删除对话失败",
@@ -880,7 +846,6 @@
       "rejectActionFailed": "拒绝操作失败",
       "enterValidCredits": "请输入有效的积分数量",
       "enterValidMaxUses": "请输入有效的使用次数",
-      "noShotsToPlay": "没有可播放的分镜",
       "loadAssetFailed": "加载素材失败",
       "saveFailed": "保存失败",
       "tagCannotBeEmpty": "标签不能为空",
@@ -976,9 +941,9 @@
               "prompt": "帮我生成符合剧情的人物、道具素材"
             },
             {
-              "title": "创建分镜",
-              "description": "根据剧情创建分镜",
-              "prompt": "帮我根据剧情创建分镜"
+              "title": "生成视频",
+              "description": "根据剧情生成视频片段",
+              "prompt": "帮我根据剧情生成视频片段"
             }
           ]
         }
@@ -1083,14 +1048,6 @@
       }
     },
     "preview": {
-      "shot": {
-        "title": "分镜编辑器",
-        "shotNumber": "第 {number} 个分镜",
-        "description": "描述",
-        "descriptionPlaceholder": "描述这个分镜中发生了什么...",
-        "duration": "时长",
-        "durationUnit": "秒"
-      },
       "episode": {
         "title": "剧集编辑器",
         "episodeNumber": "第 {number} 集",
@@ -1124,54 +1081,6 @@
         "results": "创作结果",
         "savedToLibrary": "图片已保存到创作素材库"
       }
-    },
-    "timeline": {
-      "toolbar": {
-        "addShot": "添加分镜",
-        "deleteShot": "删除分镜",
-        "moveUp": "上移",
-        "moveDown": "下移",
-        "duplicate": "复制",
-        "play": "播放",
-        "pause": "暂停",
-        "zoom": "缩放"
-      },
-      "errors": {
-        "loadShotsFailed": "加载分镜失败",
-        "addShotFailed": "添加分镜失败",
-        "deleteShotsFailed": "删除分镜失败",
-        "applyFailed": "应用失败",
-        "selectShotsForVideo": "请先选择要生成视频的分镜",
-        "shotsWithoutImages": "有 {count} 个分镜没有图片，请先生成图片",
-        "selectShotsForExport": "请先选择要导出的分镜",
-        "noExportableVideos": "没有可导出的视频",
-        "downloadFailed": "下载失败: {message}",
-        "exportFailed": "导出失败，请重试"
-      },
-      "success": {
-        "shotAdded": "分镜已添加",
-        "shotsDeleted": "已删除 {count} 个分镜",
-        "videosExported": "成功导出 {count} 个视频"
-      },
-      "loading": {
-        "preparingExport": "正在准备导出...",
-        "packingVideo": "正在打包视频 ({current}/{total})...",
-        "generatingZip": "正在生成压缩包..."
-      },
-      "info": {
-        "skippedShots": "已跳过 {count} 个未生成视频的分镜"
-      },
-      "warning": {
-        "shotDownloadFailed": "镜头 {order} 下载失败，已跳过"
-      }
-    },
-    "storyboard": {
-      "selectEpisodeFirst": "请先选择一个剧集",
-      "noShots": "当前剧集还没有分镜",
-      "clickToEdit": "点击分镜查看详情"
-    },
-    "tabs": {
-      "storyboard": "分镜"
     }
   }
 }

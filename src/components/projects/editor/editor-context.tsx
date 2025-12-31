@@ -1,41 +1,29 @@
 "use client";
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect } from "react";
-import { ProjectDetail, ShotDetail, Episode } from "@/types/project";
+import { ProjectDetail, Episode } from "@/types/project";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
-import {
-  refreshShot,
-  refreshEpisodeShots,
-  refreshProject,
-} from "@/lib/actions/project/refresh";
+import { refreshProject } from "@/lib/actions/project/refresh";
 import type { GenerationHistoryItem } from "@/types/asset";
 
 // 选中资源类型
-export type SelectedResourceType = "episode" | "shot" | "asset-generation" | "asset" | "settings" | "agent" | "storyboard" | null;
+export type SelectedResourceType = "episode" | "video" | "asset-generation" | "asset" | "settings" | "agent" | null;
 
 // 资源Tab类型
-export type ResourceTabType = "episodes" | "assets" | "agent" | "storyboard";
+export type ResourceTabType = "episodes" | "assets" | "agent";
 
 export interface SelectedResource {
   type: SelectedResourceType;
   id: string;
 }
 
-// 时间轴状态
-export interface TimelineState {
-  zoom: number; // 缩放级别 (0.5 - 3)
-  playhead: number; // 播放头位置（毫秒）
-  isPlaying: boolean; // 是否播放中
-  scrollPosition: number; // 水平滚动位置
-}
-
-// 播放器状态
-export interface PlaybackState {
-  isPlaybackMode: boolean; // 是否处于播放模式
-  currentShotIndex: number; // 当前播放的分镜索引
-  isPaused: boolean; // 是否暂停
+// 视频列表过滤状态
+export interface VideoFilterState {
+  searchQuery: string;
+  sortBy: "createdAt" | "updatedAt" | "name";
+  sortOrder: "asc" | "desc";
 }
 
 // 素材生成状态
@@ -50,7 +38,7 @@ export interface EditorState {
   // 项目数据
   project: ProjectDetail | null;
   
-  // 当前选中的剧集（用于时间轴展示）
+  // 当前选中的剧集
   selectedEpisodeId: string | null;
   
   // 当前激活的资源Tab
@@ -59,17 +47,8 @@ export interface EditorState {
   // 当前选中的资源（用于右侧预览区）
   selectedResource: SelectedResource | null;
   
-  // 时间轴状态
-  timeline: TimelineState;
-  
-  // 播放器状态
-  playbackState: PlaybackState;
-  
-  // 当前剧集的分镜列表
-  shots: ShotDetail[];
-  
-  // 多选分镜（用于批量操作）
-  selectedShotIds: string[];
+  // 视频列表过滤状态
+  videoFilter: VideoFilterState;
   
   // 加载状态
   isLoading: boolean;
@@ -85,21 +64,8 @@ type EditorAction =
   | { type: "SELECT_EPISODE"; payload: string | null }
   | { type: "SET_ACTIVE_RESOURCE_TAB"; payload: ResourceTabType }
   | { type: "SELECT_RESOURCE"; payload: SelectedResource | null }
-  | { type: "SET_SHOTS"; payload: ShotDetail[] }
-  | { type: "UPDATE_SHOT"; payload: ShotDetail } // 更新单个分镜
-  | { type: "SELECT_SHOT"; payload: string }
-  | { type: "SELECT_SHOTS"; payload: string[] }
-  | { type: "TOGGLE_SHOT_SELECTION"; payload: string }
-  | { type: "CLEAR_SHOT_SELECTION" }
-  | { type: "SET_TIMELINE_ZOOM"; payload: number }
-  | { type: "SET_PLAYHEAD"; payload: number }
-  | { type: "SET_PLAYING"; payload: boolean }
-  | { type: "SET_SCROLL_POSITION"; payload: number }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "START_PLAYBACK" }
-  | { type: "STOP_PLAYBACK" }
-  | { type: "SET_PLAYBACK_SHOT_INDEX"; payload: number }
-  | { type: "TOGGLE_PLAYBACK_PAUSE" }
+  | { type: "SET_VIDEO_FILTER"; payload: Partial<VideoFilterState> }
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
   | { type: "ADD_GENERATION_HISTORY"; payload: GenerationHistoryItem }
@@ -111,19 +77,11 @@ const initialState: EditorState = {
   selectedEpisodeId: null,
   activeResourceTab: "episodes",
   selectedResource: null,
-  timeline: {
-    zoom: 1,
-    playhead: 0,
-    isPlaying: false,
-    scrollPosition: 0,
+  videoFilter: {
+    searchQuery: "",
+    sortBy: "createdAt",
+    sortOrder: "desc",
   },
-  playbackState: {
-    isPlaybackMode: false,
-    currentShotIndex: 0,
-    isPaused: false,
-  },
-  shots: [],
-  selectedShotIds: [],
   isLoading: true,
   assetGeneration: {
     mode: "text-to-image",
@@ -171,15 +129,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         selectedEpisodeId: action.payload,
-        selectedShotIds: [],
         selectedResource: null,
-        shots: [],
-        // 退出播放模式
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
       };
 
     case "SET_ACTIVE_RESOURCE_TAB":
@@ -192,108 +142,6 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         selectedResource: action.payload,
-        // 如果选中的是分镜，同步更新 selectedShotIds
-        selectedShotIds: action.payload?.type === "shot" ? [action.payload.id] : [],
-        // 退出播放模式
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "SET_SHOTS":
-      return {
-        ...state,
-        shots: action.payload,
-      };
-
-    case "UPDATE_SHOT":
-      return {
-        ...state,
-        shots: state.shots.map((shot) =>
-          shot.id === action.payload.id ? action.payload : shot
-        ),
-      };
-
-    case "SELECT_SHOT":
-      return {
-        ...state,
-        selectedShotIds: [action.payload],
-        selectedResource: { type: "shot", id: action.payload },
-        // 退出播放模式
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "SELECT_SHOTS":
-      return {
-        ...state,
-        selectedShotIds: action.payload,
-        selectedResource: action.payload.length === 1 
-          ? { type: "shot", id: action.payload[0] }
-          : action.payload.length > 1
-          ? { type: "shot", id: action.payload[0] } // 多选时显示第一个
-          : null,
-        // 退出播放模式
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "TOGGLE_SHOT_SELECTION":
-      const isSelected = state.selectedShotIds.includes(action.payload);
-      const newSelection = isSelected
-        ? state.selectedShotIds.filter((id) => id !== action.payload)
-        : [...state.selectedShotIds, action.payload];
-      return {
-        ...state,
-        selectedShotIds: newSelection,
-        selectedResource: newSelection.length > 0
-          ? { type: "shot", id: newSelection[newSelection.length - 1] }
-          : state.selectedResource,
-        // 退出播放模式
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "CLEAR_SHOT_SELECTION":
-      return {
-        ...state,
-        selectedShotIds: [],
-        selectedResource: state.selectedResource?.type === "shot" ? null : state.selectedResource,
-      };
-
-    case "SET_TIMELINE_ZOOM":
-      return {
-        ...state,
-        timeline: { ...state.timeline, zoom: Math.max(0.5, Math.min(3, action.payload)) },
-      };
-
-    case "SET_PLAYHEAD":
-      return {
-        ...state,
-        timeline: { ...state.timeline, playhead: Math.max(0, action.payload) },
-      };
-
-    case "SET_PLAYING":
-      return {
-        ...state,
-        timeline: { ...state.timeline, isPlaying: action.payload },
-      };
-
-    case "SET_SCROLL_POSITION":
-      return {
-        ...state,
-        timeline: { ...state.timeline, scrollPosition: action.payload },
       };
 
     case "SET_LOADING":
@@ -302,41 +150,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         isLoading: action.payload,
       };
 
-    case "START_PLAYBACK":
+    case "SET_VIDEO_FILTER":
       return {
         ...state,
-        playbackState: {
-          isPlaybackMode: true,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "STOP_PLAYBACK":
-      return {
-        ...state,
-        playbackState: {
-          isPlaybackMode: false,
-          currentShotIndex: 0,
-          isPaused: false,
-        },
-      };
-
-    case "SET_PLAYBACK_SHOT_INDEX":
-      return {
-        ...state,
-        playbackState: {
-          ...state.playbackState,
-          currentShotIndex: action.payload,
-        },
-      };
-
-    case "TOGGLE_PLAYBACK_PAUSE":
-      return {
-        ...state,
-        playbackState: {
-          ...state.playbackState,
-          isPaused: !state.playbackState.isPaused,
+        videoFilter: {
+          ...state.videoFilter,
+          ...action.payload,
         },
       };
 
@@ -391,25 +210,10 @@ interface EditorContextType {
   selectEpisode: (episodeId: string | null) => void;
   setActiveResourceTab: (tab: ResourceTabType) => void;
   selectResource: (resource: SelectedResource | null) => void;
-  selectShot: (shotId: string) => void;
-  selectShots: (shotIds: string[]) => void;
-  toggleShotSelection: (shotId: string) => void;
-  clearShotSelection: () => void;
-  updateShot: (shot: ShotDetail) => void; // 更新单个分镜
-  setTimelineZoom: (zoom: number) => void;
-  setPlayhead: (position: number) => void;
-  setPlaying: (playing: boolean) => void;
   updateProject: (project: ProjectDetail) => void; // 刷新项目数据
-  // 播放控制方法
-  startPlayback: () => void;
-  stopPlayback: () => void;
-  nextShot: () => void;
-  previousShot: () => void;
-  togglePlaybackPause: () => void;
+  setVideoFilter: (filter: Partial<VideoFilterState>) => void;
   // 计算属性
   selectedEpisode: Episode | null;
-  selectedShot: ShotDetail | null;
-  totalDuration: number;
   // 任务轮询（单例）
   jobs: Job[];
   refreshJobs: () => void;
@@ -447,34 +251,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   // 集成统一的任务刷新机制
   useTaskRefresh({
     jobs,
-    onRefreshShot: useCallback(async (shotId: string) => {
-      const result = await refreshShot(shotId);
-      if (result.success && result.shot) {
-        // 更新 shots 列表中的对应 shot
-        dispatch({ type: "UPDATE_SHOT", payload: result.shot });
-      }
-    }, []),
-
-    // onRefreshCharacter 和 onRefreshScene 已废弃 - 使用 asset 系统代替
-
-    onRefreshEpisode: useCallback(async (episodeId: string) => {
-      try {
-        const result = await refreshEpisodeShots(episodeId);
-        if (result.success && result.shots) {
-          // 只有当该剧集是当前选中的剧集时才更新 shots
-          if (state.selectedEpisodeId === episodeId) {
-            dispatch({ type: "SET_SHOTS", payload: result.shots });
-          }
-        } else {
-          // 刷新失败时不更新分镜列表（保持现有数据），只记录错误日志
-          console.error("刷新剧集分镜失败:", result.error);
-        }
-      } catch (error) {
-        // 刷新失败时不更新分镜列表（保持现有数据），只记录错误日志
-        console.error("刷新剧集分镜失败:", error);
-      }
-    }, [state.selectedEpisodeId]),
-
     onRefreshProject: useCallback(async (projectId: string) => {
       const updatedProject = await refreshProject(projectId);
       if (updatedProject) {
@@ -488,31 +264,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     }, []),
   });
 
-  // 监听 shots-changed 事件，用于 Agent 分镜操作后刷新时间轴
-  useEffect(() => {
-    const handleShotsChanged = async () => {
-      if (state.selectedEpisodeId) {
-        try {
-          const result = await refreshEpisodeShots(state.selectedEpisodeId);
-          if (result.success && result.shots) {
-            // 只在成功时才更新分镜列表
-            dispatch({ type: "SET_SHOTS", payload: result.shots });
-          } else {
-            // 刷新失败时保留之前的分镜数据，只记录错误日志
-            console.error("刷新分镜失败:", result.error);
-          }
-        } catch (error) {
-          // 刷新失败时保留之前的分镜数据，只记录错误日志
-          console.error("刷新分镜失败:", error);
-        }
-      }
-    };
-
-    window.addEventListener("shots-changed", handleShotsChanged);
-    return () => window.removeEventListener("shots-changed", handleShotsChanged);
-  }, [state.selectedEpisodeId]);
-
-  // 监听 project-changed 事件，用于 Agent 剧集/项目操作后刷新项目数据
+  // 监听 project-changed 事件，用于 Agent 操作后刷新项目数据
   useEffect(() => {
     const handleProjectChanged = async () => {
       if (state.project) {
@@ -544,70 +296,12 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "SELECT_RESOURCE", payload: resource });
   }, []);
 
-  const selectShot = useCallback((shotId: string) => {
-    dispatch({ type: "SELECT_SHOT", payload: shotId });
-  }, []);
-
-  const selectShots = useCallback((shotIds: string[]) => {
-    dispatch({ type: "SELECT_SHOTS", payload: shotIds });
-  }, []);
-
-  const toggleShotSelection = useCallback((shotId: string) => {
-    dispatch({ type: "TOGGLE_SHOT_SELECTION", payload: shotId });
-  }, []);
-
-  const clearShotSelection = useCallback(() => {
-    dispatch({ type: "CLEAR_SHOT_SELECTION" });
-  }, []);
-
-  const updateShot = useCallback((shot: ShotDetail) => {
-    dispatch({ type: "UPDATE_SHOT", payload: shot });
-  }, []);
-
-  const setTimelineZoom = useCallback((zoom: number) => {
-    dispatch({ type: "SET_TIMELINE_ZOOM", payload: zoom });
-  }, []);
-
-  const setPlayhead = useCallback((position: number) => {
-    dispatch({ type: "SET_PLAYHEAD", payload: position });
-  }, []);
-
-  const setPlaying = useCallback((playing: boolean) => {
-    dispatch({ type: "SET_PLAYING", payload: playing });
-  }, []);
-
   const updateProject = useCallback((project: ProjectDetail) => {
     dispatch({ type: "UPDATE_PROJECT", payload: project });
   }, []);
 
-  // 播放控制方法
-  const startPlayback = useCallback(() => {
-    dispatch({ type: "START_PLAYBACK" });
-  }, []);
-
-  const stopPlayback = useCallback(() => {
-    dispatch({ type: "STOP_PLAYBACK" });
-  }, []);
-
-  const nextShot = useCallback(() => {
-    const currentIndex = state.playbackState.currentShotIndex;
-    if (currentIndex < state.shots.length - 1) {
-      dispatch({ type: "SET_PLAYBACK_SHOT_INDEX", payload: currentIndex + 1 });
-    } else {
-      // 最后一个分镜，退出播放模式
-      dispatch({ type: "STOP_PLAYBACK" });
-    }
-  }, [state.playbackState.currentShotIndex, state.shots.length]);
-
-  const previousShot = useCallback(() => {
-    const currentIndex = state.playbackState.currentShotIndex;
-    if (currentIndex > 0) {
-      dispatch({ type: "SET_PLAYBACK_SHOT_INDEX", payload: currentIndex - 1 });
-    }
-  }, [state.playbackState.currentShotIndex]);
-
-  const togglePlaybackPause = useCallback(() => {
-    dispatch({ type: "TOGGLE_PLAYBACK_PAUSE" });
+  const setVideoFilter = useCallback((filter: Partial<VideoFilterState>) => {
+    dispatch({ type: "SET_VIDEO_FILTER", payload: filter });
   }, []);
 
   // 素材生成相关方法
@@ -633,17 +327,6 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     return state.project.episodes.find((ep) => ep.id === state.selectedEpisodeId) || null;
   }, [state.project, state.selectedEpisodeId]);
 
-  const selectedShot = useMemo(() => {
-    // 只在单选时返回选中的分镜（多选时返回 null）
-    if (state.selectedShotIds.length !== 1) return null;
-    return state.shots.find((shot) => shot.id === state.selectedShotIds[0]) || null;
-  }, [state.selectedShotIds, state.shots]);
-
-
-  const totalDuration = useMemo(() => {
-    return state.shots.reduce((total, shot) => total + (shot.duration || 3000), 0);
-  }, [state.shots]);
-
   const value = useMemo(
     () => ({
       state,
@@ -651,27 +334,13 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       selectEpisode,
       setActiveResourceTab,
       selectResource,
-      selectShot,
-      selectShots,
-      toggleShotSelection,
-      clearShotSelection,
-      updateShot,
-      setTimelineZoom,
-      setPlayhead,
-      setPlaying,
       updateProject,
-      startPlayback,
-      stopPlayback,
-      nextShot,
-      previousShot,
-      togglePlaybackPause,
+      setVideoFilter,
       setAssetGenerationMode,
       setSelectedSourceAssets,
       addGenerationHistory,
       clearGenerationHistory,
       selectedEpisode,
-      selectedShot,
-      totalDuration,
       jobs,
       refreshJobs,
     }),
@@ -680,27 +349,13 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       selectEpisode,
       setActiveResourceTab,
       selectResource,
-      selectShot,
-      selectShots,
-      toggleShotSelection,
-      clearShotSelection,
-      updateShot,
-      setTimelineZoom,
-      setPlayhead,
-      setPlaying,
       updateProject,
-      startPlayback,
-      stopPlayback,
-      nextShot,
-      previousShot,
-      togglePlaybackPause,
+      setVideoFilter,
       setAssetGenerationMode,
       setSelectedSourceAssets,
       addGenerationHistory,
       clearGenerationHistory,
       selectedEpisode,
-      selectedShot,
-      totalDuration,
       jobs,
       refreshJobs,
     ]

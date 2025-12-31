@@ -53,11 +53,7 @@ export function calculateImageCredits(numImages: number): { credits: number; num
  * 需要使用 estimateActionCredits Server Action
  */
 export function estimateFunctionCallCredits(
-  functionCall: FunctionCall,
-  additionalData?: {
-    shotDurations?: Record<string, number>; // shotId -> duration in ms
-    assetCounts?: Record<string, number>; // 用于批量资产生成
-  }
+  functionCall: FunctionCall
 ): CreditBreakdown {
   const { name, parameters, id } = functionCall;
 
@@ -81,16 +77,17 @@ export function estimateFunctionCallCredits(
         };
       }
 
-      case "generate_shot_images": {
-        // 分镜图片生成
-        const shotIds = JSON.parse(parameters.shotIds as string) as string[];
-        const { credits } = calculateImageCredits(shotIds.length);
+      case "generate_video": {
+        // 视频生成
+        const klingConfig = parameters.klingO1Config as { duration?: string };
+        const duration = klingConfig?.duration === "10" ? 10 : 5;
+        const { credits, seconds } = calculateVideoCredits(duration * 1000);
         
         return {
           functionCallId: id,
           functionName: name,
           credits,
-          details: `${shotIds.length}张图片 × ${CREDIT_COSTS.IMAGE_GENERATION}积分`,
+          details: `${seconds}秒视频 × ${CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND}积分/秒`,
         };
       }
 
@@ -118,14 +115,10 @@ export function estimateFunctionCallCredits(
  * 计算多个function calls的总积分
  */
 export function calculateTotalCredits(
-  functionCalls: FunctionCall[],
-  additionalData?: {
-    shotDurations?: Record<string, number>;
-    assetCounts?: Record<string, number>;
-  }
+  functionCalls: FunctionCall[]
 ): CreditCost {
   const breakdown = functionCalls.map((fc) =>
-    estimateFunctionCallCredits(fc, additionalData)
+    estimateFunctionCallCredits(fc)
   );
 
   const total = breakdown.reduce((sum, item) => sum + item.credits, 0);

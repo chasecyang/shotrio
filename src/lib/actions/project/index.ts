@@ -20,11 +20,5 @@ export {
   deleteEpisode,
 } from "./episode";
 
-// 导出分镜操作
-export {
-  getEpisodeShots,
-  createShot,
-  updateShot,
-  deleteShot,
-  reorderShots,
-} from "./shot";
+// 导出视频操作 (通过 actions/video 模块)
+// 注意: 视频相关操作现在统一在 @/lib/actions/video 中
