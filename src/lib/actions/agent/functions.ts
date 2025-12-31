@@ -98,7 +98,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 3. **prompt 要求**：必须详细描述镜头运动和画面内容（至少10个字符）
    - 使用英文描述
    - 在描述中自然嵌入 @Element1、@Image1 等占位符引用图片
-   - ⚠️ 这个 prompt 非常重要：Agent 将通过它理解视频内容，用于后续的剪辑和组合
 
 4. **duration**：只能是字符串 "5" 或 "10"（不是数字）
 
@@ -108,7 +107,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - 先用 query_assets 查询可用素材
 - 根据素材数量合理分配到 elements 和 image_urls
 - 多角度的角色用 elements（需要至少2张图），单图场景用 image_urls
-- prompt 要详细且准确，方便 Agent 理解视频内容
+- prompt 要详细且准确
 
 ## 完整示例
 假设 Assets 包含以下图片（共7张）：
@@ -123,7 +122,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 生成的配置：
 \`\`\`json
 {
-  "prompt": "A high-angle aerial view of an ancient greenhouse ruin surrounded by overgrown nature. The camera swoops down through the broken glass ceiling and reveals a young man standing in the sunlit center. He wears a weathered backpack. The camera performs a smooth 180-degree orbit around him, transitioning to a back view. As the open backpack comes into focus, the camera pushes forward and zooms deep inside, revealing a glowing magical stone nestled among his belongings. Cinematic lighting with warm golden hour tones, hopeful atmosphere, shot on 35mm film.",
   "title": "温室废墟发现魔法石",
   "referenceAssetIds": ["asset-1", "asset-2", "asset-3", "asset-4", "asset-5", "asset-6", "asset-7"],
   "klingO1Config": {
@@ -158,10 +156,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        prompt: {
-          type: "string",
-          description: "视频内容的完整描述（中文或英文）。这个描述非常重要，Agent 将通过它理解视频内容，用于后续的剪辑和组合。应该详细描述画面、动作、情绪、氛围等。",
-        },
         title: {
           type: "string",
           description: "视频标题（可选），便于识别和管理",
@@ -192,7 +186,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           description: "排序值（可选），用于在视频库中排序",
         },
       },
-      required: ["prompt", "klingO1Config"],
+      required: ["klingO1Config"],
     },
     category: "generation",
     needsConfirmation: true,

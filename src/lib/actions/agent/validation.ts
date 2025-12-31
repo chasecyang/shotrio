@@ -60,29 +60,13 @@ function validateGenerateVideoParams(params: any): ValidationResult {
   const errors: string[] = [];
 
   // 检查必填参数
-  if (!params.prompt) {
-    errors.push("缺少必填参数 prompt");
-  }
-
   if (!params.klingO1Config) {
     errors.push("缺少必填参数 klingO1Config");
     return { valid: false, errors, warnings: [] };
   }
 
   // 校验 klingO1Config
-  const configValidation = validateKlingO1Config(params.klingO1Config);
-
-  // 如果有 prompt 错误，合并到结果中
-  if (errors.length > 0) {
-    return {
-      valid: false,
-      errors: [...errors, ...configValidation.errors],
-      warnings: configValidation.warnings,
-      normalizedConfig: configValidation.normalizedConfig,
-    };
-  }
-
-  return configValidation;
+  return validateKlingO1Config(params.klingO1Config);
 }
 
 /**

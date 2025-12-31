@@ -260,7 +260,6 @@ export async function executeFunction(
       }
 
       case "generate_video_asset": {
-        const prompt = parameters.prompt as string;
         const title = parameters.title as string | undefined;
         const referenceAssetIds = parameters.referenceAssetIds as string[] | undefined;
         const tags = parameters.tags as string[] | undefined;
@@ -276,11 +275,11 @@ export async function executeFunction(
           aspect_ratio?: "16:9" | "9:16" | "1:1";
         };
 
-        if (!prompt || !klingO1Config || !klingO1Config.prompt) {
+        if (!klingO1Config || !klingO1Config.prompt) {
           result = {
             functionCallId: functionCall.id,
             success: false,
-            error: "缺少必填参数：prompt 和 klingO1Config.prompt",
+            error: "缺少必填参数：klingO1Config.prompt",
           };
           break;
         }
@@ -304,8 +303,8 @@ export async function executeFunction(
           // 创建视频生成任务
           const generateResult = await createVideoAsset({
             projectId,
-            name: title || prompt,
-            prompt,
+            name: title || "未命名视频",
+            prompt: klingO1Config.prompt,
             referenceAssetIds,
             generationConfig: normalizedConfig,
             order,
