@@ -19,6 +19,13 @@ export interface AssetGenerationState {
   generationHistory: GenerationHistoryItem[];
 }
 
+// 播放状态
+export interface PlaybackState {
+  isPlaying: boolean;
+  currentTime: number; // 相对于整个时间轴的时间（毫秒）
+  currentClipIndex: number; // 当前播放的片段索引
+}
+
 // 编辑器状态
 export interface EditorState {
   // 工作模式
@@ -35,6 +42,9 @@ export interface EditorState {
 
   // 素材生成状态
   assetGeneration: AssetGenerationState;
+  
+  // 播放状态
+  playback: PlaybackState;
 }
 
 // 编辑器动作类型
@@ -48,7 +58,11 @@ type EditorAction =
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
   | { type: "ADD_GENERATION_HISTORY"; payload: GenerationHistoryItem }
-  | { type: "CLEAR_GENERATION_HISTORY" };
+  | { type: "CLEAR_GENERATION_HISTORY" }
+  | { type: "SET_PLAYING"; payload: boolean }
+  | { type: "SET_CURRENT_TIME"; payload: number }
+  | { type: "SET_CURRENT_CLIP_INDEX"; payload: number }
+  | { type: "UPDATE_PLAYBACK"; payload: Partial<PlaybackState> };
 
 // 初始状态
 const initialState: EditorState = {
@@ -60,6 +74,11 @@ const initialState: EditorState = {
     mode: "text-to-image",
     selectedSourceAssets: [],
     generationHistory: [],
+  },
+  playback: {
+    isPlaying: false,
+    currentTime: 0,
+    currentClipIndex: 0,
   },
 };
 
@@ -139,6 +158,42 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         assetGeneration: {
           ...state.assetGeneration,
           generationHistory: [],
+        },
+      };
+
+    case "SET_PLAYING":
+      return {
+        ...state,
+        playback: {
+          ...state.playback,
+          isPlaying: action.payload,
+        },
+      };
+
+    case "SET_CURRENT_TIME":
+      return {
+        ...state,
+        playback: {
+          ...state.playback,
+          currentTime: action.payload,
+        },
+      };
+
+    case "SET_CURRENT_CLIP_INDEX":
+      return {
+        ...state,
+        playback: {
+          ...state.playback,
+          currentClipIndex: action.payload,
+        },
+      };
+
+    case "UPDATE_PLAYBACK":
+      return {
+        ...state,
+        playback: {
+          ...state.playback,
+          ...action.payload,
         },
       };
 
