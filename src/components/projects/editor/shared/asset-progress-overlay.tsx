@@ -65,8 +65,8 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
   return (
     <div
       className={cn(
-        "absolute inset-0 flex flex-col items-center justify-center",
-        "bg-background/80 backdrop-blur-md",
+        "absolute inset-0 flex flex-col items-center justify-center z-10",
+        "bg-background/95 backdrop-blur-sm",
         "animate-in fade-in duration-300",
         className
       )}
@@ -77,72 +77,72 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
       aria-label={message}
     >
       {/* 波纹动画背景 */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 animate-ripple-1 rounded-full bg-primary/10" />
-        <div className="absolute inset-0 animate-ripple-2 rounded-full bg-primary/10" />
-        <div className="absolute inset-0 animate-ripple-3 rounded-full bg-primary/10" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 animate-ripple-1 rounded-full bg-primary/15" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 animate-ripple-2 rounded-full bg-primary/10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 animate-ripple-3 rounded-full bg-primary/5" />
       </div>
 
       {/* 脉动边框 */}
-      <div className="absolute inset-0 rounded-lg border-2 border-primary/30 animate-pulse-border" />
+      <div className="absolute inset-0 border-2 border-primary/40 animate-pulse-border pointer-events-none" />
 
       {/* 主内容区域 */}
-      <div className="relative z-10 flex flex-col items-center gap-3">
-        {/* 进度百分比 */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="text-4xl font-bold text-primary tabular-nums animate-pulse-slow">
-            {Math.round(progress)}%
-          </div>
-          
-          {/* 状态消息 */}
-          <div className="text-xs text-muted-foreground text-center max-w-[150px] truncate">
-            {message}
-          </div>
-        </div>
-
-        {/* 环形进度指示器（装饰性） */}
-        <div className="relative w-16 h-16">
+      <div className="relative z-20 flex flex-col items-center gap-4 px-4">
+        {/* 环形进度指示器 */}
+        <div className="relative w-20 h-20">
           {/* 背景圆环 */}
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
               cy="50"
-              r="45"
+              r="42"
               fill="none"
               stroke="currentColor"
-              strokeWidth="8"
-              className="text-muted/20"
+              strokeWidth="6"
+              className="text-muted/30"
             />
             {/* 进度圆环 */}
             <circle
               cx="50"
               cy="50"
-              r="45"
+              r="42"
               fill="none"
               stroke="currentColor"
-              strokeWidth="8"
+              strokeWidth="6"
               strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 45}`}
-              strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
-              className="text-primary transition-all duration-300 ease-out"
+              strokeDasharray={`${2 * Math.PI * 42}`}
+              strokeDashoffset={`${2 * Math.PI * 42 * (1 - progress / 100)}`}
+              className="text-primary transition-all duration-500 ease-out drop-shadow-lg"
             />
           </svg>
           
-          {/* 中心旋转点 */}
+          {/* 中心进度百分比 */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-primary animate-ping" />
+            <div className="text-2xl font-bold text-primary tabular-nums drop-shadow-md">
+              {Math.round(progress)}%
+            </div>
+          </div>
+        </div>
+        
+        {/* 状态消息 */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="text-sm font-semibold text-foreground">
+            {status === "pending" ? "准备生成" : "生成中"}
+          </div>
+          <div className="text-xs text-muted-foreground text-center max-w-[180px] line-clamp-2 px-2">
+            {message}
           </div>
         </div>
       </div>
 
       {/* 底部进度条 */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30 overflow-hidden">
+      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-muted/50 overflow-hidden z-20">
         <div
-          className="h-full bg-gradient-to-r from-primary via-primary/80 to-primary transition-all duration-300 ease-out"
+          className="h-full bg-gradient-to-r from-primary/90 via-primary to-primary/90 transition-all duration-500 ease-out relative"
           style={{ width: `${progress}%` }}
         >
           {/* 进度条上的闪光效果 */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
         </div>
       </div>
 

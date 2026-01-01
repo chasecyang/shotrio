@@ -14,7 +14,6 @@ import { Trash2, Maximize2, Video, Play } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AssetThumbnailSkeleton } from "./asset-skeleton";
 import { AssetProgressOverlay } from "./asset-progress-overlay";
 import type { Job } from "@/types/job";
 
@@ -46,6 +45,9 @@ export function AssetCard({
   
   // 检查资产是否失败
   const isFailed = asset.runtimeStatus === "failed";
+  
+  // 获取 job - 优先使用传入的 job，否则使用 asset.latestJob
+  const currentJob = job || asset.latestJob;
   
   // 获取显示 URL（视频优先使用 thumbnailUrl，图片使用 imageUrl 或 thumbnailUrl）
   const displayUrl = isVideo 
@@ -85,16 +87,25 @@ export function AssetCard({
         onClick={() => onClick(asset)}
       >
         {isGenerating ? (
-          // 生成中状态 - 显示骨架屏和进度覆盖层
+          // 生成中状态 - 显示渐变背景和进度覆盖层
           <>
-            <AssetThumbnailSkeleton />
-            <AssetProgressOverlay job={job} asset={asset} />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background/50">
+              {/* 动画网格背景 */}
+              <div className="absolute inset-0 opacity-20">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+              </div>
+              {/* 脉动光晕 */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-primary/20 blur-3xl animate-pulse" />
+              </div>
+            </div>
+            <AssetProgressOverlay job={currentJob} asset={asset} />
           </>
         ) : isFailed ? (
           // 失败状态 - 显示失败覆盖层
           <>
             <div className="absolute inset-0 bg-muted/50" />
-            <AssetProgressOverlay asset={asset} job={job} />
+            <AssetProgressOverlay asset={asset} job={currentJob} />
           </>
         ) : displayUrl ? (
           <>
@@ -178,60 +189,6 @@ export function AssetCard({
         className="p-3 space-y-2 cursor-pointer"
         onClick={() => onClick(asset)}
       >
-        {/* 生成中或失败状态的进度条 */}
-        {(isGenerating || isFailed) && (job || asset.latestJob) && (
-          <div className="space-y-1.5">
-            {/* 进度条 */}
-            <div className="relative h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ease-out ${
-                  isFailed
-                    ? "bg-destructive"
-                    : "bg-primary animate-pulse"
-                }`}
-                style={{
-                  width: isFailed
-                    ? "100%"
-                    : `${(job || asset.latestJob)?.progress || 0}%`,
-                }}
-              >
-                {/* 闪光效果 - 仅生成中显示 */}
-                {isGenerating && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                )}
-              </div>
-            </div>
-
-            {/* 状态文本 */}
-            <div className="flex items-center justify-between text-xs">
-              <span className={`font-medium ${
-                isFailed ? "text-destructive" : "text-primary"
-              }`}>
-                {isFailed ? "生成失败" : "生成中"}
-              </span>
-              {isGenerating && (job || asset.latestJob) && (
-                <span className="text-muted-foreground tabular-nums">
-                  {Math.round((job || asset.latestJob)?.progress || 0)}%
-                </span>
-              )}
-            </div>
-
-            {/* 进度消息 */}
-            {isGenerating && (job || asset.latestJob)?.progressMessage && (
-              <p className="text-xs text-muted-foreground truncate">
-                {(job || asset.latestJob)?.progressMessage}
-              </p>
-            )}
-
-            {/* 失败消息 */}
-            {isFailed && asset.errorMessage && (
-              <p className="text-xs text-destructive/80 truncate">
-                {asset.errorMessage}
-              </p>
-            )}
-          </div>
-        )}
-
         <div className="flex items-start justify-between gap-2">
           <h4 className="text-sm font-medium truncate flex-1" title={asset.name}>
             {asset.name}
@@ -285,22 +242,6 @@ export function AssetCard({
           )}
         </div>
       </div>
-      
-      {/* CSS动画 */}
-      <style jsx>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(200%);
-          }
-        }
-        
-        .animate-shimmer {
-          animation: shimmer 1.5s linear infinite;
-        }
-      `}</style>
 
       {/* Prompt 显示区域 */}
       {asset.prompt && (
