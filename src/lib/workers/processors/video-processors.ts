@@ -10,7 +10,6 @@ import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
 import { CREDIT_COSTS } from "@/types/payment";
 import type {
   Job,
-  VideoGenerationInput,
   VideoGenerationResult,
   FinalVideoExportInput,
   FinalVideoExportResult,
@@ -22,14 +21,12 @@ import { extractVideoThumbnail } from "@/lib/utils/video-thumbnail";
  * 处理视频生成任务（新架构：使用 asset 表）
  */
 export async function processVideoGeneration(jobData: Job, workerToken: string): Promise<void> {
-  // 严格验证输入数据
-  const input = jobData.inputData as VideoGenerationInput | null;
-  
-  if (!input || !input.assetId) {
-    throw new Error("Job 格式错误：缺少 assetId");
+  // 从外键读取 assetId
+  if (!jobData.assetId) {
+    throw new Error("Job 缺少 assetId 关联");
   }
   
-  const { assetId } = input;
+  const assetId = jobData.assetId;
 
   console.log(`[Worker] 开始生成视频: Asset ${assetId}`);
 
@@ -323,8 +320,9 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       throw new Error("没有找到任何视频");
     }
 
-    // 过滤出已完成的视频
-    const completedVideos = videos.filter((v) => v.status === "completed" && v.videoUrl);
+    // 过滤出已完成的视频（有 videoUrl 的视频）
+    // 注意：asset.status 已移除，改为检查 videoUrl 是否存在
+    const completedVideos = videos.filter((v) => v.videoUrl);
 
     if (completedVideos.length === 0) {
       throw new Error("没有已完成的视频");

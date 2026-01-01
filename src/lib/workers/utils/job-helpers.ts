@@ -12,6 +12,7 @@ export async function createChildJob(
     type: JobType;
     inputData: unknown;
     parentJobId?: string;
+    assetId?: string;
   }
 ): Promise<{ success: boolean; jobId?: string; error?: string }> {
   try {
@@ -22,6 +23,7 @@ export async function createChildJob(
       type: params.type,
       inputData: params.inputData,
       parentJobId: params.parentJobId,
+      assetId: params.assetId,
     });
   } catch (error) {
     console.error("创建子任务失败:", error);

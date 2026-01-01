@@ -9,7 +9,6 @@ import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
 import { CREDIT_COSTS } from "@/types/payment";
 import type {
   Job,
-  AssetImageGenerationInput,
   AssetImageGenerationResult,
 } from "@/types/job";
 import type { AspectRatio } from "@/lib/services/fal.service";
@@ -24,14 +23,12 @@ export async function processAssetImageGeneration(
   jobData: Job,
   workerToken: string
 ): Promise<void> {
-  // 严格验证输入数据
-  const input = jobData.inputData as AssetImageGenerationInput | null;
-
-  if (!input || !input.assetId) {
-    throw new Error("Job 格式错误：缺少 assetId");
+  // 从外键读取 assetId
+  if (!jobData.assetId) {
+    throw new Error("Job 缺少 assetId 关联");
   }
 
-  const { assetId } = input;
+  const assetId = jobData.assetId;
 
   try {
     await processAssetImageGenerationInternal(jobData, workerToken, assetId);

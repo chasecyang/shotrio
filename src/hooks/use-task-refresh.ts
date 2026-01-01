@@ -172,9 +172,9 @@ async function executeRefresh(
   try {
     switch (type) {
       case "video":
-        // 类型安全地提取videoId
-        if (callbacks.onRefreshVideo && typeof inputData.videoId === "string") {
-          await callbacks.onRefreshVideo(inputData.videoId);
+        // final_video_export 任务是项目级别的导出，刷新整个项目
+        if (callbacks.onRefreshProject && job.projectId) {
+          await callbacks.onRefreshProject(job.projectId);
         }
         break;
 

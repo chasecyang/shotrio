@@ -49,10 +49,10 @@ export async function getAssetWithStatus(
     return null;
   }
 
-  // 查询最新的关联job
+  // 查询最新的关联job（使用外键）
   const latestJob = await db.query.job.findFirst({
     where: and(
-      sql`${job.inputData}->>'assetId' = ${assetId}`,
+      eq(job.assetId, assetId),
       inArray(job.type, ['asset_image_generation', 'video_generation'])
     ),
     orderBy: [desc(job.createdAt)],
@@ -101,18 +101,18 @@ export async function queryAssetsWithStatus(
   // 2. 提取所有assetId
   const assetIds = assetsData.map((a) => a.id);
 
-  // 3. 批量查询所有关联的jobs
+  // 3. 批量查询所有关联的jobs（使用外键）
   // 使用子查询获取每个asset的最新job
   const jobsData = await db
     .select({
-      assetId: sql<string>`${job.inputData}->>'assetId'`,
+      assetId: job.assetId,
       job: job,
-      rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.inputData}->>'assetId' ORDER BY ${job.createdAt} DESC)`,
+      rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.assetId} ORDER BY ${job.createdAt} DESC)`,
     })
     .from(job)
     .where(
       and(
-        sql`${job.inputData}->>'assetId' IN (${sql.join(assetIds.map(id => sql`${id}`), sql`, `)})`,
+        inArray(job.assetId, assetIds),
         inArray(job.type, ['asset_image_generation', 'video_generation'])
       )
     );

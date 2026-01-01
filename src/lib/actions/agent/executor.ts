@@ -18,7 +18,6 @@ import { updateAsset, deleteAsset } from "../asset/crud";
 import { queryAssets } from "../asset/queries";
 import { replaceAssetTags } from "../asset/tags";
 import { createJob } from "../job";
-import type { AssetImageGenerationInput } from "@/types/job";
 import { getSystemArtStyles } from "../art-style/queries";
 import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
@@ -80,8 +79,8 @@ export async function executeFunction(
         if (includeVideos) {
           const videosResult = await getVideoAssets(projectId, { orderBy: "created" });
           const videos = videosResult.videos || [];
-          const completedVideos = videos.filter(v => v.status === "completed");
-          const processingVideos = videos.filter(v => v.status === "processing" || v.status === "pending");
+          const completedVideos = videos.filter(v => v.runtimeStatus === "completed");
+          const processingVideos = videos.filter(v => v.runtimeStatus === "processing" || v.runtimeStatus === "pending");
           
           contextData.videos = {
             total: videos.length,
@@ -91,7 +90,7 @@ export async function executeFunction(
               id: v.id,
               prompt: v.prompt,
               name: v.name,
-              status: v.status,
+              status: v.runtimeStatus,
               duration: v.duration,
               tags: v.tags.map(t => t.tagValue),
               order: v.order,
@@ -147,8 +146,8 @@ export async function executeFunction(
         });
 
         // 统计状态
-        const completedCount = queryResult.assets.filter(a => a.status === "completed").length;
-        const processingCount = queryResult.assets.filter(a => a.status === "processing").length;
+        const completedCount = queryResult.assets.filter(a => a.runtimeStatus === "completed").length;
+        const processingCount = queryResult.assets.filter(a => a.runtimeStatus === "processing").length;
 
         const typeLabel = assetType === "image" ? "图片资产" : assetType === "video" ? "视频资产" : "资产";
         
@@ -217,8 +216,8 @@ export async function executeFunction(
             const assetId = createResult.asset.id;
             assetIds.push(assetId);
 
-            // 创建图片生成任务
-            const input: AssetImageGenerationInput = {
+            // 创建图片生成任务（保留向后兼容）
+            const input = {
               assetId,
             };
 
@@ -226,6 +225,7 @@ export async function executeFunction(
               userId: session.user.id,
               projectId,
               type: "asset_image_generation",
+              assetId: assetId, // 外键关联
               inputData: input,
             });
 

@@ -193,6 +193,9 @@ export const job: any = pgTable("job", {
   type: jobTypeEnum("type").notNull(),
   status: jobStatusEnum("status").default("pending").notNull(),
 
+  // 关联的资产ID（可选，仅 video_generation 和 asset_image_generation 类型使用）
+  assetId: text("asset_id").references(() => asset.id, { onDelete: "cascade" }),
+
   // 任务依赖关系
   parentJobId: text("parent_job_id").references(() => job.id, { onDelete: "cascade" }),
 
@@ -254,6 +257,7 @@ export const assetRelations = relations(asset, ({ one, many }) => ({
     references: [user.id],
   }),
   tags: many(assetTag),
+  jobs: many(job), // 关联的任务（一个 asset 可以有多个 job，支持重试）
 }));
 
 export const assetTagRelations = relations(assetTag, ({ one }) => ({
@@ -271,6 +275,10 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   project: one(project, {
     fields: [job.projectId],
     references: [project.id],
+  }),
+  asset: one(asset, {
+    fields: [job.assetId],
+    references: [asset.id],
   }),
   parentJob: one(job, {
     fields: [job.parentJobId],

@@ -457,7 +457,8 @@ export async function createVideoAsset(data: {
       projectId: data.projectId,
       type: "video_generation",
       status: "pending",
-      inputData: { assetId }, // JSONB type, no need to stringify
+      assetId: assetId, // 外键关联
+      inputData: { assetId }, // 保留向后兼容
       progress: 0,
       currentStep: 0,
     });

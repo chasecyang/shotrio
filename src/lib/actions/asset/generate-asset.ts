@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import { createJob } from "@/lib/actions/job";
 import { createAssetInternal } from "@/lib/actions/asset/crud";
 import type { ImageResolution } from "@/types/asset";
-import type { AssetImageGenerationInput } from "@/types/job";
 import type { AspectRatio } from "@/lib/services/fal.service";
 
 /**
@@ -100,8 +99,8 @@ export async function generateAssetImage(
 
     const assetId = createResult.asset.id;
 
-    // 第二步：创建图片生成任务，只需传入 assetId
-    const jobInput: AssetImageGenerationInput = {
+    // 第二步：创建图片生成任务，只需传入 assetId（保留向后兼容）
+    const jobInput = {
       assetId,
     };
 
@@ -109,7 +108,8 @@ export async function generateAssetImage(
       userId: session.user.id,
       projectId,
       type: "asset_image_generation",
-      inputData: jobInput,
+      assetId: assetId, // 外键关联
+      inputData: jobInput, // 保留向后兼容
     });
 
     if (!jobResult.success || !jobResult.jobId) {
@@ -200,8 +200,8 @@ export async function editAssetImage(
 
     const assetId = createResult.asset.id;
 
-    // 第二步：创建图片生成任务，只需传入 assetId
-    const jobInput: AssetImageGenerationInput = {
+    // 第二步：创建图片生成任务，只需传入 assetId（保留向后兼容）
+    const jobInput = {
       assetId,
     };
 
@@ -209,7 +209,8 @@ export async function editAssetImage(
       userId: session.user.id,
       projectId,
       type: "asset_image_generation",
-      inputData: jobInput,
+      assetId: assetId, // 外键关联
+      inputData: jobInput, // 保留向后兼容
     });
 
     if (!jobResult.success || !jobResult.jobId) {

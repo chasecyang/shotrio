@@ -19,6 +19,7 @@ export interface Job {
   projectId: string | null;
   type: JobType;
   status: JobStatus;
+  assetId: string | null; // 关联的资产ID（可选，仅 video_generation 和 asset_image_generation 使用）
   parentJobId?: string | null; // 父任务ID
   progress: number; // 0-100
   totalSteps: number | null;
@@ -43,15 +44,6 @@ export interface BatchImageGenerationInput {
   }>;
   aspectRatio?: string;
   resolution?: string;
-}
-
-export interface VideoGenerationInput {
-  assetId: string; // 视频资产的 ID（改为 assetId）
-}
-
-// 素材图片生成输入（新架构：只需要 assetId）
-export interface AssetImageGenerationInput {
-  assetId: string;  // 要生成图片的素材ID，所有生成信息从 asset 读取
 }
 
 export interface BatchImageGenerationResult {
@@ -117,6 +109,7 @@ export interface CreateJobParams {
   userId: string;
   projectId?: string;
   type: JobType;
+  assetId?: string; // 关联的资产ID（可选）
   inputData: unknown;
   totalSteps?: number;
   parentJobId?: string; // 父任务ID

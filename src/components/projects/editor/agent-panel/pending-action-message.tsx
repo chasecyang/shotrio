@@ -288,14 +288,9 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
 
     if (completedAssetJobs.length === 0) return;
 
-    // 检查是否有我们关心的 assetId
+    // 检查是否有我们关心的 assetId（使用外键）
     const shouldRefresh = completedAssetJobs.some((job) => {
-      try {
-        const inputData = (job.inputData as { assetId?: string } | null) || {};
-        return inputData.assetId ? assetIds.includes(inputData.assetId) : false;
-      } catch {
-        return false;
-      }
+      return job.assetId ? assetIds.includes(job.assetId) : false;
     });
 
     if (shouldRefresh) {

@@ -92,6 +92,7 @@ export async function createJob(params: CreateJobParams): Promise<{
       projectId: params.projectId || null,
       type: params.type,
       status: "pending",
+      assetId: params.assetId || null, // 关联的资产ID
       progress: 0,
       currentStep: 0,
       totalSteps: params.totalSteps || null,
@@ -197,6 +198,7 @@ export async function createChildJob(params: CreateJobParams): Promise<{
       projectId: params.projectId || null,
       type: params.type,
       status: "pending",
+      assetId: params.assetId || null, // 关联的资产ID
       progress: 0,
       currentStep: 0,
       totalSteps: params.totalSteps || null,
