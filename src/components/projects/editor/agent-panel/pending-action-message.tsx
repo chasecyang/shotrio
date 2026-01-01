@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
+import { getArtStyleById } from "@/lib/actions/art-style/queries";
 import Image from "next/image";
 import { useEditor } from "../editor-context";
 
@@ -364,6 +365,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const totalCost = creditCost?.total || 0;
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+  const [artStyleName, setArtStyleName] = useState<string | null>(null);
 
   const borderColor = "border-primary/20";
   const bgColor = "bg-accent/30";
@@ -373,17 +375,18 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   // 判断操作类型
   const isGenerateAssets = functionCall.name === "generate_image_asset";
   const isGenerateVideo = functionCall.name === "generate_video_asset";
+  const isSetArtStyle = functionCall.name === "set_art_style";
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
-    if (isGenerateAssets || isGenerateVideo) {
-      // 这些操作需要单独处理数组
+    if (isGenerateAssets || isGenerateVideo || isSetArtStyle) {
+      // 这些操作需要单独处理
       return [];
     } else {
       // 其他操作：使用标准格式化
       return formatParametersForConfirmation(functionCall.arguments);
     }
-  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo]);
+  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo, isSetArtStyle]);
 
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
@@ -459,6 +462,23 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }
   }, [isGenerateVideo, functionCall.arguments]);
 
+  // 获取美术风格名称
+  useEffect(() => {
+    if (!isSetArtStyle) return;
+    
+    const styleId = functionCall.arguments.styleId as string;
+    if (!styleId) return;
+
+    // 异步获取美术风格名称
+    getArtStyleById(styleId).then((style) => {
+      if (style) {
+        setArtStyleName(style.name);
+      }
+    }).catch((error) => {
+      console.error("获取美术风格名称失败:", error);
+    });
+  }, [isSetArtStyle, functionCall.arguments.styleId]);
+
   return (
     <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
       <div className="p-3 space-y-3">
@@ -469,7 +489,10 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {functionCall.displayName || functionCall.name}
+              {isSetArtStyle && artStyleName 
+                ? `${functionCall.displayName || functionCall.name} - ${artStyleName}`
+                : (functionCall.displayName || functionCall.name)
+              }
             </p>
           </div>
         </div>
@@ -565,6 +588,21 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 </div>
               )
             )
+          ) : isSetArtStyle ? (
+            /* 设置美术风格：显示风格名称 */
+            <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">美术风格:</span>
+                {artStyleName ? (
+                  <span className="text-xs text-foreground font-medium">{artStyleName}</span>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">加载中...</span>
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             /* 其他操作：使用格式化参数展示 */
             formattedParams.length > 0 && (
