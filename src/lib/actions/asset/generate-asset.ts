@@ -99,17 +99,13 @@ export async function generateAssetImage(
 
     const assetId = createResult.asset.id;
 
-    // 第二步：创建图片生成任务，只需传入 assetId（保留向后兼容）
-    const jobInput = {
-      assetId,
-    };
-
+    // 第二步：创建图片生成任务
     const jobResult = await createJob({
       userId: session.user.id,
       projectId,
       type: "asset_image_generation",
       assetId: assetId, // 外键关联
-      inputData: jobInput, // 保留向后兼容
+      inputData: {}, // 所有生成信息已存储在 asset 表中
     });
 
     if (!jobResult.success || !jobResult.jobId) {
@@ -200,17 +196,13 @@ export async function editAssetImage(
 
     const assetId = createResult.asset.id;
 
-    // 第二步：创建图片生成任务，只需传入 assetId（保留向后兼容）
-    const jobInput = {
-      assetId,
-    };
-
+    // 第二步：创建图片生成任务
     const jobResult = await createJob({
       userId: session.user.id,
       projectId,
       type: "asset_image_generation",
       assetId: assetId, // 外键关联
-      inputData: jobInput, // 保留向后兼容
+      inputData: {}, // 所有生成信息已存储在 asset 表中
     });
 
     if (!jobResult.success || !jobResult.jobId) {

@@ -458,7 +458,7 @@ export async function createVideoAsset(data: {
       type: "video_generation",
       status: "pending",
       assetId: assetId, // 外键关联
-      inputData: { assetId }, // 保留向后兼容
+      inputData: {}, // 所有生成信息已存储在 asset 表中
       progress: 0,
       currentStep: 0,
     });

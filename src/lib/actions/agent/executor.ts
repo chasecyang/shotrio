@@ -216,17 +216,13 @@ export async function executeFunction(
             const assetId = createResult.asset.id;
             assetIds.push(assetId);
 
-            // 创建图片生成任务（保留向后兼容）
-            const input = {
-              assetId,
-            };
-
+            // 创建图片生成任务
             const jobResult = await createJob({
               userId: session.user.id,
               projectId,
               type: "asset_image_generation",
               assetId: assetId, // 外键关联
-              inputData: input,
+              inputData: {}, // 所有生成信息已存储在 asset 表中
             });
 
             if (jobResult.success && jobResult.jobId) {

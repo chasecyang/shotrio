@@ -125,11 +125,32 @@ if (!jobData.assetId) {
 const assetId = jobData.assetId;
 ```
 
+### 7. 清理向后兼容代码 ✅ (2026-01-01 最终清理)
+
+所有 `inputData` 中的 `assetId` 向后兼容代码已完全移除：
+
+**修改的文件**:
+1. `src/lib/actions/asset/generate-asset.ts`
+   - `generateAssetImage`: 移除 `inputData: { assetId }`，改为 `inputData: {}`
+   - `editAssetImage`: 移除 `inputData: { assetId }`，改为 `inputData: {}`
+
+2. `src/lib/actions/asset/crud.ts`
+   - `createVideoAsset`: 移除 `inputData: { assetId }`，改为 `inputData: {}`
+
+3. `src/lib/actions/agent/executor.ts`
+   - 批量图片生成: 移除 `inputData: { assetId }`，改为 `inputData: {}`
+
+**验证结果**:
+- ✅ 所有 worker 处理器均直接使用 `job.assetId` 外键
+- ✅ 无任何代码从 `inputData` 读取 `assetId`
+- ✅ 无 linter 错误
+- ✅ 代码更简洁，完全依赖外键关系
+
 ## 向后兼容性
 
-- ✅ 保留了 `inputData` 中的 `assetId`，确保过渡期的兼容性
-- ✅ **删除**了不再使用的 `VideoGenerationInput` 和 `AssetImageGenerationInput` 类型
-- ✅ 所有新创建的 job 同时写入外键和 inputData
+- ✅ **已删除** `inputData` 中的 `assetId`，完全使用外键关系
+- ✅ **已删除** `VideoGenerationInput` 和 `AssetImageGenerationInput` 类型
+- ✅ 所有生成信息存储在 `asset` 表中，`inputData` 可为空对象
 
 ## 性能提升
 
@@ -155,8 +176,10 @@ npm run db:generate
 npm run db:migrate
 ```
 
-在确认系统稳定运行后，可以考虑：
-- 在后续版本中完全移除 inputData 中的 assetId（目前保留用于向后兼容）
+**重构已完全完成**：
+- ✅ `inputData` 中的 `assetId` 已完全移除
+- ✅ 所有代码已更新为使用外键关系
+- ✅ 无向后兼容代码残留
 
 ## 验证清单
 
@@ -181,14 +204,14 @@ npm run db:migrate
 1. `src/lib/db/schemas/project.ts` - Schema 定义
 2. `src/types/job.ts` - 类型定义（删除旧类型）
 3. `src/lib/actions/job/create.ts` - 创建 job
-4. `src/lib/actions/asset/generate-asset.ts` - 图片生成（删除类型导入）
-5. `src/lib/actions/asset/crud.ts` - 视频生成
+4. `src/lib/actions/asset/generate-asset.ts` - 图片生成（删除类型导入 + 清理 inputData）
+5. `src/lib/actions/asset/crud.ts` - 视频生成（清理 inputData）
 6. `src/lib/actions/job/user-operations.ts` - 重试逻辑
 7. `src/lib/db/queries/asset-with-status.ts` - 状态查询
 8. `src/components/projects/editor/agent-panel/pending-action-message.tsx` - 前端过滤
 9. `src/lib/workers/processors/asset-image-generation.ts` - 图片处理器（删除类型导入）
 10. `src/lib/workers/processors/video-processors.ts` - 视频处理器（删除类型导入）
-11. `src/lib/actions/agent/executor.ts` - Agent 执行器（删除类型导入）
+11. `src/lib/actions/agent/executor.ts` - Agent 执行器（删除类型导入 + 清理 inputData）
 
 ### 未修改的文件
 - 其他不涉及 job-asset 关系的代码保持不变
