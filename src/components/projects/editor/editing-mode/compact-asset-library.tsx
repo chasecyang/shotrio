@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useEditor } from "../editor-context";
 import { queryAssets } from "@/lib/actions/asset";
-import { AssetWithRuntimeStatus } from "@/types/asset";
+import { AssetWithRuntimeStatus, AssetTypeEnum } from "@/types/asset";
 import { toast } from "sonner";
-import { Video, Play } from "lucide-react";
+import { Video, Play, Image as ImageIcon, Grid3x3 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import { AssetProgressOverlay } from "../shared/asset-progress-overlay";
 import { isAssetGenerating, isAssetFailed } from "@/lib/utils/asset-status";
+import { cn } from "@/lib/utils";
 
 /**
  * 紧凑的素材库（列表视图）
@@ -20,9 +21,9 @@ export function CompactAssetLibrary() {
   const { state } = useEditor();
   const { project } = state;
   
-  const [assets, setAssets] = useState<AssetWithRuntimeStatus[]>([]);
+  const [allAssets, setAllAssets] = useState<AssetWithRuntimeStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterType, setFilterType] = useState<"all" | "video">("video");
+  const [filterType, setFilterType] = useState<AssetTypeEnum | "all">("all");
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -35,19 +36,22 @@ export function CompactAssetLibrary() {
         limit: 100,
       });
       
-      // 筛选视频素材
-      const filteredAssets = filterType === "video" 
-        ? result.assets.filter(asset => asset.assetType === "video")
-        : result.assets;
-      
-      setAssets(filteredAssets);
+      setAllAssets(result.assets);
     } catch (error) {
       console.error("加载素材失败:", error);
       toast.error("加载素材失败");
     } finally {
       setIsLoading(false);
     }
-  }, [project?.id, filterType]);
+  }, [project?.id]);
+
+  // 客户端筛选
+  const filteredAssets = useMemo(() => {
+    if (filterType === "all") {
+      return allAssets;
+    }
+    return allAssets.filter(asset => asset.assetType === filterType);
+  }, [allAssets, filterType]);
 
   useEffect(() => {
     loadAssets();
@@ -73,7 +77,7 @@ export function CompactAssetLibrary() {
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">素材</h3>
           <span className="text-xs text-muted-foreground">
-            {assets.length} 个
+            {filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`} 个
           </span>
         </div>
         <div className="flex gap-1">
@@ -81,15 +85,34 @@ export function CompactAssetLibrary() {
             variant={filterType === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterType("all")}
-            className="flex-1 h-8 text-xs"
+            className={cn(
+              "flex-1 h-8 text-xs gap-1",
+              filterType === "all" && "shadow-sm"
+            )}
           >
+            <Grid3x3 className="h-3 w-3" />
             全部
+          </Button>
+          <Button
+            variant={filterType === "image" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilterType("image")}
+            className={cn(
+              "flex-1 h-8 text-xs gap-1",
+              filterType === "image" && "shadow-sm"
+            )}
+          >
+            <ImageIcon className="h-3 w-3" />
+            图片
           </Button>
           <Button
             variant={filterType === "video" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterType("video")}
-            className="flex-1 h-8 text-xs gap-1"
+            className={cn(
+              "flex-1 h-8 text-xs gap-1",
+              filterType === "video" && "shadow-sm"
+            )}
           >
             <Video className="h-3 w-3" />
             视频
@@ -112,16 +135,25 @@ export function CompactAssetLibrary() {
                 </div>
               ))}
             </div>
-          ) : assets.length === 0 ? (
+          ) : filteredAssets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <Video className="h-12 w-12 text-muted-foreground mb-2" />
+              {filterType === "video" ? (
+                <Video className="h-12 w-12 text-muted-foreground mb-2" />
+              ) : filterType === "image" ? (
+                <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
+              ) : (
+                <Grid3x3 className="h-12 w-12 text-muted-foreground mb-2" />
+              )}
               <p className="text-sm text-muted-foreground">
-                暂无视频素材
+                {allAssets.length === 0 
+                  ? "暂无素材" 
+                  : `暂无${filterType === "video" ? "视频" : filterType === "image" ? "图片" : ""}素材`
+                }
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              {assets.map((asset) => {
+              {filteredAssets.map((asset) => {
                 const generating = isAssetGenerating(asset);
                 const failed = isAssetFailed(asset);
                 const isVideo = asset.assetType === "video";
