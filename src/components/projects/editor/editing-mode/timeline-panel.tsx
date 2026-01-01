@@ -7,7 +7,6 @@ import { ZoomIn, ZoomOut, Plus, Play, Pause, SkipBack, SkipForward } from "lucid
 import { TimelineClipItem } from "./timeline-clip-item";
 import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
 import { toast } from "sonner";
-import { TimelineClipWithAsset } from "@/types/timeline";
 import { AddAssetDialog } from "./add-asset-dialog";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { recalculateClipPositions, formatTimeDisplay } from "@/lib/utils/timeline-utils";
@@ -29,6 +28,10 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
+  const [trimmingClipInfo, setTrimmingClipInfo] = useState<{
+    clipId: string;
+    newDuration: number;
+  } | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const timelineRulerRef = useRef<HTMLDivElement>(null);
 
@@ -42,13 +45,11 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     pause,
   } = playback;
 
-  if (!timeline) return null;
-
   const pixelsPerMs = 0.1 * zoom; // 每毫秒对应的像素数
 
   // 时间标尺鼠标按下 - 开始拖拽或跳转
   const handleTimelineMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!timelineRulerRef.current) return;
+    if (!timelineRulerRef.current || !timeline) return;
     
     e.preventDefault();
     pause(); // 按下时暂停播放
@@ -62,18 +63,18 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     
     // 启动拖拽模式
     setIsDraggingPlayhead(true);
-  }, [pause, pixelsPerMs, timeline.duration, seekTo]);
+  }, [pause, pixelsPerMs, timeline, seekTo]);
 
   // 鼠标移动处理（拖拽播放头）
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingPlayhead || !timelineRulerRef.current) return;
+    if (!isDraggingPlayhead || !timelineRulerRef.current || !timeline) return;
 
     const rect = timelineRulerRef.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const newTime = Math.max(0, Math.min(offsetX / pixelsPerMs, timeline.duration));
     
     seekTo(newTime);
-  }, [isDraggingPlayhead, pixelsPerMs, timeline.duration, seekTo]);
+  }, [isDraggingPlayhead, pixelsPerMs, timeline, seekTo]);
 
   // 鼠标释放处理
   const handleMouseUp = useCallback(() => {
@@ -92,6 +93,8 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
       };
     }
   }, [isDraggingPlayhead, handleMouseMove, handleMouseUp]);
+
+  if (!timeline) return null;
 
   // 跳转到上一个片段
   const skipToPrevious = () => {
@@ -117,12 +120,55 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
 
   // 删除片段
   const handleDeleteClip = async (clipId: string) => {
-    const result = await removeClip(clipId);
-    if (result.success && result.timeline) {
-      updateTimeline(result.timeline);
-      toast.success("已删除片段");
-    } else {
-      toast.error(result.error || "删除失败");
+    if (!timeline) return;
+    
+    // 保存原始timeline用于回滚
+    const originalTimeline = timeline;
+    
+    try {
+      // 乐观更新：立即从本地状态中移除片段
+      const remainingClips = timeline.clips.filter(clip => clip.id !== clipId);
+      
+      // 重新计算位置（波纹效果）
+      const reorderData = recalculateClipPositions(remainingClips);
+      const optimisticClips = remainingClips.map((clip) => {
+        const reorderItem = reorderData.find(r => r.clipId === clip.id);
+        return {
+          ...clip,
+          startTime: reorderItem?.startTime ?? clip.startTime,
+          order: reorderItem?.order ?? clip.order,
+        };
+      });
+      
+      // 计算新的总时长
+      const newDuration = optimisticClips.length > 0
+        ? optimisticClips[optimisticClips.length - 1].startTime + 
+          optimisticClips[optimisticClips.length - 1].duration
+        : 0;
+      
+      // 立即更新UI（乐观更新）
+      updateTimeline({
+        ...timeline,
+        clips: optimisticClips,
+        duration: newDuration,
+      });
+      
+      // 调用API删除
+      const result = await removeClip(clipId);
+      
+      if (result.success && result.timeline) {
+        // API成功，使用服务器返回的数据
+        updateTimeline(result.timeline);
+      } else {
+        // API失败，回滚
+        updateTimeline(originalTimeline);
+        toast.error(result.error || "删除失败");
+      }
+    } catch (error) {
+      // 出错时回滚
+      updateTimeline(originalTimeline);
+      console.error("删除片段失败:", error);
+      toast.error("删除失败");
     }
   };
 
@@ -139,6 +185,9 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     
     setIsReordering(true);
     
+    // 保存原始timeline用于回滚
+    const originalTimeline = timeline;
+    
     try {
       // 创建新的片段数组副本并更新拖拽片段的位置
       const updatedClips = timeline.clips.map((clip) => 
@@ -153,20 +202,62 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
       // 重新计算所有片段的 order 和 startTime（连续排列）
       const reorderData = recalculateClipPositions(updatedClips);
       
+      // 乐观更新：立即更新本地状态
+      const optimisticClips = updatedClips.map((clip, index) => {
+        const reorderItem = reorderData.find(r => r.clipId === clip.id);
+        return {
+          ...clip,
+          startTime: reorderItem?.startTime ?? clip.startTime,
+          order: reorderItem?.order ?? index,
+        };
+      });
+      
+      // 计算新的总时长
+      const newDuration = optimisticClips.length > 0
+        ? optimisticClips[optimisticClips.length - 1].startTime + 
+          optimisticClips[optimisticClips.length - 1].duration
+        : 0;
+      
+      // 立即更新UI（乐观更新）
+      updateTimeline({
+        ...timeline,
+        clips: optimisticClips,
+        duration: newDuration,
+      });
+      
       // 调用 API 更新
       const result = await reorderClips(timeline.id, reorderData);
       
       if (result.success && result.timeline) {
+        // API成功，使用服务器返回的数据确保一致性
         updateTimeline(result.timeline);
-        toast.success("片段已重新排序");
       } else {
+        // API失败，回滚到原始状态
+        updateTimeline(originalTimeline);
         toast.error(result.error || "重排序失败");
       }
     } catch (error) {
+      // 出错时回滚
+      updateTimeline(originalTimeline);
       console.error("重排序失败:", error);
       toast.error("重排序失败");
     } finally {
       setIsReordering(false);
+    }
+  };
+
+  // 裁剪预览（拖拽过程中实时更新）
+  const handleClipTrimming = (clipId: string, newDuration: number) => {
+    if (!timeline) return;
+    
+    // 查找片段
+    const clip = timeline.clips.find(c => c.id === clipId);
+    
+    // 如果时长没有变化，清除预览状态
+    if (clip && Math.abs(newDuration - clip.duration) < 10) {
+      setTrimmingClipInfo(null);
+    } else {
+      setTrimmingClipInfo({ clipId, newDuration });
     }
   };
 
@@ -176,19 +267,73 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     trimStart: number,
     duration: number
   ) => {
+    if (!timeline) return;
+    
+    // 清除裁剪预览状态
+    setTrimmingClipInfo(null);
+    
+    // 保存原始timeline用于回滚
+    const originalTimeline = timeline;
+    
     try {
+      // 乐观更新：立即更新本地状态
+      const optimisticClips = timeline.clips.map((clip) =>
+        clip.id === clipId
+          ? { ...clip, trimStart, duration }
+          : clip
+      );
+      
+      // 重新计算波纹效果后的位置
+      const reorderData = recalculateClipPositions(optimisticClips);
+      const finalClips = optimisticClips.map((clip) => {
+        const reorderItem = reorderData.find(r => r.clipId === clip.id);
+        return {
+          ...clip,
+          startTime: reorderItem?.startTime ?? clip.startTime,
+          order: reorderItem?.order ?? clip.order,
+        };
+      });
+      
+      // 计算新的总时长
+      const newDuration = finalClips.length > 0
+        ? finalClips[finalClips.length - 1].startTime + 
+          finalClips[finalClips.length - 1].duration
+        : 0;
+      
+      // 立即更新UI（乐观更新）
+      updateTimeline({
+        ...timeline,
+        clips: finalClips,
+        duration: newDuration,
+      });
+      
+      // 1. 更新片段的裁剪参数
       const result = await updateClip(clipId, {
         trimStart,
         duration,
       });
 
       if (result.success && result.timeline) {
-        updateTimeline(result.timeline);
-        toast.success("片段已裁剪");
+        // 2. 应用波纹效果 - 重新整理所有片段
+        const reorderData = recalculateClipPositions(result.timeline.clips);
+        const rippleResult = await reorderClips(result.timeline.id, reorderData);
+        
+        if (rippleResult.success && rippleResult.timeline) {
+          // API成功，使用服务器返回的数据
+          updateTimeline(rippleResult.timeline);
+        } else {
+          // 重排失败，但裁剪成功
+          updateTimeline(result.timeline);
+          toast.warning("片段已裁剪，但自动整理失败");
+        }
       } else {
+        // 裁剪失败，回滚
+        updateTimeline(originalTimeline);
         toast.error(result.error || "裁剪失败");
       }
     } catch (error) {
+      // 出错时回滚
+      updateTimeline(originalTimeline);
       console.error("裁剪失败:", error);
       toast.error("裁剪失败");
     }
@@ -406,24 +551,47 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
           >
             {timeline.clips.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-                点击左上角"添加素材"按钮添加视频片段
+                点击左上角&ldquo;添加素材&rdquo;按钮添加视频片段
               </div>
             ) : (
-              timeline.clips.map((clip) => (
-                <TimelineClipItem
-                  key={clip.id}
-                  clip={clip}
-                  allClips={timeline.clips}
-                  pixelsPerMs={pixelsPerMs}
-                  trackRef={trackRef}
-                  onDelete={() => handleDeleteClip(clip.id)}
-                  onDragStart={() => handleClipDragStart(clip.id)}
-                  onDragEnd={handleClipDragEnd}
-                  onTrim={handleClipTrim}
-                  isDragging={draggedClipId === clip.id}
-                  disabled={isReordering}
-                />
-              ))
+              timeline.clips.map((clip, index) => {
+                // 计算裁剪预览时的临时位置
+                let temporaryStartTime = clip.startTime;
+                
+                if (trimmingClipInfo) {
+                  // 找到正在裁剪的片段的索引
+                  const trimmingIndex = timeline.clips.findIndex(
+                    c => c.id === trimmingClipInfo.clipId
+                  );
+                  
+                  // 如果当前片段在正在裁剪的片段之后
+                  if (trimmingIndex !== -1 && index > trimmingIndex) {
+                    const trimmingClip = timeline.clips[trimmingIndex];
+                    const durationDiff = trimmingClipInfo.newDuration - trimmingClip.duration;
+                    
+                    // 根据时长差调整后续片段的位置
+                    temporaryStartTime = clip.startTime + durationDiff;
+                  }
+                }
+                
+                return (
+                  <TimelineClipItem
+                    key={clip.id}
+                    clip={clip}
+                    allClips={timeline.clips}
+                    pixelsPerMs={pixelsPerMs}
+                    trackRef={trackRef}
+                    temporaryStartTime={temporaryStartTime}
+                    onDelete={() => handleDeleteClip(clip.id)}
+                    onDragStart={() => handleClipDragStart(clip.id)}
+                    onDragEnd={handleClipDragEnd}
+                    onTrimming={handleClipTrimming}
+                    onTrim={handleClipTrim}
+                    isDragging={draggedClipId === clip.id}
+                    disabled={isReordering}
+                  />
+                );
+              })
             )}
           </div>
         </div>

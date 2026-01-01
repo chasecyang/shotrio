@@ -200,8 +200,33 @@ export async function removeClip(
     // 删除片段
     await db.delete(timelineClip).where(eq(timelineClip.id, clipId));
 
-    // 重新计算时间轴总时长
-    await recalculateTimelineDuration(timelineId);
+    // 获取剩余片段并重新整理（波纹编辑效果）
+    const remainingClips = await db
+      .select()
+      .from(timelineClip)
+      .where(eq(timelineClip.timelineId, timelineId))
+      .orderBy(timelineClip.order);
+
+    // 重新计算位置（连续排列，无空隙）
+    let currentTime = 0;
+    for (let i = 0; i < remainingClips.length; i++) {
+      await db
+        .update(timelineClip)
+        .set({
+          startTime: currentTime,
+          order: i,
+          updatedAt: new Date(),
+        })
+        .where(eq(timelineClip.id, remainingClips[i].id));
+      
+      currentTime += remainingClips[i].duration;
+    }
+
+    // 更新时间轴总时长
+    await db
+      .update(timeline)
+      .set({ duration: currentTime, updatedAt: new Date() })
+      .where(eq(timeline.id, timelineId));
 
     // 返回完整的时间轴数据
     const timelineData = await getProjectTimeline(projectId);

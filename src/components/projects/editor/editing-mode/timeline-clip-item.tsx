@@ -11,17 +11,19 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import { validateTrimValues } from "@/lib/utils/timeline-utils";
+import { validateTrimValues, formatTimeDisplay } from "@/lib/utils/timeline-utils";
 import { toast } from "sonner";
 
 interface TimelineClipItemProps {
   clip: TimelineClipWithAsset;
   allClips: TimelineClipWithAsset[];
   pixelsPerMs: number;
-  trackRef: React.RefObject<HTMLElement>;
+  trackRef: React.RefObject<HTMLDivElement | null>;
+  temporaryStartTime?: number;
   onDelete: () => void;
   onDragStart: () => void;
   onDragEnd: (clipId: string, newStartTime: number) => void;
+  onTrimming?: (clipId: string, newDuration: number) => void;
   onTrim: (clipId: string, trimStart: number, duration: number) => void;
   isDragging: boolean;
   disabled?: boolean;
@@ -36,9 +38,11 @@ export function TimelineClipItem({
   allClips,
   pixelsPerMs,
   trackRef,
+  temporaryStartTime,
   onDelete,
   onDragStart,
   onDragEnd,
+  onTrimming,
   onTrim,
   isDragging,
   disabled = false,
@@ -133,6 +137,8 @@ export function TimelineClipItem({
       if (validation.valid) {
         setTempTrimStart(newTrimStart);
         setTempDuration(newDuration);
+        // 左边缘裁剪不影响后续片段位置，但需要通知以便更新预览
+        onTrimming?.(clip.id, newDuration);
       }
     };
 
@@ -145,6 +151,9 @@ export function TimelineClipItem({
         Math.abs(tempDuration - clip.duration) > 10
       ) {
         onTrim(clip.id, tempTrimStart, tempDuration);
+      } else {
+        // 没有改变，清除预览状态
+        onTrimming?.(clip.id, clip.duration);
       }
     };
 
@@ -155,7 +164,7 @@ export function TimelineClipItem({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isTrimmingLeft, trimStartX, pixelsPerMs, clip, tempTrimStart, tempDuration, onTrim]);
+  }, [isTrimmingLeft, trimStartX, pixelsPerMs, clip, tempTrimStart, tempDuration, onTrim, onTrimming]);
 
   // 右边缘裁剪（调整出点）
   const handleMouseDownRight = (e: React.MouseEvent) => {
@@ -182,6 +191,8 @@ export function TimelineClipItem({
 
       if (validation.valid) {
         setTempDuration(newDuration);
+        // 实时通知父组件，用于推移后续片段
+        onTrimming?.(clip.id, newDuration);
       }
     };
 
@@ -191,6 +202,9 @@ export function TimelineClipItem({
       // 如果真的改变了，保存
       if (Math.abs(tempDuration - clip.duration) > 10) {
         onTrim(clip.id, clip.trimStart, tempDuration);
+      } else {
+        // 没有改变，清除预览状态
+        onTrimming?.(clip.id, clip.duration);
       }
     };
 
@@ -201,12 +215,13 @@ export function TimelineClipItem({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isTrimmingRight, trimStartX, pixelsPerMs, clip, tempDuration, onTrim]);
+  }, [isTrimmingRight, trimStartX, pixelsPerMs, clip, tempDuration, onTrim, onTrimming]);
 
-  // 计算显示位置和宽度（考虑临时裁剪状态）
+  // 计算显示位置和宽度（考虑临时裁剪状态和临时位置）
+  const effectiveStartTime = temporaryStartTime !== undefined ? temporaryStartTime : clip.startTime;
   const displayLeft = isTrimmingLeft
-    ? (clip.startTime + (tempTrimStart - clip.trimStart)) * pixelsPerMs
-    : left + dragOffset;
+    ? (effectiveStartTime + (tempTrimStart - clip.trimStart)) * pixelsPerMs
+    : effectiveStartTime * pixelsPerMs + dragOffset;
   const displayWidth = (isTrimmingLeft || isTrimmingRight ? tempDuration : clip.duration) * pixelsPerMs;
 
   return (
@@ -265,20 +280,52 @@ export function TimelineClipItem({
           {/* 左边缘：调整入点手柄 */}
           <div
             className={cn(
-              "absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize transition-colors z-10",
-              isTrimmingLeft ? "bg-primary" : "hover:bg-primary/50"
+              "absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize group/left-handle z-10",
+              "before:absolute before:inset-y-0 before:-left-2 before:-right-2 before:content-['']"
             )}
             onMouseDown={handleMouseDownLeft}
-          />
+          >
+            <div
+              className={cn(
+                "h-full w-1 transition-all",
+                isTrimmingLeft
+                  ? "bg-primary scale-x-150"
+                  : "bg-transparent group-hover/left-handle:bg-primary/50"
+              )}
+            />
+            
+            {/* 裁剪时显示时间提示 */}
+            {isTrimmingLeft && (
+              <div className="absolute -top-8 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
+                入点: {formatTimeDisplay(tempTrimStart)} | 时长: {formatTimeDisplay(tempDuration)}
+              </div>
+            )}
+          </div>
 
           {/* 右边缘：调整出点手柄 */}
           <div
             className={cn(
-              "absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize transition-colors z-10",
-              isTrimmingRight ? "bg-primary" : "hover:bg-primary/50"
+              "absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize group/right-handle z-10",
+              "before:absolute before:inset-y-0 before:-left-2 before:-right-2 before:content-['']"
             )}
             onMouseDown={handleMouseDownRight}
-          />
+          >
+            <div
+              className={cn(
+                "h-full w-1 transition-all",
+                isTrimmingRight
+                  ? "bg-primary scale-x-150"
+                  : "bg-transparent group-hover/right-handle:bg-primary/50"
+              )}
+            />
+            
+            {/* 裁剪时显示时间提示 */}
+            {isTrimmingRight && (
+              <div className="absolute -top-8 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
+                出点: {formatTimeDisplay(clip.trimStart + tempDuration)} | 时长: {formatTimeDisplay(tempDuration)}
+              </div>
+            )}
+          </div>
         </div>
       </ContextMenuTrigger>
 
