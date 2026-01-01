@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ZoomIn, ZoomOut, Plus } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
-import { addClipToTimeline, removeClip, reorderClips } from "@/lib/actions/timeline";
+import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { TimelineClipWithAsset } from "@/types/timeline";
 import { AddAssetDialog } from "./add-asset-dialog";
 import { AssetWithRuntimeStatus } from "@/types/asset";
+import { recalculateClipPositions } from "@/lib/utils/timeline-utils";
 
 /**
  * 时间轴面板组件
@@ -22,6 +23,7 @@ export function TimelinePanel() {
   const [zoom, setZoom] = useState(1); // 缩放级别
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
   if (!timeline) return null;
@@ -44,9 +46,67 @@ export function TimelinePanel() {
     setDraggedClipId(clipId);
   };
 
-  // 片段拖拽结束
-  const handleClipDragEnd = () => {
+  // 片段拖拽结束 - 重新排序
+  const handleClipDragEnd = async (clipId: string, newStartTime: number) => {
     setDraggedClipId(null);
+    
+    if (!timeline) return;
+    
+    setIsReordering(true);
+    
+    try {
+      // 创建新的片段数组副本并更新拖拽片段的位置
+      const updatedClips = timeline.clips.map((clip) => 
+        clip.id === clipId 
+          ? { ...clip, startTime: newStartTime } 
+          : clip
+      );
+      
+      // 按照新的 startTime 排序
+      updatedClips.sort((a, b) => a.startTime - b.startTime);
+      
+      // 重新计算所有片段的 order 和 startTime（连续排列）
+      const reorderData = recalculateClipPositions(updatedClips);
+      
+      // 调用 API 更新
+      const result = await reorderClips(timeline.id, reorderData);
+      
+      if (result.success && result.timeline) {
+        updateTimeline(result.timeline);
+        toast.success("片段已重新排序");
+      } else {
+        toast.error(result.error || "重排序失败");
+      }
+    } catch (error) {
+      console.error("重排序失败:", error);
+      toast.error("重排序失败");
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  // 更新片段裁剪
+  const handleClipTrim = async (
+    clipId: string,
+    trimStart: number,
+    duration: number
+  ) => {
+    try {
+      const result = await updateClip(clipId, {
+        trimStart,
+        duration,
+      });
+
+      if (result.success && result.timeline) {
+        updateTimeline(result.timeline);
+        toast.success("片段已裁剪");
+      } else {
+        toast.error(result.error || "裁剪失败");
+      }
+    } catch (error) {
+      console.error("裁剪失败:", error);
+      toast.error("裁剪失败");
+    }
   };
 
   // 缩放控制
@@ -176,11 +236,15 @@ export function TimelinePanel() {
                 <TimelineClipItem
                   key={clip.id}
                   clip={clip}
+                  allClips={timeline.clips}
                   pixelsPerMs={pixelsPerMs}
+                  trackRef={trackRef}
                   onDelete={() => handleDeleteClip(clip.id)}
                   onDragStart={() => handleClipDragStart(clip.id)}
                   onDragEnd={handleClipDragEnd}
+                  onTrim={handleClipTrim}
                   isDragging={draggedClipId === clip.id}
+                  disabled={isReordering}
                 />
               ))
             )}

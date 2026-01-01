@@ -109,10 +109,10 @@ export function EditingModeLayout() {
       </div>
 
       {/* 主内容区：上下分栏 */}
-      <ResizablePanelGroup direction="vertical" className="flex-1">
+      <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
         {/* 上部：预览窗口 */}
-        <ResizablePanel defaultSize={60} minSize={30}>
-          <div className="h-full bg-black/95 flex items-center justify-center">
+        <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
+          <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
             <VideoPreview />
           </div>
         </ResizablePanel>
@@ -120,7 +120,7 @@ export function EditingModeLayout() {
         <ResizableHandle withHandle />
 
         {/* 下部：时间轴 */}
-        <ResizablePanel defaultSize={40} minSize={30}>
+        <ResizablePanel defaultSize={40} minSize={30} className="overflow-hidden">
           <TimelinePanel />
         </ResizablePanel>
       </ResizablePanelGroup>

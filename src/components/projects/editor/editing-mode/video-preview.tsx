@@ -1,40 +1,82 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, SkipBack, SkipForward, Film } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Play, Pause, SkipBack, SkipForward, Film, AlertCircle } from "lucide-react";
+import { useVideoPlayback } from "@/hooks/use-video-playback";
+import { formatTimeDisplay } from "@/lib/utils/timeline-utils";
+import { useEffect, useState } from "react";
 
 /**
  * 视频预览组件
- * 第一期先实现基础UI，播放功能后续完善
+ * 实现时间轴的实时视频预览和播放控制
  */
 export function VideoPreview() {
   const { state } = useEditor();
   const { timeline } = state;
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const {
+    videoRef,
+    nextVideoRef,
+    isPlaying,
+    currentTime,
+    currentClip,
+    videoTime,
+    togglePlayPause,
+    seekTo,
+    isLoading,
+  } = useVideoPlayback({ timeline });
+
+  const [videoError, setVideoError] = useState(false);
   const duration = timeline?.duration || 0;
 
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  // 跳转到上一个片段
+  const skipToPrevious = () => {
+    if (!timeline || !currentClip) return;
+    const currentIndex = timeline.clips.findIndex((c) => c.id === currentClip.id);
+    if (currentIndex > 0) {
+      const prevClip = timeline.clips[currentIndex - 1];
+      seekTo(prevClip.startTime);
+    } else {
+      seekTo(0);
+    }
   };
 
-  const handlePlayPause = () => {
-    // TODO: 实现实际播放逻辑
-    setIsPlaying(!isPlaying);
+  // 跳转到下一个片段
+  const skipToNext = () => {
+    if (!timeline || !currentClip) return;
+    const currentIndex = timeline.clips.findIndex((c) => c.id === currentClip.id);
+    if (currentIndex < timeline.clips.length - 1) {
+      const nextClip = timeline.clips[currentIndex + 1];
+      seekTo(nextClip.startTime);
+    }
   };
 
+  // 进度条拖拽
   const handleSeek = (value: number[]) => {
-    setCurrentTime(value[0]);
+    seekTo(value[0]);
   };
 
+  // 监听视频错误
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleError = () => setVideoError(true);
+    const handleLoadedData = () => setVideoError(false);
+
+    video.addEventListener("error", handleError);
+    video.addEventListener("loadeddata", handleLoadedData);
+
+    return () => {
+      video.removeEventListener("error", handleError);
+      video.removeEventListener("loadeddata", handleLoadedData);
+    };
+  }, [videoRef]);
+
+  // 空状态
   if (!timeline || timeline.clips.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 text-white/60">
@@ -47,21 +89,67 @@ export function VideoPreview() {
   return (
     <div className="w-full h-full flex flex-col">
       {/* 预览画面 */}
-      <div className="flex-1 flex items-center justify-center">
-        {/* 第一期显示第一个片段的缩略图作为预览 */}
-        {timeline.clips[0]?.asset && (
+      <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+        {/* 主视频元素 */}
+        {currentClip?.asset.videoUrl ? (
+          <>
+            <video
+              ref={videoRef}
+              src={currentClip.asset.videoUrl}
+              className="max-w-full max-h-full object-contain"
+              onError={() => setVideoError(true)}
+              onLoadedData={() => setVideoError(false)}
+            />
+            {/* 预加载下一个视频（隐藏） */}
+            <video
+              ref={nextVideoRef}
+              className="hidden"
+              preload="auto"
+            />
+          </>
+        ) : (
+          // 如果没有视频URL，显示缩略图
           <img
-            src={timeline.clips[0].asset.thumbnailUrl || timeline.clips[0].asset.imageUrl || ""}
+            src={
+              currentClip?.asset.thumbnailUrl ||
+              currentClip?.asset.imageUrl ||
+              ""
+            }
             alt="预览"
             className="max-w-full max-h-full object-contain"
           />
         )}
+
+        {/* 加载指示器 */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+            <Spinner className="w-8 h-8 text-white" />
+          </div>
+        )}
+
+        {/* 错误提示 */}
+        {videoError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 z-10">
+            <AlertCircle className="w-12 h-12 text-red-400" />
+            <p className="text-sm text-white/80">视频加载失败</p>
+          </div>
+        )}
+
+        {/* 当前片段信息 */}
+        {currentClip && (
+          <div className="absolute top-4 left-4 px-3 py-2 rounded-lg bg-black/80 backdrop-blur-sm text-white text-sm z-10">
+            <div className="font-medium">{currentClip.asset.name}</div>
+            <div className="text-xs text-white/70 mt-1">
+              片段 {timeline.clips.findIndex((c) => c.id === currentClip.id) + 1} / {timeline.clips.length}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 播放控制栏 */}
-      <div className="p-4 bg-black/60 backdrop-blur space-y-3">
+      {/* 播放控制栏 - 增强视觉对比 */}
+      <div className="shrink-0 p-4 bg-zinc-900/95 backdrop-blur-md border-t border-white/10 space-y-3">
         {/* 进度条 */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Slider
             value={[currentTime]}
             max={duration || 100}
@@ -69,41 +157,53 @@ export function VideoPreview() {
             onValueChange={handleSeek}
             className="cursor-pointer"
           />
-          <div className="flex justify-between text-xs text-white/60">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+          <div className="flex justify-between text-xs text-zinc-400">
+            <span>{formatTimeDisplay(currentTime)}</span>
+            <span>{formatTimeDisplay(duration)}</span>
           </div>
         </div>
 
-        {/* 控制按钮 */}
-        <div className="flex items-center justify-center gap-2">
+        {/* 控制按钮 - 增强可见性 */}
+        <div className="flex items-center justify-center gap-3">
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 w-9 p-0 text-white/80 hover:text-white hover:bg-white/10"
+            className="h-10 w-10 p-0 text-zinc-300 hover:text-white hover:bg-white/15 transition-all"
+            onClick={skipToPrevious}
+            disabled={!currentClip}
           >
             <SkipBack className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
             size="lg"
-            className="h-12 w-12 p-0 text-white hover:text-white hover:bg-white/20 rounded-full"
-            onClick={handlePlayPause}
+            className="h-14 w-14 p-0 text-white hover:text-white hover:bg-white/25 hover:scale-105 rounded-full transition-all shadow-lg bg-white/10"
+            onClick={togglePlayPause}
+            disabled={!currentClip}
           >
             {isPlaying ? (
-              <Pause className="h-6 w-6" />
+              <Pause className="h-7 w-7" />
             ) : (
-              <Play className="h-6 w-6" />
+              <Play className="h-7 w-7 ml-0.5" />
             )}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 w-9 p-0 text-white/80 hover:text-white hover:bg-white/10"
+            className="h-10 w-10 p-0 text-zinc-300 hover:text-white hover:bg-white/15 transition-all"
+            onClick={skipToNext}
+            disabled={!currentClip}
           >
             <SkipForward className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* 视频时间信息 */}
+        {currentClip?.asset.videoUrl && (
+          <div className="text-center text-xs text-zinc-500">
+            视频时间: {formatTimeDisplay(videoTime)}
+          </div>
+        )}
       </div>
     </div>
   );
