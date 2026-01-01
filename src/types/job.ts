@@ -24,8 +24,8 @@ export interface Job {
   totalSteps: number | null;
   currentStep: number;
   progressMessage: string | null;
-  inputData: string | null; // JSON string
-  resultData: string | null; // JSON string
+  inputData: unknown | null; // JSONB type, auto-parsed by Drizzle
+  resultData: unknown | null; // JSONB type, auto-parsed by Drizzle
   errorMessage: string | null;
   isImported: boolean; // 是否已导入（用于提取类任务）
   createdAt: Date;

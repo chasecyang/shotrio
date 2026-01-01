@@ -22,14 +22,14 @@ const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
   // 素材生成
   asset_image_generation: {
     type: "asset",
-    refreshOn: ["processing", "completed", "failed"],
-    debounce: 500, // 防抖500ms，避免过于频繁刷新
+    refreshOn: ["pending", "processing", "completed", "failed"],
+    debounce: 300, // 防抖300ms，避免过于频繁刷新
   },
 
   // 视频生成
   video_generation: {
     type: "asset",
-    refreshOn: ["processing", "completed", "failed"],
+    refreshOn: ["pending", "processing", "completed", "failed"],
     debounce: 500, // 防抖500ms，避免过于频繁刷新
   },
 
@@ -90,14 +90,8 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
         // 标记为已处理
         processedJobsRef.current.add(job.id);
 
-        // 解析任务输入数据
-        let inputData: Record<string, unknown> = {};
-        try {
-          inputData = job.inputData || {};
-        } catch (error) {
-          console.error("解析任务输入数据失败:", error);
-          continue;
-        }
+        // 获取任务输入数据（JSONB 已由 Drizzle 自动解析）
+        const inputData = (job.inputData as Record<string, unknown>) || {};
 
         // 防抖处理（如果配置了）
         const refreshKey = `${job.type}-${job.id}`;

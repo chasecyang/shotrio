@@ -148,24 +148,16 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
     onToolCallEnd: (toolName: string, success: boolean) => {
-      // 🔥 Tool call 完成后立即处理刷新
       if (success && isVideoRelatedFunction(toolName)) {
-        console.log("[AgentPanel] Tool call 完成:", toolName, "立即刷新任务列表和素材库");
-        
-        // 立即刷新任务列表，让 useTaskRefresh 能监听到新任务
+        console.log("[AgentPanel] 素材相关操作完成，刷新任务列表");
+        // 刷新jobs，useTaskRefresh会自动监听job变化并触发素材库刷新
         editorContext.refreshJobs();
-        
-        // 延迟触发素材变更事件（给任务列表一点时间更新）
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("asset-created"));
-        }, 100);
       }
       
       if (success && isProjectRelatedFunction(toolName)) {
-        console.log("[AgentPanel] Tool call 完成:", toolName, "触发项目刷新");
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("project-changed"));
-        }, 100);
+        console.log("[AgentPanel] 项目相关操作完成，刷新项目数据");
+        editorContext.refreshJobs();
+        window.dispatchEvent(new CustomEvent("project-changed"));
       }
     },
     onComplete: () => {

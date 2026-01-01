@@ -6,7 +6,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 
 interface AssetProgressOverlayProps {
   job?: Job;
-  asset?: { status: string; errorMessage?: string | null };
+  asset?: { runtimeStatus?: string; errorMessage?: string | null };
   className?: string;
 }
 
@@ -16,7 +16,7 @@ interface AssetProgressOverlayProps {
  */
 export function AssetProgressOverlay({ job, asset, className }: AssetProgressOverlayProps) {
   // 失败状态
-  if (asset?.status === "failed") {
+  if (asset?.runtimeStatus === "failed") {
     const errorMessage = asset.errorMessage || job?.errorMessage || "生成失败，请重试";
     
     return (
@@ -33,10 +33,8 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
         {/* 失败图标 */}
         <div className="relative z-10 flex flex-col items-center gap-2 p-4">
           <div className="relative">
-            {/* 脉动红色圆环 */}
-            <div className="absolute inset-0 rounded-full bg-destructive/20 animate-ping" />
             <div className="relative w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center border-2 border-destructive/30">
-              <AlertCircle className="w-8 h-8 text-destructive animate-pulse" />
+              <AlertCircle className="w-8 h-8 text-destructive" />
             </div>
           </div>
           

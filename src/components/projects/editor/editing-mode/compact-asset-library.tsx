@@ -5,11 +5,13 @@ import { useEditor } from "../editor-context";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
-import { Video } from "lucide-react";
+import { Video, Play } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
+import { AssetProgressOverlay } from "../shared/asset-progress-overlay";
+import { isAssetGenerating, isAssetFailed } from "@/lib/utils/asset-status";
 
 /**
  * 紧凑的素材库（列表视图）
@@ -51,7 +53,8 @@ export function CompactAssetLibrary() {
     loadAssets();
   }, [loadAssets]);
 
-  // 监听素材创建事件
+  // 监听素材创建事件（用于手动上传素材或作为兜底刷新机制）
+  // 注意：Agent生成素材的刷新由 useTaskRefresh 统一处理
   useEffect(() => {
     const handleAssetCreated = () => {
       loadAssets();
@@ -118,42 +121,74 @@ export function CompactAssetLibrary() {
             </div>
           ) : (
             <div className="space-y-2">
-              {assets.map((asset) => (
-                <div
-                  key={asset.id}
-                  className="rounded-lg border bg-card overflow-hidden"
-                >
-                  {/* 缩略图 */}
-                  <div className="relative aspect-video bg-muted">
-                    {asset.thumbnailUrl || asset.imageUrl ? (
-                      <Image
-                        src={asset.thumbnailUrl || asset.imageUrl!}
-                        alt={asset.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Video className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    
-                    {/* 时长标签 */}
-                    {asset.duration && (
-                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-xs font-medium">
-                        {Math.floor(asset.duration / 1000)}s
-                      </div>
-                    )}
-                  </div>
+              {assets.map((asset) => {
+                const generating = isAssetGenerating(asset);
+                const failed = isAssetFailed(asset);
+                const isVideo = asset.assetType === "video";
+                const displayUrl = isVideo 
+                  ? asset.thumbnailUrl 
+                  : asset.thumbnailUrl || asset.imageUrl;
+                
+                return (
+                  <div
+                    key={asset.id}
+                    className="rounded-lg border bg-card overflow-hidden transition-all hover:border-primary/40"
+                  >
+                    {/* 缩略图 */}
+                    <div className="relative aspect-video bg-muted">
+                      {generating ? (
+                        // 生成中状态 - 显示骨架屏和进度覆盖层
+                        <>
+                          <Skeleton className="absolute inset-0" />
+                          <AssetProgressOverlay job={asset.latestJob} asset={asset} />
+                        </>
+                      ) : failed ? (
+                        // 失败状态 - 显示失败覆盖层
+                        <>
+                          <div className="absolute inset-0 bg-muted/50" />
+                          <AssetProgressOverlay asset={asset} job={asset.latestJob} />
+                        </>
+                      ) : displayUrl ? (
+                        <>
+                          <Image
+                            src={displayUrl}
+                            alt={asset.name}
+                            fill
+                            className="object-cover"
+                          />
+                          {/* 视频播放图标 */}
+                          {isVideo && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                              <div className="bg-black/50 rounded-full p-2 backdrop-blur-sm">
+                                <Play className="h-4 w-4 text-white fill-white" />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        // 无缩略图 - 显示默认图标
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Video className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      {/* 时长标签 - 只在非生成和非失败状态显示 */}
+                      {asset.duration && !generating && !failed && (
+                        <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-xs font-medium">
+                          {Math.floor(asset.duration / 1000)}s
+                        </div>
+                      )}
+                    </div>
 
-                  {/* 信息 */}
-                  <div className="p-2">
-                    <p className="text-xs font-medium truncate">
-                      {asset.name}
-                    </p>
+                    {/* 信息 */}
+                    <div className="p-2">
+                      <p className="text-xs font-medium truncate">
+                        {asset.name}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

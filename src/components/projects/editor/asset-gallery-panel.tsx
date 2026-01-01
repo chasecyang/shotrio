@@ -70,7 +70,8 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
     loadAssets();
   }, [loadAssets]);
 
-  // 监听素材创建事件
+  // 监听素材创建事件（用于手动上传素材或作为兜底刷新机制）
+  // 注意：Agent生成素材的刷新由 useTaskRefresh 统一处理
   useEffect(() => {
     const handleAssetCreated = () => {
       loadAssets();
