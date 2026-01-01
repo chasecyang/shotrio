@@ -237,43 +237,29 @@ export function AssetCard({
             {asset.name}
           </h4>
         </div>
-        {/* 标签和信息区域 - 单行显示，支持 hover 查看全部 */}
-        <div className="flex items-center gap-1.5">
-          {/* 视频类型标签 */}
-          {isVideo && (
-            <Badge variant="default" className="text-xs px-2 py-0 shrink-0 gap-1">
-              <Video className="h-3 w-3" />
-              视频
-            </Badge>
-          )}
+        {/* 标签和信息区域 - 始终单行显示，根据容器宽度自适应 */}
+        <div className="flex items-center gap-1.5 min-w-0">
           {/* 视频时长 - 仅在非生成和非失败状态显示 */}
           {isVideo && asset.duration && !isGenerating && !isFailed && (
             <Badge variant="secondary" className="text-xs px-2 py-0 shrink-0">
               {Math.round(asset.duration / 1000)}秒
             </Badge>
           )}
-          {/* 标签 */}
-          {asset.tags.length > 0 ? (
+          {/* 标签 - 根据容器宽度自适应显示，始终单行 */}
+          {asset.tags.length > 0 && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                      {asset.tags.slice(0, 1).map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="outline"
-                          className="text-xs px-2 py-0 shrink-0"
-                        >
-                          {tag.tagValue}
-                        </Badge>
-                      ))}
-                    </div>
-                    {asset.tags.length > 1 && (
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        +{asset.tags.length - 1}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+                    {asset.tags.map((tag) => (
+                      <Badge
+                        key={tag.id}
+                        variant="outline"
+                        className="text-xs px-2 py-0 shrink-0"
+                      >
+                        {tag.tagValue}
+                      </Badge>
+                    ))}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
@@ -291,7 +277,7 @@ export function AssetCard({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          ) : null}
+          )}
           {asset.usageCount > 0 && !isGenerating && !isFailed && (
             <Badge variant="outline" className="text-xs ml-auto shrink-0">
               {asset.usageCount}次
