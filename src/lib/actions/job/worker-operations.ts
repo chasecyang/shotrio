@@ -351,24 +351,41 @@ export async function getPendingJobs(
     );
 
     // 将数据库的蛇形命名转换为驼峰命名
-    const jobs = (result.rows || []).map((row: Record<string, unknown>) => ({
-      id: row.id,
-      userId: row.user_id,
-      projectId: row.project_id,
-      type: row.type,
-      status: row.status,
-      progress: row.progress,
-      totalSteps: row.total_steps,
-      currentStep: row.current_step,
-      progressMessage: row.progress_message,
-      inputData: row.input_data,
-      resultData: row.result_data,
-      errorMessage: row.error_message,
-      createdAt: row.created_at,
-      startedAt: row.started_at,
-      completedAt: row.completed_at,
-      updatedAt: row.updated_at,
-    })) as Job[];
+    const jobs = (result.rows || []).map((row: Record<string, unknown>) => {
+      // 验证JSONB字段是否正确解析为对象
+      if (row.input_data !== null && row.input_data !== undefined) {
+        const inputDataType = typeof row.input_data;
+        if (inputDataType !== 'object') {
+          console.warn(`[getPendingJobs] input_data类型异常: ${inputDataType}, jobId: ${row.id}`);
+        }
+      }
+      if (row.result_data !== null && row.result_data !== undefined) {
+        const resultDataType = typeof row.result_data;
+        if (resultDataType !== 'object') {
+          console.warn(`[getPendingJobs] result_data类型异常: ${resultDataType}, jobId: ${row.id}`);
+        }
+      }
+      
+      return {
+        id: row.id,
+        userId: row.user_id,
+        projectId: row.project_id,
+        type: row.type,
+        status: row.status,
+        progress: row.progress,
+        totalSteps: row.total_steps,
+        currentStep: row.current_step,
+        progressMessage: row.progress_message,
+        inputData: row.input_data,
+        resultData: row.result_data,
+        errorMessage: row.error_message,
+        isImported: row.is_imported,
+        createdAt: row.created_at,
+        startedAt: row.started_at,
+        completedAt: row.completed_at,
+        updatedAt: row.updated_at,
+      };
+    }) as Job[];
 
     return {
       success: true,

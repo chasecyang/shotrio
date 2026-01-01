@@ -91,7 +91,8 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
         processedJobsRef.current.add(job.id);
 
         // 获取任务输入数据（JSONB 已由 Drizzle 自动解析）
-        const inputData = (job.inputData as Record<string, unknown>) || {};
+        // 使用类型守卫确保类型安全
+        const inputData = (job.inputData as Record<string, unknown> | null) || {};
 
         // 防抖处理（如果配置了）
         const refreshKey = `${job.type}-${job.id}`;
@@ -163,8 +164,9 @@ async function executeRefresh(
   try {
     switch (type) {
       case "video":
-        if (callbacks.onRefreshVideo && inputData.videoId) {
-          await callbacks.onRefreshVideo(inputData.videoId as string);
+        // 类型安全地提取videoId
+        if (callbacks.onRefreshVideo && typeof inputData.videoId === "string") {
+          await callbacks.onRefreshVideo(inputData.videoId);
         }
         break;
 

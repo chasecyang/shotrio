@@ -24,13 +24,14 @@ export async function processAssetImageGeneration(
   jobData: Job,
   workerToken: string
 ): Promise<void> {
-  const input: AssetImageGenerationInput = (jobData.inputData || {}) as AssetImageGenerationInput;
+  // 严格验证输入数据
+  const input = jobData.inputData as AssetImageGenerationInput | null;
 
-  const { assetId } = input;
-
-  if (!assetId) {
+  if (!input || !input.assetId) {
     throw new Error("Job 格式错误：缺少 assetId");
   }
+
+  const { assetId } = input;
 
   try {
     await processAssetImageGenerationInternal(jobData, workerToken, assetId);
