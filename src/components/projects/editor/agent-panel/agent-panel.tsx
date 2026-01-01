@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-context";
 import { useAgentStream } from "./use-agent-stream";
+import { useEditor } from "../editor-context";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { SuggestionCards } from "./suggestion-cards";
@@ -65,6 +66,7 @@ function isProjectRelatedFunction(functionName: string): boolean {
 
 export function AgentPanel({ projectId }: AgentPanelProps) {
   const agent = useAgent();
+  const editorContext = useEditor();
   const t = useTranslations();
   
   const [input, setInput] = useState("");
@@ -145,36 +147,33 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
 
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
+    onToolCallEnd: (toolName: string, success: boolean) => {
+      // 🔥 Tool call 完成后立即处理刷新
+      if (success && isVideoRelatedFunction(toolName)) {
+        console.log("[AgentPanel] Tool call 完成:", toolName, "立即刷新任务列表和素材库");
+        
+        // 立即刷新任务列表，让 useTaskRefresh 能监听到新任务
+        editorContext.refreshJobs();
+        
+        // 延迟触发素材变更事件（给任务列表一点时间更新）
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("asset-created"));
+        }, 100);
+      }
+      
+      if (success && isProjectRelatedFunction(toolName)) {
+        console.log("[AgentPanel] Tool call 完成:", toolName, "触发项目刷新");
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("project-changed"));
+        }, 100);
+      }
+    },
     onComplete: () => {
       // 设置 loading 状态为 false（由 context 统一管理）
       agent.setLoading(false);
       
       // 延迟刷新对话列表
       setTimeout(() => agent.refreshConversations(true), 100);
-      
-      // 触发事件刷新（检查所有包含 toolCalls 的消息，而不只是最后一条）
-      let hasAssetRelatedTool = false;
-      let hasProjectRelatedTool = false;
-      
-      for (const message of agent.state.messages) {
-        if (message.toolCalls && message.toolCalls.length > 0) {
-          const toolName = message.toolCalls[0]?.function.name;
-          if (toolName && isVideoRelatedFunction(toolName)) {
-            hasAssetRelatedTool = true;
-          }
-          if (toolName && isProjectRelatedFunction(toolName)) {
-            hasProjectRelatedTool = true;
-          }
-        }
-      }
-      
-      if (hasAssetRelatedTool) {
-        // 视频/资产操作触发统一的资产变更事件
-        setTimeout(() => window.dispatchEvent(new CustomEvent("asset-created")), 200);
-      }
-      if (hasProjectRelatedTool) {
-        setTimeout(() => window.dispatchEvent(new CustomEvent("project-changed")), 200);
-      }
     },
     onError: (error) => {
       // 设置 loading 状态为 false（由 context 统一管理）

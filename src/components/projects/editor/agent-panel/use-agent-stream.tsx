@@ -17,6 +17,7 @@ interface UseAgentStreamOptions {
   onPendingAction?: () => void;
   onComplete?: () => void;
   onError?: (error: string) => void;
+  onToolCallEnd?: (toolName: string, success: boolean) => void;
 }
 
 /**
@@ -210,6 +211,11 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                       }),
                       toolCallId: matchingToolCall.id, // 关联到具体的 tool call（使用真实 ID）
                     });
+                  }
+                  
+                  // 🔥 通知外部 tool call 已完成
+                  if (options.onToolCallEnd) {
+                    options.onToolCallEnd(event.data.name, event.data.success);
                   }
                 } else {
                   console.warn("[Agent Stream] 未找到匹配的 tool call:", event.data.name, "ID:", event.data.id);

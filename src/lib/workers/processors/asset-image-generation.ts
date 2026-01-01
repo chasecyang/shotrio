@@ -24,9 +24,7 @@ export async function processAssetImageGeneration(
   jobData: Job,
   workerToken: string
 ): Promise<void> {
-  const input: AssetImageGenerationInput = JSON.parse(
-    jobData.inputData || "{}"
-  );
+  const input: AssetImageGenerationInput = (jobData.inputData || {}) as AssetImageGenerationInput;
 
   const { assetId } = input;
 

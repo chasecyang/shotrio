@@ -121,7 +121,7 @@ export function AssetCard({
           </div>
         )}
         {/* 复选框 - 始终渲染同一个元素，避免 hover 时的抽动 */}
-        {onSelectChange && !isGenerating && !isFailed && (isBatchSelected || isHovered) && (
+        {onSelectChange && !isGenerating && (isBatchSelected || isHovered) && (
           <div
             className="absolute top-2 left-2 z-10 cursor-pointer transition-transform hover:scale-110"
             onClick={(e) => {
@@ -139,7 +139,7 @@ export function AssetCard({
           </div>
         )}
         {/* 悬停遮罩（仅在有内容时显示操作按钮） */}
-        {isHovered && !isGenerating && !isFailed && (
+        {isHovered && !isGenerating && (
           <div className="absolute inset-0 animate-in fade-in duration-200 pointer-events-none">
             {/* 左上角放大按钮（仅非批量选择模式） */}
             {!onSelectChange && !isVideo && (
