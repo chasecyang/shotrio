@@ -224,6 +224,8 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
               onConfirm={handleConfirmAction}
               onCancel={handleCancelAction}
               currentBalance={currentBalance}
+              isConfirming={isConfirming}
+              isRejecting={isRejecting}
             />
           )}
 

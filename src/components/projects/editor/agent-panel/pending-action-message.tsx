@@ -4,6 +4,7 @@ import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2, Film, Camera, Clock, Video } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
   formatParametersForConfirmation, 
@@ -32,6 +33,8 @@ interface PendingActionMessageProps {
   onConfirm: (id: string) => void;
   onCancel: (id: string) => void;
   currentBalance?: number;
+  isConfirming?: boolean;
+  isRejecting?: boolean;
 }
 
 // Prompt高亮组件
@@ -355,12 +358,17 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   onConfirm,
   onCancel,
   currentBalance,
+  isConfirming = false,
+  isRejecting = false,
 }: PendingActionMessageProps) {
   const t = useTranslations();
   const totalCost = creditCost?.total || 0;
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
   const [artStyleName, setArtStyleName] = useState<string | null>(null);
+  
+  // 计算整体 loading 状态
+  const isLoading = isConfirming || isRejecting;
 
   const borderColor = "border-primary/20";
   const bgColor = "bg-accent/30";
@@ -475,7 +483,10 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   }, [isSetArtStyle, functionCall.arguments.styleId]);
 
   return (
-    <div className={`rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`}>
+    <div className={cn(
+      `rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`,
+      isLoading && "opacity-70 pointer-events-none"
+    )}>
       <div className="p-3 space-y-3">
         {/* Header with Icon and Title */}
         <div className="flex items-start gap-2.5">
@@ -656,18 +667,37 @@ export const PendingActionMessage = memo(function PendingActionMessage({
               variant="ghost"
               size="sm"
               className="h-7 px-3 text-xs"
+              disabled={isLoading}
             >
-              <X className="h-3 w-3 mr-1" />
-              {t('editor.agent.pendingAction.reject')}
+              {isRejecting ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  处理中...
+                </>
+              ) : (
+                <>
+                  <X className="h-3 w-3 mr-1" />
+                  {t('editor.agent.pendingAction.reject')}
+                </>
+              )}
             </Button>
             <Button
               onClick={() => onConfirm(functionCall.id)}
-              disabled={insufficientBalance}
+              disabled={insufficientBalance || isLoading}
               size="sm"
               className="h-7 px-3 text-xs"
             >
-              <Check className="h-3 w-3 mr-1" />
-              {t('editor.agent.pendingAction.confirm')}
+              {isConfirming ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  执行中...
+                </>
+              ) : (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  {t('editor.agent.pendingAction.confirm')}
+                </>
+              )}
             </Button>
           </div>
         </div>

@@ -372,6 +372,7 @@ export async function getPendingJobs(
         projectId: row.project_id,
         type: row.type,
         status: row.status,
+        assetId: row.asset_id,
         progress: row.progress,
         totalSteps: row.total_steps,
         currentStep: row.current_step,
