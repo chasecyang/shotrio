@@ -148,20 +148,39 @@ export async function executeFunction(
         // 统计状态
         const completedCount = queryResult.assets.filter(a => a.runtimeStatus === "completed").length;
         const processingCount = queryResult.assets.filter(a => a.runtimeStatus === "processing").length;
+        const failedCount = queryResult.assets.filter(a => a.runtimeStatus === "failed").length;
 
         const typeLabel = assetType === "image" ? "图片资产" : assetType === "video" ? "视频资产" : "资产";
+        
+        // 格式化资产信息，提供更详细的数据给AI
+        const formattedAssets = queryResult.assets.map(a => ({
+          id: a.id,
+          name: a.name,
+          type: a.assetType,
+          status: a.runtimeStatus,
+          imageUrl: a.imageUrl,
+          videoUrl: a.videoUrl,
+          duration: a.duration,
+          prompt: a.prompt,
+          tags: a.tags.map(t => t.tagValue),
+          order: a.order,
+          createdAt: a.createdAt,
+          // 如果有source信息，也包含进来
+          sourceAssetIds: a.sourceAssetIds,
+        }));
         
         result = {
           functionCallId: functionCall.id,
           success: true,
           data: {
-            assets: queryResult.assets,
+            assets: formattedAssets,
             total: queryResult.total,
             completed: completedCount,
             processing: processingCount,
+            failed: failedCount,
             message: queryResult.assets.length === 0 
               ? `${typeLabel}库为空，没有找到任何${typeLabel}` 
-              : `找到 ${queryResult.total} 个${typeLabel}（${completedCount} 个已完成，${processingCount} 个处理中）`,
+              : `找到 ${queryResult.total} 个${typeLabel}（${completedCount} 个已完成，${processingCount} 个处理中${failedCount > 0 ? `，${failedCount} 个失败` : ''}）`,
           },
         };
         break;

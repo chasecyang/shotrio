@@ -38,18 +38,18 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "query_assets",
-    description: "查询项目资产库（图片和视频）。支持按类型和标签筛选。适合在需要引用现有素材或视频时使用。",
+    description: "查询项目资产库（包括图片素材和视频素材）。支持按类型（image/video）和标签筛选。返回资产的详细信息，包括ID、名称、状态、URL、prompt、标签等。适合在需要引用现有素材、查看生成结果、或了解资产库内容时使用。",
     displayName: "查询资产库",
     parameters: {
       type: "object",
       properties: {
         assetType: {
           type: "string",
-          description: "资产类型筛选：'image' 或 'video'。不提供则返回所有类型",
+          description: "资产类型筛选：'image'（图片素材）或 'video'（视频素材）。不提供则返回所有类型",
         },
         tags: {
           type: "array",
-          description: "标签筛选数组，如 ['角色','男性'] 或 ['场景','室外']",
+          description: "标签筛选数组，如 ['角色','男性'] 或 ['场景','室外']。可同时筛选多个标签",
         },
         limit: {
           type: "number",
@@ -197,14 +197,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "update_asset",
-    description: "修改资产信息（支持单个或批量）。只允许修改 name（名称）和 tags（标签），不允许修改 prompt 等生成配置字段。适用于图片和视频资产。",
+    description: "修改资产信息（支持单个或批量，同时支持图片素材和视频素材）。只允许修改 name（名称）和 tags（标签），不允许修改 prompt 等生成配置字段。适合批量重命名、添加标签分类、优化素材管理。",
     displayName: "修改资产",
     parameters: {
       type: "object",
       properties: {
         updates: {
           type: "array",
-          description: "更新数组，每项包含 assetId（必填）和要修改的字段（name, tags）",
+          description: "更新数组，每项包含 assetId（必填，可以是图片或视频的ID）和要修改的字段（name, tags）",
         },
       },
       required: ["updates"],
@@ -235,14 +235,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "delete_asset",
-    description: "删除资产（支持单个或批量）。可删除图片或视频资产。删除后无法恢复，请谨慎使用。",
+    description: "删除资产（支持单个或批量，同时支持图片素材和视频素材）。删除后无法恢复，请谨慎使用。适合清理不需要的素材、删除生成失败的资产。",
     displayName: "删除资产",
     parameters: {
       type: "object",
       properties: {
         assetIds: {
           type: "array",
-          description: "要删除的资产ID数组",
+          description: "要删除的资产ID数组（可以是图片或视频的ID）",
         },
       },
       required: ["assetIds"],
