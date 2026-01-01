@@ -58,12 +58,21 @@ export function getNextClip(
 }
 
 /**
- * 格式化时间显示 (ms -> mm:ss)
+ * 格式化时间显示 (ms -> MM:SS.mm)
+ * @param ms 毫秒数
+ * @param showMilliseconds 是否显示毫秒（默认显示）
  */
-export function formatTimeDisplay(ms: number): string {
+export function formatTimeDisplay(ms: number, showMilliseconds: boolean = true): string {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
+  
+  if (showMilliseconds) {
+    // 计算毫秒部分，保留2位（百分之一秒）
+    const centiseconds = Math.floor((ms % 1000) / 10);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}.${centiseconds.toString().padStart(2, "0")}`;
+  }
+  
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 

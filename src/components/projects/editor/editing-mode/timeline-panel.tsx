@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { ZoomIn, ZoomOut, Plus, Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
 import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
@@ -348,6 +349,11 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     setZoom(prev => Math.max(prev / 1.5, 0.2));
   };
 
+  // Slider 缩放控制（将 zoom 转换为 20-500 的整数范围）
+  const handleZoomChange = (value: number[]) => {
+    setZoom(value[0] / 100);
+  };
+
   // 处理添加素材
   const handleAddAsset = async (asset: AssetWithRuntimeStatus) => {
     if (!timeline) return;
@@ -376,16 +382,36 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     }
   };
 
+  // 根据缩放级别计算刻度间隔
+  const getTimeStepByZoom = (zoom: number): number => {
+    if (zoom < 0.5) return 10000;  // 10s
+    if (zoom < 1) return 5000;     // 5s
+    if (zoom < 2) return 2000;     // 2s
+    if (zoom < 3) return 1000;     // 1s
+    return 500;                     // 0.5s
+  };
+
   // 生成时间标尺
   const generateTimeRuler = () => {
     const totalWidth = (timeline.duration || 10000) * pixelsPerMs;
-    const stepMs = 5000; // 每5秒一个标记
+    const stepMs = getTimeStepByZoom(zoom); // 根据缩放级别动态计算刻度间隔
     const marks: { time: number; label: string }[] = [];
 
     for (let time = 0; time <= timeline.duration; time += stepMs) {
+      let label: string;
+      
+      // 根据缩放级别决定标签格式
+      if (zoom >= 2) {
+        // 高缩放级别：显示毫秒
+        label = formatTimeDisplay(time);
+      } else {
+        // 低缩放级别：仅显示秒
+        label = `${Math.floor(time / 1000)}s`;
+      }
+      
       marks.push({
         time,
-        label: `${Math.floor(time / 1000)}s`,
+        label,
       });
     }
 
@@ -454,7 +480,7 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
           </div>
           
           {/* 缩放控制 */}
-          <div className="flex items-center gap-1 border-l pl-3">
+          <div className="flex items-center gap-2 border-l pl-3">
             <Button
               variant="ghost"
               size="sm"
@@ -463,9 +489,17 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <span className="text-xs text-muted-foreground w-12 text-center">
-              {Math.round(zoom * 100)}%
-            </span>
+            
+            {/* 缩放滑块 */}
+            <Slider
+              value={[zoom * 100]}
+              onValueChange={handleZoomChange}
+              min={20}
+              max={500}
+              step={5}
+              className="w-24"
+            />
+            
             <Button
               variant="ghost"
               size="sm"
@@ -474,6 +508,10 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
+            
+            <span className="text-xs text-muted-foreground w-12 text-center">
+              {Math.round(zoom * 100)}%
+            </span>
           </div>
         </div>
       </div>
