@@ -16,7 +16,9 @@ import type { Job } from "@/types/job";
  * 2. 生成的资产（sourceType='generated'）：
  *    - 如果有关联job，从job.status映射得到
  *    - 如果没有job但有文件URL，视为 'completed'
- *    - 如果没有job且没有文件URL，视为 'failed'（孤立资产）
+ *    - 如果没有job且没有文件URL：
+ *      - 刚创建（5分钟内）：视为 'pending'（等待job创建）
+ *      - 创建较久：视为 'failed'（孤立资产）
  * 
  * @param asset - 资产对象
  * @param latestJob - 关联的最新job（可选）
@@ -37,7 +39,17 @@ export function calculateAssetStatus(
     if (asset.imageUrl || asset.videoUrl) {
       return 'completed';
     }
-    // 否则视为失败（孤立资产）
+    
+    // 检查资产创建时间
+    const assetAge = Date.now() - new Date(asset.createdAt).getTime();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    // 如果是刚创建的（5分钟内），可能job还在创建中，视为pending
+    if (assetAge < fiveMinutes) {
+      return 'pending';
+    }
+    
+    // 创建时间较久但没有job和文件，视为失败（孤立资产）
     return 'failed';
   }
   

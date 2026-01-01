@@ -180,12 +180,69 @@ export function CompactAssetLibrary() {
                       )}
                     </div>
 
-                    {/* 信息 */}
-                    <div className="p-2">
+                    {/* 信息区域 */}
+                    <div className="p-2 space-y-1.5">
+                      {/* 生成中或失败状态的进度条 */}
+                      {(generating || failed) && asset.latestJob && (
+                        <div className="space-y-1">
+                          {/* 进度条 */}
+                          <div className="relative h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ease-out ${
+                                failed
+                                  ? "bg-destructive"
+                                  : "bg-primary animate-pulse"
+                              }`}
+                              style={{
+                                width: failed
+                                  ? "100%"
+                                  : `${asset.latestJob.progress || 0}%`,
+                              }}
+                            >
+                              {/* 闪光效果 - 仅生成中显示 */}
+                              {generating && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 状态文本 */}
+                          <div className="flex items-center justify-between text-xs">
+                            <span className={`font-medium ${
+                              failed ? "text-destructive" : "text-primary"
+                            }`}>
+                              {failed ? "生成失败" : "生成中"}
+                            </span>
+                            {generating && (
+                              <span className="text-muted-foreground tabular-nums">
+                                {Math.round(asset.latestJob.progress || 0)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 素材名称 */}
                       <p className="text-xs font-medium truncate">
                         {asset.name}
                       </p>
                     </div>
+
+                    {/* CSS动画 */}
+                    <style jsx>{`
+                      @keyframes shimmer {
+                        0% {
+                          transform: translateX(-100%);
+                        }
+                        100% {
+                          transform: translateX(200%);
+                        }
+                      }
+                      
+                      .animate-shimmer {
+                        animation: shimmer 1.5s linear infinite;
+                      }
+                    `}</style>
                   </div>
                 );
               })}

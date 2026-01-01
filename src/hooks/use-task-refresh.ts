@@ -58,10 +58,16 @@ export interface RefreshCallbacks {
  * 统一的任务刷新 Hook
  * 
  * 监听任务状态变化，根据任务类型自动刷新相应的资源
+ * 
+ * 优化：
+ * - 追踪每个任务的状态变化，而不是只标记是否处理过
+ * - 只在状态真正变化时才触发刷新
+ * - 确保任务完成时一定会刷新
  */
 export function useTaskRefresh(callbacks: RefreshCallbacks) {
   const { jobs } = callbacks;
-  const processedJobsRef = useRef<Set<string>>(new Set());
+  // 追踪每个任务的最后状态（jobId -> status）
+  const jobStatusMapRef = useRef<Map<string, string>>(new Map());
   const refreshTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // 使用 ref 存储 callbacks，避免 callbacks 对象引用变化导致 effect 重复执行
@@ -71,8 +77,7 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
   useEffect(() => {
     const processJobs = async () => {
       for (const job of jobs) {
-        // 跳过已处理的任务
-        if (!job.id || processedJobsRef.current.has(job.id)) {
+        if (!job.id) {
           continue;
         }
 
@@ -87,8 +92,18 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
           continue;
         }
 
-        // 标记为已处理
-        processedJobsRef.current.add(job.id);
+        // 获取上次记录的状态
+        const lastStatus = jobStatusMapRef.current.get(job.id);
+        
+        // 如果状态没有变化，跳过（避免重复刷新）
+        if (lastStatus === job.status) {
+          continue;
+        }
+
+        // 更新状态记录
+        jobStatusMapRef.current.set(job.id, job.status);
+
+        console.log(`[useTaskRefresh] 任务 ${job.id} 状态变化: ${lastStatus || '新任务'} -> ${job.status}`);
 
         // 获取任务输入数据（JSONB 已由 Drizzle 自动解析）
         // 使用类型守卫确保类型安全
@@ -125,27 +140,20 @@ export function useTaskRefresh(callbacks: RefreshCallbacks) {
     };
   }, [jobs]);
 
-  // 清理已处理任务的记录（避免内存泄漏）
+  // 清理已完成任务的状态记录（避免内存泄漏）
   useEffect(() => {
     // 每隔 5 分钟清理一次已完成任务的记录
     const cleanupInterval = setInterval(() => {
-      const completedJobIds = jobs
-        .filter(
-          (job) =>
-            job.status === "completed" ||
-            job.status === "failed" ||
-            job.status === "cancelled"
-        )
-        .map((job) => job.id)
-        .filter(Boolean) as string[];
-
-      // 保留最近 50 个已完成任务的记录
-      if (processedJobsRef.current.size > 100) {
-        const idsToKeep = new Set(completedJobIds.slice(-50));
-        processedJobsRef.current = new Set(
-          Array.from(processedJobsRef.current).filter((id) => idsToKeep.has(id))
-        );
+      const currentJobIds = new Set(jobs.map((job) => job.id).filter(Boolean));
+      
+      // 移除不在当前任务列表中的记录
+      for (const [jobId] of jobStatusMapRef.current) {
+        if (!currentJobIds.has(jobId)) {
+          jobStatusMapRef.current.delete(jobId);
+        }
       }
+
+      console.log(`[useTaskRefresh] 清理状态记录，当前追踪 ${jobStatusMapRef.current.size} 个任务`);
     }, 5 * 60 * 1000);
 
     return () => clearInterval(cleanupInterval);

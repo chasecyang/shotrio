@@ -175,9 +175,63 @@ export function AssetCard({
 
       {/* 信息区域 */}
       <div 
-        className="p-3 space-y-1.5 cursor-pointer"
+        className="p-3 space-y-2 cursor-pointer"
         onClick={() => onClick(asset)}
       >
+        {/* 生成中或失败状态的进度条 */}
+        {(isGenerating || isFailed) && (job || asset.latestJob) && (
+          <div className="space-y-1.5">
+            {/* 进度条 */}
+            <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 ease-out ${
+                  isFailed
+                    ? "bg-destructive"
+                    : "bg-primary animate-pulse"
+                }`}
+                style={{
+                  width: isFailed
+                    ? "100%"
+                    : `${(job || asset.latestJob)?.progress || 0}%`,
+                }}
+              >
+                {/* 闪光效果 - 仅生成中显示 */}
+                {isGenerating && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                )}
+              </div>
+            </div>
+
+            {/* 状态文本 */}
+            <div className="flex items-center justify-between text-xs">
+              <span className={`font-medium ${
+                isFailed ? "text-destructive" : "text-primary"
+              }`}>
+                {isFailed ? "生成失败" : "生成中"}
+              </span>
+              {isGenerating && (job || asset.latestJob) && (
+                <span className="text-muted-foreground tabular-nums">
+                  {Math.round((job || asset.latestJob)?.progress || 0)}%
+                </span>
+              )}
+            </div>
+
+            {/* 进度消息 */}
+            {isGenerating && (job || asset.latestJob)?.progressMessage && (
+              <p className="text-xs text-muted-foreground truncate">
+                {(job || asset.latestJob)?.progressMessage}
+              </p>
+            )}
+
+            {/* 失败消息 */}
+            {isFailed && asset.errorMessage && (
+              <p className="text-xs text-destructive/80 truncate">
+                {asset.errorMessage}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex items-start justify-between gap-2">
           <h4 className="text-sm font-medium truncate flex-1" title={asset.name}>
             {asset.name}
@@ -192,21 +246,10 @@ export function AssetCard({
               视频
             </Badge>
           )}
-          {/* 视频时长 */}
-          {isVideo && asset.duration && (
+          {/* 视频时长 - 仅在非生成和非失败状态显示 */}
+          {isVideo && asset.duration && !isGenerating && !isFailed && (
             <Badge variant="secondary" className="text-xs px-2 py-0 shrink-0">
               {Math.round(asset.duration / 1000)}秒
-            </Badge>
-          )}
-          {/* 状态标签 */}
-          {isGenerating && (
-            <Badge variant="secondary" className="text-xs px-2 py-0 shrink-0">
-              生成中
-            </Badge>
-          )}
-          {isFailed && (
-            <Badge variant="destructive" className="text-xs px-2 py-0 shrink-0">
-              失败
             </Badge>
           )}
           {/* 标签 */}
@@ -249,13 +292,29 @@ export function AssetCard({
               </Tooltip>
             </TooltipProvider>
           ) : null}
-          {asset.usageCount > 0 && (
+          {asset.usageCount > 0 && !isGenerating && !isFailed && (
             <Badge variant="outline" className="text-xs ml-auto shrink-0">
               {asset.usageCount}次
             </Badge>
           )}
         </div>
       </div>
+      
+      {/* CSS动画 */}
+      <style jsx>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(200%);
+          }
+        }
+        
+        .animate-shimmer {
+          animation: shimmer 1.5s linear infinite;
+        }
+      `}</style>
 
       {/* Prompt 显示区域 */}
       {asset.prompt && (
