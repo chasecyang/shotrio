@@ -180,13 +180,31 @@ export class AgentEngine {
         userRejected: true,
       });
 
-      // 添加 tool message（墓碑标记）
+      // 关键修复：找到包含 pending tool call 的 assistant 消息位置
+      // 需要将 tool message 插入到该 assistant 消息之后（紧跟着）
+      // 以确保符合 OpenAI API 的要求：tool messages 必须紧跟 assistant message with tool_calls
+      
+      const lastAssistantIndex = state.messages.findLastIndex(
+        m => m.role === "assistant" && 
+        m.tool_calls?.some(tc => tc.id === pendingToolCall.id)
+      );
+
       const toolMessage: Message = {
         role: "tool",
         content: rejectionContent,
         tool_call_id: pendingToolCall.id,
       };
-      state.messages.push(toolMessage);
+
+      if (lastAssistantIndex !== -1) {
+        // 将 tool message 插入到 assistant message 之后
+        // 这样即使后面有用户的"打断消息"，顺序也是正确的
+        state.messages.splice(lastAssistantIndex + 1, 0, toolMessage);
+        console.log(`[AgentEngine] 将 tool message 插入到位置 ${lastAssistantIndex + 1}`);
+      } else {
+        // 降级处理：如果找不到（理论上不应该发生），就追加到末尾
+        console.warn("[AgentEngine] 未找到包含 tool_call 的 assistant 消息，追加到末尾");
+        state.messages.push(toolMessage);
+      }
       
       // 保存到数据库
       await saveToolMessage(
