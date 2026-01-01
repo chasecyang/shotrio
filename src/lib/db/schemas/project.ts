@@ -21,15 +21,6 @@ export const assetSourceTypeEnum = pgEnum("asset_source_type", [
   "uploaded",  // 用户上传
 ]);
 
-// 资产状态枚举（统一的状态管理）
-// 注意：这个枚举保留用于类型定义，但不再作为数据库字段
-export const assetStatusEnum = pgEnum("asset_status", [
-  "pending",
-  "processing", 
-  "completed",
-  "failed",
-]);
-
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
   "batch_image_generation", // 批量图像生成
@@ -161,9 +152,7 @@ export const asset: any = pgTable("asset", {
   meta: text("meta"), // JSON字符串，存储类型特定的元数据
   
   // 注意：status 和 errorMessage 字段已移除
-  // 状态现在从关联的 job 动态计算
-  // status: assetStatusEnum("status").default("completed").notNull(), // ❌ 已移除
-  // errorMessage: text("error_message"), // ❌ 已移除
+  // 状态现在从关联的 job 动态计算，详见 src/lib/utils/asset-status.ts
   
   // 组织和排序
   order: integer("order"), // 用于排序

@@ -68,6 +68,7 @@ export async function createDerivedAsset(
       projectId: input.projectId,
       userId: session.user.id,
       name: input.name,
+      sourceType: 'generated', // 派生资产通过AI处理生成，标记为generated
       imageUrl: input.imageUrl,
       thumbnailUrl: input.thumbnailUrl || null,
       prompt: input.prompt || null,

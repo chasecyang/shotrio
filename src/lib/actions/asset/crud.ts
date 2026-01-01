@@ -269,7 +269,20 @@ export async function deleteAssets(assetIds: string[]): Promise<{
 }
 
 /**
- * 获取单个资产详情（带标签）
+ * 获取单个资产详情（带标签，不含运行时状态）
+ * 
+ * 注意：此函数返回 AssetWithTags 类型，不包含运行时状态（runtimeStatus）
+ * 
+ * 使用场景：
+ * - 当只需要资产的基本信息和标签时使用
+ * - 用于编辑资产信息、标签管理等场景
+ * 
+ * 如果需要显示资产状态（生成中、已完成、失败等），请使用：
+ * - `getAssetWithStatus()` - 获取单个资产含运行时状态
+ * - `queryAssets()` - 批量查询资产含运行时状态
+ * 
+ * @param assetId - 资产ID
+ * @returns 资产信息（包含标签，不含运行时状态）
  */
 export async function getAsset(assetId: string): Promise<{
   success: boolean;

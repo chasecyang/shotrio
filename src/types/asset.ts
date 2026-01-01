@@ -325,16 +325,6 @@ export function hasAssetTag(asset: AssetWithTags, tagValue: string): boolean {
   return asset.tags.some(tag => tag.tagValue === tagValue);
 }
 
-/**
- * 计算Asset的状态（已废弃）
- * @deprecated 请使用 src/lib/utils/asset-status.ts 中的 calculateAssetStatus 函数
- * 该函数会根据asset.sourceType和关联的job状态来计算运行时状态
- */
-export function getAssetStatus(asset: { imageUrl?: string | null; status?: AssetStatus }): AssetStatus {
-  // 兼容代码，避免立即报错
-  return asset.status || (asset.imageUrl ? "completed" : "processing");
-}
-
 // ===== 素材生成相关类型 =====
 
 /**

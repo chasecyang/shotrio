@@ -15,6 +15,22 @@ import type { Job } from "@/types/job";
 /**
  * 查询单个资产并附加运行时状态
  * 
+ * 此函数会自动JOIN关联的job表，并计算资产的运行时状态（runtimeStatus）
+ * 
+ * 使用场景：
+ * - 需要显示资产的生成状态（pending/processing/completed/failed）
+ * - 需要获取资产的错误信息（从关联的job获取）
+ * - 需要访问关联的job信息（latestJob字段）
+ * 
+ * 状态计算规则：
+ * - 上传的资产（sourceType='uploaded'）：直接返回 'completed'
+ * - 生成的资产（sourceType='generated'）：
+ *   - 有关联job：从job.status映射（pending/processing/completed/failed/cancelled）
+ *   - 无job但有文件URL：视为 'completed'
+ *   - 无job且无文件：视为 'failed'（孤立资产）
+ * 
+ * 注意：此函数不进行权限验证，需要调用方自行验证
+ * 
  * @param assetId - 资产ID
  * @returns 带运行时状态的资产，如果不存在返回null
  */
