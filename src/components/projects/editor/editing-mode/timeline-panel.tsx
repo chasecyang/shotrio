@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ZoomIn, ZoomOut, Plus, Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
 import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
@@ -253,11 +252,22 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* 工具栏 */}
-      <div className="h-12 border-b flex items-center px-4 gap-3 shrink-0">
-        <span className="text-xs font-medium text-muted-foreground">时间轴</span>
+      <div className="h-12 border-b flex items-center justify-between px-4 gap-3 shrink-0">
+        {/* 左侧：添加素材 */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 px-2"
+            onClick={() => setAddDialogOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="text-xs">添加素材</span>
+          </Button>
+        </div>
         
-        {/* 播放控制按钮组 */}
-        <div className="flex items-center gap-1 border-r pr-3">
+        {/* 中央：播放控制按钮组 */}
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -290,55 +300,46 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
             <SkipForward className="h-4 w-4" />
           </Button>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1 px-2"
-          onClick={() => setAddDialogOpen(true)}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span className="text-xs">添加素材</span>
-        </Button>
         
-        <div className="flex-1" />
-        
-        {/* 时间显示 */}
-        <div className="text-xs text-muted-foreground font-mono">
-          {formatTimeDisplay(currentTime)} / {formatTimeDisplay(timeline.duration)}
-        </div>
-        
-        {/* 缩放控制 */}
-        <div className="flex items-center gap-1 border-l pl-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={handleZoomOut}
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <span className="text-xs text-muted-foreground w-12 text-center">
-            {Math.round(zoom * 100)}%
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={handleZoomIn}
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
+        {/* 右侧：时间显示和缩放控制 */}
+        <div className="flex items-center gap-3">
+          {/* 时间显示 */}
+          <div className="text-xs text-muted-foreground font-mono">
+            {formatTimeDisplay(currentTime)} / {formatTimeDisplay(timeline.duration)}
+          </div>
+          
+          {/* 缩放控制 */}
+          <div className="flex items-center gap-1 border-l pl-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={handleZoomOut}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground w-12 text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={handleZoomIn}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* 时间轴主体 */}
-      <ScrollArea className="flex-1">
-        <div className="p-4">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+        <div className="pl-2">
           {/* 时间标尺 */}
           <div 
             ref={timelineRulerRef}
-            className={`relative h-8 border-b mb-2 transition-colors ${
+            className={`relative h-8 border-b mb-1.5 mr-4 transition-colors ${
               isDraggingPlayhead 
                 ? 'cursor-grabbing' 
                 : 'cursor-grab hover:bg-muted/20'
@@ -353,7 +354,9 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
                 style={{ left: mark.time * pixelsPerMs }}
               >
                 <div className="w-px h-2 bg-border" />
-                <span className="absolute top-2 left-0 text-xs text-muted-foreground -translate-x-1/2">
+                <span className={`absolute top-2 text-xs text-muted-foreground ${
+                  mark.time === 0 ? 'left-0' : 'left-0 -translate-x-1/2'
+                }`}>
                   {mark.label}
                 </span>
               </div>
@@ -398,7 +401,7 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
           {/* 轨道 */}
           <div
             ref={trackRef}
-            className="relative h-24 border rounded-lg bg-muted/20"
+            className="relative h-24 mr-4"
             style={{ width: Math.max(totalWidth, 800) }}
           >
             {timeline.clips.length === 0 ? (
@@ -424,8 +427,7 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
             )}
           </div>
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
 
       {/* 添加素材对话框 */}
       <AddAssetDialog
