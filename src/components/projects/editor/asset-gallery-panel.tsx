@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useEditor } from "./editor-context";
 import { AssetCard } from "./shared/asset-card";
 import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
@@ -24,23 +24,30 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MediaViewer } from "@/components/ui/media-viewer";
+import { AssetFilter, AssetFilterOptions } from "./shared/asset-filter";
 
 interface AssetGalleryPanelProps {
   userId: string;
   onOpenAssetGeneration: () => void;
 }
 
+const DEFAULT_FILTER: AssetFilterOptions = {
+  assetTypes: [],
+  tags: [],
+};
+
 export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGalleryPanelProps) {
   const { state, setMode } = useEditor();
   const { project } = state;
 
-  const [assets, setAssets] = useState<AssetWithRuntimeStatus[]>([]);
+  const [allAssets, setAllAssets] = useState<AssetWithRuntimeStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [filterOptions, setFilterOptions] = useState<AssetFilterOptions>(DEFAULT_FILTER);
 
   // 媒体查看器状态
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -54,16 +61,18 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
     try {
       const result = await queryAssets({
         projectId: project.id,
-        limit: 100,
+        limit: 200,
+        search: filterOptions.search,
+        tagFilters: filterOptions.tags.length > 0 ? filterOptions.tags : undefined,
       });
-      setAssets(result.assets);
+      setAllAssets(result.assets);
     } catch (error) {
       console.error("加载素材失败:", error);
       toast.error("加载素材失败");
     } finally {
       setIsLoading(false);
     }
-  }, [project?.id]);
+  }, [project?.id, filterOptions.search, filterOptions.tags]);
 
   // 初始加载
   useEffect(() => {
@@ -82,6 +91,25 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
       window.removeEventListener("asset-created", handleAssetCreated);
     };
   }, [loadAssets]);
+
+  // 客户端筛选逻辑（用于素材类型筛选）
+  const filteredAssets = useMemo(() => {
+    let result = [...allAssets];
+
+    // 素材类型筛选（image/video）
+    if (filterOptions.assetTypes.length > 0) {
+      result = result.filter(asset => 
+        filterOptions.assetTypes.includes(asset.assetType)
+      );
+    }
+
+    return result;
+  }, [allAssets, filterOptions.assetTypes]);
+
+  // 重置筛选
+  const handleResetFilter = () => {
+    setFilterOptions(DEFAULT_FILTER);
+  };
 
   // 处理素材点击 - 打开媒体查看器
   const handleAssetClick = (asset: AssetWithRuntimeStatus) => {
@@ -154,7 +182,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
 
   // 全选
   const handleSelectAll = () => {
-    setSelectedAssetIds(new Set(assets.map((asset) => asset.id)));
+    setSelectedAssetIds(new Set(filteredAssets.map((asset) => asset.id)));
   };
 
   // 取消全选
@@ -188,45 +216,59 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-        <div className="flex items-center gap-3">
-          {/* 模式切换器 */}
-          <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-1">
-            <button
-              onClick={() => setMode("asset-management")}
-              className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                "hover:bg-background/60",
-                "bg-background text-foreground shadow-sm"
-              )}
-            >
-              <Images className="h-4 w-4" />
-              <span>素材</span>
-            </button>
-            <button
-              onClick={() => setMode("editing")}
-              className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                "hover:bg-background/60",
-                "text-muted-foreground"
-              )}
-            >
-              <Film className="h-4 w-4" />
-              <span>剪辑</span>
-            </button>
+      <div className="border-b shrink-0">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            {/* 模式切换器 */}
+            <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-1">
+              <button
+                onClick={() => setMode("asset-management")}
+                className={cn(
+                  "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                  "hover:bg-background/60",
+                  "bg-background text-foreground shadow-sm"
+                )}
+              >
+                <Images className="h-4 w-4" />
+                <span>素材</span>
+              </button>
+              <button
+                onClick={() => setMode("editing")}
+                className={cn(
+                  "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                  "hover:bg-background/60",
+                  "text-muted-foreground"
+                )}
+              >
+                <Film className="h-4 w-4" />
+                <span>剪辑</span>
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              ({filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`})
+            </span>
           </div>
-          <span className="text-xs text-muted-foreground">({assets.length})</span>
+          <div className="flex items-center gap-2">
+            {/* 暂时隐藏上传功能 */}
+            {/* <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              上传
+            </Button> */}
+            <Button size="sm" onClick={onOpenAssetGeneration}>
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              AI 生成
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* 暂时隐藏上传功能 */}
-          {/* <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
-            <Upload className="h-3.5 w-3.5 mr-1.5" />
-            上传
-          </Button> */}
-          <Button size="sm" onClick={onOpenAssetGeneration}>
-            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-            AI 生成
-          </Button>
+        
+        {/* 筛选栏 */}
+        <div className="px-4 pb-3">
+          <AssetFilter 
+            value={filterOptions}
+            onChange={setFilterOptions}
+            onReset={handleResetFilter}
+            allAssets={allAssets}
+          />
         </div>
       </div>
 
@@ -248,26 +290,33 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                 </div>
               ))}
             </div>
-          ) : assets.length === 0 ? (
+          ) : filteredAssets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mb-4">
                 <Images className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-base font-semibold mb-2">暂无素材</h3>
+              <h3 className="text-base font-semibold mb-2">
+                {allAssets.length === 0 ? "暂无素材" : "没有符合条件的素材"}
+              </h3>
               <p className="text-sm text-muted-foreground mb-6 text-center max-w-sm">
-                开始创作第一个素材，可以使用 AI 生成或上传本地文件
+                {allAssets.length === 0 
+                  ? "开始创作第一个素材，可以使用 AI 生成或上传本地文件"
+                  : "尝试调整筛选条件查看更多素材"
+                }
               </p>
-              <div className="flex gap-2">
-                <Button onClick={onOpenAssetGeneration} size="sm">
-                  <Sparkles className="w-4 h-4 mr-1.5" />
-                  AI 生成
-                </Button>
-                {/* 暂时隐藏上传功能 */}
-                {/* <Button onClick={() => setUploadDialogOpen(true)} variant="outline" size="sm">
-                  <Upload className="w-4 h-4 mr-1.5" />
-                  上传素材
-                </Button> */}
-              </div>
+              {allAssets.length === 0 && (
+                <div className="flex gap-2">
+                  <Button onClick={onOpenAssetGeneration} size="sm">
+                    <Sparkles className="w-4 h-4 mr-1.5" />
+                    AI 生成
+                  </Button>
+                  {/* 暂时隐藏上传功能 */}
+                  {/* <Button onClick={() => setUploadDialogOpen(true)} variant="outline" size="sm">
+                    <Upload className="w-4 h-4 mr-1.5" />
+                    上传素材
+                  </Button> */}
+                </div>
+              )}
             </div>
           ) : (
             <div
@@ -276,7 +325,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                 gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
               }}
             >
-              {assets.map((asset) => (
+              {filteredAssets.map((asset) => (
                 <AssetCard
                   key={asset.id}
                   asset={asset}
@@ -338,7 +387,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
       {selectedAssetIds.size > 0 && (
         <FloatingActionBar
           selectedCount={selectedAssetIds.size}
-          totalCount={assets.length}
+          totalCount={filteredAssets.length}
           onSelectAll={handleSelectAll}
           onDeselectAll={handleDeselectAll}
           onDelete={handleBatchDelete}
