@@ -5,7 +5,7 @@ import { useEditor } from "../editor-context";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
-import { Video, Filter } from "lucide-react";
+import { Video } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,22 +63,12 @@ export function CompactAssetLibrary() {
     };
   }, [loadAssets]);
 
-  const handleDragStart = (e: React.DragEvent, asset: AssetWithRuntimeStatus) => {
-    // 设置拖拽数据
-    e.dataTransfer.setData("application/json", JSON.stringify({
-      assetId: asset.id,
-      assetType: asset.assetType,
-      duration: asset.duration,
-    }));
-    e.dataTransfer.effectAllowed = "copy";
-  };
-
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-3 border-b shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">素材库</h3>
+          <h3 className="text-sm font-semibold">素材</h3>
           <span className="text-xs text-muted-foreground">
             {assets.length} 个
           </span>
@@ -131,9 +121,7 @@ export function CompactAssetLibrary() {
               {assets.map((asset) => (
                 <div
                   key={asset.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, asset)}
-                  className="group relative rounded-lg border bg-card overflow-hidden cursor-grab active:cursor-grabbing hover:border-primary transition-colors"
+                  className="rounded-lg border bg-card overflow-hidden"
                 >
                   {/* 缩略图 */}
                   <div className="relative aspect-video bg-muted">
@@ -163,13 +151,6 @@ export function CompactAssetLibrary() {
                     <p className="text-xs font-medium truncate">
                       {asset.name}
                     </p>
-                  </div>
-
-                  {/* 拖拽提示 */}
-                  <div className="absolute inset-0 bg-primary/90 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="text-xs text-primary-foreground font-medium">
-                      拖入时间轴
-                    </span>
                   </div>
                 </div>
               ))}

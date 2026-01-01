@@ -88,7 +88,7 @@ export function EditingModeLayout() {
               )}
             >
               <Images className="h-4 w-4" />
-              <span>素材库</span>
+              <span>素材</span>
             </button>
             <button
               onClick={() => setMode("editing")}
@@ -99,7 +99,7 @@ export function EditingModeLayout() {
               )}
             >
               <Film className="h-4 w-4" />
-              <span>视频剪辑</span>
+              <span>剪辑</span>
             </button>
           </div>
           <span className="text-xs text-muted-foreground">
