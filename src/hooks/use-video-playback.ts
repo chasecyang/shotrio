@@ -7,7 +7,7 @@ interface UseVideoPlaybackOptions {
   onTimeUpdate?: (currentTime: number) => void;
 }
 
-interface UseVideoPlaybackReturn {
+export interface UseVideoPlaybackReturn {
   videoRef: React.RefObject<HTMLVideoElement>;
   nextVideoRef: React.RefObject<HTMLVideoElement>;
   isPlaying: boolean;
@@ -77,10 +77,12 @@ export function useVideoPlayback({
     const newTime = currentTime + deltaTime;
     
     if (newTime >= timeline.duration) {
-      // 播放结束
+      // 播放结束 - 保持在最后一个有效帧，而不是 duration
       setIsPlaying(false);
-      setCurrentTime(timeline.duration);
-      onTimeUpdate?.(timeline.duration);
+      // 设置为 duration - 1ms，确保仍在最后一个片段范围内
+      const endTime = Math.max(0, timeline.duration - 1);
+      setCurrentTime(endTime);
+      onTimeUpdate?.(endTime);
       lastTimeRef.current = 0;
       return;
     }
@@ -96,6 +98,12 @@ export function useVideoPlayback({
   const play = useCallback(() => {
     if (!timeline || timeline.clips.length === 0) return;
     
+    // 如果已经播放到结尾（接近 duration 的 100ms 内），重新从头开始
+    if (currentTime >= timeline.duration - 100) {
+      setCurrentTime(0);
+      onTimeUpdate?.(0);
+    }
+    
     // 重置时间戳以避免时间跳跃
     lastTimeRef.current = 0;
     setIsPlaying(true);
@@ -105,7 +113,7 @@ export function useVideoPlayback({
         setIsPlaying(false);
       });
     }
-  }, [timeline]);
+  }, [timeline, currentTime, onTimeUpdate]);
 
   const pause = useCallback(() => {
     setIsPlaying(false);

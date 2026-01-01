@@ -16,10 +16,16 @@ export function findClipAtTime(
   }
 
   // 找到当前时间点对应的片段
-  const clip = timeline.clips.find((c) => {
+  let clip = timeline.clips.find((c) => {
     const clipEnd = c.startTime + c.duration;
     return currentTime >= c.startTime && currentTime < clipEnd;
   });
+
+  // 如果找不到片段，可能是因为时间在边界上（等于或超过 duration）
+  // 这种情况下返回最后一个片段
+  if (!clip && currentTime >= timeline.duration && timeline.clips.length > 0) {
+    clip = timeline.clips[timeline.clips.length - 1];
+  }
 
   if (!clip) {
     return { clip: null, clipStartTime: 0, videoTime: 0 };

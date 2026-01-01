@@ -1,22 +1,27 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { ZoomIn, ZoomOut, Plus } from "lucide-react";
+import { ZoomIn, ZoomOut, Plus, Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
 import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { TimelineClipWithAsset } from "@/types/timeline";
 import { AddAssetDialog } from "./add-asset-dialog";
 import { AssetWithRuntimeStatus } from "@/types/asset";
-import { recalculateClipPositions } from "@/lib/utils/timeline-utils";
+import { recalculateClipPositions, formatTimeDisplay } from "@/lib/utils/timeline-utils";
+import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
+
+interface TimelinePanelProps {
+  playback: UseVideoPlaybackReturn;
+}
 
 /**
  * 时间轴面板组件
  */
-export function TimelinePanel() {
+export function TimelinePanel({ playback }: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
   
@@ -24,11 +29,92 @@ export function TimelinePanel() {
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  const timelineRulerRef = useRef<HTMLDivElement>(null);
+
+  // 从 playback prop 获取播放控制
+  const {
+    isPlaying,
+    currentTime,
+    currentClip,
+    togglePlayPause,
+    seekTo,
+    pause,
+  } = playback;
 
   if (!timeline) return null;
 
   const pixelsPerMs = 0.1 * zoom; // 每毫秒对应的像素数
+
+  // 时间标尺鼠标按下 - 开始拖拽或跳转
+  const handleTimelineMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!timelineRulerRef.current) return;
+    
+    e.preventDefault();
+    pause(); // 按下时暂停播放
+    
+    const rect = timelineRulerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const newTime = Math.max(0, Math.min(clickX / pixelsPerMs, timeline.duration));
+    
+    // 立即跳转到点击位置
+    seekTo(newTime);
+    
+    // 启动拖拽模式
+    setIsDraggingPlayhead(true);
+  }, [pause, pixelsPerMs, timeline.duration, seekTo]);
+
+  // 鼠标移动处理（拖拽播放头）
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDraggingPlayhead || !timelineRulerRef.current) return;
+
+    const rect = timelineRulerRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const newTime = Math.max(0, Math.min(offsetX / pixelsPerMs, timeline.duration));
+    
+    seekTo(newTime);
+  }, [isDraggingPlayhead, pixelsPerMs, timeline.duration, seekTo]);
+
+  // 鼠标释放处理
+  const handleMouseUp = useCallback(() => {
+    setIsDraggingPlayhead(false);
+  }, []);
+
+  // 监听全局鼠标事件（用于拖拽）
+  useEffect(() => {
+    if (isDraggingPlayhead) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDraggingPlayhead, handleMouseMove, handleMouseUp]);
+
+  // 跳转到上一个片段
+  const skipToPrevious = () => {
+    if (!timeline || !currentClip) return;
+    const currentIndex = timeline.clips.findIndex((c) => c.id === currentClip.id);
+    if (currentIndex > 0) {
+      const prevClip = timeline.clips[currentIndex - 1];
+      seekTo(prevClip.startTime);
+    } else {
+      seekTo(0);
+    }
+  };
+
+  // 跳转到下一个片段
+  const skipToNext = () => {
+    if (!timeline || !currentClip) return;
+    const currentIndex = timeline.clips.findIndex((c) => c.id === currentClip.id);
+    if (currentIndex < timeline.clips.length - 1) {
+      const nextClip = timeline.clips[currentIndex + 1];
+      seekTo(nextClip.startTime);
+    }
+  };
 
   // 删除片段
   const handleDeleteClip = async (clipId: string) => {
@@ -167,8 +253,44 @@ export function TimelinePanel() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* 工具栏 */}
-      <div className="h-10 border-b flex items-center px-4 gap-2 shrink-0">
+      <div className="h-12 border-b flex items-center px-4 gap-3 shrink-0">
         <span className="text-xs font-medium text-muted-foreground">时间轴</span>
+        
+        {/* 播放控制按钮组 */}
+        <div className="flex items-center gap-1 border-r pr-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={skipToPrevious}
+            disabled={!currentClip}
+          >
+            <SkipBack className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={togglePlayPause}
+            disabled={!currentClip}
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={skipToNext}
+            disabled={!currentClip}
+          >
+            <SkipForward className="h-4 w-4" />
+          </Button>
+        </div>
+
         <Button
           variant="outline"
           size="sm"
@@ -178,8 +300,16 @@ export function TimelinePanel() {
           <Plus className="h-3.5 w-3.5" />
           <span className="text-xs">添加素材</span>
         </Button>
+        
         <div className="flex-1" />
-        <div className="flex items-center gap-1">
+        
+        {/* 时间显示 */}
+        <div className="text-xs text-muted-foreground font-mono">
+          {formatTimeDisplay(currentTime)} / {formatTimeDisplay(timeline.duration)}
+        </div>
+        
+        {/* 缩放控制 */}
+        <div className="flex items-center gap-1 border-l pl-3">
           <Button
             variant="ghost"
             size="sm"
@@ -206,7 +336,16 @@ export function TimelinePanel() {
       <ScrollArea className="flex-1">
         <div className="p-4">
           {/* 时间标尺 */}
-          <div className="relative h-8 border-b mb-2" style={{ width: totalWidth }}>
+          <div 
+            ref={timelineRulerRef}
+            className={`relative h-8 border-b mb-2 transition-colors ${
+              isDraggingPlayhead 
+                ? 'cursor-grabbing' 
+                : 'cursor-grab hover:bg-muted/20'
+            }`}
+            style={{ width: totalWidth }}
+            onMouseDown={handleTimelineMouseDown}
+          >
             {marks.map((mark) => (
               <div
                 key={mark.time}
@@ -219,6 +358,41 @@ export function TimelinePanel() {
                 </span>
               </div>
             ))}
+            
+            {/* 播放头指示器 */}
+            <div
+              className="absolute z-10 pointer-events-none"
+              style={{ 
+                left: currentTime * pixelsPerMs,
+                top: 0,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              {/* 顶部三角形 */}
+              <svg
+                className="absolute left-1/2 -translate-x-1/2 top-0"
+                width="10"
+                height="7"
+                viewBox="0 0 10 7"
+                style={{
+                  filter: 'drop-shadow(0 0.5px 1.5px rgba(0,0,0,0.15))',
+                }}
+              >
+                <path
+                  d="M5 7 L0 0 L10 0 Z"
+                  className="fill-primary/95"
+                />
+              </svg>
+              
+              {/* 指示线 */}
+              <div 
+                className="w-px absolute left-1/2 -translate-x-1/2 bg-primary/40"
+                style={{ 
+                  height: 'calc(100vh - 120px)',
+                  top: '7px',
+                }}
+              />
+            </div>
           </div>
 
           {/* 轨道 */}

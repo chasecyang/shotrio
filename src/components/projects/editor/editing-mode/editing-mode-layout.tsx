@@ -12,6 +12,7 @@ import { TimelinePanel } from "./timeline-panel";
 import { getOrCreateProjectTimeline } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
+import { useVideoPlayback } from "@/hooks/use-video-playback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Images, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,9 @@ export function EditingModeLayout() {
 
   // 自动保存
   useTimelineAutosave(timeline);
+
+  // 集中管理视频播放控制
+  const videoPlayback = useVideoPlayback({ timeline });
 
   // 加载或创建时间轴
   useEffect(() => {
@@ -113,7 +117,7 @@ export function EditingModeLayout() {
         {/* 上部：预览窗口 */}
         <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
           <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
-            <VideoPreview />
+            <VideoPreview playback={videoPlayback} />
           </div>
         </ResizablePanel>
 
@@ -121,7 +125,7 @@ export function EditingModeLayout() {
 
         {/* 下部：时间轴 */}
         <ResizablePanel defaultSize={40} minSize={30} className="overflow-hidden">
-          <TimelinePanel />
+          <TimelinePanel playback={videoPlayback} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
