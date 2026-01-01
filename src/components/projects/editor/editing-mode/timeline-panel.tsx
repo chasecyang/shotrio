@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ZoomIn, ZoomOut, Plus } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
 import { addClipToTimeline, removeClip, reorderClips } from "@/lib/actions/timeline";
@@ -144,7 +144,7 @@ export function TimelinePanel() {
 
       {/* 时间轴主体 */}
       <ScrollArea className="flex-1">
-        <div className="p-4 min-w-max">
+        <div className="p-4">
           {/* 时间标尺 */}
           <div className="relative h-8 border-b mb-2" style={{ width: totalWidth }}>
             {marks.map((mark) => (
@@ -186,6 +186,7 @@ export function TimelinePanel() {
             )}
           </div>
         </div>
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
 
       {/* 添加素材对话框 */}
