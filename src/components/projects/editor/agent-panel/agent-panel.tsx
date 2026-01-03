@@ -511,39 +511,42 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         </div>
 
         {/* Input */}
-        <div className="border-t border-border p-4 shrink-0">
-          <div className="flex gap-2">
+        <div className="border-t border-border p-4 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="relative flex items-end w-full p-2 bg-muted/50 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring focus-within:border-ring transition-all">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isEmptyState && !input ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
-              className="min-h-[60px] max-h-[120px] resize-none"
+              className="min-h-[20px] max-h-[200px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
+              style={{ height: 'auto', minHeight: '44px' }} 
             />
-            {agent.state.isLoading && !input.trim() ? (
-              <Button
-                onClick={handleStop}
-                size="icon"
-                variant="destructive"
-                className="h-[60px] w-[60px] shrink-0"
-                title={t('editor.agent.chatInput.stopGeneration')}
-              >
-                <Square className="h-5 w-5" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                size="icon"
-                variant={agent.state.isLoading && input.trim() ? "secondary" : "default"}
-                className="h-[60px] w-[60px] shrink-0"
-                title={agent.state.isLoading ? "发送消息并中断当前输出" : t('editor.agent.chatInput.sendMessage')}
-              >
-                <Send className="h-5 w-5" />
-              </Button>
-            )}
+            <div className="absolute bottom-2 right-2">
+              {agent.state.isLoading && !input.trim() ? (
+                <Button
+                  onClick={handleStop}
+                  size="icon"
+                  variant="destructive"
+                  className="h-8 w-8 rounded-lg"
+                  title={t('editor.agent.chatInput.stopGeneration')}
+                >
+                  <Square className="h-4 w-4 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  size="icon"
+                  variant={agent.state.isLoading && input.trim() ? "secondary" : "default"}
+                  className="h-8 w-8 rounded-lg transition-all"
+                  title={agent.state.isLoading ? "发送消息并中断当前输出" : t('editor.agent.chatInput.sendMessage')}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-center text-muted-foreground/60">
             {agent.state.isLoading 
               ? (input.trim() ? "发送消息将中断当前输出" : t('editor.agent.chatInput.stopToInterrupt'))
               : t('editor.agent.chatInput.enterToSend')}
