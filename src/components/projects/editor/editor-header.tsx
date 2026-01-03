@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Settings } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { BackgroundTasks } from "../layout/background-tasks";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 import { EditorCreditsButton } from "./editor-credits-button";
@@ -80,6 +81,8 @@ export function EditorHeader({
         <BackgroundTasks />
 
         <Separator orientation="vertical" className="h-6" />
+
+        <ThemeToggle />
 
         {/* 用户菜单 */}
         <UserNav user={user} variant="default" />
