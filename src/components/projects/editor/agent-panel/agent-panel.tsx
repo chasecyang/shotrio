@@ -15,7 +15,6 @@ import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation, updateConversationTitle, saveInterruptMessage } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
-import { useTypewriter } from "@/hooks/use-typewriter";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -79,18 +78,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   
-  // 获取示例文本
-  const examples = t.raw('editor.agent.chatInput.examples') as string[];
-  
-  // 打字机效果 - 只在空状态且输入为空时显示
+  // 空状态判断
   const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
-  const typewriterText = useTypewriter({
-    words: examples || [],
-    loop: true,
-    typeSpeed: 80,
-    deleteSpeed: 40,
-    delaySpeed: 2000,
-  });
 
   // 检测用户是否在底部
   const handleScroll = useCallback(() => {
@@ -528,7 +517,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isEmptyState && !input ? typewriterText : t('editor.agent.chatInput.placeholder')}
+              placeholder={isEmptyState && !input ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
               className="min-h-[60px] max-h-[120px] resize-none"
             />
             {agent.state.isLoading && !input.trim() ? (

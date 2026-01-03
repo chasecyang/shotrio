@@ -911,6 +911,7 @@
       },
       "chatInput": {
         "placeholder": "告诉我你想做什么，比如生成素材、创建视频...",
+        "emptyPlaceholder": "思考、创作、打磨",
         "send": "发送",
         "sending": "发送中...",
         "stopGeneration": "停止生成",
@@ -918,10 +919,9 @@
         "stopToInterrupt": "点击停止按钮中断生成",
         "enterToSend": "Enter 发送 · Shift+Enter 换行",
         "examples": [
-          "创作一个猫和老鼠的小故事",
-          "帮我生成一段武侠风格的打斗场景",
-          "创作一个关于未来世界的科幻故事",
-          "生成一个温馨的家庭聚会短片"
+          "思考",
+          "创作",
+          "打磨"
         ]
       },
       "panel": {

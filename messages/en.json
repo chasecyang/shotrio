@@ -910,6 +910,7 @@
       },
       "chatInput": {
         "placeholder": "Tell me what you want to do, like generate assets, create videos...",
+        "emptyPlaceholder": "Think, Create, Polish",
         "send": "Send",
         "sending": "Sending...",
         "stopGeneration": "Stop",
@@ -917,10 +918,9 @@
         "stopToInterrupt": "Click stop button to interrupt generation",
         "enterToSend": "Enter to send · Shift+Enter for new line",
         "examples": [
-          "Create a short story about a cat and a mouse",
-          "Generate a martial arts fight scene",
-          "Create a sci-fi story about the future world",
-          "Generate a warm family gathering video"
+          "Think",
+          "Create",
+          "Polish"
         ]
       },
       "panel": {
