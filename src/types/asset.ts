@@ -2,7 +2,7 @@
  * Asset系统的TypeScript类型定义
  */
 
-import type { AspectRatio } from "@/lib/services/fal.service";
+import type { AspectRatio } from "@/lib/services/image.service";
 
 // ===== 基础类型 =====
 

@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { createJob } from "@/lib/actions/job";
 import { createAssetInternal } from "@/lib/actions/asset/crud";
 import type { ImageResolution } from "@/types/asset";
-import type { AspectRatio } from "@/lib/services/fal.service";
+import type { AspectRatio } from "@/lib/services/image.service";
 
 /**
  * 生成素材图片的输入参数（文生图）

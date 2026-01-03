@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { generateAssetImage, editAssetImage } from "@/lib/actions/asset/generate-asset";
 import type { ImageResolution } from "@/types/asset";
-import type { AspectRatio } from "@/lib/services/fal.service";
+import type { AspectRatio } from "@/lib/services/image.service";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { uploadAsset } from "@/lib/actions/asset/upload-asset";

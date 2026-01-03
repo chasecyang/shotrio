@@ -3,7 +3,7 @@
 import db from "@/lib/db";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import { verifyProjectOwnership } from "../utils/validation";
-import { generateImage, editImage } from "@/lib/services/fal.service";
+import { generateImage, editImage } from "@/lib/services/image.service";
 import { uploadImageToR2, AssetCategory } from "@/lib/storage/r2.service";
 import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
 import { CREDIT_COSTS } from "@/types/payment";
@@ -11,7 +11,7 @@ import type {
   Job,
   AssetImageGenerationResult,
 } from "@/types/job";
-import type { AspectRatio } from "@/lib/services/fal.service";
+import type { AspectRatio } from "@/lib/services/image.service";
 import { asset } from "@/lib/db/schemas/project";
 import { inArray, eq } from "drizzle-orm";
 

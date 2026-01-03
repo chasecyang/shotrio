@@ -5,7 +5,7 @@ import { artStyle } from "@/lib/db/schemas/project";
 import { eq, isNull, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { generateImage } from "@/lib/services/fal.service";
+import { generateImage } from "@/lib/services/image.service";
 import { uploadImageFromUrl } from "@/lib/actions/upload-actions";
 import { AssetCategory } from "@/lib/storage";
 import { requireAdmin } from "@/lib/auth/auth-utils";
