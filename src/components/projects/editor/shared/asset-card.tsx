@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Maximize2, Video, Play } from "lucide-react";
+import { Trash2, Maximize2, Video, Play, FileText } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +39,7 @@ export function AssetCard({
 
   // 检查资产类型
   const isVideo = asset.assetType === "video";
+  const isText = asset.assetType === "text";
   
   // 检查资产是否正在生成中（使用运行时状态）
   const isGenerating = asset.runtimeStatus === "processing" || asset.runtimeStatus === "pending";
@@ -86,7 +87,17 @@ export function AssetCard({
         className="relative aspect-video bg-muted/30 overflow-hidden cursor-pointer"
         onClick={() => onClick(asset)}
       >
-        {isGenerating ? (
+        {isText ? (
+          // 文本资产 - 显示文本图标和预览
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-4">
+            <FileText className="h-12 w-12 text-amber-600 dark:text-amber-400 mb-2" />
+            {asset.textContent && (
+              <p className="text-xs text-muted-foreground line-clamp-3 text-center px-2">
+                {asset.textContent.substring(0, 100)}...
+              </p>
+            )}
+          </div>
+        ) : isGenerating ? (
           // 生成中状态 - 显示渐变背景和进度覆盖层
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background/50">
@@ -152,8 +163,8 @@ export function AssetCard({
         {/* 悬停遮罩（仅在有内容时显示操作按钮） */}
         {isHovered && !isGenerating && (
           <div className="absolute inset-0 animate-in fade-in duration-200 pointer-events-none">
-            {/* 左上角放大按钮（仅非批量选择模式） */}
-            {!onSelectChange && !isVideo && (
+            {/* 左上角放大按钮（仅非批量选择模式，且非视频和文本） */}
+            {!onSelectChange && !isVideo && !isText && (
               <Button
                 size="sm"
                 variant="secondary"

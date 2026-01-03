@@ -9,7 +9,7 @@ import type { AspectRatio } from "@/lib/services/fal.service";
 /**
  * 资产类型枚举（数据库层面）
  */
-export type AssetTypeEnum = "image" | "video";
+export type AssetTypeEnum = "image" | "video" | "text";
 
 /**
  * 资产来源类型
@@ -66,6 +66,16 @@ export interface SceneMeta {
 export interface PropMeta {
   description?: string;       // 道具描述
   category?: string;          // 分类
+}
+
+/**
+ * 文本资产类型的meta数据
+ */
+export interface TextAssetMeta {
+  category?: string;          // 分类（角色小传、剧本、分镜等）
+  version?: number;           // 版本号
+  author?: string;            // 作者
+  lastModified?: string;      // 最后修改时间
 }
 
 
@@ -136,6 +146,7 @@ export interface AssetMeta {
   character?: CharacterMeta;
   scene?: SceneMeta;
   prop?: PropMeta;
+  textAsset?: TextAssetMeta;
   editParams?: EditParams;
   generationParams?: GenerationParams;  // 生成参数
   custom?: Record<string, unknown>;
@@ -168,6 +179,10 @@ export interface Asset {
   // 视频字段（视频类型必填）
   videoUrl: string | null;
   duration: number | null; // 毫秒
+  
+  // 文本字段（文本类型必填）
+  textContent: string | null;
+  textFormat: string | null; // 'markdown' | 'plain'
   
   // 生成信息
   prompt: string | null;
@@ -207,6 +222,8 @@ export interface CreateAssetInput {
   sourceType?: AssetSourceType;  // 新增：资产来源类型
   imageUrl?: string;  // 可选，为空表示素材正在生成中
   thumbnailUrl?: string;
+  textContent?: string;  // 文本内容（文本类型必填）
+  textFormat?: string;   // 文本格式（'markdown' | 'plain'）
   prompt?: string;
   seed?: number;
   modelUsed?: string;
@@ -222,6 +239,8 @@ export interface UpdateAssetInput {
   name?: string;
   imageUrl?: string;
   thumbnailUrl?: string;
+  textContent?: string;
+  textFormat?: string;
   prompt?: string;
   seed?: number;
   modelUsed?: string;

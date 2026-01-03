@@ -39,6 +39,8 @@ export async function createAssetInternal(
       sourceType: input.sourceType || 'generated', // 默认为生成类
       imageUrl: input.imageUrl || null,
       thumbnailUrl: input.thumbnailUrl || null,
+      textContent: input.textContent || null,
+      textFormat: input.textFormat || null,
       prompt: input.prompt || null,
       seed: input.seed || null,
       modelUsed: input.modelUsed || null,
@@ -143,6 +145,8 @@ export async function updateAsset(
     if (input.name !== undefined) updateData.name = input.name;
     if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
     if (input.thumbnailUrl !== undefined) updateData.thumbnailUrl = input.thumbnailUrl;
+    if (input.textContent !== undefined) updateData.textContent = input.textContent;
+    if (input.textFormat !== undefined) updateData.textFormat = input.textFormat;
     if (input.prompt !== undefined) updateData.prompt = input.prompt;
     if (input.seed !== undefined) updateData.seed = input.seed;
     if (input.modelUsed !== undefined) updateData.modelUsed = input.modelUsed;

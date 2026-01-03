@@ -13,7 +13,7 @@ export const projectStatusEnum = pgEnum("project_status", [
 ]);
 
 // 资产类型枚举
-export const assetTypeEnum = pgEnum("asset_type", ["image", "video"]);
+export const assetTypeEnum = pgEnum("asset_type", ["image", "video", "text"]);
 
 // 资产来源类型枚举
 export const assetSourceTypeEnum = pgEnum("asset_source_type", [
@@ -136,6 +136,10 @@ export const asset: any = pgTable("asset", {
   // 视频字段（视频类型必填）
   videoUrl: text("video_url"), // 视频URL
   duration: integer("duration"), // 视频时长（毫秒）
+  
+  // 文本字段（文本类型必填）
+  textContent: text("text_content"), // 文本内容
+  textFormat: text("text_format"), // 文本格式（'markdown' | 'plain'）
   
   // 生成信息
   prompt: text("prompt"), // 生成用的prompt

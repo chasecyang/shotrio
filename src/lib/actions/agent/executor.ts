@@ -25,6 +25,10 @@ import {
   getVideoAssets,
   createVideoAsset,
 } from "../asset/crud";
+import { 
+  createTextAsset,
+  getTextAssetContent,
+} from "../asset/text-asset";
 
 /**
  * 执行单个 function call
@@ -446,6 +450,84 @@ export async function executeFunction(
           success: updateResult.success,
           data: updateResult.data,
           error: updateResult.error,
+        };
+        break;
+      }
+
+      // ============================================
+      // 文本资产类
+      // ============================================
+      case "create_text_asset": {
+        const name = parameters.name as string;
+        const content = parameters.content as string;
+        const format = (parameters.format as "markdown" | "plain") || "markdown";
+        const tags = (parameters.tags as string[]) || [];
+
+        const createResult = await createTextAsset({
+          projectId,
+          name,
+          content,
+          format,
+          tags,
+        });
+
+        if (createResult.success) {
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              assetId: createResult.asset?.id,
+              name: createResult.asset?.name,
+              message: `已创建文本资产"${name}"`,
+            },
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: createResult.error || "创建文本资产失败",
+          };
+        }
+        break;
+      }
+
+      case "query_text_assets": {
+        const tags = parameters.tags as string[] | undefined;
+        const limit = (parameters.limit as number) || 10;
+
+        // 查询文本类型的资产
+        const queryResult = await queryAssets({
+          projectId,
+          assetType: "text",
+          tagFilters: tags,
+          limit,
+        });
+
+        // 获取每个文本资产的完整内容
+        const textAssets = await Promise.all(
+          queryResult.assets.map(async (asset) => {
+            const contentResult = await getTextAssetContent(asset.id);
+            return {
+              id: asset.id,
+              name: asset.name,
+              content: contentResult.content || "",
+              format: contentResult.format || "markdown",
+              tags: asset.tags.map(t => t.tagValue),
+              createdAt: asset.createdAt,
+            };
+          })
+        );
+
+        result = {
+          functionCallId: functionCall.id,
+          success: true,
+          data: {
+            assets: textAssets,
+            total: queryResult.total,
+            message: textAssets.length === 0 
+              ? "没有找到文本资产" 
+              : `找到 ${textAssets.length} 个文本资产`,
+          },
         };
         break;
       }

@@ -254,6 +254,66 @@ Agent应根据查询到的素材自动选择：
     category: "deletion",
     needsConfirmation: true,
   },
+
+  // ============================================
+  // 文本资产工具
+  // ============================================
+  {
+    name: "create_text_asset",
+    description: "创建文本资产，用于记录角色小传、剧本、分镜设计、世界观设定等文本信息。这些文本可以被后续查询和引用，作为项目的知识库。",
+    displayName: "创建文本资产",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "资产名称，如'张三角色小传'、'第一幕剧本'",
+        },
+        content: {
+          type: "string",
+          description: "文本内容，支持 Markdown 格式",
+        },
+        format: {
+          type: "string",
+          description: "文本格式：'markdown'（默认）或 'plain'",
+          enum: ["markdown", "plain"],
+        },
+        tags: {
+          type: "array",
+          description: "标签数组，如 ['角色小传', '主角'] 或 ['剧本', '第一幕']",
+          items: {
+            type: "string",
+          },
+        },
+      },
+      required: ["name", "content"],
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
+  {
+    name: "query_text_assets",
+    description: "查询并读取文本资产内容。可以按标签筛选，返回完整的文本内容用于参考。适合在需要查看角色设定、剧本内容、分镜设计等信息时使用。",
+    displayName: "查询文本资产",
+    parameters: {
+      type: "object",
+      properties: {
+        tags: {
+          type: "array",
+          description: "标签筛选数组，如 ['角色小传'] 或 ['剧本']",
+          items: {
+            type: "string",
+          },
+        },
+        limit: {
+          type: "number",
+          description: "返回数量限制，默认10",
+        },
+      },
+    },
+    category: "read",
+    needsConfirmation: false,
+  },
 ];
 
 /**

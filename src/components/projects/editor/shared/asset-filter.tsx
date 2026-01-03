@@ -17,6 +17,7 @@ import {
   Search,
   Image as ImageIcon,
   Video,
+  FileText,
   Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ interface AssetFilterProps {
 const assetTypeOptions: { value: AssetTypeEnum; label: string; icon: typeof ImageIcon }[] = [
   { value: "image", label: "图片", icon: ImageIcon },
   { value: "video", label: "视频", icon: Video },
+  { value: "text", label: "文本", icon: FileText },
 ];
 
 export function AssetFilter({ value, onChange, onReset, allAssets }: AssetFilterProps) {

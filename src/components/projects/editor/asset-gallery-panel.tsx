@@ -7,11 +7,12 @@ import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Images, Film } from "lucide-react";
+import { Sparkles, Images, Film, FileText, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
 import { cn } from "@/lib/utils";
 import { AssetUploadDialog } from "./shared/asset-upload-dialog";
+import { TextAssetDialog } from "./shared/text-asset-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
   AlertDialog,
@@ -43,6 +44,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
   const [allAssets, setAllAssets] = useState<AssetWithRuntimeStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -52,6 +54,9 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
   // 媒体查看器状态
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerAsset, setViewerAsset] = useState<AssetWithRuntimeStatus | null>(null);
+  
+  // 文本资产编辑状态
+  const [editingTextAsset, setEditingTextAsset] = useState<AssetWithRuntimeStatus | null>(null);
 
   // 加载素材
   const loadAssets = useCallback(async () => {
@@ -111,10 +116,17 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
     setFilterOptions(DEFAULT_FILTER);
   };
 
-  // 处理素材点击 - 打开媒体查看器
+  // 处理素材点击 - 根据类型打开不同的查看器
   const handleAssetClick = (asset: AssetWithRuntimeStatus) => {
-    setViewerAsset(asset);
-    setViewerOpen(true);
+    if (asset.assetType === "text") {
+      // 文本资产打开编辑对话框
+      setEditingTextAsset(asset);
+      setTextAssetDialogOpen(true);
+    } else {
+      // 图片/视频打开媒体查看器
+      setViewerAsset(asset);
+      setViewerOpen(true);
+    }
   };
 
   // 处理删除
@@ -254,6 +266,10 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
               <Upload className="h-3.5 w-3.5 mr-1.5" />
               上传
             </Button> */}
+            <Button size="sm" variant="outline" onClick={() => setTextAssetDialogOpen(true)}>
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              文本
+            </Button>
             <Button size="sm" onClick={onOpenAssetGeneration}>
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
               AI 生成
@@ -346,6 +362,20 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
         onOpenChange={setUploadDialogOpen}
         projectId={project.id}
         userId={userId}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {/* 文本资产对话框 */}
+      <TextAssetDialog
+        open={textAssetDialogOpen}
+        onOpenChange={(open) => {
+          setTextAssetDialogOpen(open);
+          if (!open) {
+            setEditingTextAsset(null);
+          }
+        }}
+        projectId={project.id}
+        asset={editingTextAsset || undefined}
         onSuccess={handleUploadSuccess}
       />
 
