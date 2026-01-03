@@ -9,10 +9,7 @@ import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
   formatParametersForConfirmation, 
   ENUM_VALUE_LABELS,
-  type ReferenceToVideoConfigDisplay,
-  type PromptPart,
-  parsePromptReferences,
-  formatReferenceToVideoConfigSync
+  parsePromptReferences
 } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
@@ -56,166 +53,6 @@ function PromptWithHighlights({
           <span key={i}>{part.text}</span>
         )
       )}
-    </div>
-  );
-}
-
-// 图片缩略图组件
-function ImageThumbnail({ 
-  image 
-}: { 
-  image: { imageUrl: string; label: string; type: string; apiReference: string } 
-}) {
-  const [imageError, setImageError] = useState(false);
-  
-  const getTypeIcon = () => {
-    switch (image.type) {
-      case 'element':
-        return <Camera className="h-3 w-3 text-white" />;
-      case 'start_frame':
-        return <Film className="h-3 w-3 text-white" />;
-      case 'reference':
-        return <ImageIcon className="h-3 w-3 text-white" />;
-      default:
-        return null;
-    }
-  };
-
-  const getTypeLabel = () => {
-    switch (image.type) {
-      case 'element':
-        return '角色';
-      case 'reference':
-        return '参考';
-      default:
-        return '';
-    }
-  };
-  
-  return (
-    <div className="space-y-1">
-      <div className="relative group aspect-square rounded border overflow-hidden bg-muted">
-        {!imageError ? (
-          <Image 
-            src={image.imageUrl}
-            alt={image.label}
-            fill
-            className="object-cover"
-            sizes="80px"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted">
-            <ImageIcon className="h-6 w-6 text-muted-foreground" />
-          </div>
-        )}
-        {/* 类型标识 */}
-        <div className="absolute top-1 right-1 bg-black/60 rounded px-1 py-0.5">
-          <div className="flex items-center gap-0.5">
-            {getTypeIcon()}
-            <span className="text-[9px] text-white font-medium">{getTypeLabel()}</span>
-          </div>
-        </div>
-      </div>
-      {/* Label标签 */}
-      <div className="text-[10px] text-center text-muted-foreground truncate px-0.5" title={image.label}>
-        {image.label}
-      </div>
-    </div>
-  );
-}
-
-// 参数项组件
-function ParamItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-muted-foreground">{label}:</span>
-      <span className="text-xs text-foreground">{value}</span>
-    </div>
-  );
-}
-
-// Reference-to-Video 配置展示组件
-function ReferenceToVideoConfigDisplay({ config }: { config: ReferenceToVideoConfigDisplay }) {
-  // 按API引用分组图片
-  const groupedImages = useMemo(() => {
-    const groups: Record<string, typeof config.images> = {};
-    config.images.forEach(img => {
-      const ref = img.apiReference;
-      if (!groups[ref]) {
-        groups[ref] = [];
-      }
-      groups[ref].push(img);
-    });
-    return groups;
-  }, [config.images]);
-
-  // 按顺序排列分组（Element1, Element2..., Image1, Image2...）
-  const sortedGroups = useMemo(() => {
-    return Object.entries(groupedImages).sort(([a], [b]) => {
-      const getOrder = (ref: string) => {
-        const match = ref.match(/@(Element|Image)(\d+)/);
-        if (!match) return 999;
-        const type = match[1] === 'Element' ? 0 : 1; // Element优先
-        const num = parseInt(match[2]);
-        return type * 1000 + num;
-      };
-      return getOrder(a) - getOrder(b);
-    });
-  }, [groupedImages]);
-
-  return (
-    <div className="space-y-3">
-      {/* Prompt区域 */}
-      {config.prompt && (
-        <div>
-          <div className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-            <Video className="h-3.5 w-3.5" />
-            视频描述
-          </div>
-          <div className="bg-background/50 border border-border/50 rounded-md p-2.5 max-h-32 overflow-y-auto">
-            <PromptWithHighlights prompt={config.prompt} />
-          </div>
-        </div>
-      )}
-      
-      {/* 关联图片 - 按分组横向展示 */}
-      {config.images.length > 0 && (
-        <div>
-          <div className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-            <ImageIcon className="h-3.5 w-3.5" />
-            关联图片 ({config.images.length}张)
-          </div>
-          {/* 横向滚动容器 */}
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-            {sortedGroups.map(([apiRef, images]) => (
-              <div key={apiRef} className="flex-shrink-0">
-                {/* 分组标题 */}
-                <div className="text-[10px] font-medium text-primary mb-1 font-mono">
-                  {apiRef}
-                  {images.length > 1 && <span className="text-muted-foreground ml-1">({images.length}张)</span>}
-                </div>
-                {/* 该分组的图片 - 横向排列 */}
-                <div className="flex gap-2">
-                  {images.map((img, index) => (
-                    <div key={`${img.imageUrl}-${index}`} className="w-20">
-                      <ImageThumbnail image={img} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* 其他参数 */}
-      <div className="bg-background/50 border border-border/50 rounded-md p-2.5">
-        <div className="grid grid-cols-2 gap-2">
-          <ParamItem label="时长" value={config.duration} />
-          <ParamItem label="宽高比" value={config.aspectRatio} />
-        </div>
-      </div>
     </div>
   );
 }
@@ -445,26 +282,6 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }
   }, [isGenerateAssets, functionCall.arguments]);
 
-  // 解析视频生成的referenceToVideoConfig
-  const referenceToVideoConfigDisplay = useMemo(() => {
-    if (!isGenerateVideo) return null;
-    
-    try {
-      const referenceToVideoConfig = functionCall.arguments.referenceToVideoConfig;
-      
-      if (!referenceToVideoConfig || typeof referenceToVideoConfig !== 'object') {
-        return null;
-      }
-      
-      // 使用formatReferenceToVideoConfigSync格式化配置
-      // 注意：这里没有URL到label的映射，会使用默认标签
-      return formatReferenceToVideoConfigSync(referenceToVideoConfig);
-    } catch (error) {
-      console.error("解析referenceToVideoConfig失败:", error);
-      return null;
-    }
-  }, [isGenerateVideo, functionCall.arguments]);
-
   // 获取美术风格名称
   useEffect(() => {
     if (!isSetArtStyle) return;
@@ -564,35 +381,30 @@ export const PendingActionMessage = memo(function PendingActionMessage({
               )
             )
           ) : isGenerateVideo ? (
-            /* 生成视频：显示参考配置 */
-            referenceToVideoConfigDisplay ? (
-              <ReferenceToVideoConfigDisplay config={referenceToVideoConfigDisplay} />
-            ) : (
-              /* Fallback: 如果解析失败，使用标准格式化 */
-              formattedParams.length > 0 && (
-                <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
-                  <div className="space-y-1.5">
-                    {formattedParams.map((param) => (
-                      <div key={param.key} className="space-y-1.5">
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-medium text-muted-foreground shrink-0">
-                            {param.label}:
-                          </span>
-                          <span className="text-xs text-foreground break-words">
-                            {param.value}
-                          </span>
-                        </div>
-                        {/* 如果是素材引用参数，显示图片预览 */}
-                        {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-                          <div className="pl-0 pt-1">
-                            <AssetPreview assetIds={param.assetIds} />
-                          </div>
-                        )}
+            /* 生成视频：显示首尾帧参数 */
+            formattedParams.length > 0 && (
+              <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
+                <div className="space-y-1.5">
+                  {formattedParams.map((param) => (
+                    <div key={param.key} className="space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-medium text-muted-foreground shrink-0">
+                          {param.label}:
+                        </span>
+                        <span className="text-xs text-foreground break-words">
+                          {param.value}
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                      {/* 如果是素材引用参数，显示图片预览 */}
+                      {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
+                        <div className="pl-0 pt-1">
+                          <AssetPreview assetIds={param.assetIds} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )
+              </div>
             )
           ) : isSetArtStyle ? (
             /* 设置美术风格：显示风格名称 */

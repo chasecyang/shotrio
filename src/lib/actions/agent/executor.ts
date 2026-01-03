@@ -283,9 +283,6 @@ export async function executeFunction(
         const referenceAssetIds = parameters.referenceAssetIds as string[] | undefined;
         const tags = parameters.tags as string[] | undefined;
         const order = parameters.order as number | undefined;
-        
-        // 获取生成方式（默认 reference-to-video 保持向后兼容）
-        const type = (parameters.videoGenerationType as string) || "reference-to-video";
 
         try {
           // 使用 validation.ts 中的统一校验
@@ -307,34 +304,21 @@ export async function executeFunction(
           // 从校验结果中获取标准化配置
           const normalizedConfig = validationResult.normalizedConfig!;
           
-          // 提取 prompt
-          const prompt = normalizedConfig.prompt;
-          
-          // 构建完整的 VideoGenerationConfig
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let generationConfig: any;
-          
-          if (type === "image-to-video") {
-            // 首尾帧过渡
-            generationConfig = {
-              type: "image-to-video",
-              ...normalizedConfig,
-            };
-          } else {
-            // reference-to-video：根据 video_url 自动判断内部类型
-            const internalType = normalizedConfig.video_url ? "video-to-video" : "reference-to-video";
-            
-            generationConfig = {
-              type: internalType,
-              ...normalizedConfig,
-            };
-          }
+          // 直接使用标准化的配置构建 VideoGenerationConfig
+          const generationConfig = {
+            prompt: normalizedConfig.prompt,
+            start_image_url: normalizedConfig.start_image_url,
+            end_image_url: normalizedConfig.end_image_url,
+            duration: normalizedConfig.duration,
+            aspect_ratio: normalizedConfig.aspect_ratio,
+            negative_prompt: normalizedConfig.negative_prompt,
+          };
           
           // 创建视频生成任务
           const generateResult = await createVideoAsset({
             projectId,
-            name: title || `未命名${type}视频`,
-            prompt,
+            name: title || "未命名视频",
+            prompt: normalizedConfig.prompt,
             referenceAssetIds,
             generationConfig,
             order,
@@ -348,7 +332,7 @@ export async function executeFunction(
               data: {
                 assetId: generateResult.data?.asset.id,
                 jobId: generateResult.data?.jobId,
-                message: `${type} 视频生成任务已创建`,
+                message: "视频生成任务已创建",
               },
             };
           } else {

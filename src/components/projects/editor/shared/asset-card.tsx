@@ -48,7 +48,7 @@ export function AssetCard({
   const isFailed = asset.runtimeStatus === "failed";
   
   // 获取 job - 优先使用传入的 job，否则使用 asset.latestJob
-  const currentJob = job || asset.latestJob;
+  const currentJob = job || asset.latestJob || undefined;
   
   // 获取显示 URL（视频优先使用 thumbnailUrl，图片使用 imageUrl 或 thumbnailUrl）
   const displayUrl = isVideo 

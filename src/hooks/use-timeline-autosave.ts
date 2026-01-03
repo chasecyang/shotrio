@@ -47,7 +47,7 @@ export function useTimelineAutosave(timeline: TimelineDetail | null) {
       try {
         await updateTimeline(timeline.id, {
           title: timeline.title,
-          description: timeline.description,
+          description: timeline.description ?? undefined,
           duration: timeline.duration,
           fps: timeline.fps,
           resolution: timeline.resolution,

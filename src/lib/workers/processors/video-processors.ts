@@ -3,14 +3,7 @@
 import db from "@/lib/db";
 import { asset } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { 
-  generateReferenceToVideo, 
-  generateKlingO1ImageToVideo,
-  generateVideoToVideo,
-  type KlingO1ReferenceToVideoInput,
-  type KlingO1ImageToVideoInput,
-  type VideoToVideoInput,
-} from "@/lib/services/fal.service";
+import { generateVideo, getVideoServiceProvider } from "@/lib/services/video-service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
@@ -126,73 +119,29 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     const transactionId = spendResult.transactionId;
 
+    // 获取当前视频服务提供商
+    const provider = getVideoServiceProvider();
+
     await updateJobProgress(
       {
         jobId: jobData.id,
         progress: 25,
-        progressMessage: `调用 Kling API 生成视频（${type}）...`,
+        progressMessage: `调用 ${provider === "veo" ? "Veo 3.1" : "Kling"} API 生成视频（${type}）...`,
       },
       workerToken
     );
 
-    // 5. 根据类型路由到不同的 API
-    console.log(`[Worker] 调用 Kling API (${type})`);
+    // 5. 调用统一的视频生成服务
+    console.log(`[Worker] 使用 ${provider} 服务生成视频 (${type})`);
     console.log(`[Worker] 完整配置:`, JSON.stringify(config, null, 2));
     
     let videoResult;
     try {
-      switch (type) {
-        case "image-to-video": {
-          // 首尾帧过渡
-          const i2vInput: KlingO1ImageToVideoInput = {
-            prompt: config.prompt,
-            start_image_url: config.start_image_url!,
-            end_image_url: config.end_image_url,
-            duration: config.duration,
-            negative_prompt: config.negative_prompt,
-          };
-          videoResult = await generateKlingO1ImageToVideo(i2vInput);
-          break;
-        }
-
-        case "reference-to-video":
-        case "video-to-video": {
-          // reference-to-video：根据 video_url 判断调用哪个 API
-          if (config.video_url) {
-            // 有视频 → 视频续写
-            console.log(`[Worker] 检测到 video_url，使用 video-to-video API`);
-            const v2vInput: VideoToVideoInput = {
-              prompt: config.prompt,
-              video_url: config.video_url,
-              image_urls: config.image_urls,
-              elements: config.elements,
-              duration: config.duration,
-              aspect_ratio: config.aspect_ratio,
-              negative_prompt: config.negative_prompt,
-            };
-            videoResult = await generateVideoToVideo(v2vInput);
-          } else {
-            // 无视频 → 多图参考
-            console.log(`[Worker] 未检测到 video_url，使用 reference-to-video API`);
-            const r2vInput: KlingO1ReferenceToVideoInput = {
-              prompt: config.prompt,
-              elements: config.elements,
-              image_urls: config.image_urls,
-              duration: config.duration,
-              aspect_ratio: config.aspect_ratio,
-              negative_prompt: config.negative_prompt,
-            };
-            videoResult = await generateReferenceToVideo(r2vInput);
-          }
-          break;
-        }
-
-        default:
-          throw new Error(`未知的视频生成类型: ${type}`);
-      }
+      // 使用统一的视频服务接口
+      videoResult = await generateVideo(config);
     } catch (error) {
       // 打印详细错误信息
-      console.error(`[Worker] Kling API 调用失败 (${type}):`, error);
+      console.error(`[Worker] ${provider} API 调用失败 (${type}):`, error);
       if (error && typeof error === 'object' && 'body' in error) {
         console.error(`[Worker] 错误详情:`, JSON.stringify((error as any).body, null, 2));
       }
@@ -209,6 +158,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
             originalTransactionId: transactionId,
             reason: "generation_failed",
             type,
+            provider,
           },
         });
       }
@@ -219,11 +169,11 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       throw error;
     }
 
-    if (!videoResult.video?.url) {
+    if (!videoResult.videoUrl) {
       throw new Error("视频生成失败：未返回视频URL");
     }
 
-    console.log(`[Worker] Kling API (${type}) 返回视频URL: ${videoResult.video.url}`);
+    console.log(`[Worker] ${provider} API (${type}) 返回视频URL: ${videoResult.videoUrl}`);
 
     await updateJobProgress(
       {
@@ -236,7 +186,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     // 7. 上传视频到 R2
     const uploadResult = await uploadVideoFromUrl(
-      videoResult.video.url,
+      videoResult.videoUrl,
       `video-${assetId}-${Date.now()}.mp4`,
       jobData.userId
     );

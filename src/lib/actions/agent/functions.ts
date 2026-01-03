@@ -83,96 +83,62 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产，支持2种Kling AI生成方式，根据素材类型智能选择最佳方式。
+    description: `生成视频资产。基于起始帧（必填）和结束帧（可选）生成视频过渡动画。系统会自动使用配置的视频服务提供商（Kling 或 Veo）。
 
-## 🎬 生成方式速查
+## 使用说明
 
-### 1️⃣ 首尾帧过渡 (image-to-video)
-**适用场景：** 分镜较为简单，首位帧能够充分表达含义
-**素材要求：** 1-2张图片（起始帧必填，结束帧可选）
-**典型用途：** 场景切换、时间流逝、物体变化
+**适用场景：** 场景切换、时间流逝、物体变化等需要画面过渡的场景
+
+**参数要求：**
+- **prompt**（必填）：详细描述视频内容和镜头运动（≥10字符）
+- **start_image_url**（必填）：起始帧图片的资产ID或URL
+- **end_image_url**（可选）：结束帧图片的资产ID或URL，不提供则由AI自动生成过渡
+- **duration**（可选）：视频时长，"5" 或 "10" 秒，默认 "5"
+- **aspect_ratio**（可选）：宽高比，"16:9"、"9:16" 或 "1:1"，默认 "16:9"
 
 **示例：**
 \`\`\`json
 {
-  "videoGenerationType": "image-to-video",
-  "imageToVideoConfig": {
-    "prompt": "Smooth camera push-in. @Image1 as start, @Image2 as end. Cinematic transition from winter to spring.",
-    "start_image_url": "asset-winter-scene",
-    "end_image_url": "asset-spring-scene",
-    "duration": "5"
-  },
+  "prompt": "Smooth camera push-in. Cinematic transition from winter to spring.",
+  "start_image_url": "asset-winter-scene",
+  "end_image_url": "asset-spring-scene",
+  "duration": "5",
   "title": "冬春季节过渡"
 }
 \`\`\`
 
-### 2️⃣ 参考生成 (reference-to-video) 
-**适用场景：** 镜头较为复杂，或者前后镜头需要较强的连贯性
-**素材要求：** 
-  - 多图参考：2-7张图片（支持角色elements + 场景image_urls组合）
-  - 视频续写：1个参考视频 + 可选的风格参考图
-**典型用途：** 角色动作、镜头运动、复杂场景合成、视频接续
-
-**多图参考示例：**
-\`\`\`json
-{
-  "videoGenerationType": "reference-to-video",
-  "referenceToVideoConfig": {
-    "prompt": "Character from @Element1 walks forward in the scene from @Image1. Camera follows smoothly.",
-    "elements": [{ 
-      "frontal_image_url": "asset-character-front",
-      "reference_image_urls": ["asset-character-side", "asset-character-back"]
-    }],
-    "image_urls": ["asset-scene-bg"],
-    "duration": "5"
-  }
-}
-\`\`\`
-
-**视频续写示例：**
-\`\`\`json
-{
-  "videoGenerationType": "reference-to-video",
-  "referenceToVideoConfig": {
-    "prompt": "Based on @Video1, character continues walking into the forest. Keep the same cinematic style as @Image1.",
-    "video_url": "asset-video-123",
-    "image_urls": ["asset-forest-style"],
-    "duration": "5"
-  },
-  "title": "进入森林-续"
-}
-\`\`\`
-
-## 💡 智能选择建议
-Agent应根据查询到的素材自动选择：
-- 素材只有1-2张图 → **image-to-video**（首尾帧）
-- 素材有2-7张图，包含角色多角度 → **reference-to-video**（多图参考）
-- 素材包含视频 → **reference-to-video** + video_url（视频续写）
-
-## ⚠️ 重要约束
-1. **图片总数限制：** reference-to-video 的 elements + image_urls 总图片数 ≤ 7张
-2. **Prompt要求：** 必须详细描述镜头运动和画面内容（≥10字符）
-3. **Duration格式：** 字符串 "5" 或 "10"（不是数字）
-4. **参考占位符：** 
-   - image-to-video: 用 @Image1（起始）、@Image2（结束）
-   - reference-to-video (多图): 用 @Element1、@Image1 等
-   - reference-to-video (视频): 用 @Video1 + @Image1/@Element1（可选）
+**注意事项：**
+1. prompt 应该详细描述镜头运动和画面内容
+2. 图片资产ID需要从 query_assets 查询获得
+3. 视频生成需要一定时间，任务创建后可通过轮询查看状态
 `,
     displayName: "生成视频资产",
     parameters: {
       type: "object",
       properties: {
-        videoGenerationType: {
+        prompt: {
           type: "string",
-          description: "视频生成方式。可选值：'image-to-video'（首尾帧过渡）、'reference-to-video'（参考生成，支持多图参考或视频续写，默认）",
+          description: "视频描述（必填），详细描述视频内容和镜头运动，至少10个字符",
         },
-        imageToVideoConfig: {
-          type: "object",
-          description: "首尾帧配置（仅当 videoGenerationType='image-to-video' 时使用）。包含：prompt（必填）、start_image_url（必填）、end_image_url（可选）、duration（可选）",
+        start_image_url: {
+          type: "string",
+          description: "起始帧（必填），图片资产的ID或URL",
         },
-        referenceToVideoConfig: {
-          type: "object",
-          description: "参考生成配置（仅当 videoGenerationType='reference-to-video' 时使用）。包含：prompt（必填）、video_url（可选，传入时为视频续写）、elements（可选）、image_urls（可选）、duration（可选）、aspect_ratio（可选）",
+        end_image_url: {
+          type: "string",
+          description: "结束帧（可选），图片资产的ID或URL。不提供则由AI生成过渡",
+        },
+        duration: {
+          type: "string",
+          description: "视频时长（可选），字符串 '5' 或 '10'，默认 '5'",
+        },
+        aspect_ratio: {
+          type: "string",
+          description: "宽高比（可选），'16:9'、'9:16' 或 '1:1'，默认 '16:9'",
+        },
+        negative_prompt: {
+          type: "string",
+          description: "负面提示词（可选），用于避免不想要的内容",
         },
         title: {
           type: "string",
@@ -191,6 +157,7 @@ Agent应根据查询到的素材自动选择：
           description: "排序值（可选），用于在视频库中排序",
         },
       },
+      required: ["prompt", "start_image_url"],
     },
     category: "generation",
     needsConfirmation: true,

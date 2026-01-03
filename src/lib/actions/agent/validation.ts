@@ -4,7 +4,15 @@
  * 在 Agent 执行 function 前校验参数，提前发现错误并返回给 AI 修正
  */
 
-import { validateReferenceToVideoConfig, type ValidationResult } from "@/lib/utils/video-validation";
+/**
+ * 参数校验结果
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  normalizedConfig?: Record<string, unknown>;
+}
 
 /**
  * 校验 Function 参数
@@ -55,67 +63,32 @@ export async function validateFunctionParameters(
 
 /**
  * 校验 generate_video_asset 参数
- * 支持两种生成方式：image-to-video, reference-to-video（包含视频续写）
+ * 统一的首尾帧生成方式
  */
 function validateGenerateVideoParams(params: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // 获取生成方式（默认 reference-to-video 保持向后兼容）
-  const type = params.videoGenerationType || "reference-to-video";
-
-  // 根据类型路由到不同的校验函数
-  switch (type) {
-    case "image-to-video":
-      if (!params.imageToVideoConfig) {
-        errors.push("videoGenerationType='image-to-video' 时必须提供 imageToVideoConfig");
-        return { valid: false, errors, warnings };
-      }
-      return validateImageToVideoConfig(params.imageToVideoConfig as Record<string, unknown>);
-
-    case "reference-to-video":
-      if (!params.referenceToVideoConfig) {
-        errors.push("videoGenerationType='reference-to-video' 时必须提供 referenceToVideoConfig");
-        return { valid: false, errors, warnings };
-      }
-      return validateReferenceToVideoConfig(params.referenceToVideoConfig as import("@/lib/utils/video-validation").ExtendedVideoConfig);
-
-    default:
-      errors.push(`未知的 videoGenerationType: ${type}。仅支持 image-to-video 和 reference-to-video`);
-      return { valid: false, errors, warnings };
-  }
-}
-
-/**
- * 校验 image-to-video 配置（首尾帧）
- */
-function validateImageToVideoConfig(config: Record<string, unknown>): ValidationResult {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  // 1. 校验 prompt
-  if (!config.prompt || typeof config.prompt !== 'string') {
-    errors.push("imageToVideoConfig.prompt 是必填字段");
-  } else if (config.prompt.trim().length < 10) {
-    errors.push("imageToVideoConfig.prompt 必须至少包含 10 个字符");
+  // 1. 校验 prompt（必填）
+  if (!params.prompt || typeof params.prompt !== 'string') {
+    errors.push("prompt 是必填字段");
+  } else if (params.prompt.trim().length < 10) {
+    errors.push("prompt 必须至少包含 10 个字符");
   }
 
   // 2. 校验 start_image_url（必填）
-  if (!config.start_image_url || typeof config.start_image_url !== 'string') {
-    errors.push("imageToVideoConfig.start_image_url 是必填字段");
+  if (!params.start_image_url || typeof params.start_image_url !== 'string') {
+    errors.push("start_image_url 是必填字段");
   }
 
-  // 3. 校验 duration 格式
-  if (config.duration && typeof config.duration === 'string' && !["5", "10"].includes(config.duration)) {
-    errors.push("imageToVideoConfig.duration 必须是字符串 '5' 或 '10'");
+  // 3. 校验 duration 格式（可选）
+  if (params.duration && typeof params.duration === 'string' && !["5", "10"].includes(params.duration)) {
+    errors.push("duration 必须是字符串 '5' 或 '10'");
   }
 
-  // 4. 建议在 prompt 中使用 @Image1 和 @Image2
-  if (typeof config.prompt === 'string' && !config.prompt.includes("@Image1")) {
-    warnings.push("建议在 prompt 中使用 @Image1 引用起始帧");
-  }
-  if (config.end_image_url && typeof config.prompt === 'string' && !config.prompt.includes("@Image2")) {
-    warnings.push("提供了 end_image_url，建议在 prompt 中使用 @Image2 引用结束帧");
+  // 4. 校验 aspect_ratio 格式（可选）
+  if (params.aspect_ratio && typeof params.aspect_ratio === 'string' && !["16:9", "9:16", "1:1"].includes(params.aspect_ratio)) {
+    errors.push("aspect_ratio 必须是 '16:9'、'9:16' 或 '1:1'");
   }
 
   return {
@@ -123,12 +96,13 @@ function validateImageToVideoConfig(config: Record<string, unknown>): Validation
     errors,
     warnings,
     normalizedConfig: {
-      prompt: typeof config.prompt === 'string' ? config.prompt.trim() : '',
-      start_image_url: config.start_image_url as string,
-      end_image_url: config.end_image_url as string | undefined,
-      duration: (config.duration as string) || "5",
-      negative_prompt: config.negative_prompt as string | undefined,
-    } as unknown as import("@/lib/utils/video-validation").ExtendedVideoConfig,
+      prompt: typeof params.prompt === 'string' ? params.prompt.trim() : '',
+      start_image_url: params.start_image_url as string,
+      end_image_url: params.end_image_url as string | undefined,
+      duration: (params.duration as string) || "5",
+      aspect_ratio: params.aspect_ratio as "16:9" | "9:16" | "1:1" | undefined,
+      negative_prompt: params.negative_prompt as string | undefined,
+    },
   };
 }
 

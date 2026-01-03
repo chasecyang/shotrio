@@ -8,8 +8,8 @@ interface UseVideoPlaybackOptions {
 }
 
 export interface UseVideoPlaybackReturn {
-  videoRef: React.RefObject<HTMLVideoElement>;
-  nextVideoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  nextVideoRef: React.RefObject<HTMLVideoElement | null>;
   isPlaying: boolean;
   currentTime: number;
   currentClip: TimelineClipWithAsset | null;
@@ -31,7 +31,7 @@ export function useVideoPlayback({
 }: UseVideoPlaybackOptions): UseVideoPlaybackReturn {
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number>(0);
 
   const [isPlaying, setIsPlaying] = useState(false);

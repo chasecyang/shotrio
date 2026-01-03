@@ -102,41 +102,17 @@ export interface GenerationParams {
 /**
  * 视频配置（用于生成）
  * 
- * Agent 层面支持两种生成方式：
- * - image-to-video: 首尾帧过渡
- * - reference-to-video: 参考生成（多图参考或视频续写）
- * 
- * 内部实现：
- * - type 字段会根据 video_url 自动设置为 video-to-video
- * - 这样 Agent 只需要区分"首尾帧"和"参考生成"两种语义
- * - 实际调用哪个 API 由系统根据参数自动判断
+ * 统一的首尾帧生成方式：
+ * - 基于起始帧（必填）和结束帧（可选）生成视频
+ * - 系统会自动使用配置的视频服务提供商（Kling 或 Veo）
  */
 export interface VideoGenerationConfig {
-  // 生成方式标识（内部使用，由系统自动设置）
-  type?: "image-to-video" | "reference-to-video" | "video-to-video";
-  
-  // 模型层级（预留Pro版本支持）
-  modelTier?: "standard" | "pro";
-  
-  // 通用字段
-  prompt: string;
-  duration?: "5" | "10";
-  aspect_ratio?: "16:9" | "9:16" | "1:1";
-  negative_prompt?: string;
-  
-  // image-to-video 特定字段
-  start_image_url?: string;      // 起始帧
-  end_image_url?: string;        // 结束帧
-  
-  // reference-to-video 特定字段
-  elements?: Array<{
-    frontal_image_url: string;
-    reference_image_urls?: string[];
-  }>;
-  image_urls?: string[];         // 场景参考图（也用于视频续写的风格参考）
-  
-  // 视频续写特定字段（传入后自动触发 video-to-video API）
-  video_url?: string;            // 参考视频，存在时 type 自动设为 video-to-video
+  prompt: string;                // 视频描述（必填）
+  start_image_url: string;       // 起始帧（必填）
+  end_image_url?: string;        // 结束帧（可选）
+  duration?: "5" | "10";         // 视频时长（秒）
+  aspect_ratio?: "16:9" | "9:16" | "1:1";  // 宽高比
+  negative_prompt?: string;      // 负面提示词
 }
 
 /**
