@@ -44,6 +44,12 @@
     "languageUpdated": "语言设置已更新",
     "use": "使用"
   },
+  "theme": {
+    "toggle": "切换主题",
+    "light": "浅色模式",
+    "dark": "深色模式",
+    "system": "跟随系统"
+  },
   "nav": {
     "home": "首页",
     "dashboard": "控制台",

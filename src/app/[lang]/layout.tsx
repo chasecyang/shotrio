@@ -9,6 +9,7 @@ import { routing } from '@/i18n/routing';
 import { ChatwootProvider } from '@/components/integrations/chatwoot-provider';
 import { getCurrentUser } from '@/lib/auth/auth-utils';
 import { generatePageMetadata, homepageMetadata } from '@/lib/seo/metadata';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 
 // 英文字体
 const syne = Syne({
@@ -77,11 +78,13 @@ export default async function RootLayout({
       <body
         className={`${syne.variable} ${manrope.variable} ${notoSansSC.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}
       >
-        <NextIntlClientProvider messages={messages}>
-          {children}
-          <Toaster />
-          <ChatwootProvider user={user} />
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            {children}
+            <Toaster />
+            <ChatwootProvider user={user} />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

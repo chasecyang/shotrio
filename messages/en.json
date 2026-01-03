@@ -44,6 +44,12 @@
     "languageUpdated": "Language settings updated",
     "use": "Use"
   },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",

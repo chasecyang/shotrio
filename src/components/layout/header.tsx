@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/routing";
 import { AuthButton } from "@/components/auth/auth-button";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { HeaderCreditsButton } from "@/components/credits/header-credits-button";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ export async function Header() {
   const t = await getTranslations("nav");
 
   return (
-    <header className="border-b border-neutral-200 bg-white sticky top-0 z-50">
+    <header className="border-b border-border bg-background sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
         <div className="flex items-center gap-3 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -37,6 +38,7 @@ export async function Header() {
             </>
           )}
           <LanguageSwitcher />
+          <ThemeToggle />
           <AuthButton initialUser={user} />
         </div>
       </div>
