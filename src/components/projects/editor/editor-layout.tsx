@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useEditor } from "./editor-context";
 import {
   ResizablePanelGroup,
@@ -12,7 +11,6 @@ import { EditorProvider } from "./editor-context";
 import { EditorHeader } from "./editor-header";
 import { AgentPanel } from "./agent-panel/agent-panel";
 import { AssetGalleryPanel } from "./asset-gallery-panel";
-import { AssetGenerationDialog } from "./asset-generation-dialog";
 import { EditingModeLayout } from "./editing-mode/editing-mode-layout";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -78,9 +76,6 @@ function EditorLayoutInner({
   
   // 注册键盘快捷键
   useEditorKeyboard();
-  
-  // 素材生成对话框状态
-  const [assetGenerationOpen, setAssetGenerationOpen] = useState(false);
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -126,19 +121,11 @@ function EditorLayoutInner({
             <div className="h-full overflow-hidden">
               <AssetGalleryPanel 
                 userId={user.id}
-                onOpenAssetGeneration={() => setAssetGenerationOpen(true)}
               />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
-
-      {/* 素材生成对话框 */}
-      <AssetGenerationDialog
-        open={assetGenerationOpen}
-        onOpenChange={setAssetGenerationOpen}
-        projectId={project.id}
-      />
     </div>
   );
 }

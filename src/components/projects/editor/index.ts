@@ -6,7 +6,6 @@ export type { EditorState } from "./editor-context";
 
 // Asset Gallery
 export { AssetGalleryPanel } from "./asset-gallery-panel";
-export { AssetGenerationDialog } from "./asset-generation-dialog";
 
 // Agent Panel
 export { AgentPanel } from "./agent-panel/agent-panel";

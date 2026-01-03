@@ -7,11 +7,11 @@ import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Images, Film, FileText, Plus } from "lucide-react";
+import { Images, Film, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
 import { cn } from "@/lib/utils";
-import { AddAssetDialog } from "./shared/add-asset-dialog";
+import { AddAssetPanel } from "./shared/add-asset-panel";
 import { TextAssetDialog } from "./shared/text-asset-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -29,7 +29,6 @@ import { AssetFilter, AssetFilterOptions } from "./shared/asset-filter";
 
 interface AssetGalleryPanelProps {
   userId: string;
-  onOpenAssetGeneration: () => void;
 }
 
 const DEFAULT_FILTER: AssetFilterOptions = {
@@ -37,13 +36,13 @@ const DEFAULT_FILTER: AssetFilterOptions = {
   tags: [],
 };
 
-export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGalleryPanelProps) {
+export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   const { state, setMode } = useEditor();
   const { project } = state;
 
   const [allAssets, setAllAssets] = useState<AssetWithRuntimeStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [addAssetDialogOpen, setAddAssetDialogOpen] = useState(false);
+  const [showAddAssetPanel, setShowAddAssetPanel] = useState(false);
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
@@ -225,6 +224,20 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
 
   if (!project) return null;
 
+  // 如果显示添加素材面板，则渲染面板而不是素材列表
+  if (showAddAssetPanel) {
+    return (
+      <AddAssetPanel
+        projectId={project.id}
+        onBack={() => setShowAddAssetPanel(false)}
+        onSuccess={() => {
+          loadAssets();
+          setShowAddAssetPanel(false);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
@@ -261,7 +274,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setAddAssetDialogOpen(true)}>
+            <Button size="sm" onClick={() => setShowAddAssetPanel(true)}>
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               添加素材
             </Button>
@@ -312,7 +325,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                 }
               </p>
               {allAssets.length === 0 && (
-                <Button onClick={() => setAddAssetDialogOpen(true)} size="sm">
+                <Button onClick={() => setShowAddAssetPanel(true)} size="sm">
                   <Plus className="w-4 h-4 mr-1.5" />
                   添加素材
                 </Button>
@@ -339,15 +352,6 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
           )}
         </div>
       </div>
-
-      {/* 添加素材对话框 */}
-      <AddAssetDialog
-        open={addAssetDialogOpen}
-        onOpenChange={setAddAssetDialogOpen}
-        projectId={project.id}
-        onSuccess={handleUploadSuccess}
-        onOpenAIGeneration={onOpenAssetGeneration}
-      />
 
       {/* 文本资产编辑对话框 */}
       <TextAssetDialog
