@@ -34,7 +34,6 @@ export function TextAssetDialog({
   
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
-  const [format, setFormat] = useState<"markdown" | "plain">("markdown");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,13 +43,11 @@ export function TextAssetDialog({
     if (isEditMode && asset) {
       setName(asset.name);
       setContent(asset.textContent || "");
-      setFormat((asset.textFormat as "markdown" | "plain") || "markdown");
       setTags(asset.tags.map(t => t.tagValue));
     } else {
       // 新建模式时重置
       setName("");
       setContent("");
-      setFormat("markdown");
       setTags([]);
     }
   }, [isEditMode, asset, open]);
@@ -83,7 +80,7 @@ export function TextAssetDialog({
     try {
       if (isEditMode && asset) {
         // 更新模式
-        const contentResult = await updateTextAssetContent(asset.id, content, format);
+        const contentResult = await updateTextAssetContent(asset.id, content);
         if (!contentResult.success) {
           toast.error(contentResult.error || "更新内容失败");
           setIsSubmitting(false);
@@ -107,7 +104,6 @@ export function TextAssetDialog({
           projectId,
           name: name.trim(),
           content,
-          format,
           tags,
         });
 
@@ -150,29 +146,6 @@ export function TextAssetDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
-
-          {/* 格式选择 */}
-          <div className="space-y-2">
-            <Label>文本格式</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={format === "markdown" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFormat("markdown")}
-              >
-                Markdown
-              </Button>
-              <Button
-                type="button"
-                variant={format === "plain" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFormat("plain")}
-              >
-                纯文本
-              </Button>
-            </div>
           </div>
 
           {/* 标签输入（仅新建模式） */}
@@ -222,11 +195,7 @@ export function TextAssetDialog({
               </TabsList>
               <TabsContent value="edit" className="mt-2">
                 <Textarea
-                  placeholder={
-                    format === "markdown"
-                      ? "支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项"
-                      : "输入文本内容..."
-                  }
+                  placeholder="支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="min-h-[300px] font-mono text-sm"
@@ -234,13 +203,7 @@ export function TextAssetDialog({
               </TabsContent>
               <TabsContent value="preview" className="mt-2">
                 <div className="min-h-[300px] border rounded-md p-4 bg-muted/30 overflow-auto">
-                  {format === "markdown" ? (
-                    <MarkdownRenderer content={content || "*暂无内容*"} />
-                  ) : (
-                    <pre className="whitespace-pre-wrap text-sm">
-                      {content || "暂无内容"}
-                    </pre>
-                  )}
+                  <MarkdownRenderer content={content || "*暂无内容*"} />
                 </div>
               </TabsContent>
             </Tabs>

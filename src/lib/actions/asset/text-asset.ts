@@ -12,7 +12,6 @@ export interface CreateTextAssetInput {
   projectId: string;
   name: string;
   content: string;
-  format?: "markdown" | "plain";
   tags?: string[];
   meta?: {
     category?: string;
@@ -50,7 +49,6 @@ export async function createTextAsset(
     name: input.name,
     sourceType: "uploaded", // 文本资产无需 job 处理
     textContent: input.content,
-    textFormat: input.format || "markdown",
     tags: input.tags,
     meta: input.meta ? { textAsset: input.meta } : undefined,
   });
@@ -61,8 +59,7 @@ export async function createTextAsset(
  */
 export async function updateTextAssetContent(
   assetId: string,
-  content: string,
-  format?: "markdown" | "plain"
+  content: string
 ): Promise<{
   success: boolean;
   error?: string;
@@ -91,7 +88,6 @@ export async function updateTextAssetContent(
 
   return updateAsset(assetId, {
     textContent: content,
-    textFormat: format,
   });
 }
 
@@ -105,7 +101,6 @@ export async function getTextAssetContent(
 ): Promise<{
   success: boolean;
   content?: string;
-  format?: string;
   name?: string;
   tags?: string[];
   error?: string;
@@ -141,7 +136,6 @@ export async function getTextAssetContent(
   return {
     success: true,
     content,
-    format: asset.textFormat || "markdown",
     name: asset.name,
     tags: asset.tags.map(tag => tag.tagValue),
   };
@@ -158,7 +152,6 @@ export async function getTextAssetsContent(
     id: string;
     name: string;
     content: string;
-    format: string;
     tags: string[];
   }>;
   error?: string;
@@ -184,7 +177,6 @@ export async function getTextAssetsContent(
       id: assetIds[idx],
       name: r.name || "",
       content: r.content || "",
-      format: r.format || "markdown",
       tags: r.tags || [],
     }));
 

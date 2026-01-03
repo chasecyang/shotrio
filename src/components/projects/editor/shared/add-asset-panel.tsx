@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, DragEvent } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +24,6 @@ import {
   Film,
   FileText,
   X,
-  Upload,
   ArrowLeft,
   Loader2,
   Check,
@@ -35,7 +34,6 @@ import { generateAssetImage, editAssetImage } from "@/lib/actions/asset/generate
 import { createVideoAsset } from "@/lib/actions/asset/crud";
 import { queryAssets, getAsset } from "@/lib/actions/asset";
 import { hasEnoughCredits } from "@/lib/actions/credits/balance";
-import { uploadAsset } from "@/lib/actions/asset/upload-asset";
 import { CREDIT_COSTS } from "@/types/payment";
 import type { AssetWithTags, AssetWithRuntimeStatus, ImageResolution } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
@@ -46,6 +44,7 @@ import { useTaskPolling } from "@/hooks/use-task-polling";
 import type { AssetImageGenerationResult } from "@/types/job";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { AssetLibraryPickerDialog } from "./asset-library-picker-dialog";
 
 interface AddAssetPanelProps {
   projectId: string;
@@ -89,17 +88,10 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
   const [imageAspectRatio, setImageAspectRatio] = useState<AspectRatio>("16:9");
   const [imageResolution, setImageResolution] = useState<ImageResolution>("2K");
   const [numImages, setNumImages] = useState(1);
-  const [uploadedImages, setUploadedImages] = useState<Array<{
-    file: File;
-    preview: string;
-    id: string;
-  }>>([]);
   const [selectedImageAssets, setSelectedImageAssets] = useState<AssetWithTags[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentImageJobId, setCurrentImageJobId] = useState<string | null>(null);
   const [generatedAssets, setGeneratedAssets] = useState<AssetImageGenerationResult["assets"]>([]);
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
 
   // === 视频生成状态 ===
   const [videoPrompt, setVideoPrompt] = useState("");
@@ -113,7 +105,6 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
   // === 文本创建状态 ===
   const [textName, setTextName] = useState("");
   const [textContent, setTextContent] = useState("");
-  const [textFormat, setTextFormat] = useState<"markdown" | "plain">("markdown");
   const [textTagInput, setTextTagInput] = useState("");
   const [textTags, setTextTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -186,8 +177,6 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
         
         setTimeout(() => {
           setCurrentImageJobId(null);
-          uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
-          setUploadedImages([]);
           onSuccess?.();
         }, 2000);
       } catch (error) {
@@ -198,7 +187,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
       toast.error(currentImageJob.errorMessage || tToast("error.generationFailed"));
       setCurrentImageJobId(null);
     }
-  }, [currentImageJob, uploadedImages, tToast, onSuccess]);
+  }, [currentImageJob, tToast, onSuccess]);
 
   // === 图片生成处理函数 ===
   const handleImageGenerate = useCallback(async () => {
@@ -221,35 +210,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
     try {
       let result;
       
-      if (uploadedImages.length > 0) {
-        // 有上传图片，先上传到服务器
-        const uploadResults = await Promise.all(
-          uploadedImages.map(img => uploadAsset({
-            file: img.file,
-            projectId,
-            category: "reference",
-          }))
-        );
-
-        const failedUploads = uploadResults.filter(r => !r.success);
-        if (failedUploads.length > 0) {
-          toast.error("部分图片上传失败");
-          return;
-        }
-
-        const sourceAssetIds = uploadResults
-          .filter(r => r.asset?.id)
-          .map(r => r.asset!.id);
-
-        result = await editAssetImage({
-          projectId,
-          prompt: imagePrompt.trim(),
-          sourceAssetIds,
-          aspectRatio: imageAspectRatio,
-          resolution: imageResolution,
-          numImages,
-        });
-      } else if (selectedImageAssets.length > 0) {
+      if (selectedImageAssets.length > 0) {
         // 使用素材库中的图片
         result = await editAssetImage({
           projectId,
@@ -280,56 +241,27 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
       console.error("生成失败:", error);
       toast.error("操作失败，请重试");
     }
-  }, [imagePrompt, numImages, uploadedImages, selectedImageAssets, imageAspectRatio, imageResolution, projectId, t]);
+  }, [imagePrompt, numImages, selectedImageAssets, imageAspectRatio, imageResolution, projectId, t]);
 
-  // 文件上传处理
-  const handleFiles = async (files: File[]) => {
-    setIsUploading(true);
-    try {
-      const newImages = files.map(file => ({
-        file,
-        preview: URL.createObjectURL(file),
-        id: Math.random().toString(36).substring(7),
-      }));
-      setUploadedImages(prev => [...prev, ...newImages]);
-      toast.success(`已添加 ${files.length} 张参考图`);
-    } catch (error) {
-      console.error("处理文件失败:", error);
-      toast.error("处理文件失败");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // 处理从素材库选择图片
+  const handleAssetPickerConfirm = async (assetIds: string[]) => {
+    setSelectedSourceAssets(assetIds);
     
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      await handleFiles(imageFiles);
-    }
-    
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleRemoveUploadedImage = (id: string) => {
-    setUploadedImages(prev => {
-      const updated = prev.filter(img => img.id !== id);
-      const removed = prev.find(img => img.id === id);
-      if (removed) {
-        URL.revokeObjectURL(removed.preview);
+    // 加载选中素材的详情
+    const assets: AssetWithTags[] = [];
+    for (const assetId of assetIds) {
+      const result = await getAsset(assetId);
+      if (result.success && result.asset) {
+        assets.push(result.asset);
       }
-      return updated;
-    });
+    }
+    setSelectedImageAssets(assets);
+    toast.success(`已选择 ${assetIds.length} 张参考图`);
   };
 
   const handleRemoveSelectedAsset = (assetId: string) => {
-    setSelectedSourceAssets(
-      assetGeneration.selectedSourceAssets.filter(id => id !== assetId)
-    );
+    const newAssetIds = assetGeneration.selectedSourceAssets.filter(id => id !== assetId);
+    setSelectedSourceAssets(newAssetIds);
   };
 
   // === 视频生成处理函数 ===
@@ -430,7 +362,6 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
         projectId,
         name: textName.trim(),
         content: textContent,
-        format: textFormat,
         tags: textTags,
       });
 
@@ -513,30 +444,12 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
               <div className="space-y-2">
                 <Label>参考图片（可选）</Label>
                 <div className="grid grid-cols-4 gap-3">
-                  {/* 已上传的图片 */}
-                  {uploadedImages.map((img) => (
-                    <div key={img.id} className="relative aspect-square rounded-lg border overflow-hidden group">
-                      <Image
-                        src={img.preview}
-                        alt="参考图"
-                        fill
-                        className="object-cover"
-                      />
-                      <button
-                        onClick={() => handleRemoveUploadedImage(img.id)}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-
                   {/* 从素材库选择的图片 */}
                   {selectedImageAssets.map((asset) => (
                     <div key={asset.id} className="relative aspect-square rounded-lg border overflow-hidden group">
                       {asset.imageUrl && (
                         <Image
-                          src={asset.imageUrl}
+                          src={asset.thumbnailUrl || asset.imageUrl}
                           alt={asset.name}
                           fill
                           className="object-cover"
@@ -551,26 +464,18 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
                     </div>
                   ))}
 
-                  {/* 上传按钮 */}
+                  {/* 选择按钮 */}
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isGeneratingImage || isUploading}
-                    className="aspect-square rounded-lg border-2 border-dashed hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary"
+                    onClick={() => setAssetPickerOpen(true)}
+                    disabled={isGeneratingImage}
+                    className="aspect-square rounded-lg border-2 border-dashed hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Upload className="w-5 h-5" />
-                    <span>上传图片</span>
+                    <ImageIcon className="w-5 h-5" />
+                    <span className="text-xs">选择图片</span>
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  可以上传本地图片或从素材库拖拽图片到此处作为参考
+                  从素材库中选择图片作为参考
                 </p>
               </div>
 
@@ -850,28 +755,6 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
               </div>
 
               {/* 格式选择 */}
-              <div className="space-y-2">
-                <Label>文本格式</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={textFormat === "markdown" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setTextFormat("markdown")}
-                  >
-                    Markdown
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={textFormat === "plain" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setTextFormat("plain")}
-                  >
-                    纯文本
-                  </Button>
-                </div>
-              </div>
-
               {/* 标签 */}
               <div className="space-y-2">
                 <Label htmlFor="tags">标签</Label>
@@ -917,11 +800,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
                   </TabsList>
                   <TabsContent value="edit" className="mt-2">
                     <Textarea
-                      placeholder={
-                        textFormat === "markdown"
-                          ? "支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项"
-                          : "输入文本内容..."
-                      }
+                      placeholder="支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项"
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
                       className="min-h-[300px] font-mono text-sm"
@@ -929,13 +808,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
                   </TabsContent>
                   <TabsContent value="preview" className="mt-2">
                     <div className="min-h-[300px] border rounded-md p-4 bg-muted/30 overflow-auto">
-                      {textFormat === "markdown" ? (
-                        <MarkdownRenderer content={textContent || "*暂无内容*"} />
-                      ) : (
-                        <pre className="whitespace-pre-wrap text-sm">
-                          {textContent || "暂无内容"}
-                        </pre>
-                      )}
+                      <MarkdownRenderer content={textContent || "*暂无内容*"} />
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -959,6 +832,16 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
       <PurchaseDialog
         open={purchaseDialogOpen}
         onOpenChange={setPurchaseDialogOpen}
+      />
+
+      {/* 素材库选择弹窗 */}
+      <AssetLibraryPickerDialog
+        open={assetPickerOpen}
+        onOpenChange={setAssetPickerOpen}
+        projectId={projectId}
+        selectedAssetIds={assetGeneration.selectedSourceAssets}
+        onConfirm={handleAssetPickerConfirm}
+        maxSelection={10}
       />
     </div>
   );

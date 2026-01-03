@@ -156,9 +156,8 @@ export interface Asset {
   videoUrl: string | null;
   duration: number | null; // 毫秒
   
-  // 文本字段（文本类型必填）
+  // 文本字段（文本类型必填，统一使用 Markdown 格式）
   textContent: string | null;
-  textFormat: string | null; // 'markdown' | 'plain'
   
   // 生成信息
   prompt: string | null;
@@ -198,8 +197,7 @@ export interface CreateAssetInput {
   sourceType?: AssetSourceType;  // 新增：资产来源类型
   imageUrl?: string;  // 可选，为空表示素材正在生成中
   thumbnailUrl?: string;
-  textContent?: string;  // 文本内容（文本类型必填）
-  textFormat?: string;   // 文本格式（'markdown' | 'plain'）
+  textContent?: string;  // 文本内容（文本类型必填，统一使用 Markdown 格式）
   prompt?: string;
   seed?: number;
   modelUsed?: string;
@@ -216,7 +214,6 @@ export interface UpdateAssetInput {
   imageUrl?: string;
   thumbnailUrl?: string;
   textContent?: string;
-  textFormat?: string;
   prompt?: string;
   seed?: number;
   modelUsed?: string;

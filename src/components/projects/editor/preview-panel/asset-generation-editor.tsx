@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, DragEvent, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,7 +29,6 @@ import {
   Loader2,
   Check,
   ChevronDown,
-  Upload,
   X,
   Send,
   AlertCircle,
@@ -42,7 +41,6 @@ import type { ImageResolution } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { uploadAsset } from "@/lib/actions/asset/upload-asset";
 import { getAsset } from "@/lib/actions/asset";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import type { AssetImageGenerationResult } from "@/types/job";
@@ -51,6 +49,7 @@ import { hasEnoughCredits } from "@/lib/actions/credits/balance";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { CREDIT_COSTS, PackageType } from "@/types/payment";
 import { useTranslations } from "next-intl";
+import { AssetLibraryPickerDialog } from "../shared/asset-library-picker-dialog";
 
 interface AssetGenerationEditorProps {
   projectId: string;
@@ -83,14 +82,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
   // UI 状态
   const [showAdvancedParams, setShowAdvancedParams] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadedImages, setUploadedImages] = useState<Array<{
-    file: File;
-    preview: string;
-    id: string;
-  }>>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   
   // 从素材库选择的素材
   const [selectedAssets, setSelectedAssets] = useState<AssetWithTags[]>([]);
@@ -132,11 +124,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         
         // 注意：素材列表刷新由 editor-context.tsx 中的 useTaskRefresh 统一处理
         
-        // 清空当前任务ID和上传的图片
+        // 清空当前任务ID
         setTimeout(() => {
           setCurrentJobId(null);
-          uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
-          setUploadedImages([]);
         }, 2000);
       } catch (error) {
         console.error("解析任务结果失败:", error);
@@ -147,7 +137,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       toast.error(currentJob.errorMessage || tToast("error.generationFailed"));
       setCurrentJobId(null);
     }
-  }, [currentJob, uploadedImages, tToast]);
+  }, [currentJob, tToast]);
 
   // 加载选中的素材详情
   useEffect(() => {
@@ -171,121 +161,34 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
   // 智能占位符：根据是否有参考图动态显示
   const placeholder = useMemo(() => {
-    const hasImages = uploadedImages.length > 0 || selectedAssets.length > 0;
+    const hasImages = selectedAssets.length > 0;
     
     if (hasImages) {
       return "基于参考图进行创作，例如：调整为温暖的日落色调，保持人物姿势和表情不变...";
     }
     
     return "详细描述你想要创作的内容，例如：一位30岁的亚洲女性，短发，现代职业装，自信的微笑...";
-  }, [uploadedImages.length, selectedAssets.length]);
+  }, [selectedAssets.length]);
 
-  // 处理文件拖拽
-  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isGenerating && !isUploading) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // 只有当鼠标真正离开容器时才取消拖拽状态
-    // 检查 relatedTarget 是否在当前元素内
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
+  // 处理从素材库选择图片
+  const handleAssetPickerConfirm = async (assetIds: string[]) => {
+    setSelectedSourceAssets(assetIds);
     
-    if (
-      x <= rect.left ||
-      x >= rect.right ||
-      y <= rect.top ||
-      y >= rect.bottom
-    ) {
-      setIsDragging(false);
-    }
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    if (isGenerating || isUploading) return;
-
-    // 尝试获取素材数据（从素材库拖拽）
-    const assetData = e.dataTransfer.getData("application/json");
-    if (assetData) {
-      try {
-        const { assetId } = JSON.parse(assetData);
-        if (assetId && !assetGeneration.selectedSourceAssets.includes(assetId)) {
-          setSelectedSourceAssets([...assetGeneration.selectedSourceAssets, assetId]);
-          toast.success(tToast("success.referenceAssetAdded"));
-        }
-        return;
-      } catch (error) {
-        console.error("解析素材数据失败:", error);
+    // 加载选中素材的详情
+    const assets: AssetWithTags[] = [];
+    for (const assetId of assetIds) {
+      const result = await getAsset(assetId);
+      if (result.success && result.asset) {
+        assets.push(result.asset);
       }
     }
-
-    // 如果没有素材数据，尝试处理文件
-    const files = Array.from(e.dataTransfer.files).filter(file => 
-      file.type.startsWith('image/')
-    );
-
-    if (files.length > 0) {
-      await handleFiles(files);
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      await handleFiles(Array.from(files));
-    }
-  };
-
-  const handleFiles = async (files: File[]) => {
-    setIsUploading(true);
-    try {
-      const newImages = files.map(file => ({
-        file,
-        preview: URL.createObjectURL(file),
-        id: Math.random().toString(36).substring(7),
-      }));
-      
-      setUploadedImages(prev => [...prev, ...newImages]);
-      toast.success(`${files.length} images added`);
-    } catch {
-      toast.error(tToast("error.addImageFailed"));
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleRemoveImage = (id: string) => {
-    setUploadedImages(prev => {
-      const updated = prev.filter(img => img.id !== id);
-      // 释放 URL
-      const removed = prev.find(img => img.id === id);
-      if (removed) {
-        URL.revokeObjectURL(removed.preview);
-      }
-      return updated;
-    });
+    setSelectedAssets(assets);
+    toast.success(`已选择 ${assetIds.length} 张参考图`);
   };
 
   const handleRemoveSelectedAsset = (assetId: string) => {
-    setSelectedSourceAssets(
-      assetGeneration.selectedSourceAssets.filter(id => id !== assetId)
-    );
+    const newAssetIds = assetGeneration.selectedSourceAssets.filter(id => id !== assetId);
+    setSelectedSourceAssets(newAssetIds);
   };
 
   // 生成图片 - 创建后台任务
@@ -311,26 +214,8 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     try {
       let result;
       
-      // 如果有上传的图片，先上传到服务器
-      const uploadedAssetIds: string[] = [];
-      if (uploadedImages.length > 0) {
-        toast.info(tToast("info.uploadingReferenceImages"));
-        for (const img of uploadedImages) {
-          const uploadResult = await uploadAsset({
-            projectId,
-            userId: state.project?.userId || '',
-            assetName: `ref_${Date.now()}`,
-            file: img.file,
-          });
-          
-          if (uploadResult.success && uploadResult.assetId) {
-            uploadedAssetIds.push(uploadResult.assetId);
-          }
-        }
-      }
-
-      // 合并所有参考图的ID
-      const allReferenceIds = [...uploadedAssetIds, ...assetGeneration.selectedSourceAssets];
+      // 获取所有参考图的ID
+      const allReferenceIds = assetGeneration.selectedSourceAssets;
 
       if (allReferenceIds.length > 0) {
         // 图生图模式
@@ -372,10 +257,8 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     aspectRatio,
     resolution,
     numImages,
-    uploadedImages,
     assetGeneration,
     refreshJobs,
-    state.project?.userId,
     t,
     tToast,
   ]);
@@ -430,46 +313,31 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         {/* 主卡片 */}
         <Card className="border overflow-hidden">
           <CardContent className="p-0">
-            {/* 图片拖拽区域 */}
+            {/* 参考图片区域 */}
             <div
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
               className={cn(
                 "relative border-b bg-muted/20 transition-all",
-                (uploadedImages.length === 0 && selectedAssets.length === 0) ? "min-h-[240px]" : "min-h-[160px]",
-                isDragging && "border-primary bg-primary/5",
-                (isGenerating || isUploading) && "opacity-60"
+                selectedAssets.length === 0 ? "min-h-[240px]" : "min-h-[160px]",
+                isGenerating && "opacity-60"
               )}
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileSelect}
-                className="hidden"
-                disabled={isGenerating || isUploading}
-              />
-
-              {(uploadedImages.length === 0 && selectedAssets.length === 0) ? (
+              {selectedAssets.length === 0 ? (
                 <div 
-                  onClick={() => !isGenerating && !isUploading && fileInputRef.current?.click()}
+                  onClick={() => !isGenerating && setAssetPickerOpen(true)}
                   className={cn(
                     "absolute inset-0 flex flex-col items-center justify-center gap-3 cursor-pointer",
-                    (isGenerating || isUploading) && "cursor-not-allowed"
+                    isGenerating && "cursor-not-allowed"
                   )}
                 >
                   <div className="w-12 h-12 rounded-full bg-background border flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-muted-foreground" />
+                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-medium text-foreground">
-                      拖拽图片到此处，或点击上传
+                      点击从素材库选择参考图片
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      也可以从左侧创作素材库拖拽素材作为参考
+                      可选择多张图片作为创作参考
                     </p>
                   </div>
                 </div>
@@ -504,41 +372,18 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                           <X className="w-4 h-4" />
                         </button>
                         <div className="absolute bottom-1 left-1 right-1 bg-primary/90 text-primary-foreground text-[10px] px-1 py-0.5 rounded truncate">
-                          创作素材库
+                          {asset.name}
                         </div>
-                      </div>
-                    ))}
-                    {/* 上传的图片 */}
-                    {uploadedImages.map((img) => (
-                      <div key={img.id} className="relative group">
-                        <div className="w-24 h-24 rounded-lg overflow-hidden border bg-background">
-                          <Image
-                            src={img.preview}
-                            alt="预览"
-                            width={96}
-                            height={96}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveImage(img.id);
-                          }}
-                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
                       </div>
                     ))}
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        fileInputRef.current?.click();
+                        setAssetPickerOpen(true);
                       }}
                       className="w-24 h-24 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
                     >
-                      <Upload className="w-5 h-5 text-muted-foreground" />
+                      <ImageIcon className="w-5 h-5 text-muted-foreground" />
                     </div>
                   </div>
                 </div>
@@ -758,6 +603,16 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         open={purchaseDialogOpen}
         onOpenChange={setPurchaseDialogOpen}
         highlightPackage={PackageType.STARTER}
+      />
+
+      {/* 素材库选择弹窗 */}
+      <AssetLibraryPickerDialog
+        open={assetPickerOpen}
+        onOpenChange={setAssetPickerOpen}
+        projectId={projectId}
+        selectedAssetIds={assetGeneration.selectedSourceAssets}
+        onConfirm={handleAssetPickerConfirm}
+        maxSelection={10}
       />
     </ScrollArea>
   );

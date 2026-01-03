@@ -138,8 +138,7 @@ export const asset: any = pgTable("asset", {
   duration: integer("duration"), // 视频时长（毫秒）
   
   // 文本字段（文本类型必填）
-  textContent: text("text_content"), // 文本内容
-  textFormat: text("text_format"), // 文本格式（'markdown' | 'plain'）
+  textContent: text("text_content"), // 文本内容（统一使用 Markdown 格式）
   
   // 生成信息
   prompt: text("prompt"), // 生成用的prompt
