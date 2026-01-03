@@ -227,6 +227,15 @@ export async function getQueueResult(
 
 // ============= Kling Video 类型定义 =============
 
+// 视频生成方式枚举
+export type VideoGenerationType = 
+  | "image-to-video"      // 首尾帧过渡
+  | "reference-to-video"  // 多图参考（当前）
+  | "video-to-video";     // 视频续写
+
+// 模型层级（预留Pro版本支持）
+export type ModelTier = "standard" | "pro";
+
 export type VideoDuration = "5" | "10";
 export type VideoAspectRatio = "16:9" | "9:16" | "1:1";
 
@@ -243,6 +252,15 @@ export interface ImageToVideoInput {
   duration?: VideoDuration;
   negative_prompt?: string;
   generate_audio?: boolean;
+}
+
+// Kling O1 首尾帧配置（image-to-video）
+export interface KlingO1ImageToVideoInput {
+  prompt: string;
+  start_image_url: string;      // 起始帧（必填）
+  end_image_url?: string;        // 结束帧（可选）
+  duration?: VideoDuration;
+  negative_prompt?: string;
 }
 
 export interface ImageToVideoOutput {
@@ -375,6 +393,21 @@ export interface KlingO1ReferenceToVideoInput {
   negative_prompt?: string;           // 负面提示词
 }
 
+/**
+ * Kling O1 Video-to-Video 输入参数（视频续写）
+ * 
+ * 基于现有视频片段生成下一段，保持风格和运动连贯性
+ */
+export interface VideoToVideoInput {
+  prompt: string;                     // 详细描述，使用 @Video1 引用视频，@Image1/@Element1 引用图片
+  video_url: string;                  // 参考视频URL（必填）
+  image_urls?: string[];              // 可选：风格/场景参考图
+  elements?: KlingO1Element[];        // 可选：角色元素
+  duration?: VideoDuration;           // 视频时长：5秒或10秒
+  aspect_ratio?: VideoAspectRatio;    // 宽高比
+  negative_prompt?: string;           // 负面提示词
+}
+
 // ============= Kling O1 Reference-to-Video 接口 =============
 
 /**
@@ -491,6 +524,128 @@ export async function queueReferenceToVideo(
   );
 
   return { request_id };
+}
+
+// ============= Kling O1 Image-to-Video（首尾帧）接口 =============
+
+/**
+ * 使用 Kling O1 Image-to-Video API 生成首尾帧过渡视频
+ * 
+ * 支持特性：
+ * - 平滑的首尾帧过渡动画
+ * - 可选的结束帧（只提供起始帧则自动生成运动）
+ * - 适合场景切换、时间流逝等效果
+ * 
+ * API 文档: https://fal.ai/models/fal-ai/kling-video/o1/standard/image-to-video
+ */
+export async function generateKlingO1ImageToVideo(
+  input: KlingO1ImageToVideoInput
+): Promise<ImageToVideoOutput> {
+  configureFal();
+
+  // 处理图片 URL（如果是 R2 key，转换为公开 URL）
+  const processImageUrl = async (url: string): Promise<string> => {
+    if (!url.startsWith("http")) {
+      const publicUrl = getImageUrl(url);
+      return publicUrl || url;
+    }
+    return url;
+  };
+
+  const startImageUrl = await processImageUrl(input.start_image_url);
+  const endImageUrl = input.end_image_url 
+    ? await processImageUrl(input.end_image_url)
+    : undefined;
+
+  const result = await fal.subscribe(
+    "fal-ai/kling-video/o1/standard/image-to-video",
+    {
+      input: {
+        prompt: input.prompt,
+        start_image_url: startImageUrl,
+        end_image_url: endImageUrl,
+        duration: input.duration ?? "5",
+        negative_prompt: input.negative_prompt ?? "blur, distort, low quality, subtitles",
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      },
+    }
+  );
+
+  return result.data as ImageToVideoOutput;
+}
+
+// ============= Kling O1 Video-to-Video（视频续写）接口 =============
+
+/**
+ * 使用 Kling O1 Video-to-Video API 生成视频续写
+ * 
+ * 支持特性：
+ * - 基于参考视频生成下一段
+ * - 保持运动风格和镜头语言连贯
+ * - 可结合角色元素和风格参考图
+ * 
+ * API 文档: https://fal.ai/models/fal-ai/kling-video/o1/standard/video-to-video/reference
+ */
+export async function generateVideoToVideo(
+  input: VideoToVideoInput
+): Promise<ImageToVideoOutput> {
+  configureFal();
+
+  // 处理所有 URL（视频和图片）
+  const processUrl = async (url: string): Promise<string> => {
+    if (!url.startsWith("http")) {
+      const publicUrl = getImageUrl(url);
+      return publicUrl || url;
+    }
+    return url;
+  };
+
+  const videoUrl = await processUrl(input.video_url);
+
+  // 处理 elements（如果有）
+  const processedElements = input.elements 
+    ? await Promise.all(
+        input.elements.map(async (element) => ({
+          frontal_image_url: await processUrl(element.frontal_image_url),
+          reference_image_urls: element.reference_image_urls
+            ? await Promise.all(element.reference_image_urls.map(processUrl))
+            : undefined,
+        }))
+      )
+    : undefined;
+
+  // 处理全局参考图（如果有）
+  const processedImageUrls = input.image_urls
+    ? await Promise.all(input.image_urls.map(processUrl))
+    : undefined;
+
+  const result = await fal.subscribe(
+    "fal-ai/kling-video/o1/standard/video-to-video/reference",
+    {
+      input: {
+        prompt: input.prompt,
+        video_url: videoUrl,
+        elements: processedElements,
+        image_urls: processedImageUrls,
+        duration: input.duration ?? "5",
+        aspect_ratio: input.aspect_ratio ?? "16:9",
+        negative_prompt: input.negative_prompt ?? "blur, distort, low quality, subtitles",
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      },
+    }
+  );
+
+  return result.data as ImageToVideoOutput;
 }
 
 // ============= Vision 接口 =============

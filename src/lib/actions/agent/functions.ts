@@ -83,99 +83,104 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `使用 Kling O1 Reference-to-Video API 生成视频资产。
+    description: `生成视频资产，支持2种Kling AI生成方式，根据素材类型智能选择最佳方式。
 
-⚠️ 重要限制（参数会被自动校验）：
-1. **图片总数限制**：elements 和 image_urls 中的图片总数不能超过 7 张
-   - elements 中每个角色的 frontal_image_url + reference_image_urls 都计入总数
-   - 超过限制会导致校验失败，请减少图片数量
+## 🎬 生成方式速查
 
-2. **elements 要求**：每个 element 必须包含至少一张 reference_image_urls
-   - 如果角色只有一张图片，必须放到 image_urls 中，不要使用 elements
-   - 错误示例：elements: [{ frontal_image_url: "xxx.png" }]  // 缺少 reference_image_urls
-   - 正确做法：image_urls: ["xxx.png"]
+### 1️⃣ 首尾帧过渡 (image-to-video)
+**适用场景：** 分镜较为简单，首位帧能够充分表达含义
+**素材要求：** 1-2张图片（起始帧必填，结束帧可选）
+**典型用途：** 场景切换、时间流逝、物体变化
 
-3. **prompt 要求**：必须详细描述镜头运动和画面内容（至少10个字符）
-   - 使用英文描述
-   - 在描述中自然嵌入 @Element1、@Image1 等占位符引用图片
-
-4. **duration**：只能是字符串 "5" 或 "10"（不是数字）
-
-5. **aspect_ratio**：只能是 "16:9"、"9:16" 或 "1:1"
-
-💡 最佳实践：
-- 先用 query_assets 查询可用素材
-- 根据素材数量合理分配到 elements 和 image_urls
-- 多角度的角色用 elements（需要至少2张图），单图场景用 image_urls
-- prompt 要详细且准确
-
-## 完整示例
-假设 Assets 包含以下图片（共7张）：
-- "温室废墟-鸟瞰" (首帧) → image_urls[0]
-- "汤姆-正面照" → elements[0].frontal_image_url  
-- "汤姆-背面照" → elements[0].reference_image_urls[0]
-- "汤姆-侧面照" → elements[0].reference_image_urls[1]
-- "魔法石-特写" → elements[1].frontal_image_url
-- "魔法石-发光" → elements[1].reference_image_urls[0]
-- "温室内部风格参考" → image_urls[1]
-
-生成的配置：
+**示例：**
 \`\`\`json
 {
-  "title": "温室废墟发现魔法石",
-  "referenceAssetIds": ["asset-1", "asset-2", "asset-3", "asset-4", "asset-5", "asset-6", "asset-7"],
-  "klingO1Config": {
-    "prompt": "Take @Image1 as the start frame. Start with a high-angle satellite view of the ancient greenhouse ruin surrounded by nature. The camera swoops down and flies inside the building, revealing the character from @Element1 standing in the sun-drenched center. The camera then seamlessly transitions into a smooth 180-degree orbit around the character, moving to the back view. As the open backpack comes into focus, the camera continues to push forward, zooming deep inside the bag to reveal the glowing stone from @Element2 nestled inside. Cinematic lighting, hopeful atmosphere, 35mm lens. Make sure to keep it as the style of @Image2.",
-    "image_urls": [
-      "https://v3b.fal.media/files/b/koala/v9COzzH23FGBYdGLgbK3u.png",
-      "https://v3b.fal.media/files/b/elephant/5Is2huKQFSE7A7c5uUeUF.png"
-    ],
-    "elements": [
-      {
-        "frontal_image_url": "https://v3b.fal.media/files/b/panda/MQp-ghIqshvMZROKh9lW3.png",
-        "reference_image_urls": [
-          "https://v3b.fal.media/files/b/kangaroo/YMpmQkYt9xugpOTQyZW0O.png",
-          "https://v3b.fal.media/files/b/zebra/d6ywajNyJ6bnpa_xBue-K.png"
-        ]
-      },
-      {
-        "frontal_image_url": "https://v3b.fal.media/files/b/koala/gSnsA7HJlgcaTyR5Ujj2H.png",
-        "reference_image_urls": [
-          "https://v3b.fal.media/files/b/kangaroo/EBF4nWihspyv4pp6hgj7D.png"
-        ]
-      }
-    ],
-    "duration": "5",
-    "aspect_ratio": "16:9"
+  "videoGenerationType": "image-to-video",
+  "imageToVideoConfig": {
+    "prompt": "Smooth camera push-in. @Image1 as start, @Image2 as end. Cinematic transition from winter to spring.",
+    "start_image_url": "asset-winter-scene",
+    "end_image_url": "asset-spring-scene",
+    "duration": "5"
   },
-  "tags": ["开场", "发现", "魔法"]
+  "title": "冬春季节过渡"
 }
 \`\`\`
+
+### 2️⃣ 参考生成 (reference-to-video) 
+**适用场景：** 镜头较为复杂，或者前后镜头需要较强的连贯性
+**素材要求：** 
+  - 多图参考：2-7张图片（支持角色elements + 场景image_urls组合）
+  - 视频续写：1个参考视频 + 可选的风格参考图
+**典型用途：** 角色动作、镜头运动、复杂场景合成、视频接续
+
+**多图参考示例：**
+\`\`\`json
+{
+  "videoGenerationType": "reference-to-video",
+  "referenceToVideoConfig": {
+    "prompt": "Character from @Element1 walks forward in the scene from @Image1. Camera follows smoothly.",
+    "elements": [{ 
+      "frontal_image_url": "asset-character-front",
+      "reference_image_urls": ["asset-character-side", "asset-character-back"]
+    }],
+    "image_urls": ["asset-scene-bg"],
+    "duration": "5"
+  }
+}
+\`\`\`
+
+**视频续写示例：**
+\`\`\`json
+{
+  "videoGenerationType": "reference-to-video",
+  "referenceToVideoConfig": {
+    "prompt": "Based on @Video1, character continues walking into the forest. Keep the same cinematic style as @Image1.",
+    "video_url": "asset-video-123",
+    "image_urls": ["asset-forest-style"],
+    "duration": "5"
+  },
+  "title": "进入森林-续"
+}
+\`\`\`
+
+## 💡 智能选择建议
+Agent应根据查询到的素材自动选择：
+- 素材只有1-2张图 → **image-to-video**（首尾帧）
+- 素材有2-7张图，包含角色多角度 → **reference-to-video**（多图参考）
+- 素材包含视频 → **reference-to-video** + video_url（视频续写）
+
+## ⚠️ 重要约束
+1. **图片总数限制：** reference-to-video 的 elements + image_urls 总图片数 ≤ 7张
+2. **Prompt要求：** 必须详细描述镜头运动和画面内容（≥10字符）
+3. **Duration格式：** 字符串 "5" 或 "10"（不是数字）
+4. **参考占位符：** 
+   - image-to-video: 用 @Image1（起始）、@Image2（结束）
+   - reference-to-video (多图): 用 @Element1、@Image1 等
+   - reference-to-video (视频): 用 @Video1 + @Image1/@Element1（可选）
 `,
     displayName: "生成视频资产",
     parameters: {
       type: "object",
       properties: {
+        videoGenerationType: {
+          type: "string",
+          description: "视频生成方式。可选值：'image-to-video'（首尾帧过渡）、'reference-to-video'（参考生成，支持多图参考或视频续写，默认）",
+        },
+        imageToVideoConfig: {
+          type: "object",
+          description: "首尾帧配置（仅当 videoGenerationType='image-to-video' 时使用）。包含：prompt（必填）、start_image_url（必填）、end_image_url（可选）、duration（可选）",
+        },
+        referenceToVideoConfig: {
+          type: "object",
+          description: "参考生成配置（仅当 videoGenerationType='reference-to-video' 时使用）。包含：prompt（必填）、video_url（可选，传入时为视频续写）、elements（可选）、image_urls（可选）、duration（可选）、aspect_ratio（可选）",
+        },
         title: {
           type: "string",
           description: "视频标题（可选），便于识别和管理",
         },
         referenceAssetIds: {
           type: "array",
-          description: "参考素材ID数组（可选）。这些素材将用于视频生成，需要在 klingO1Config 中引用",
-        },
-        klingO1Config: {
-          type: "object",
-          description: `Kling O1 API 完整配置。包含：
-- prompt: 电影化视频描述（必填，英文，在描述中自然嵌入 @Element1/@Image1 等占位符）
-- elements: 角色/物体元素数组（可选，用于角色一致性控制）
-  * 每个 element 必须包含 frontal_image_url（正面图）和至少一张 reference_image_urls（多角度参考图）
-  * ⚠️ 重要：如果某个角色只有一张图片，不要使用 elements，而是放到 image_urls 中
-- image_urls: 首帧/风格/场景/氛围参考图URL数组（可选，第一张通常作为首帧）
-- duration: "5" 或 "10"（可选，默认 "5"）
-- aspect_ratio: "16:9"/"9:16"/"1:1"（可选，默认 "16:9"）
-
-注意：elements 和 image_urls 中的图片总数最多 7 张`,
+          description: "参考素材ID数组（可选）。这些素材将用于视频生成",
         },
         tags: {
           type: "array",
@@ -186,7 +191,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           description: "排序值（可选），用于在视频库中排序",
         },
       },
-      required: ["klingO1Config"],
     },
     category: "generation",
     needsConfirmation: true,

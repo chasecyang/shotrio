@@ -4,7 +4,7 @@
  * 在 Agent 执行 function 前校验参数，提前发现错误并返回给 AI 修正
  */
 
-import { validateKlingO1Config, type ValidationResult } from "@/lib/utils/video-validation";
+import { validateReferenceToVideoConfig, type ValidationResult } from "@/lib/utils/video-validation";
 
 /**
  * 校验 Function 参数
@@ -55,25 +55,89 @@ export async function validateFunctionParameters(
 
 /**
  * 校验 generate_video_asset 参数
+ * 支持两种生成方式：image-to-video, reference-to-video（包含视频续写）
  */
-function validateGenerateVideoParams(params: any): ValidationResult {
+function validateGenerateVideoParams(params: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
-  // 检查必填参数
-  if (!params.klingO1Config) {
-    errors.push("缺少必填参数 klingO1Config");
-    return { valid: false, errors, warnings: [] };
+  // 获取生成方式（默认 reference-to-video 保持向后兼容）
+  const type = params.videoGenerationType || "reference-to-video";
+
+  // 根据类型路由到不同的校验函数
+  switch (type) {
+    case "image-to-video":
+      if (!params.imageToVideoConfig) {
+        errors.push("videoGenerationType='image-to-video' 时必须提供 imageToVideoConfig");
+        return { valid: false, errors, warnings };
+      }
+      return validateImageToVideoConfig(params.imageToVideoConfig as Record<string, unknown>);
+
+    case "reference-to-video":
+      if (!params.referenceToVideoConfig) {
+        errors.push("videoGenerationType='reference-to-video' 时必须提供 referenceToVideoConfig");
+        return { valid: false, errors, warnings };
+      }
+      return validateReferenceToVideoConfig(params.referenceToVideoConfig as import("@/lib/utils/video-validation").ExtendedVideoConfig);
+
+    default:
+      errors.push(`未知的 videoGenerationType: ${type}。仅支持 image-to-video 和 reference-to-video`);
+      return { valid: false, errors, warnings };
+  }
+}
+
+/**
+ * 校验 image-to-video 配置（首尾帧）
+ */
+function validateImageToVideoConfig(config: Record<string, unknown>): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // 1. 校验 prompt
+  if (!config.prompt || typeof config.prompt !== 'string') {
+    errors.push("imageToVideoConfig.prompt 是必填字段");
+  } else if (config.prompt.trim().length < 10) {
+    errors.push("imageToVideoConfig.prompt 必须至少包含 10 个字符");
   }
 
-  // 校验 klingO1Config
-  return validateKlingO1Config(params.klingO1Config);
+  // 2. 校验 start_image_url（必填）
+  if (!config.start_image_url || typeof config.start_image_url !== 'string') {
+    errors.push("imageToVideoConfig.start_image_url 是必填字段");
+  }
+
+  // 3. 校验 duration 格式
+  if (config.duration && typeof config.duration === 'string' && !["5", "10"].includes(config.duration)) {
+    errors.push("imageToVideoConfig.duration 必须是字符串 '5' 或 '10'");
+  }
+
+  // 4. 建议在 prompt 中使用 @Image1 和 @Image2
+  if (typeof config.prompt === 'string' && !config.prompt.includes("@Image1")) {
+    warnings.push("建议在 prompt 中使用 @Image1 引用起始帧");
+  }
+  if (config.end_image_url && typeof config.prompt === 'string' && !config.prompt.includes("@Image2")) {
+    warnings.push("提供了 end_image_url，建议在 prompt 中使用 @Image2 引用结束帧");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    normalizedConfig: {
+      prompt: typeof config.prompt === 'string' ? config.prompt.trim() : '',
+      start_image_url: config.start_image_url as string,
+      end_image_url: config.end_image_url as string | undefined,
+      duration: (config.duration as string) || "5",
+      negative_prompt: config.negative_prompt as string | undefined,
+    } as unknown as import("@/lib/utils/video-validation").ExtendedVideoConfig,
+  };
 }
+
 
 /**
  * 校验 generate_image_asset 参数
  * TODO: 实现完整校验
  */
-function validateGenerateAssetsParams(params: any): ValidationResult {
+function validateGenerateAssetsParams(params: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -88,7 +152,7 @@ function validateGenerateAssetsParams(params: any): ValidationResult {
   }
 
   // 检查每个 asset
-  params.assets.forEach((asset: any, index: number) => {
+  params.assets.forEach((asset: Record<string, unknown>, index: number) => {
     if (!asset.prompt || typeof asset.prompt !== 'string') {
       errors.push(`assets[${index}] 缺少必填参数 prompt`);
     } else if (asset.prompt.trim().length < 5) {

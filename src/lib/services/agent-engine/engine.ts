@@ -264,7 +264,7 @@ export class AgentEngine {
       let sentContentLength = 0; // 追踪已发送内容的长度
       const toolCalls: Array<{ id: string; name: string; args: string }> = [];
       let lastUpdateTime = Date.now();
-      const throttleInterval = 5; // 5ms 节流
+      const throttleInterval = 50; // 50ms 节流
       
       const stream = await openai.chat.completions.create({
         model: this.config.modelName,

@@ -422,6 +422,13 @@ export async function createVideoAsset(data: {
     const assetId = randomUUID();
     const jobId = randomUUID();
 
+    // 向后兼容：如果 generationConfig 没有 type 字段，自动设置为 reference-to-video
+    const config = { ...data.generationConfig };
+    if (!config.type) {
+      config.type = "reference-to-video";
+      console.log(`[createVideoAsset] 向后兼容：自动设置 type=reference-to-video`);
+    }
+
     // 1. 创建 asset 记录（assetType='video', sourceType='generated'）
     await db.insert(asset).values({
       id: assetId,
@@ -431,7 +438,7 @@ export async function createVideoAsset(data: {
       prompt: data.prompt,
       assetType: "video",
       sourceType: "generated", // 视频资产都是生成类
-      generationConfig: JSON.stringify(data.generationConfig),
+      generationConfig: JSON.stringify(config),
       sourceAssetIds: data.referenceAssetIds || null,
       order: data.order || null,
       usageCount: 0,
@@ -504,7 +511,7 @@ export async function getVideoAssets(
   }
 ): Promise<{
   success: boolean;
-  videos?: AssetWithTags[];
+  videos?: import("@/types/asset").AssetWithRuntimeStatus[];
   error?: string;
 }> {
   const session = await auth.api.getSession({

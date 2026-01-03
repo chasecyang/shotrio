@@ -7,9 +7,9 @@ import { getAllEnumLabels } from "@/lib/constants/enums";
 import { safeJSONParse, parseAsArray } from "./json-helpers";
 
 /**
- * Kling O1 配置展示结构
+ * Reference-to-Video 配置展示结构
  */
-export interface KlingO1ConfigDisplay {
+export interface ReferenceToVideoConfigDisplay {
   prompt: string;              // 完整prompt
   promptHighlights?: {         // @label占位符高亮信息
     label: string;
@@ -443,7 +443,7 @@ export function parsePromptReferences(prompt: string): PromptPart[] {
  * 注意：这是一个简化版本，不查询数据库
  * 实际使用时应该从shotAssets映射URL到label
  */
-export function extractImagesFromKlingO1Config(
+export function extractImagesFromReferenceToVideoConfig(
   config: {
     prompt?: string;
     elements?: Array<{
@@ -453,8 +453,8 @@ export function extractImagesFromKlingO1Config(
     image_urls?: string[];
   },
   urlToLabelMap?: Map<string, string>
-): KlingO1ConfigDisplay['images'] {
-  const images: KlingO1ConfigDisplay['images'] = [];
+): ReferenceToVideoConfigDisplay['images'] {
+  const images: ReferenceToVideoConfigDisplay['images'] = [];
   
   // 从elements中提取图片
   if (config.elements) {
@@ -504,7 +504,7 @@ export function extractImagesFromKlingO1Config(
  * 格式化Kling O1配置为可展示的结构
  * 这是简化版本，不需要异步查询数据库
  */
-export function formatKlingO1ConfigSync(
+export function formatReferenceToVideoConfigSync(
   config: {
     prompt?: string;
     elements?: Array<{
@@ -516,7 +516,7 @@ export function formatKlingO1ConfigSync(
     aspect_ratio?: string;
   },
   urlToLabelMap?: Map<string, string>
-): KlingO1ConfigDisplay {
+): ReferenceToVideoConfigDisplay {
   const prompt = config.prompt || '';
   
   // 解析prompt中的引用
@@ -526,7 +526,7 @@ export function formatKlingO1ConfigSync(
     .map(p => ({ label: p.label! }));
   
   // 提取所有图片
-  const images = extractImagesFromKlingO1Config(config, urlToLabelMap);
+  const images = extractImagesFromReferenceToVideoConfig(config, urlToLabelMap);
   
   // 格式化duration
   const duration = config.duration ? `${config.duration}秒` : '5秒';

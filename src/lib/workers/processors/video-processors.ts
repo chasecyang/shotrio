@@ -3,7 +3,14 @@
 import db from "@/lib/db";
 import { asset } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { generateReferenceToVideo, type KlingO1ReferenceToVideoInput } from "@/lib/services/fal.service";
+import { 
+  generateReferenceToVideo, 
+  generateKlingO1ImageToVideo,
+  generateVideoToVideo,
+  type KlingO1ReferenceToVideoInput,
+  type KlingO1ImageToVideoInput,
+  type VideoToVideoInput,
+} from "@/lib/services/fal.service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
@@ -14,6 +21,7 @@ import type {
   FinalVideoExportInput,
   FinalVideoExportResult,
 } from "@/types/job";
+import type { VideoGenerationConfig } from "@/types/asset";
 import { verifyProjectOwnership } from "../utils/validation";
 import { extractVideoThumbnail } from "@/lib/utils/video-thumbnail";
 
@@ -67,22 +75,25 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       throw new Error("视频生成配置不存在");
     }
 
-    // 2. 解析 Kling O1 配置
-    const klingO1Config: KlingO1ReferenceToVideoInput = JSON.parse(assetData.generationConfig);
+    // 2. 解析视频生成配置
+    const config: VideoGenerationConfig = JSON.parse(assetData.generationConfig);
+    
+    // 向后兼容：如果没有 type 字段，默认为 reference-to-video
+    const type = config.type || "reference-to-video";
 
-    console.log(`[Worker] Kling O1 配置:`, {
-      prompt: klingO1Config.prompt,
-      elementsCount: klingO1Config.elements?.length || 0,
-      globalImagesCount: klingO1Config.image_urls?.length || 0,
-      duration: klingO1Config.duration,
-      aspectRatio: klingO1Config.aspect_ratio,
+    console.log(`[Worker] 视频生成类型: ${type}`);
+    console.log(`[Worker] 配置:`, {
+      type,
+      prompt: config.prompt,
+      duration: config.duration,
+      aspectRatio: config.aspect_ratio,
     });
 
     // 注意：不需要手动更新asset状态为processing
     // 状态从关联的job动态计算，job已经在startJob时被设置为processing
 
     // 3. 计算积分消费
-    const videoDuration = parseInt(klingO1Config.duration || "5");
+    const videoDuration = parseInt(config.duration || "5");
     const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
     
     await updateJobProgress(
@@ -94,16 +105,17 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    // 5. 扣除积分
+    // 4. 扣除积分
     const spendResult = await spendCredits({
       userId: jobData.userId,
       amount: creditsNeeded,
-      description: `生成 ${videoDuration}秒 视频（Kling O1）`,
+      description: `生成 ${videoDuration}秒 视频（${type}）`,
       metadata: {
         jobId: jobData.id,
         assetId,
         projectId: jobData.projectId,
         duration: videoDuration,
+        type,
         costPerSecond: CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND,
       },
     });
@@ -118,21 +130,69 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       {
         jobId: jobData.id,
         progress: 25,
-        progressMessage: "调用 Kling O1 API 生成视频...",
+        progressMessage: `调用 Kling API 生成视频（${type}）...`,
       },
       workerToken
     );
 
-    // 6. 调用 Kling O1 API
-    console.log(`[Worker] 调用 Kling O1 API`);
-    console.log(`[Worker] 完整配置:`, JSON.stringify(klingO1Config, null, 2));
+    // 5. 根据类型路由到不同的 API
+    console.log(`[Worker] 调用 Kling API (${type})`);
+    console.log(`[Worker] 完整配置:`, JSON.stringify(config, null, 2));
     
     let videoResult;
     try {
-      videoResult = await generateReferenceToVideo(klingO1Config);
+      switch (type) {
+        case "image-to-video": {
+          // 首尾帧过渡
+          const i2vInput: KlingO1ImageToVideoInput = {
+            prompt: config.prompt,
+            start_image_url: config.start_image_url!,
+            end_image_url: config.end_image_url,
+            duration: config.duration,
+            negative_prompt: config.negative_prompt,
+          };
+          videoResult = await generateKlingO1ImageToVideo(i2vInput);
+          break;
+        }
+
+        case "reference-to-video":
+        case "video-to-video": {
+          // reference-to-video：根据 video_url 判断调用哪个 API
+          if (config.video_url) {
+            // 有视频 → 视频续写
+            console.log(`[Worker] 检测到 video_url，使用 video-to-video API`);
+            const v2vInput: VideoToVideoInput = {
+              prompt: config.prompt,
+              video_url: config.video_url,
+              image_urls: config.image_urls,
+              elements: config.elements,
+              duration: config.duration,
+              aspect_ratio: config.aspect_ratio,
+              negative_prompt: config.negative_prompt,
+            };
+            videoResult = await generateVideoToVideo(v2vInput);
+          } else {
+            // 无视频 → 多图参考
+            console.log(`[Worker] 未检测到 video_url，使用 reference-to-video API`);
+            const r2vInput: KlingO1ReferenceToVideoInput = {
+              prompt: config.prompt,
+              elements: config.elements,
+              image_urls: config.image_urls,
+              duration: config.duration,
+              aspect_ratio: config.aspect_ratio,
+              negative_prompt: config.negative_prompt,
+            };
+            videoResult = await generateReferenceToVideo(r2vInput);
+          }
+          break;
+        }
+
+        default:
+          throw new Error(`未知的视频生成类型: ${type}`);
+      }
     } catch (error) {
       // 打印详细错误信息
-      console.error(`[Worker] Kling O1 API 调用失败:`, error);
+      console.error(`[Worker] Kling API 调用失败 (${type}):`, error);
       if (error && typeof error === 'object' && 'body' in error) {
         console.error(`[Worker] 错误详情:`, JSON.stringify((error as any).body, null, 2));
       }
@@ -142,12 +202,13 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         await refundCredits({
           userId: jobData.userId,
           amount: creditsNeeded,
-          description: `视频生成失败，退还积分`,
+          description: `视频生成失败（${type}），退还积分`,
           metadata: {
             jobId: jobData.id,
             assetId,
             originalTransactionId: transactionId,
             reason: "generation_failed",
+            type,
           },
         });
       }
@@ -162,7 +223,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       throw new Error("视频生成失败：未返回视频URL");
     }
 
-    console.log(`[Worker] Kling O1 API 返回视频URL: ${videoResult.video.url}`);
+    console.log(`[Worker] Kling API (${type}) 返回视频URL: ${videoResult.video.url}`);
 
     await updateJobProgress(
       {

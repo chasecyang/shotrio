@@ -5,28 +5,39 @@
 
 import type { KlingO1ReferenceToVideoInput } from "@/lib/services/fal.service";
 
+/**
+ * 扩展的视频配置类型（支持 video_url）
+ */
+export interface ExtendedVideoConfig extends KlingO1ReferenceToVideoInput {
+  video_url?: string; // 视频续写时使用
+}
+
 export interface ValidationResult {
   valid: boolean;
   errors: string[];      // 阻断性错误
   warnings: string[];    // 警告信息
-  normalizedConfig?: KlingO1ReferenceToVideoInput; // 修正后的配置
+  normalizedConfig?: ExtendedVideoConfig; // 修正后的配置
 }
 
 /**
- * 校验 Kling O1 配置参数
+ * 校验 reference-to-video 配置参数（统一处理多图参考和视频续写）
  * 
  * 校验规则：
  * 1. prompt 非空且有意义（≥10个字符）
- * 2. 图片总数 1-7 张
- * 3. elements 中每个元素必须有 reference_image_urls
- * 4. duration 为 "5" 或 "10"
- * 5. aspect_ratio 为 "16:9"、"9:16" 或 "1:1"
+ * 2. 多图参考模式：图片总数 1-7 张
+ * 3. 视频续写模式：video_url 必填，图片总数 ≤ 7 张（可选）
+ * 4. elements 中每个元素必须有 reference_image_urls
+ * 5. duration 为 "5" 或 "10"
+ * 6. aspect_ratio 为 "16:9"、"9:16" 或 "1:1"
  */
-export function validateKlingO1Config(
-  config: KlingO1ReferenceToVideoInput
+export function validateReferenceToVideoConfig(
+  config: ExtendedVideoConfig
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+
+  // 判断是否为视频续写模式
+  const isVideoToVideo = Boolean(config.video_url);
 
   // 1. 校验 prompt
   if (!config.prompt || typeof config.prompt !== 'string') {
@@ -35,7 +46,19 @@ export function validateKlingO1Config(
     errors.push(`prompt 必须至少包含 10 个字符，当前只有 ${config.prompt.trim().length} 个字符`);
   }
 
-  // 2. 计算图片总数
+  // 2. 视频续写模式：校验 video_url
+  if (isVideoToVideo) {
+    if (!config.video_url || typeof config.video_url !== 'string') {
+      errors.push("视频续写模式下，video_url 是必填字段");
+    }
+    
+    // 建议在 prompt 中使用 @Video1
+    if (config.prompt && !config.prompt.includes("@Video1")) {
+      warnings.push("建议在 prompt 中使用 @Video1 引用参考视频");
+    }
+  }
+
+  // 3. 计算图片总数
   let totalImages = 0;
   const imageUrls = new Set<string>(); // 用于检测重复
   
@@ -53,7 +76,7 @@ export function validateKlingO1Config(
       // reference_image_urls
       if (el.reference_image_urls && Array.isArray(el.reference_image_urls)) {
         totalImages += el.reference_image_urls.length;
-        el.reference_image_urls.forEach(url => imageUrls.add(url));
+        el.reference_image_urls.forEach((url) => imageUrls.add(url));
       }
     });
   }
@@ -61,17 +84,31 @@ export function validateKlingO1Config(
   // 统计 image_urls
   if (config.image_urls && Array.isArray(config.image_urls)) {
     totalImages += config.image_urls.length;
-    config.image_urls.forEach(url => imageUrls.add(url));
+    config.image_urls.forEach((url) => imageUrls.add(url));
   }
 
-  // 检查图片数量
-  if (totalImages === 0) {
-    errors.push("至少需要提供一张图片（通过 elements 或 image_urls）");
-  } else if (totalImages > 7) {
-    errors.push(
-      `图片总数为 ${totalImages} 张，超过 API 限制（最多 7 张）。` +
-      `请减少 elements 或 image_urls 中的图片数量。`
-    );
+  // 4. 检查图片数量
+  if (isVideoToVideo) {
+    // 视频续写模式：图片可选，但不能超过 7 张
+    if (totalImages > 7) {
+      errors.push(
+        `图片总数为 ${totalImages} 张，超过 API 限制（最多 7 张）。` +
+        `请减少 elements 或 image_urls 中的图片数量。`
+      );
+    }
+    if (totalImages === 0) {
+      warnings.push("视频续写模式下未提供参考图片，将仅基于视频生成");
+    }
+  } else {
+    // 多图参考模式：至少需要 1 张图片
+    if (totalImages === 0) {
+      errors.push("多图参考模式下，至少需要提供一张图片（通过 elements 或 image_urls）");
+    } else if (totalImages > 7) {
+      errors.push(
+        `图片总数为 ${totalImages} 张，超过 API 限制（最多 7 张）。` +
+        `请减少 elements 或 image_urls 中的图片数量。`
+      );
+    }
   }
 
   // 检查是否有重复图片（警告）
@@ -79,7 +116,7 @@ export function validateKlingO1Config(
     warnings.push(`检测到重复的图片 URL（${totalImages - imageUrls.size} 处重复），建议去重以节省配额`);
   }
 
-  // 3. 校验 elements 格式
+  // 5. 校验 elements 格式
   if (config.elements && Array.isArray(config.elements)) {
     config.elements.forEach((el, index) => {
       // 检查是否缺少 reference_image_urls
@@ -106,7 +143,7 @@ export function validateKlingO1Config(
     });
   }
 
-  // 4. 校验 image_urls 格式
+  // 6. 校验 image_urls 格式
   if (config.image_urls && Array.isArray(config.image_urls)) {
     config.image_urls.forEach((url, index) => {
       if (!isValidImageUrl(url)) {
@@ -115,7 +152,7 @@ export function validateKlingO1Config(
     });
   }
 
-  // 5. 校验 duration
+  // 7. 校验 duration
   if (config.duration) {
     const validDurations = ["5", "10"];
     if (!validDurations.includes(config.duration)) {
@@ -125,7 +162,7 @@ export function validateKlingO1Config(
     }
   }
 
-  // 6. 校验 aspect_ratio
+  // 8. 校验 aspect_ratio
   if (config.aspect_ratio) {
     const validRatios = ["16:9", "9:16", "1:1"];
     if (!validRatios.includes(config.aspect_ratio)) {
@@ -135,8 +172,16 @@ export function validateKlingO1Config(
     }
   }
 
-  // 7. 标准化配置
-  const normalizedConfig = normalizeKlingO1Config(config);
+  // 9. 标准化配置
+  const normalizedConfig = {
+    prompt: config.prompt?.trim(),
+    duration: config.duration || "5",
+    aspect_ratio: config.aspect_ratio || "16:9",
+    negative_prompt: config.negative_prompt,
+    ...(isVideoToVideo ? { video_url: config.video_url } : {}),
+    ...(config.elements ? { elements: config.elements } : {}),
+    ...(config.image_urls ? { image_urls: config.image_urls } : {}),
+  };
 
   return {
     valid: errors.length === 0,
@@ -147,14 +192,14 @@ export function validateKlingO1Config(
 }
 
 /**
- * 标准化 Kling O1 配置
+ * 标准化 reference-to-video 配置
  * 
  * 自动修正：
  * 1. 移除 elements 中 reference_image_urls 为空的项，转移到 image_urls
  * 2. 设置默认值（duration="5", aspect_ratio="16:9"）
  * 3. 去重图片 URL
  */
-export function normalizeKlingO1Config(
+export function normalizeReferenceToVideoConfig(
   config: KlingO1ReferenceToVideoInput
 ): KlingO1ReferenceToVideoInput {
   const normalized: KlingO1ReferenceToVideoInput = {

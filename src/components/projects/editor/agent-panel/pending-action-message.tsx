@@ -9,10 +9,10 @@ import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
   formatParametersForConfirmation, 
   ENUM_VALUE_LABELS,
-  type KlingO1ConfigDisplay,
+  type ReferenceToVideoConfigDisplay,
   type PromptPart,
   parsePromptReferences,
-  formatKlingO1ConfigSync
+  formatReferenceToVideoConfigSync
 } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
@@ -135,8 +135,8 @@ function ParamItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Kling O1 配置展示组件
-function KlingO1ConfigDisplay({ config }: { config: KlingO1ConfigDisplay }) {
+// Reference-to-Video 配置展示组件
+function ReferenceToVideoConfigDisplay({ config }: { config: ReferenceToVideoConfigDisplay }) {
   // 按API引用分组图片
   const groupedImages = useMemo(() => {
     const groups: Record<string, typeof config.images> = {};
@@ -445,22 +445,22 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }
   }, [isGenerateAssets, functionCall.arguments]);
 
-  // 解析视频生成的klingO1Config
-  const klingO1ConfigDisplay = useMemo(() => {
+  // 解析视频生成的referenceToVideoConfig
+  const referenceToVideoConfigDisplay = useMemo(() => {
     if (!isGenerateVideo) return null;
     
     try {
-      const klingO1Config = functionCall.arguments.klingO1Config;
+      const referenceToVideoConfig = functionCall.arguments.referenceToVideoConfig;
       
-      if (!klingO1Config || typeof klingO1Config !== 'object') {
+      if (!referenceToVideoConfig || typeof referenceToVideoConfig !== 'object') {
         return null;
       }
       
-      // 使用formatKlingO1ConfigSync格式化配置
+      // 使用formatReferenceToVideoConfigSync格式化配置
       // 注意：这里没有URL到label的映射，会使用默认标签
-      return formatKlingO1ConfigSync(klingO1Config);
+      return formatReferenceToVideoConfigSync(referenceToVideoConfig);
     } catch (error) {
-      console.error("解析klingO1Config失败:", error);
+      console.error("解析referenceToVideoConfig失败:", error);
       return null;
     }
   }, [isGenerateVideo, functionCall.arguments]);
@@ -564,9 +564,9 @@ export const PendingActionMessage = memo(function PendingActionMessage({
               )
             )
           ) : isGenerateVideo ? (
-            /* 生成视频：显示Kling O1配置 */
-            klingO1ConfigDisplay ? (
-              <KlingO1ConfigDisplay config={klingO1ConfigDisplay} />
+            /* 生成视频：显示参考配置 */
+            referenceToVideoConfigDisplay ? (
+              <ReferenceToVideoConfigDisplay config={referenceToVideoConfigDisplay} />
             ) : (
               /* Fallback: 如果解析失败，使用标准格式化 */
               formattedParams.length > 0 && (
