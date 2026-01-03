@@ -458,7 +458,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
   return (
     <div className="h-full flex flex-col bg-background">
       {/* 顶部导航栏 */}
-      <div className="border-b px-6 py-4 flex items-center justify-between">
+      <div className="px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -469,14 +469,13 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
             <ArrowLeft className="w-4 h-4" />
             返回
           </Button>
-          <div className="h-4 w-px bg-border" />
           <h2 className="text-lg font-semibold">添加素材</h2>
         </div>
       </div>
 
       {/* 主内容区 */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-        <div className="border-b px-6">
+        <div className="px-6 pb-4">
           <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="image" className="flex items-center gap-1.5">
               <ImageIcon className="h-4 w-4" />
@@ -495,8 +494,8 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
 
         {/* 图片生成 Tab */}
         <TabsContent value="image" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6 max-w-4xl mx-auto">
+          <ScrollArea className="flex-1 h-full">
+            <div className="p-6 space-y-6 max-w-4xl mx-auto pb-24">
               {/* 提示词 */}
               <div className="space-y-2">
                 <Label>创作描述</Label>
@@ -666,7 +665,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
           </ScrollArea>
 
           {/* 底部操作栏 */}
-          <div className="border-t p-4 flex justify-end gap-2">
+          <div className="p-6 flex justify-end gap-2 bg-muted/30">
             <Button variant="outline" onClick={onBack}>
               取消
             </Button>
@@ -692,8 +691,8 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
 
         {/* 视频生成 Tab */}
         <TabsContent value="video" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6 max-w-4xl mx-auto">
+          <ScrollArea className="flex-1 h-full">
+            <div className="p-6 space-y-6 max-w-4xl mx-auto pb-24">
               {/* 提示词 */}
               <div className="space-y-2">
                 <Label>视频描述</Label>
@@ -820,7 +819,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
           </ScrollArea>
 
           {/* 底部操作栏 */}
-          <div className="border-t p-4 flex justify-end gap-2">
+          <div className="p-6 flex justify-end gap-2 bg-muted/30">
             <Button variant="outline" onClick={onBack}>
               取消
             </Button>
@@ -837,8 +836,8 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
 
         {/* 文本创建 Tab */}
         <TabsContent value="text" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6 max-w-4xl mx-auto">
+          <ScrollArea className="flex-1 h-full">
+            <div className="p-6 space-y-6 max-w-4xl mx-auto pb-24">
               {/* 名称 */}
               <div className="space-y-2">
                 <Label htmlFor="name">资产名称</Label>
@@ -945,7 +944,7 @@ export function AddAssetPanel({ projectId, onBack, onSuccess }: AddAssetPanelPro
           </ScrollArea>
 
           {/* 底部操作栏 */}
-          <div className="border-t p-4 flex justify-end gap-2">
+          <div className="p-6 flex justify-end gap-2 bg-muted/30">
             <Button variant="outline" onClick={onBack}>
               取消
             </Button>

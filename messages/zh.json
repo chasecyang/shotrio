@@ -910,13 +910,19 @@
         "executing": "执行中..."
       },
       "chatInput": {
-        "placeholder": "输入消息...",
+        "placeholder": "告诉我你想做什么，比如生成素材、创建视频...",
         "send": "发送",
         "sending": "发送中...",
         "stopGeneration": "停止生成",
         "sendMessage": "发送消息",
         "stopToInterrupt": "点击停止按钮中断生成",
-        "enterToSend": "Enter 发送 · Shift+Enter 换行"
+        "enterToSend": "Enter 发送 · Shift+Enter 换行",
+        "examples": [
+          "创作一个猫和老鼠的小故事",
+          "帮我生成一段武侠风格的打斗场景",
+          "创作一个关于未来世界的科幻故事",
+          "生成一个温馨的家庭聚会短片"
+        ]
       },
       "panel": {
         "newConversation": "新对话",
@@ -924,6 +930,7 @@
         "startNewConversation": "开始新对话",
         "startConversation": "开始对话",
         "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等",
+        "emptyState": "创作你的故事",
         "scrollToBottom": "回到底部",
         "aiGenerating": "Agent 正在努力创作",
         "suggestions": {

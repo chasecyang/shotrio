@@ -7,7 +7,6 @@ import { useAgentStream } from "./use-agent-stream";
 import { useEditor } from "../editor-context";
 import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
-import { SuggestionCards } from "./suggestion-cards";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, Square, ArrowDown, ChevronDown, MessageSquarePlus, Trash2, Clock, CheckCircle, AlertCircle } from "lucide-react";
@@ -16,6 +15,7 @@ import { getCreditBalance } from "@/lib/actions/credits/balance";
 import { createConversation, updateConversationTitle, saveInterruptMessage } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
+import { useTypewriter } from "@/hooks/use-typewriter";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +78,19 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 对话删除确认对话框
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  
+  // 获取示例文本
+  const examples = t.raw('editor.agent.chatInput.examples') as string[];
+  
+  // 打字机效果 - 只在空状态且输入为空时显示
+  const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
+  const typewriterText = useTypewriter({
+    words: examples || [],
+    loop: true,
+    typeSpeed: 80,
+    deleteSpeed: 40,
+    delaySpeed: 2000,
+  });
 
   // 检测用户是否在底部
   const handleScroll = useCallback(() => {
@@ -306,16 +319,6 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     toast.info("已停止 AI 生成");
   }, [abort, agent]);
 
-  // 处理建议选择
-  const handleSelectSuggestion = useCallback((text: string) => {
-    setInput(text);
-    // 可选：自动聚焦到输入框
-    setTimeout(() => {
-      const textarea = document.querySelector('textarea');
-      textarea?.focus();
-    }, 100);
-  }, []);
-
   // 键盘快捷键
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -481,16 +484,10 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             <div className="py-2">
               {agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading) ? (
                 <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                  <Bot className="mb-4 h-12 w-12 text-muted-foreground" />
-                  <p className="text-lg font-medium mb-2">
-                    {agent.state.isNewConversation ? t('editor.agent.panel.startNewConversation') : t('editor.agent.panel.startConversation')}
+                  <Bot className="mb-3 h-8 w-8 text-muted-foreground/60" />
+                  <p className="text-sm text-muted-foreground/80">
+                    {t('editor.agent.panel.emptyState')}
                   </p>
-                  <p className="text-sm text-muted-foreground max-w-md mb-8">
-                    {t('editor.agent.panel.welcomeMessage')}
-                  </p>
-                  
-                  {/* 建议卡片 */}
-                  <SuggestionCards onSelectSuggestion={handleSelectSuggestion} />
                 </div>
               ) : (
                 <>
@@ -531,7 +528,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t('editor.agent.chatInput.placeholder')}
+              placeholder={isEmptyState && !input ? typewriterText : t('editor.agent.chatInput.placeholder')}
               className="min-h-[60px] max-h-[120px] resize-none"
             />
             {agent.state.isLoading && !input.trim() ? (

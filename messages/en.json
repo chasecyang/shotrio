@@ -909,13 +909,19 @@
         "executing": "Executing..."
       },
       "chatInput": {
-        "placeholder": "Type a message...",
+        "placeholder": "Tell me what you want to do, like generate assets, create videos...",
         "send": "Send",
         "sending": "Sending...",
         "stopGeneration": "Stop",
         "sendMessage": "Send message",
         "stopToInterrupt": "Click stop button to interrupt generation",
-        "enterToSend": "Enter to send · Shift+Enter for new line"
+        "enterToSend": "Enter to send · Shift+Enter for new line",
+        "examples": [
+          "Create a short story about a cat and a mouse",
+          "Generate a martial arts fight scene",
+          "Create a sci-fi story about the future world",
+          "Generate a warm family gathering video"
+        ]
       },
       "panel": {
         "newConversation": "New Conversation",
@@ -923,6 +929,7 @@
         "startNewConversation": "Start New Conversation",
         "startConversation": "Start Conversation",
         "welcomeMessage": "Tell me what you want to do, I can help you create shots, generate assets, manage projects, and more",
+        "emptyState": "Craft Your Story",
         "scrollToBottom": "Scroll to Bottom",
         "aiGenerating": "Agent is creating",
         "suggestions": {
