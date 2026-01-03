@@ -11,7 +11,7 @@ import { Sparkles, Images, Film, FileText, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
 import { cn } from "@/lib/utils";
-import { AssetUploadDialog } from "./shared/asset-upload-dialog";
+import { AddAssetDialog } from "./shared/add-asset-dialog";
 import { TextAssetDialog } from "./shared/text-asset-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -43,7 +43,7 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
 
   const [allAssets, setAllAssets] = useState<AssetWithRuntimeStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [addAssetDialogOpen, setAddAssetDialogOpen] = useState(false);
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
@@ -261,18 +261,9 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {/* 暂时隐藏上传功能 */}
-            {/* <Button size="sm" variant="outline" onClick={() => setUploadDialogOpen(true)}>
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              上传
-            </Button> */}
-            <Button size="sm" variant="outline" onClick={() => setTextAssetDialogOpen(true)}>
-              <FileText className="h-3.5 w-3.5 mr-1.5" />
-              文本
-            </Button>
-            <Button size="sm" onClick={onOpenAssetGeneration}>
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              AI 生成
+            <Button size="sm" onClick={() => setAddAssetDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              添加素材
             </Button>
           </div>
         </div>
@@ -321,17 +312,10 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
                 }
               </p>
               {allAssets.length === 0 && (
-                <div className="flex gap-2">
-                  <Button onClick={onOpenAssetGeneration} size="sm">
-                    <Sparkles className="w-4 h-4 mr-1.5" />
-                    AI 生成
-                  </Button>
-                  {/* 暂时隐藏上传功能 */}
-                  {/* <Button onClick={() => setUploadDialogOpen(true)} variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-1.5" />
-                    上传素材
-                  </Button> */}
-                </div>
+                <Button onClick={() => setAddAssetDialogOpen(true)} size="sm">
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  添加素材
+                </Button>
               )}
             </div>
           ) : (
@@ -356,16 +340,16 @@ export function AssetGalleryPanel({ userId, onOpenAssetGeneration }: AssetGaller
         </div>
       </div>
 
-      {/* 上传对话框 */}
-      <AssetUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
+      {/* 添加素材对话框 */}
+      <AddAssetDialog
+        open={addAssetDialogOpen}
+        onOpenChange={setAddAssetDialogOpen}
         projectId={project.id}
-        userId={userId}
         onSuccess={handleUploadSuccess}
+        onOpenAIGeneration={onOpenAssetGeneration}
       />
 
-      {/* 文本资产对话框 */}
+      {/* 文本资产编辑对话框 */}
       <TextAssetDialog
         open={textAssetDialogOpen}
         onOpenChange={(open) => {

@@ -8,7 +8,6 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import { BetaBanner } from "@/components/ui/beta-banner";
 import { EditorProvider } from "./editor-context";
 import { EditorHeader } from "./editor-header";
 import { AgentPanel } from "./agent-panel/agent-panel";
@@ -91,9 +90,6 @@ function EditorLayoutInner({
         projects={projects}
         user={user}
       />
-
-      {/* Beta Notice - 编辑器专用 */}
-      <BetaBanner dismissible storageKey="editor-beta-banner-dismissed" />
 
       {/* 主内容区：根据模式切换布局 */}
       {state.mode === "editing" ? (
