@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { 
   AlertCircle, 
   Coins, 
@@ -250,18 +252,19 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   // 判断操作类型
   const isGenerateAssets = functionCall.name === "generate_image_asset";
   const isGenerateVideo = functionCall.name === "generate_video_asset";
+  const isCreateTextAsset = functionCall.name === "create_text_asset";
   const isSetArtStyle = functionCall.name === "set_art_style";
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
-    if (isGenerateAssets || isGenerateVideo || isSetArtStyle) {
+    if (isGenerateAssets || isGenerateVideo || isSetArtStyle || isCreateTextAsset) {
       // 这些操作需要单独处理
       return [];
     } else {
       // 其他操作：使用标准格式化
       return formatParametersForConfirmation(functionCall.arguments);
     }
-  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo, isSetArtStyle]);
+  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo, isSetArtStyle, isCreateTextAsset]);
 
   // 解析生成素材的assets数组（从editedParams读取，支持编辑）
   const generationAssets = useMemo(() => {
@@ -333,6 +336,26 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("获取美术风格名称失败:", error);
     });
   }, [isSetArtStyle, functionCall.arguments.styleId]);
+
+  // 渲染 Markdown 预览（截取前N行）
+  const renderMarkdownPreview = (content: string, maxLines: number = 5) => {
+    const lines = content.split('\n');
+    const preview = lines.slice(0, maxLines).join('\n');
+    const hasMore = lines.length > maxLines;
+    
+    return (
+      <div className="space-y-1">
+        <div className="text-xs text-foreground/80 max-h-32 overflow-hidden">
+          <MarkdownRenderer content={preview} />
+        </div>
+        {hasMore && (
+          <p className="text-xs text-muted-foreground italic">
+            ...还有 {lines.length - maxLines} 行
+          </p>
+        )}
+      </div>
+    );
+  };
 
   const renderEditForm = () => {
     if (isGenerateAssets) {
@@ -467,6 +490,61 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       );
     }
 
+    if (isCreateTextAsset) {
+      return (
+        <div className="space-y-4">
+          <div className="grid gap-2">
+            <Label>名称 *</Label>
+            <Input
+              value={editedParams.name as string || ""}
+              onChange={(e) => setEditedParams({ ...editedParams, name: e.target.value })}
+              placeholder="文本资产名称，如'主角小传'、'第一幕剧本'"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>内容 *</Label>
+            <Tabs defaultValue="edit" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="edit">编辑</TabsTrigger>
+                <TabsTrigger value="preview">预览</TabsTrigger>
+              </TabsList>
+              <TabsContent value="edit" className="mt-2">
+                <Textarea
+                  value={editedParams.content as string || ""}
+                  onChange={(e) => setEditedParams({ ...editedParams, content: e.target.value })}
+                  className="min-h-[300px] font-mono text-sm"
+                  placeholder="支持 Markdown 语法..."
+                />
+              </TabsContent>
+              <TabsContent value="preview" className="mt-2">
+                <div className="min-h-[300px] max-h-[400px] border rounded-md p-4 bg-muted/30 overflow-auto">
+                  <MarkdownRenderer content={editedParams.content as string || "*暂无内容*"} />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label>标签</Label>
+            <Input
+              value={
+                Array.isArray(editedParams.tags) 
+                  ? editedParams.tags.join(", ") 
+                  : (editedParams.tags as string || "")
+              }
+              onChange={(e) => {
+                const tagsStr = e.target.value;
+                const tagsArray = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
+                setEditedParams({ ...editedParams, tags: tagsArray });
+              }}
+              placeholder="用逗号分隔，如: 角色小传, 主角"
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">此操作暂无复杂参数可编辑，请直接确认。</p>
@@ -560,6 +638,30 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          ) : isCreateTextAsset ? (
+            /* 创建文本资产：显示名称、内容预览、标签 */
+            <div className="rounded-md bg-background/50 border border-border/50 p-3">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">名称:</span>
+                  <span className="text-xs text-foreground">{editedParams.name as string || "未命名"}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">内容预览:</span>
+                  {renderMarkdownPreview(editedParams.content as string || "")}
+                </div>
+                {editedParams.tags && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">标签:</span>
+                    <span className="text-xs text-foreground">
+                      {Array.isArray(editedParams.tags) 
+                        ? editedParams.tags.join(", ") 
+                        : editedParams.tags}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           ) : isSetArtStyle ? (
@@ -663,7 +765,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             </Button>
             
             {/* Edit Button */}
-            {(isGenerateAssets || isGenerateVideo) && (
+            {(isGenerateAssets || isGenerateVideo || isCreateTextAsset) && (
               <Button
                 onClick={() => setShowEditDialog(true)}
                 variant="outline"
@@ -705,7 +807,11 @@ export const PendingActionMessage = memo(function PendingActionMessage({
         <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {isGenerateAssets ? "编辑生成素材参数" : "编辑生成视频参数"}
+              {isGenerateAssets 
+                ? "编辑生成素材参数" 
+                : isGenerateVideo 
+                ? "编辑生成视频参数"
+                : "编辑文本资产参数"}
             </DialogTitle>
             <DialogDescription>
               请在确认生成前检查并修改相关参数。

@@ -128,7 +128,7 @@ function formatParameterValue(key: string, value: unknown, mode: FormatMode = "d
     }
 
     // 截断长文本（简洁模式）
-    if (mode === "concise" && (key === "prompt" || key === "description" || key === "visualPrompt")) {
+    if (mode === "concise" && (key === "prompt" || key === "description" || key === "visualPrompt" || key === "content")) {
       return truncateText(value, 100);
     }
 
