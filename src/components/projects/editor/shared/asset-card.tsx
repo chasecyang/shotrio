@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { Trash2, Maximize2, Video, Play, FileText } from "lucide-react";
 import { useState } from "react";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssetProgressOverlay } from "./asset-progress-overlay";
 import type { Job } from "@/types/job";
@@ -89,13 +91,36 @@ export function AssetCard({
       >
         {isText ? (
           // 文本资产 - 显示文本图标和预览
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-4">
-            <FileText className="h-12 w-12 text-amber-600 dark:text-amber-400 mb-2" />
-            {asset.textContent && (
-              <p className="text-xs text-muted-foreground line-clamp-3 text-center px-2">
-                {asset.textContent.substring(0, 100)}...
-              </p>
-            )}
+          <div className="absolute inset-0 flex flex-col p-3 bg-muted/20">
+            <div className="flex items-center gap-1.5 mb-2 opacity-70">
+              <FileText className="h-4 w-4 text-foreground/70" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                Text
+              </span>
+            </div>
+            <div className="flex-1 w-full overflow-hidden relative">
+              <div className="text-[10px] leading-relaxed text-foreground/80 break-words">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                    h1: ({ children }) => <h1 className="text-xs font-bold mb-1 mt-2 first:mt-0">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xs font-bold mb-1 mt-2 first:mt-0">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-[11px] font-semibold mb-1 mt-1 first:mt-0">{children}</h3>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-1 pl-1">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-1 pl-1">{children}</ol>,
+                    li: ({ children }) => <li className="mb-0.5">{children}</li>,
+                    code: ({ children }) => <code className="bg-muted px-1 rounded font-mono text-[9px]">{children}</code>,
+                    pre: ({ children }) => <pre className="bg-muted p-1 rounded mb-1 overflow-hidden">{children}</pre>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-muted pl-2 italic my-1">{children}</blockquote>,
+                  }}
+                >
+                  {asset.textContent || ""}
+                </ReactMarkdown>
+              </div>
+              {/* 底部渐变遮罩 */}
+              <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background/10 to-transparent pointer-events-none" />
+            </div>
           </div>
         ) : isGenerating ? (
           // 生成中状态 - 显示渐变背景和进度覆盖层

@@ -197,6 +197,7 @@ export interface CreateAssetInput {
   sourceType?: AssetSourceType;  // 新增：资产来源类型
   imageUrl?: string;  // 可选，为空表示素材正在生成中
   thumbnailUrl?: string;
+  videoUrl?: string;  // 视频URL（视频类型必填）
   textContent?: string;  // 文本内容（文本类型必填，统一使用 Markdown 格式）
   prompt?: string;
   seed?: number;

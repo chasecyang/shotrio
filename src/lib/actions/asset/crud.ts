@@ -30,15 +30,25 @@ export async function createAssetInternal(
   try {
     const assetId = randomUUID();
 
+    // 根据传入的参数自动判断 assetType
+    let assetType: "image" | "video" | "text" = "image"; // 默认为 image
+    if (input.textContent) {
+      assetType = "text"; // 有文本内容则为文本资产
+    } else if (input.videoUrl) {
+      assetType = "video"; // 有视频URL则为视频资产
+    }
+
     // 插入资产
     await db.insert(asset).values({
       id: assetId,
       projectId: input.projectId,
       userId: input.userId,
       name: input.name,
+      assetType, // 根据内容自动判断类型
       sourceType: input.sourceType || 'generated', // 默认为生成类
       imageUrl: input.imageUrl || null,
       thumbnailUrl: input.thumbnailUrl || null,
+      videoUrl: input.videoUrl || null,
       textContent: input.textContent || null,
       prompt: input.prompt || null,
       seed: input.seed || null,
