@@ -45,40 +45,9 @@ export function EditingModeLayout() {
 
   if (!project) return null;
 
-  if (!timeline) {
-    return (
-      <div className="h-full flex flex-col bg-background">
-        {/* 顶部工具栏骨架 - 和素材库header样式一致 */}
-        <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-9 w-48" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-        </div>
-
-        {/* 主内容区骨架 */}
-        <div className="flex-1 flex flex-col">
-          {/* 预览窗口骨架 */}
-          <div className="flex-1 bg-black/95 flex items-center justify-center p-8">
-            <Skeleton className="w-full max-w-4xl aspect-video" />
-          </div>
-
-          {/* 时间轴骨架 */}
-          <div className="h-64 border-t bg-background p-4">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="space-y-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 顶部工具栏 - 和素材库header样式一致 */}
+      {/* 顶部工具栏 - 始终渲染，不受 timeline 加载状态影响 */}
       <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
         <div className="flex items-center gap-3">
           {/* 模式切换器 */}
@@ -106,28 +75,47 @@ export function EditingModeLayout() {
               <span>剪辑</span>
             </button>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {timeline.clips.length} 个片段
-          </span>
+          {timeline && (
+            <span className="text-xs text-muted-foreground">
+              {timeline.clips.length} 个片段
+            </span>
+          )}
         </div>
       </div>
 
-      {/* 主内容区：上下分栏 */}
-      <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
-        {/* 上部：预览窗口 */}
-        <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
-          <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
-            <VideoPreview playback={videoPlayback} />
+      {/* 主内容区：根据 timeline 状态条件渲染 */}
+      {!timeline ? (
+        // 内容区 skeleton
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 bg-black/95 flex items-center justify-center p-8">
+            <Skeleton className="w-full max-w-4xl aspect-video" />
           </div>
-        </ResizablePanel>
+          <div className="h-64 border-t bg-background p-4">
+            <Skeleton className="h-6 w-32 mb-4" />
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        // 实际内容：上下分栏
+        <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
+          {/* 上部：预览窗口 */}
+          <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
+            <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
+              <VideoPreview playback={videoPlayback} />
+            </div>
+          </ResizablePanel>
 
-        <ResizableHandle withHandle />
+          <ResizableHandle withHandle />
 
-        {/* 下部：时间轴 */}
-        <ResizablePanel defaultSize={40} minSize={30} className="overflow-hidden">
-          <TimelinePanel playback={videoPlayback} />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          {/* 下部：时间轴 */}
+          <ResizablePanel defaultSize={40} minSize={30} className="overflow-hidden">
+            <TimelinePanel playback={videoPlayback} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </div>
   );
 }
