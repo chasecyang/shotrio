@@ -6,12 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Coins, Plus, Check, X, Image as ImageIcon, Loader2, Film, Camera, Clock, Video, Edit, Save } from "lucide-react";
+import { 
+  AlertCircle, 
+  Coins, 
+  Plus, 
+  Check, 
+  X, 
+  Image as ImageIcon, 
+  Loader2, 
+  Edit, 
+  Maximize2 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
   formatParametersForConfirmation, 
-  ENUM_VALUE_LABELS,
   parsePromptReferences
 } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
@@ -26,6 +35,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PendingActionMessageProps {
   functionCall: {
@@ -215,7 +232,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const [artStyleName, setArtStyleName] = useState<string | null>(null);
   
   // 🆕 编辑状态
-  const [isEditing, setIsEditing] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [editedParams, setEditedParams] = useState<Record<string, unknown>>(functionCall.arguments);
   
   // 计算整体 loading 状态
@@ -313,6 +330,147 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     });
   }, [isSetArtStyle, functionCall.arguments.styleId]);
 
+  const renderEditForm = () => {
+    if (isGenerateAssets) {
+      return (
+        generationAssets && generationAssets.length > 0 && (
+          <div className="space-y-6">
+            {generationAssets.map((asset, index) => (
+              <div key={index} className="rounded-md border p-4 space-y-4">
+                <div className="font-medium text-sm flex items-center gap-2">
+                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">#{index + 1}</span>
+                  {asset.name}
+                </div>
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>名称</Label>
+                    <Input
+                      value={asset.name}
+                      onChange={(e) => {
+                        const newAssets = [...generationAssets];
+                        newAssets[index] = { ...newAssets[index], name: e.target.value };
+                        setEditedParams({ ...editedParams, assets: newAssets });
+                      }}
+                      placeholder="资产名称"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>提示词 *</Label>
+                    <Textarea
+                      value={asset.prompt}
+                      onChange={(e) => {
+                        const newAssets = [...generationAssets];
+                        newAssets[index] = { ...newAssets[index], prompt: e.target.value };
+                        setEditedParams({ ...editedParams, assets: newAssets });
+                      }}
+                      className="min-h-[100px]"
+                      placeholder="描述你想生成的图片"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>标签</Label>
+                    <Input
+                      value={asset.tags}
+                      onChange={(e) => {
+                        const newAssets = [...generationAssets];
+                        newAssets[index] = { ...newAssets[index], tags: e.target.value };
+                        setEditedParams({ ...editedParams, assets: newAssets });
+                      }}
+                      placeholder="用逗号分隔，如: 角色, 主角"
+                    />
+                  </div>
+                  {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>参考图 ({asset.sourceAssetIds.length}张)</Label>
+                      <AssetPreview assetIds={asset.sourceAssetIds} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      );
+    }
+    
+    if (isGenerateVideo) {
+      return (
+        <div className="space-y-4">
+          <div className="grid gap-2">
+            <Label>提示词 *</Label>
+            <Textarea
+              value={editedParams.prompt as string || ""}
+              onChange={(e) => setEditedParams({ ...editedParams, prompt: e.target.value })}
+              className="min-h-[100px]"
+              placeholder="描述视频内容和镜头运动"
+            />
+          </div>
+          {editedParams.title !== undefined && (
+            <div className="grid gap-2">
+              <Label>标题</Label>
+              <Input
+                value={editedParams.title as string || ""}
+                onChange={(e) => setEditedParams({ ...editedParams, title: e.target.value })}
+                placeholder="视频标题"
+              />
+            </div>
+          )}
+          {editedParams.duration !== undefined && (
+            <div className="grid gap-2">
+              <Label>时长</Label>
+              <Select
+                value={editedParams.duration as string || "5"}
+                onValueChange={(value) => setEditedParams({ ...editedParams, duration: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5秒</SelectItem>
+                  <SelectItem value="10">10秒</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {editedParams.aspect_ratio !== undefined && (
+            <div className="grid gap-2">
+              <Label>宽高比</Label>
+              <Select
+                value={editedParams.aspect_ratio as string || "16:9"}
+                onValueChange={(value) => setEditedParams({ ...editedParams, aspect_ratio: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="16:9">16:9 (宽屏)</SelectItem>
+                  <SelectItem value="9:16">9:16 (竖屏)</SelectItem>
+                  <SelectItem value="1:1">1:1 (方形)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {/* 显示参考图 */}
+          {formattedParams.map((param) => (
+            param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
+              <div key={param.key} className="space-y-2">
+                <Label>{param.label}</Label>
+                <AssetPreview assetIds={param.assetIds} />
+              </div>
+            )
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <p className="text-muted-foreground text-sm">此操作暂无复杂参数可编辑，请直接确认。</p>
+        {/* 可以遍历 formattedParams 并尝试提供通用编辑，但目前需求主要针对生成类 */}
+      </div>
+    );
+  };
+
   return (
     <div className={cn(
       `rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`,
@@ -334,258 +492,71 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
         </div>
 
-        {/* Function Call Details */}
+        {/* Function Call Details (Read Only Summary) */}
         <div className="space-y-2 pl-9">
           {isGenerateAssets ? (
-            /* 生成素材：横向滚动显示（支持编辑） */
-            generationAssets && generationAssets.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-                  {generationAssets.map((asset, index) => (
-                    <div key={index} className="flex-shrink-0 w-80 rounded-md bg-background/50 border border-border/50 p-3">
-                      {isEditing ? (
-                        /* 编辑模式：显示表单 */
-                        <div className="space-y-2.5">
-                          <div>
-                            <Label className="text-xs mb-1">名称</Label>
-                            <Input
-                              value={asset.name}
-                              onChange={(e) => {
-                                const newAssets = [...generationAssets];
-                                newAssets[index] = { ...newAssets[index], name: e.target.value };
-                                setEditedParams({ ...editedParams, assets: newAssets });
-                              }}
-                              className="h-7 text-xs"
-                              placeholder="资产名称"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs mb-1">提示词 *</Label>
-                            <Textarea
-                              value={asset.prompt}
-                              onChange={(e) => {
-                                const newAssets = [...generationAssets];
-                                newAssets[index] = { ...newAssets[index], prompt: e.target.value };
-                                setEditedParams({ ...editedParams, assets: newAssets });
-                              }}
-                              className="text-xs min-h-[60px]"
-                              placeholder="描述你想生成的图片"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs mb-1">标签</Label>
-                            <Input
-                              value={asset.tags}
-                              onChange={(e) => {
-                                const newAssets = [...generationAssets];
-                                newAssets[index] = { ...newAssets[index], tags: e.target.value };
-                                setEditedParams({ ...editedParams, assets: newAssets });
-                              }}
-                              className="h-7 text-xs"
-                              placeholder="用逗号分隔，如: 角色, 主角"
-                            />
-                          </div>
-                          {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">参考图 ({asset.sourceAssetIds.length}张)</Label>
-                              <AssetPreview assetIds={asset.sourceAssetIds} />
-                            </div>
-                          )}
+            /* 生成素材：横向滚动预览 */
+            generationAssets && generationAssets.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                {generationAssets.map((asset, index) => (
+                  <div key={index} className="flex-shrink-0 w-64 rounded-md bg-background/50 border border-border/50 p-3">
+                    <div className="space-y-1.5">
+                      {asset.name && asset.name !== "-" && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">名称:</span>
+                          <span className="text-xs text-foreground truncate">{asset.name}</span>
                         </div>
-                      ) : (
-                        /* 查看模式：只读显示 */
+                      )}
+                      {asset.prompt && asset.prompt !== "-" && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-medium text-muted-foreground shrink-0">提示词:</span>
+                          <span className="text-xs text-foreground break-words line-clamp-2">{asset.prompt}</span>
+                        </div>
+                      )}
+                      {asset.tags && asset.tags !== "-" && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">标签:</span>
+                          <span className="text-xs text-foreground truncate">{asset.tags}</span>
+                        </div>
+                      )}
+                      {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
                         <div className="space-y-1.5">
-                          {asset.name && asset.name !== "-" && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-muted-foreground">名称:</span>
-                              <span className="text-xs text-foreground truncate">{asset.name}</span>
-                            </div>
-                          )}
-                          {asset.prompt && asset.prompt !== "-" && (
-                            <div className="flex items-start gap-2">
-                              <span className="text-xs font-medium text-muted-foreground shrink-0">提示词:</span>
-                              <span className="text-xs text-foreground break-words line-clamp-3">{asset.prompt}</span>
-                            </div>
-                          )}
-                          {asset.tags && asset.tags !== "-" && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-muted-foreground">标签:</span>
-                              <span className="text-xs text-foreground truncate">{asset.tags}</span>
-                            </div>
-                          )}
-                          {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs font-medium text-muted-foreground">参考图:</span>
-                                <span className="text-xs text-foreground">{asset.sourceAssetIds.length}张</span>
-                              </div>
-                              <AssetPreview assetIds={asset.sourceAssetIds} />
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs font-medium text-muted-foreground">参考图:</span>
+                            <span className="text-xs text-foreground">{asset.sourceAssetIds.length}张</span>
+                          </div>
+                          <AssetPreview assetIds={asset.sourceAssetIds} />
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-                
-                {/* 编辑/保存切换按钮 */}
-                <Button
-                  onClick={() => setIsEditing(!isEditing)}
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  disabled={isLoading}
-                >
-                  {isEditing ? (
-                    <>
-                      <Check className="h-3 w-3 mr-1" />
-                      完成编辑
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="h-3 w-3 mr-1" />
-                      编辑参数
-                    </>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              /* Fallback: 如果解析失败，使用标准格式化 */
-              formattedParams.length > 0 && (
-                <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
-                  <div className="space-y-1.5">
-                    {formattedParams.map((param) => (
-                      <div key={param.key} className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-muted-foreground shrink-0">
-                          {param.label}:
-                        </span>
-                        <span className="text-xs text-foreground break-words">
-                          {param.value}
-                        </span>
-                      </div>
-                    ))}
                   </div>
-                </div>
-              )
+                ))}
+              </div>
             )
           ) : isGenerateVideo ? (
-            /* 生成视频：显示首尾帧参数（支持编辑） */
-            <div className="space-y-3">
-              <div className="rounded-md bg-background/50 border border-border/50 p-3">
-                {isEditing ? (
-                  /* 编辑模式：显示表单 */
-                  <div className="space-y-2.5">
-                    <div>
-                      <Label className="text-xs mb-1">提示词 *</Label>
-                      <Textarea
-                        value={editedParams.prompt as string || ""}
-                        onChange={(e) => setEditedParams({ ...editedParams, prompt: e.target.value })}
-                        className="text-xs min-h-[60px]"
-                        placeholder="描述视频内容和镜头运动"
-                      />
+            /* 生成视频：只读显示 */
+            <div className="rounded-md bg-background/50 border border-border/50 p-3">
+              <div className="space-y-1.5">
+                {formattedParams.map((param) => (
+                  <div key={param.key} className="space-y-1.5">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-medium text-muted-foreground shrink-0">
+                        {param.label}:
+                      </span>
+                      <span className="text-xs text-foreground break-words">
+                        {param.value}
+                      </span>
                     </div>
-                    {editedParams.title !== undefined && (
-                      <div>
-                        <Label className="text-xs mb-1">标题</Label>
-                        <Input
-                          value={editedParams.title as string || ""}
-                          onChange={(e) => setEditedParams({ ...editedParams, title: e.target.value })}
-                          className="h-7 text-xs"
-                          placeholder="视频标题"
-                        />
+                    {/* 如果是素材引用参数，显示图片预览 */}
+                    {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
+                      <div className="pl-0 pt-1">
+                        <AssetPreview assetIds={param.assetIds} />
                       </div>
                     )}
-                    {editedParams.duration !== undefined && (
-                      <div>
-                        <Label className="text-xs mb-1">时长</Label>
-                        <Select
-                          value={editedParams.duration as string || "5"}
-                          onValueChange={(value) => setEditedParams({ ...editedParams, duration: value })}
-                        >
-                          <SelectTrigger className="h-7 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5">5秒</SelectItem>
-                            <SelectItem value="10">10秒</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {editedParams.aspect_ratio !== undefined && (
-                      <div>
-                        <Label className="text-xs mb-1">宽高比</Label>
-                        <Select
-                          value={editedParams.aspect_ratio as string || "16:9"}
-                          onValueChange={(value) => setEditedParams({ ...editedParams, aspect_ratio: value })}
-                        >
-                          <SelectTrigger className="h-7 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="16:9">16:9 (宽屏)</SelectItem>
-                            <SelectItem value="9:16">9:16 (竖屏)</SelectItem>
-                            <SelectItem value="1:1">1:1 (方形)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {/* 显示参考图 */}
-                    {formattedParams.map((param) => (
-                      param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-                        <div key={param.key} className="space-y-1.5">
-                          <Label className="text-xs">{param.label}</Label>
-                          <AssetPreview assetIds={param.assetIds} />
-                        </div>
-                      )
-                    ))}
                   </div>
-                ) : (
-                  /* 查看模式：只读显示 */
-                  <div className="space-y-1.5">
-                    {formattedParams.map((param) => (
-                      <div key={param.key} className="space-y-1.5">
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-medium text-muted-foreground shrink-0">
-                            {param.label}:
-                          </span>
-                          <span className="text-xs text-foreground break-words">
-                            {param.value}
-                          </span>
-                        </div>
-                        {/* 如果是素材引用参数，显示图片预览 */}
-                        {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-                          <div className="pl-0 pt-1">
-                            <AssetPreview assetIds={param.assetIds} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
-              
-              {/* 编辑/保存切换按钮 */}
-              <Button
-                onClick={() => setIsEditing(!isEditing)}
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                disabled={isLoading}
-              >
-                {isEditing ? (
-                  <>
-                    <Check className="h-3 w-3 mr-1" />
-                    完成编辑
-                  </>
-                ) : (
-                  <>
-                    <Edit className="h-3 w-3 mr-1" />
-                    编辑参数
-                  </>
-                )}
-              </Button>
             </div>
           ) : isSetArtStyle ? (
             /* 设置美术风格：显示风格名称 */
@@ -674,11 +645,24 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 </>
               )}
             </Button>
+            
+            {/* Edit Button */}
+            {(isGenerateAssets || isGenerateVideo) && (
+              <Button
+                onClick={() => setShowEditDialog(true)}
+                variant="outline"
+                size="sm"
+                className="h-7 px-3 text-xs"
+                disabled={isLoading}
+              >
+                <Maximize2 className="h-3 w-3 mr-1" />
+                详情 & 修改
+              </Button>
+            )}
+
             <Button
               onClick={() => {
-                // 🆕 传递修改后的参数（如果有修改的话）
-                const finalParams = isEditing ? editedParams : undefined;
-                onConfirm(functionCall.id, finalParams);
+                onConfirm(functionCall.id, editedParams);
               }}
               disabled={insufficientBalance || isLoading}
               size="sm"
@@ -699,6 +683,44 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isGenerateAssets ? "编辑生成素材参数" : "编辑生成视频参数"}
+            </DialogTitle>
+            <DialogDescription>
+              请在确认生成前检查并修改相关参数。
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {renderEditForm()}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              取消
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowEditDialog(false);
+                // 这里我们不需要立即 confirm，而是关闭弹窗，用户可以点击卡片上的确认
+                // 或者我们可以在这里直接 confirm？
+                // 交互上：用户在弹窗改完，点击“确认修改”，应该只是保存到 editedParams？
+                // 或者是“确认并执行”？
+                // 方案：改为“确认并执行”更流畅。
+                onConfirm(functionCall.id, editedParams);
+              }}
+              disabled={insufficientBalance || isLoading}
+            >
+              确认并执行
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Purchase Dialog */}
       <PurchaseDialog

@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useEditor } from "./editor-context";
 import { AssetCard } from "./shared/asset-card";
-import { queryAssets, deleteAsset, deleteAssets } from "@/lib/actions/asset";
+import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Images, Film, Plus } from "lucide-react";
+import { Images, Film } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
 import { cn } from "@/lib/utils";
-import { AddAssetPanel } from "./shared/add-asset-panel";
 import { TextAssetDialog } from "./shared/text-asset-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -37,12 +35,9 @@ const DEFAULT_FILTER: AssetFilterOptions = {
 };
 
 export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
-  const { state, setMode } = useEditor();
-  const { project } = state;
+  const { state, setMode, loadAssets } = useEditor();
+  const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
 
-  const [allAssets, setAllAssets] = useState<AssetWithRuntimeStatus[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showAddAssetPanel, setShowAddAssetPanel] = useState(false);
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
@@ -53,48 +48,29 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   // 媒体查看器状态
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerAsset, setViewerAsset] = useState<AssetWithRuntimeStatus | null>(null);
-  
+
   // 文本资产编辑状态
   const [editingTextAsset, setEditingTextAsset] = useState<AssetWithRuntimeStatus | null>(null);
 
-  // 加载素材
-  const loadAssets = useCallback(async () => {
-    if (!project?.id) return;
-
-    setIsLoading(true);
-    try {
-      const result = await queryAssets({
-        projectId: project.id,
-        limit: 200,
-        search: filterOptions.search,
-        tagFilters: filterOptions.tags.length > 0 ? filterOptions.tags : undefined,
-      });
-      setAllAssets(result.assets);
-    } catch (error) {
-      console.error("加载素材失败:", error);
-      toast.error("加载素材失败");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [project?.id, filterOptions.search, filterOptions.tags]);
-
-  // 初始加载
+  // 初始加载或静默刷新
   useEffect(() => {
-    loadAssets();
-  }, [loadAssets]);
+    if (!project?.id) return;
+    // 始终调用 loadAssets，但只有首次加载时才会显示 skeleton
+    loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
+  }, [project?.id, loadAssets, filterOptions.search, filterOptions.tags]);
 
   // 监听素材创建事件（用于手动上传素材或作为兜底刷新机制）
   // 注意：Agent生成素材的刷新由 useTaskRefresh 统一处理
   useEffect(() => {
     const handleAssetCreated = () => {
-      loadAssets();
+      loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
     };
 
     window.addEventListener("asset-created", handleAssetCreated);
     return () => {
       window.removeEventListener("asset-created", handleAssetCreated);
     };
-  }, [loadAssets]);
+  }, [loadAssets, filterOptions.search, filterOptions.tags]);
 
   // 客户端筛选逻辑（用于素材类型筛选）
   const filteredAssets = useMemo(() => {
@@ -164,7 +140,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
         const count = deletedIds.length;
         toast.success(`已删除 ${count} 个素材`);
         setSelectedAssetIds(new Set());
-        await loadAssets();
+        await loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
       } else {
         toast.error(result.error || "删除失败");
       }
@@ -203,7 +179,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
 
   // 处理上传成功
   const handleUploadSuccess = () => {
-    loadAssets();
+    loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
   };
 
   // 处理重试
@@ -212,7 +188,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
       const result = await retryJob(jobId);
       if (result.success) {
         toast.success("已重新提交任务");
-        await loadAssets();
+        await loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
       } else {
         toast.error(result.error || "重试失败");
       }
@@ -223,20 +199,6 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   };
 
   if (!project) return null;
-
-  // 如果显示添加素材面板，则渲染面板而不是素材列表
-  if (showAddAssetPanel) {
-    return (
-      <AddAssetPanel
-        projectId={project.id}
-        onBack={() => setShowAddAssetPanel(false)}
-        onSuccess={() => {
-          loadAssets();
-          setShowAddAssetPanel(false);
-        }}
-      />
-    );
-  }
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -273,12 +235,6 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
               ({filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`})
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setShowAddAssetPanel(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              添加素材
-            </Button>
-          </div>
         </div>
         
         {/* 筛选栏 */}
@@ -295,7 +251,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
       {/* 素材网格 */}
       <div className="flex-1 overflow-auto">
         <div className="p-4">
-          {isLoading ? (
+          {!assetsLoaded && assetsLoading ? (
             <div
               className="grid gap-3"
               style={{
@@ -318,18 +274,12 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
               <h3 className="text-base font-semibold mb-2">
                 {allAssets.length === 0 ? "暂无素材" : "没有符合条件的素材"}
               </h3>
-              <p className="text-sm text-muted-foreground mb-6 text-center max-w-sm">
-                {allAssets.length === 0 
-                  ? "开始创作第一个素材，可以使用 AI 生成或上传本地文件"
+              <p className="text-sm text-muted-foreground text-center max-w-sm">
+                {allAssets.length === 0
+                  ? "暂无素材"
                   : "尝试调整筛选条件查看更多素材"
                 }
               </p>
-              {allAssets.length === 0 && (
-                <Button onClick={() => setShowAddAssetPanel(true)} size="sm">
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  添加素材
-                </Button>
-              )}
             </div>
           ) : (
             <div

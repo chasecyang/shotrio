@@ -1,13 +1,14 @@
 "use client";
 
-import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect } from "react";
+import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect, useRef } from "react";
 import { ProjectDetail } from "@/types/project";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
 import { refreshProject } from "@/lib/actions/project/refresh";
-import type { GenerationHistoryItem } from "@/types/asset";
+import type { GenerationHistoryItem, AssetWithRuntimeStatus } from "@/types/asset";
 import type { TimelineDetail } from "@/types/timeline";
+import { queryAssets } from "@/lib/actions/asset";
 
 // 编辑器模式
 export type EditorMode = "asset-management" | "editing";
@@ -30,19 +31,24 @@ export interface PlaybackState {
 export interface EditorState {
   // 工作模式
   mode: EditorMode;
-  
+
   // 项目数据
   project: ProjectDetail | null;
-  
+
   // 时间轴数据
   timeline: TimelineDetail | null;
-  
+
   // 加载状态
   isLoading: boolean;
 
+  // 素材列表状态
+  assets: AssetWithRuntimeStatus[];
+  assetsLoading: boolean;
+  assetsLoaded: boolean; // 标记是否已完成首次加载
+
   // 素材生成状态
   assetGeneration: AssetGenerationState;
-  
+
   // 播放状态
   playback: PlaybackState;
 }
@@ -55,6 +61,8 @@ type EditorAction =
   | { type: "SET_MODE"; payload: EditorMode }
   | { type: "SET_TIMELINE"; payload: TimelineDetail | null }
   | { type: "UPDATE_TIMELINE"; payload: TimelineDetail }
+  | { type: "SET_ASSETS"; payload: AssetWithRuntimeStatus[] }
+  | { type: "SET_ASSETS_LOADING"; payload: boolean }
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }
   | { type: "ADD_GENERATION_HISTORY"; payload: GenerationHistoryItem }
@@ -70,6 +78,9 @@ const initialState: EditorState = {
   project: null,
   timeline: null,
   isLoading: true,
+  assets: [],
+  assetsLoading: false,
+  assetsLoaded: false,
   assetGeneration: {
     mode: "text-to-image",
     selectedSourceAssets: [],
@@ -121,6 +132,20 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         timeline: action.payload,
+      };
+
+    case "SET_ASSETS":
+      return {
+        ...state,
+        assets: action.payload,
+        assetsLoaded: true,
+        assetsLoading: false,
+      };
+
+    case "SET_ASSETS_LOADING":
+      return {
+        ...state,
+        assetsLoading: action.payload,
       };
 
     case "SET_ASSET_GENERATION_MODE":
@@ -202,6 +227,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
+// 素材加载选项
+export interface LoadAssetsOptions {
+  search?: string;
+  tags?: string[];
+}
+
 // Context 类型
 interface EditorContextType {
   state: EditorState;
@@ -211,6 +242,8 @@ interface EditorContextType {
   setMode: (mode: EditorMode) => void; // 切换编辑器模式
   setTimeline: (timeline: TimelineDetail | null) => void; // 设置时间轴数据
   updateTimeline: (timeline: TimelineDetail) => void; // 更新时间轴数据
+  // 素材相关方法
+  loadAssets: (options?: LoadAssetsOptions) => Promise<void>; // 加载素材列表
   // 任务轮询（单例）
   jobs: Job[];
   refreshJobs: () => void;
@@ -255,7 +288,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     }, []),
 
     onRefreshAssets: useCallback(async () => {
-      // 触发素材列表刷新事件，AssetGalleryPanel 会监听此事件
+      // 直接刷新素材列表，同时保留事件以兼容其他监听器
       window.dispatchEvent(new CustomEvent("asset-created"));
     }, []),
   });
@@ -296,6 +329,36 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "UPDATE_TIMELINE", payload: timeline });
   }, []);
 
+  // 用于防止重复加载的 ref
+  const isLoadingAssetsRef = useRef(false);
+
+  // 加载素材列表
+  const loadAssets = useCallback(async (options?: LoadAssetsOptions) => {
+    if (!state.project?.id) return;
+    if (isLoadingAssetsRef.current) return;
+
+    // 仅在首次加载时显示 loading
+    if (!state.assetsLoaded) {
+      dispatch({ type: "SET_ASSETS_LOADING", payload: true });
+    }
+
+    isLoadingAssetsRef.current = true;
+    try {
+      const result = await queryAssets({
+        projectId: state.project.id,
+        limit: 200,
+        search: options?.search,
+        tagFilters: options?.tags && options.tags.length > 0 ? options.tags : undefined,
+      });
+      dispatch({ type: "SET_ASSETS", payload: result.assets });
+    } catch (error) {
+      console.error("加载素材失败:", error);
+      dispatch({ type: "SET_ASSETS_LOADING", payload: false });
+    } finally {
+      isLoadingAssetsRef.current = false;
+    }
+  }, [state.project?.id, state.assetsLoaded]);
+
   // 素材生成相关方法
   const setAssetGenerationMode = useCallback((mode: "text-to-image" | "image-to-image") => {
     dispatch({ type: "SET_ASSET_GENERATION_MODE", payload: mode });
@@ -321,6 +384,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setMode,
       setTimeline,
       updateTimeline,
+      loadAssets,
       setAssetGenerationMode,
       setSelectedSourceAssets,
       addGenerationHistory,
@@ -334,6 +398,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setMode,
       setTimeline,
       updateTimeline,
+      loadAssets,
       setAssetGenerationMode,
       setSelectedSourceAssets,
       addGenerationHistory,
