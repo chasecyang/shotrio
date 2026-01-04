@@ -14,9 +14,13 @@ import {
   X, 
   Image as ImageIcon, 
   Loader2, 
-  Edit, 
   Maximize2 
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
@@ -605,24 +609,36 @@ export const PendingActionMessage = memo(function PendingActionMessage({
         {/* Footer: Credit Cost and Actions */}
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
           {/* Credit Cost */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-background text-xs">
-            <Coins className="h-3.5 w-3.5 text-primary" />
-            <span className="text-muted-foreground">{t('agent.credits.total')}</span>
-            <span className="font-semibold text-foreground">{totalCost}</span>
-            <span className="text-muted-foreground">{t('credits.creditsUnit')}</span>
-            {insufficientBalance && (
-              <span className="text-red-600 dark:text-red-400 ml-1">
-                ({t('agent.credits.insufficient')}: {currentBalance}<button
-                  onClick={() => setShowPurchaseDialog(true)}
-                  className="inline-flex items-center justify-center w-4 h-4 ml-0.5 rounded-sm text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
-                  title={t('credits.addCredits')}
-                  type="button"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>)
-              </span>
-            )}
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-background text-xs cursor-default">
+                <Coins className="h-3.5 w-3.5 text-primary" />
+                <span className="font-semibold text-foreground">{totalCost}</span>
+                {insufficientBalance && (
+                  <span className="flex items-center text-red-600 dark:text-red-400 ml-1">
+                    <span className="text-xs">({currentBalance})</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPurchaseDialog(true);
+                      }}
+                      className="inline-flex items-center justify-center w-4 h-4 ml-0.5 rounded-sm text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                      title={t('credits.addCredits')}
+                      type="button"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {insufficientBalance 
+                ? `${t('agent.credits.total')} ${totalCost} ${t('credits.creditsUnit')} (${t('agent.credits.insufficient')}: ${currentBalance})`
+                : `${t('agent.credits.total')} ${totalCost} ${t('credits.creditsUnit')}`
+              }
+            </TooltipContent>
+          </Tooltip>
 
           {/* Action Buttons */}
           <div className="flex gap-2">
