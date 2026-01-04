@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { updateProject, deleteProject } from "@/lib/actions/project";
 import { getSystemArtStyles, getUserArtStyles } from "@/lib/actions/art-style/queries";
 import { StyleSelector } from "./style-selector";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Check, AlertCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useTranslations } from "next-intl";
+import { useAutoSave, SaveStatus } from "@/hooks/use-auto-save";
 
 interface ProjectSettingsFormProps {
   project: ProjectDetail;
@@ -37,7 +38,6 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   const router = useRouter();
   const t = useTranslations("projects.settings");
   const tToasts = useTranslations("toasts");
-  const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [systemStyles, setSystemStyles] = useState<ArtStyle[]>([]);
   const [loadingStyles, setLoadingStyles] = useState(true);
@@ -47,6 +47,37 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
     description: project.description || "",
     styleId: project.styleId || null,
     stylePrompt: project.stylePrompt || "",
+  });
+
+  const [originalData] = useState({
+    title: project.title,
+    description: project.description || "",
+    styleId: project.styleId || null,
+    stylePrompt: project.stylePrompt || "",
+  });
+
+  // 自动保存处理
+  const handleAutoSave = useCallback(async (data: typeof formData) => {
+    if (!data.title.trim()) {
+      return { success: false, error: "请输入项目名称" };
+    }
+    const result = await updateProject(project.id, {
+      title: data.title,
+      description: data.description || null,
+      styleId: data.styleId,
+      stylePrompt: data.stylePrompt || null,
+    });
+    if (result.success) {
+      router.refresh();
+    }
+    return result;
+  }, [project.id, router]);
+
+  const { saveStatus } = useAutoSave({
+    data: formData,
+    originalData,
+    onSave: handleAutoSave,
+    delay: 1000,
   });
 
   // 加载风格列表
@@ -69,36 +100,6 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
     loadStyles();
   }, [userId, tToasts]);
 
-  async function handleSave() {
-    if (!formData.title.trim()) {
-      toast.error(tToasts("error.enterProjectName"));
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await updateProject(project.id, {
-        title: formData.title,
-        description: formData.description || null,
-        styleId: formData.styleId,
-        stylePrompt: formData.stylePrompt || null,
-      });
-
-      if (result.success) {
-        toast.success(tToasts("success.settingsSaved"));
-        // 刷新页面数据
-        router.refresh();
-      } else {
-        toast.error(result.error || tToasts("error.saveFailed"));
-      }
-    } catch (error) {
-      toast.error(tToasts("error.saveFailed"));
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -119,98 +120,85 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t("description")}
-        </p>
+    <div className="space-y-8">
+      {/* 保存状态 */}
+      {saveStatus !== "idle" && (
+        <div className="flex justify-end">
+          <SaveStatusIndicator status={saveStatus} />
+        </div>
+      )}
+
+      {/* 项目名称 */}
+      <div className="space-y-2">
+        <Label htmlFor="title">{t("projectName")}</Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) =>
+            setFormData({ ...formData, title: e.target.value })
+          }
+          placeholder={t("projectNamePlaceholder")}
+        />
       </div>
 
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">{t("projectName")}</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              disabled={loading}
-              placeholder={t("projectNamePlaceholder")}
-            />
-          </div>
+      {/* 项目描述 */}
+      <div className="space-y-2">
+        <Label htmlFor="description">{t("projectDescription")}</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
+          placeholder={t("projectDescriptionPlaceholder")}
+          rows={3}
+        />
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">{t("projectDescription")}</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              disabled={loading}
-              placeholder={t("projectDescriptionPlaceholder")}
-              rows={3}
-            />
+      {/* 美术风格选择 */}
+      <div className="space-y-3" id="style">
+        <Label>{t("artStyle")}</Label>
+        <p className="text-xs text-muted-foreground">
+          {t("artStyleDescription")}
+        </p>
+        
+        {loadingStyles ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
-
-          {/* 美术风格选择 */}
-          <div className="space-y-3" id="style">
-            <Label>{t("artStyle")}</Label>
-            <p className="text-xs text-muted-foreground">
-              {t("artStyleDescription")}
-            </p>
+        ) : (
+          <Tabs defaultValue="preset" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="preset">{t("presetStyle")}</TabsTrigger>
+              <TabsTrigger value="custom">{t("customStyle")}</TabsTrigger>
+            </TabsList>
             
-            {loadingStyles ? (
-              <div className="flex items-center justify-center p-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <TabsContent value="preset" className="mt-4">
+              <StyleSelector
+                styles={systemStyles}
+                selectedStyleId={formData.styleId}
+                onSelect={(styleId) => setFormData({ ...formData, styleId, stylePrompt: "" })}
+              />
+            </TabsContent>
+            
+            <TabsContent value="custom" className="mt-4">
+              <div className="space-y-2">
+                <Textarea
+                  value={formData.stylePrompt}
+                  onChange={(e) =>
+                    setFormData({ ...formData, stylePrompt: e.target.value, styleId: null })
+                  }
+                  placeholder={t("customStylePlaceholder")}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("customStyleHint")}
+                </p>
               </div>
-            ) : (
-              <Tabs defaultValue="preset" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="preset">{t("presetStyle")}</TabsTrigger>
-                  <TabsTrigger value="custom">{t("customStyle")}</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="preset" className="mt-4">
-                  <StyleSelector
-                    styles={systemStyles}
-                    selectedStyleId={formData.styleId}
-                    onSelect={(styleId) => setFormData({ ...formData, styleId, stylePrompt: "" })}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="custom" className="mt-4">
-                  <div className="space-y-2">
-                    <Textarea
-                      value={formData.stylePrompt}
-                      onChange={(e) =>
-                        setFormData({ ...formData, stylePrompt: e.target.value, styleId: null })
-                      }
-                      disabled={loading}
-                      placeholder={t("customStylePlaceholder")}
-                      rows={4}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t("customStyleHint")}
-                    </p>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {!loading && <Save className="mr-2 h-4 w-4" />}
-              {t("saveButton")}
-            </Button>
-          </div>
-        </div>
-      </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
 
       <Card className="p-6 border-destructive">
         <div className="space-y-4">
@@ -249,6 +237,34 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
           </AlertDialog>
         </div>
       </Card>
+    </div>
+  );
+}
+
+// 保存状态指示器组件
+function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+  if (status === "idle") return null;
+  
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      {status === "saving" && (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">保存中...</span>
+        </>
+      )}
+      {status === "saved" && (
+        <>
+          <Check className="h-4 w-4 text-green-500" />
+          <span className="text-green-500">已保存</span>
+        </>
+      )}
+      {status === "error" && (
+        <>
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <span className="text-destructive">保存失败</span>
+        </>
+      )}
     </div>
   );
 }
