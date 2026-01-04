@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,7 +11,7 @@ import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 import { EditorCreditsButton } from "./editor-credits-button";
 import { BetaBadge } from "@/components/ui/beta-badge";
-import { ProjectSettingsDialog } from "./project-settings-dialog";
+import { useEditor } from "./editor-context";
 import type { EditorProject, EditorUser } from "./editor-types";
 
 interface EditorHeaderProps {
@@ -26,7 +25,7 @@ export function EditorHeader({
   projects,
   user,
 }: EditorHeaderProps) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { setShowSettings } = useEditor();
 
   return (
     <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 gap-4 shrink-0">
@@ -56,7 +55,7 @@ export function EditorHeader({
                 variant="ghost" 
                 size="icon" 
                 className="h-8 w-8"
-                onClick={() => setSettingsOpen(true)}
+                onClick={() => setShowSettings(true)}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -87,12 +86,6 @@ export function EditorHeader({
         {/* 用户菜单 */}
         <UserNav user={user} variant="default" />
       </div>
-
-      {/* 项目设置弹窗 */}
-      <ProjectSettingsDialog 
-        open={settingsOpen} 
-        onOpenChange={setSettingsOpen} 
-      />
     </header>
   );
 }

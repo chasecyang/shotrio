@@ -12,6 +12,7 @@ import { EditorHeader } from "./editor-header";
 import { AgentPanel } from "./agent-panel/agent-panel";
 import { AssetGalleryPanel } from "./asset-gallery-panel";
 import { EditingModeLayout } from "./editing-mode/editing-mode-layout";
+import { ProjectSettingsPanel } from "./project-settings-panel";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
@@ -86,46 +87,30 @@ function EditorLayoutInner({
         user={user}
       />
 
-      {/* 主内容区：根据模式切换布局 */}
-      {state.mode === "editing" ? (
-        /* 剪辑模式：保持Agent在左侧，右侧是剪辑界面 */
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* 左侧：AI 对话面板 */}
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={60}>
-            <div className="h-full overflow-hidden border-r">
-              <AgentPanel projectId={project.id} />
-            </div>
-          </ResizablePanel>
+      {/* 主内容区：根据设置面板状态和模式切换布局 */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* 左侧：AI 对话面板 */}
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={60}>
+          <div className="h-full overflow-hidden border-r">
+            <AgentPanel projectId={project.id} />
+          </div>
+        </ResizablePanel>
 
-          <ResizableHandle withHandle />
+        <ResizableHandle withHandle />
 
-          {/* 右侧：剪辑界面 */}
-          <ResizablePanel defaultSize={70} minSize={40}>
+        {/* 右侧：根据状态显示不同面板 */}
+        <ResizablePanel defaultSize={70} minSize={40}>
+          {state.showSettings ? (
+            <ProjectSettingsPanel />
+          ) : state.mode === "editing" ? (
             <EditingModeLayout />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      ) : (
-        /* 素材管理模式：原有布局 */
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* 左侧：AI 对话面板 */}
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={60}>
-            <div className="h-full overflow-hidden border-r">
-              <AgentPanel projectId={project.id} />
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* 右侧：素材展示面板 */}
-          <ResizablePanel defaultSize={70} minSize={40}>
+          ) : (
             <div className="h-full overflow-hidden">
-              <AssetGalleryPanel 
-                userId={user.id}
-              />
+              <AssetGalleryPanel userId={user.id} />
             </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      )}
+          )}
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }

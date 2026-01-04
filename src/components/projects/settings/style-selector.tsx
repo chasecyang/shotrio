@@ -2,7 +2,6 @@
 
 import { ArtStyle } from "@/types/art-style";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -62,17 +61,10 @@ export function StyleSelector({ styles, selectedStyleId, onSelect }: StyleSelect
             
             {/* 风格信息 */}
             <div className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h4 className="font-medium text-sm">{style.name}</h4>
-                  {style.nameEn && (
-                    <p className="text-xs text-muted-foreground">{style.nameEn}</p>
-                  )}
-                </div>
-                {style.userId === null && style.usageCount > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {style.usageCount}次
-                  </Badge>
+              <div className="mb-2">
+                <h4 className="font-medium text-sm">{style.name}</h4>
+                {style.nameEn && (
+                  <p className="text-xs text-muted-foreground">{style.nameEn}</p>
                 )}
               </div>
               

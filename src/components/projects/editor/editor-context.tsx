@@ -51,6 +51,9 @@ export interface EditorState {
 
   // 播放状态
   playback: PlaybackState;
+
+  // 设置面板显示状态
+  showSettings: boolean;
 }
 
 // 编辑器动作类型
@@ -70,7 +73,8 @@ type EditorAction =
   | { type: "SET_PLAYING"; payload: boolean }
   | { type: "SET_CURRENT_TIME"; payload: number }
   | { type: "SET_CURRENT_CLIP_INDEX"; payload: number }
-  | { type: "UPDATE_PLAYBACK"; payload: Partial<PlaybackState> };
+  | { type: "UPDATE_PLAYBACK"; payload: Partial<PlaybackState> }
+  | { type: "SET_SHOW_SETTINGS"; payload: boolean };
 
 // 初始状态
 const initialState: EditorState = {
@@ -91,6 +95,7 @@ const initialState: EditorState = {
     currentTime: 0,
     currentClipIndex: 0,
   },
+  showSettings: false,
 };
 
 // Reducer
@@ -222,6 +227,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         },
       };
 
+    case "SET_SHOW_SETTINGS":
+      return {
+        ...state,
+        showSettings: action.payload,
+      };
+
     default:
       return state;
   }
@@ -252,6 +263,8 @@ interface EditorContextType {
   setSelectedSourceAssets: (assetIds: string[]) => void;
   addGenerationHistory: (history: GenerationHistoryItem) => void;
   clearGenerationHistory: () => void;
+  // 设置面板相关方法
+  setShowSettings: (show: boolean) => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -376,6 +389,10 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "CLEAR_GENERATION_HISTORY" });
   }, []);
 
+  const setShowSettings = useCallback((show: boolean) => {
+    dispatch({ type: "SET_SHOW_SETTINGS", payload: show });
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -389,6 +406,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setSelectedSourceAssets,
       addGenerationHistory,
       clearGenerationHistory,
+      setShowSettings,
       jobs,
       refreshJobs,
     }),
@@ -403,6 +421,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setSelectedSourceAssets,
       addGenerationHistory,
       clearGenerationHistory,
+      setShowSettings,
       jobs,
       refreshJobs,
     ]
