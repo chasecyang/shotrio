@@ -424,6 +424,16 @@ export async function executeFunction(
       }
 
       case "set_art_style": {
+        // 验证参数
+        if (!parameters.styleId) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "缺少必需参数: styleId",
+          };
+          break;
+        }
+
         const updateResult = await updateProject(
           projectId,
           { styleId: parameters.styleId as string }

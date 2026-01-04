@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       resumeConversationId?: string;
       resumeValue?: {
         approved: boolean;
+        modifiedParams?: Record<string, unknown>; // 🆕 用户修改的参数
       };
     } = await request.json();
 
@@ -74,12 +75,14 @@ export async function POST(request: NextRequest) {
             console.log(
               "[Agent Stream] 恢复对话:",
               input.resumeConversationId,
-              input.resumeValue.approved ? "（用户同意）" : "（用户拒绝）"
+              input.resumeValue.approved ? "（用户同意）" : "（用户拒绝）",
+              input.resumeValue.modifiedParams ? "使用修改后的参数" : ""
             );
 
             for await (const event of engine.resumeConversation(
               input.resumeConversationId,
-              input.resumeValue.approved
+              input.resumeValue.approved,
+              input.resumeValue.modifiedParams // 🆕 传递修改的参数
             )) {
               controller.enqueue(
                 encoder.encode(JSON.stringify(event) + "\n")

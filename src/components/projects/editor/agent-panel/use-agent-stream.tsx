@@ -352,7 +352,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
    * 恢复对话（确认/拒绝后继续）
    */
   const resumeConversation = useCallback(
-    async (conversationId: string, approved: boolean) => {
+    async (conversationId: string, approved: boolean, modifiedParams?: Record<string, unknown>) => {
       // 创建 abort controller
       abortControllerRef.current = new AbortController();
 
@@ -366,6 +366,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
             resumeConversationId: conversationId,
             resumeValue: {
               approved,
+              modifiedParams, // 🆕 传递修改的参数
             },
           }),
           signal: abortControllerRef.current.signal,

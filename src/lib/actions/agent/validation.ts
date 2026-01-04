@@ -36,12 +36,14 @@ export async function validateFunctionParameters(
       case "generate_image_asset":
         return validateGenerateAssetsParams(params);
 
+      case "set_art_style":
+        return validateSetArtStyleParams(params);
+
       // 其他 function 暂不校验（默认通过）
       case "query_context":
       case "query_assets":
       case "update_episode":
       case "update_asset":
-      case "set_art_style":
       case "delete_asset":
         return { valid: true, errors: [], warnings: [] };
 
@@ -143,6 +145,27 @@ function validateGenerateAssetsParams(params: Record<string, unknown>): Validati
       errors.push(`assets[${index}].sourceAssetIds 必须是数组类型`);
     }
   });
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * 校验 set_art_style 参数
+ */
+function validateSetArtStyleParams(params: Record<string, unknown>): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // 校验 styleId（必填）
+  if (!params.styleId || typeof params.styleId !== 'string') {
+    errors.push("styleId 是必填字段，请先使用 query_context 获取可用的美术风格列表");
+  } else if (params.styleId.trim().length === 0) {
+    errors.push("styleId 不能为空");
+  }
 
   return {
     valid: errors.length === 0,

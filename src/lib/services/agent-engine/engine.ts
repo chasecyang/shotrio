@@ -133,9 +133,10 @@ export class AgentEngine {
    */
   async *resumeConversation(
     conversationId: string,
-    approved: boolean
+    approved: boolean,
+    modifiedParams?: Record<string, unknown>
   ): AsyncGenerator<AgentStreamEvent> {
-    console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`);
+    console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`, modifiedParams ? "使用修改后的参数" : "");
 
     // 1. 加载对话状态
     const state = await loadConversationState(conversationId);
@@ -169,7 +170,34 @@ export class AgentEngine {
     if (approved) {
       // 用户同意：执行 tool
       console.log("[AgentEngine] 用户同意，执行 tool");
-      yield* this.executeTool(state, pendingToolCall, funcDef);
+      
+      // 🆕 如果用户修改了参数，更新 tool call 的参数
+      let finalToolCall = pendingToolCall;
+      if (modifiedParams) {
+        console.log("[AgentEngine] 使用用户修改的参数:", modifiedParams);
+        finalToolCall = {
+          ...pendingToolCall,
+          function: {
+            ...pendingToolCall.function,
+            arguments: JSON.stringify(modifiedParams),
+          },
+        };
+        
+        // 🔄 同时更新消息历史中的 tool call 参数
+        // 找到包含此 tool call 的 assistant 消息
+        const assistantMsg = state.messages.find(
+          m => m.role === "assistant" && 
+          m.tool_calls?.some(tc => tc.id === pendingToolCall.id)
+        );
+        if (assistantMsg && assistantMsg.tool_calls) {
+          const toolCallIndex = assistantMsg.tool_calls.findIndex(tc => tc.id === pendingToolCall.id);
+          if (toolCallIndex !== -1) {
+            assistantMsg.tool_calls[toolCallIndex].function.arguments = JSON.stringify(modifiedParams);
+          }
+        }
+      }
+      
+      yield* this.executeTool(state, finalToolCall, funcDef);
     } else {
       // 用户拒绝：添加 rejection 消息
       console.log("[AgentEngine] 用户拒绝");

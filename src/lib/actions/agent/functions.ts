@@ -185,14 +185,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "set_art_style",
-    description: "为项目设置美术风格。风格会影响所有后续图像生成的整体外观和氛围。先用 query_context 获取可用风格列表。",
+    description: "为项目设置美术风格。风格会影响所有后续图像生成的整体外观和氛围。先用 query_context 获取可用风格列表，然后使用风格对象的 id 字段作为 styleId 参数。",
     displayName: "设置美术风格",
     parameters: {
       type: "object",
       properties: {
         styleId: {
           type: "string",
-          description: "风格ID",
+          description: "美术风格的唯一标识符。必须使用 query_context 返回的 artStyles 数组中某个风格对象的 id 字段（例如：artStyles[0].id），不要使用 name 字段",
         },
       },
       required: ["styleId"],

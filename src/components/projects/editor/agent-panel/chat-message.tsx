@@ -99,13 +99,13 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
   const { resumeConversation } = useAgentStream();
 
   // Handle pending action confirmation
-  const handleConfirmAction = async () => {
+  const handleConfirmAction = async (id: string, modifiedParams?: Record<string, unknown>) => {
     if (!approvalInfo || !agent.state.currentConversationId || isConfirming) return;
 
     setIsConfirming(true);
 
     try {
-      console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId);
+      console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId, modifiedParams ? "使用修改后的参数" : "");
 
       toast.success("操作已确认，Agent 正在继续...");
 
@@ -113,7 +113,7 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
       agent.setLoading(true);
 
       // 恢复对话，Engine 会自动执行已确认的操作
-      await resumeConversation(agent.state.currentConversationId, true);
+      await resumeConversation(agent.state.currentConversationId, true, modifiedParams);
     } catch (error) {
       console.error("确认操作失败:", error);
       toast.error("确认操作失败");

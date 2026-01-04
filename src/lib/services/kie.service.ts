@@ -2,7 +2,7 @@ import { getImageUrl } from "@/lib/storage/r2.service";
 
 // ============= Kie.ai 配置 =============
 
-const KIE_API_BASE_URL = "https://api.kie.ai/v1";
+const KIE_API_BASE_URL = "https://api.kie.ai/api/v1";
 
 function getKieApiKey(): string {
   const apiKey = process.env.KIE_API_KEY;
@@ -12,6 +12,148 @@ function getKieApiKey(): string {
   }
   
   return apiKey;
+}
+
+// ============= 任务状态类型 =============
+
+interface CreateTaskResponse {
+  code: number;
+  msg: string;
+  data: {
+    taskId: string;
+  };
+}
+
+interface TaskDetailResponse {
+  code: number;
+  msg: string;
+  data: {
+    taskId: string;
+    model: string;
+    state: "waiting" | "queuing" | "generating" | "success" | "fail";
+    param: string;
+    resultJson: string;
+    failCode?: string;
+    failMsg?: string;
+    completeTime?: number;
+    createTime: number;
+    updateTime: number;
+  };
+}
+
+interface TaskResult {
+  resultUrls: string[];
+}
+
+// ============= 通用任务查询函数 =============
+
+/**
+ * 创建 Kie.ai 任务
+ */
+async function createTask(model: string, input: Record<string, unknown>, callBackUrl?: string): Promise<string> {
+  const apiKey = getKieApiKey();
+
+  const requestBody = {
+    model,
+    input,
+    ...(callBackUrl && { callBackUrl }),
+  };
+
+  console.log(`[Kie.ai] 创建任务: ${model}`, JSON.stringify(requestBody, null, 2));
+
+  const response = await fetch(`${KIE_API_BASE_URL}/jobs/createTask`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error(`[Kie.ai] 创建任务失败 (${response.status}):`, error);
+    throw new Error(`Kie.ai API failed: ${response.status} ${error}`);
+  }
+
+  const data = await response.json() as CreateTaskResponse;
+  
+  if (data.code !== 200 || !data.data?.taskId) {
+    throw new Error(`Kie.ai 创建任务失败: ${data.msg || "未知错误"}`);
+  }
+
+  console.log(`[Kie.ai] 任务已创建: ${data.data.taskId}`);
+  return data.data.taskId;
+}
+
+/**
+ * 查询任务状态
+ */
+async function getTaskDetails(taskId: string): Promise<TaskDetailResponse["data"]> {
+  const apiKey = getKieApiKey();
+
+  const response = await fetch(
+    `${KIE_API_BASE_URL}/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error(`[Kie.ai] 查询任务失败 (${response.status}):`, error);
+    throw new Error(`Kie.ai 查询任务失败: ${response.status} ${error}`);
+  }
+
+  const data = await response.json() as TaskDetailResponse;
+  
+  if (data.code !== 200) {
+    throw new Error(`Kie.ai 查询任务失败: ${data.msg || "未知错误"}`);
+  }
+
+  return data.data;
+}
+
+/**
+ * 轮询等待任务完成
+ */
+async function waitForTaskCompletion(
+  taskId: string,
+  maxAttempts = 60,
+  interval = 5000
+): Promise<string[]> {
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const taskDetails = await getTaskDetails(taskId);
+    
+    console.log(`[Kie.ai] 任务状态 [${attempts + 1}/${maxAttempts}]: ${taskDetails.state}`);
+
+    if (taskDetails.state === "success") {
+      if (!taskDetails.resultJson) {
+        throw new Error("任务完成但没有返回结果");
+      }
+
+      const result = JSON.parse(taskDetails.resultJson) as TaskResult;
+      console.log(`[Kie.ai] 任务完成，生成了 ${result.resultUrls.length} 张图片`);
+      return result.resultUrls;
+    }
+
+    if (taskDetails.state === "fail") {
+      const errorMsg = taskDetails.failMsg || "未知错误";
+      console.error(`[Kie.ai] 任务失败: ${errorMsg}`);
+      throw new Error(`Kie.ai 任务失败: ${errorMsg}`);
+    }
+
+    // 仍在处理中，等待后继续
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+
+  throw new Error(`Kie.ai 任务超时（已尝试 ${maxAttempts} 次）`);
 }
 
 // ============= 类型定义 =============
@@ -69,17 +211,6 @@ export interface NanoBananaProInput {
   output_format?: "png" | "jpg";
 }
 
-// ============= API 响应类型 =============
-
-interface KieApiResponse {
-  output?: {
-    images?: Array<{ url: string }>;
-    image?: { url: string };
-  };
-  images?: Array<{ url: string }>;
-  image?: { url: string };
-}
-
 // ============= Nano Banana 文生图接口 =============
 
 /**
@@ -89,8 +220,6 @@ interface KieApiResponse {
 export async function generateImage(
   input: TextToImageInput
 ): Promise<GenerateImageOutput> {
-  const apiKey = getKieApiKey();
-
   // 将 AspectRatio 转换为 ImageSize
   const imageSize = input.aspect_ratio === "auto" 
     ? "1:1" 
@@ -101,41 +230,20 @@ export async function generateImage(
     ? "png" 
     : (input.output_format ?? "png");
 
-  const requestBody = {
+  const taskInput = {
     prompt: input.prompt,
     output_format: outputFormat,
     image_size: imageSize,
   };
 
-  const response = await fetch(`${KIE_API_BASE_URL}/google/nano-banana`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // 创建任务
+  const taskId = await createTask("google/nano-banana", taskInput);
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("Kie.ai Nano Banana API error:", error);
-    throw new Error(`Kie.ai API failed: ${response.status} ${error}`);
-  }
+  // 等待任务完成
+  const imageUrls = await waitForTaskCompletion(taskId);
 
-  const data = await response.json() as KieApiResponse;
-  
-  // 解析响应格式
-  const images: GeneratedImage[] = [];
-  
-  if (data.output?.images) {
-    images.push(...data.output.images.map(img => ({ url: img.url })));
-  } else if (data.output?.image) {
-    images.push({ url: data.output.image.url });
-  } else if (data.images) {
-    images.push(...data.images.map(img => ({ url: img.url })));
-  } else if (data.image) {
-    images.push({ url: (data.image as any).url });
-  }
+  // 转换为标准格式
+  const images: GeneratedImage[] = imageUrls.map(url => ({ url }));
 
   return {
     images,
@@ -152,8 +260,6 @@ export async function generateImage(
 export async function editImage(
   input: ImageToImageInput
 ): Promise<GenerateImageOutput> {
-  const apiKey = getKieApiKey();
-
   // 处理图片 URL：如果是 R2 key，转换为公开 URL
   const processedUrls = await Promise.all(
     input.image_urls.map(async (url) => {
@@ -175,42 +281,21 @@ export async function editImage(
     ? "png" 
     : (input.output_format ?? "png");
 
-  const requestBody = {
+  const taskInput = {
     prompt: input.prompt,
     image_urls: processedUrls,
     output_format: outputFormat,
     image_size: imageSize,
   };
 
-  const response = await fetch(`${KIE_API_BASE_URL}/google/nano-banana-edit`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // 创建任务
+  const taskId = await createTask("google/nano-banana-edit", taskInput);
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("Kie.ai Nano Banana Edit API error:", error);
-    throw new Error(`Kie.ai API failed: ${response.status} ${error}`);
-  }
+  // 等待任务完成
+  const imageUrls = await waitForTaskCompletion(taskId);
 
-  const data = await response.json() as KieApiResponse;
-  
-  // 解析响应格式
-  const images: GeneratedImage[] = [];
-  
-  if (data.output?.images) {
-    images.push(...data.output.images.map(img => ({ url: img.url })));
-  } else if (data.output?.image) {
-    images.push({ url: data.output.image.url });
-  } else if (data.images) {
-    images.push(...data.images.map(img => ({ url: img.url })));
-  } else if (data.image) {
-    images.push({ url: (data.image as any).url });
-  }
+  // 转换为标准格式
+  const images: GeneratedImage[] = imageUrls.map(url => ({ url }));
 
   return {
     images,
@@ -228,8 +313,6 @@ export async function editImage(
 export async function generateImagePro(
   input: NanoBananaProInput
 ): Promise<GenerateImageOutput> {
-  const apiKey = getKieApiKey();
-
   // 处理图片输入（如果有）
   let processedImageInput: string[] | undefined;
   if (input.image_input) {
@@ -244,7 +327,7 @@ export async function generateImagePro(
     );
   }
 
-  const requestBody = {
+  const taskInput = {
     prompt: input.prompt,
     ...(processedImageInput && { image_input: processedImageInput }),
     aspect_ratio: input.aspect_ratio ?? "1:1",
@@ -252,35 +335,14 @@ export async function generateImagePro(
     output_format: input.output_format ?? "png",
   };
 
-  const response = await fetch(`${KIE_API_BASE_URL}/google/nano-banana-pro`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // 创建任务
+  const taskId = await createTask("google/nano-banana-pro", taskInput);
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("Kie.ai Nano Banana Pro API error:", error);
-    throw new Error(`Kie.ai API failed: ${response.status} ${error}`);
-  }
+  // 等待任务完成
+  const imageUrls = await waitForTaskCompletion(taskId);
 
-  const data = await response.json() as KieApiResponse;
-  
-  // 解析响应格式
-  const images: GeneratedImage[] = [];
-  
-  if (data.output?.images) {
-    images.push(...data.output.images.map(img => ({ url: img.url })));
-  } else if (data.output?.image) {
-    images.push({ url: data.output.image.url });
-  } else if (data.images) {
-    images.push(...data.images.map(img => ({ url: img.url })));
-  } else if (data.image) {
-    images.push({ url: (data.image as any).url });
-  }
+  // 转换为标准格式
+  const images: GeneratedImage[] = imageUrls.map(url => ({ url }));
 
   return {
     images,
@@ -302,13 +364,13 @@ export async function generateImageSmart(
       prompt: input.prompt,
       image_urls: input.image_urls,
       output_format: input.output_format,
-      image_size: input.image_size,
+      aspect_ratio: input.aspect_ratio,
     });
   } else {
     return generateImage({
       prompt: input.prompt,
       output_format: input.output_format,
-      image_size: input.image_size,
+      aspect_ratio: input.aspect_ratio,
     });
   }
 }
