@@ -337,22 +337,11 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     });
   }, [isSetArtStyle, functionCall.arguments.styleId]);
 
-  // 渲染 Markdown 预览（截取前N行）
-  const renderMarkdownPreview = (content: string, maxLines: number = 5) => {
-    const lines = content.split('\n');
-    const preview = lines.slice(0, maxLines).join('\n');
-    const hasMore = lines.length > maxLines;
-    
+  // 渲染 Markdown 预览（可滚动查看完整内容）
+  const renderMarkdownPreview = (content: string) => {
     return (
-      <div className="space-y-1">
-        <div className="text-xs text-foreground/80 max-h-32 overflow-hidden">
-          <MarkdownRenderer content={preview} />
-        </div>
-        {hasMore && (
-          <p className="text-xs text-muted-foreground italic">
-            ...还有 {lines.length - maxLines} 行
-          </p>
-        )}
+      <div className="max-h-40 overflow-y-auto border rounded-md p-2 bg-muted/20 text-xs text-foreground/80">
+        <MarkdownRenderer content={content || "*暂无内容*"} />
       </div>
     );
   };
@@ -648,7 +637,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                   <span className="text-xs font-medium text-muted-foreground">名称:</span>
                   <span className="text-xs text-foreground">{editedParams.name as string || "未命名"}</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">内容预览:</span>
                   {renderMarkdownPreview(editedParams.content as string || "")}
                 </div>

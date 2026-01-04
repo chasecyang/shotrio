@@ -67,11 +67,8 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
       styleId: data.styleId,
       stylePrompt: data.stylePrompt || null,
     });
-    if (result.success) {
-      router.refresh();
-    }
     return result;
-  }, [project.id, router]);
+  }, [project.id]);
 
   const { saveStatus } = useAutoSave({
     data: formData,
@@ -121,16 +118,12 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
 
   return (
     <div className="space-y-8">
-      {/* 保存状态 */}
-      {saveStatus !== "idle" && (
-        <div className="flex justify-end">
-          <SaveStatusIndicator status={saveStatus} />
-        </div>
-      )}
-
       {/* 项目名称 */}
       <div className="space-y-2">
-        <Label htmlFor="title">{t("projectName")}</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="title">{t("projectName")}</Label>
+          <SaveStatusIndicator status={saveStatus} />
+        </div>
         <Input
           id="title"
           value={formData.title}
@@ -241,29 +234,20 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   );
 }
 
-// 保存状态指示器组件
+// 保存状态指示器组件 - 紧凑的内联图标
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   if (status === "idle") return null;
   
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="inline-flex items-center">
       {status === "saving" && (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          <span className="text-muted-foreground">保存中...</span>
-        </>
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
       )}
       {status === "saved" && (
-        <>
-          <Check className="h-4 w-4 text-green-500" />
-          <span className="text-green-500">已保存</span>
-        </>
+        <Check className="h-3.5 w-3.5 text-green-500" />
       )}
       {status === "error" && (
-        <>
-          <AlertCircle className="h-4 w-4 text-destructive" />
-          <span className="text-destructive">保存失败</span>
-        </>
+        <AlertCircle className="h-3.5 w-3.5 text-destructive" />
       )}
     </div>
   );
