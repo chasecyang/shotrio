@@ -73,14 +73,17 @@ export async function generateAssetImage(
     // 第一步：创建素材记录（包含所有生成信息，但无图片）
     // 使用临时名称，由 AI worker 分析后可能会更新
     const assetName = `AI生成-${Date.now()}`;
-    
+
     const createResult = await createAssetInternal({
       projectId,
       userId: session.user.id,
       name: assetName,
-      sourceType: 'generated', // ✅ 标记为生成类资产，状态从job计算
-      prompt: prompt.trim(),
-      modelUsed: "nano-banana",
+      assetType: "image",
+      sourceType: "generated", // ✅ 标记为生成类资产，状态从job计算
+      generationInfo: {
+        prompt: prompt.trim(),
+        modelUsed: "nano-banana",
+      },
       meta: {
         generationParams: {
           aspectRatio: aspectRatio as "16:9" | "1:1" | "9:16",
@@ -169,15 +172,18 @@ export async function editAssetImage(
     // 第一步：创建素材记录（包含所有生成信息，但无图片）
     // 使用临时名称，由 AI worker 分析后可能会更新
     const assetName = `图生图-${Date.now()}`;
-    
+
     const createResult = await createAssetInternal({
       projectId,
       userId: session.user.id,
       name: assetName,
-      sourceType: 'generated', // ✅ 标记为生成类资产
-      prompt: editPrompt.trim(),
-      modelUsed: "nano-banana",
-      sourceAssetIds: sourceAssetIds,
+      assetType: "image",
+      sourceType: "generated", // ✅ 标记为生成类资产
+      generationInfo: {
+        prompt: editPrompt.trim(),
+        modelUsed: "nano-banana",
+        sourceAssetIds: sourceAssetIds,
+      },
       meta: {
         generationParams: {
           aspectRatio: aspectRatio as "16:9" | "1:1" | "9:16",

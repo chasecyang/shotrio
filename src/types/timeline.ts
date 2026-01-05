@@ -1,4 +1,4 @@
-import { AssetWithRuntimeStatus } from "./asset";
+import { AssetWithFullData } from "./asset";
 
 /**
  * Timeline - 视频剪辑时间轴
@@ -39,7 +39,7 @@ export interface TimelineClip {
  * TimelineClipWithAsset - 带素材信息的片段（用于前端展示）
  */
 export interface TimelineClipWithAsset extends TimelineClip {
-  asset: AssetWithRuntimeStatus;
+  asset: AssetWithFullData;
 }
 
 /**

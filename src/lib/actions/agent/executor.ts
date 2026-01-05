@@ -123,13 +123,13 @@ export async function executeFunction(
             limit: 1000,
           });
 
-          const assetStats = assetsResult.assets 
+          const assetStats = assetsResult.assets
             ? await analyzeAssetsByType(assetsResult.assets)
-            : { byType: {}, withoutImage: 0 };
+            : { byType: {}, notReady: 0 };
 
           // 计算completed和generating数量
-          const completedCount = assetsResult.assets.filter(a => a.imageUrl).length;
-          const generatingCount = assetsResult.assets.filter(a => !a.imageUrl).length;
+          const completedCount = assetsResult.assets.filter(a => a.runtimeStatus === "completed").length;
+          const generatingCount = assetsResult.assets.filter(a => a.runtimeStatus !== "completed").length;
 
           contextData.assets = {
             total: assetsResult.total || 0,
@@ -170,22 +170,34 @@ export async function executeFunction(
 
         const typeLabel = assetType === "image" ? "图片资产" : assetType === "video" ? "视频资产" : "资产";
         
-        // 格式化资产信息，提供更详细的数据给AI
-        const formattedAssets = queryResult.assets.map(a => ({
-          id: a.id,
-          name: a.name,
-          type: a.assetType,
-          status: a.runtimeStatus,
-          imageUrl: a.imageUrl,
-          videoUrl: a.videoUrl,
-          duration: a.duration,
-          prompt: a.prompt,
-          tags: a.tags.map(t => t.tagValue),
-          order: a.order,
-          createdAt: a.createdAt,
-          // 如果有source信息，也包含进来
-          sourceAssetIds: a.sourceAssetIds,
-        }));
+        // 格式化资产信息，只返回Agent决策所需的字段
+        const formattedAssets = queryResult.assets.map(a => {
+          // 基础字段（所有类型都有）
+          const base: Record<string, unknown> = {
+            id: a.id,
+            name: a.name,
+            type: a.assetType,
+            status: a.runtimeStatus,
+            tags: a.tags.map(t => t.tagValue),
+          };
+
+          // 生成信息（仅AI生成的素材）
+          if (a.sourceType === 'generated') {
+            base.generation = {
+              prompt: a.prompt,
+              sourceAssetIds: a.sourceAssetIds,
+            };
+          }
+
+          // 类型特定字段
+          if (a.assetType === 'video' || a.assetType === 'audio') {
+            base.duration = a.duration;
+          } else if (a.assetType === 'text') {
+            base.contentPreview = a.textContent?.slice(0, 100) || null;
+          }
+
+          return base;
+        });
         
         result = {
           functionCallId: functionCall.id,
@@ -241,10 +253,14 @@ export async function executeFunction(
               projectId,
               userId: session.user.id,
               name: assetName,
-              prompt: finalPrompt,
+              assetType: "image",
+              sourceType: "generated",
               tags: assetData.tags,
-              modelUsed: "nano-banana",
-              sourceAssetIds: assetData.sourceAssetIds,
+              generationInfo: {
+                prompt: finalPrompt,
+                modelUsed: "nano-banana",
+                sourceAssetIds: assetData.sourceAssetIds,
+              },
               meta: {
                 generationParams: {
                   aspectRatio: "16:9" as "16:9" | "1:1" | "9:16",

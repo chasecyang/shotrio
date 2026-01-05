@@ -3,18 +3,19 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { asset, assetTag, project } from "@/lib/db/schemas/project";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { asset, generationInfo, project } from "@/lib/db/schemas/project";
+import { eq, and, desc, sql } from "drizzle-orm";
 import type {
+  AssetTypeEnum,
   AssetQueryFilter,
   AssetQueryResult,
-  AssetWithRuntimeStatus,
+  AssetWithFullData,
 } from "@/types/asset";
-import { queryProjectAssetsWithStatus } from "@/lib/db/queries/asset-with-status";
+import { queryProjectAssets, queryAssetsWithFullData } from "@/lib/db/queries/asset-with-status";
 
 /**
  * 查询资产列表（带标签筛选）
- * 现在使用新的查询helper，自动JOIN job表并计算运行时状态
+ * 使用 Drizzle relations 自动 join 扩展表并计算运行时状态
  */
 export async function queryAssets(
   filter: AssetQueryFilter
@@ -42,8 +43,8 @@ export async function queryAssets(
     const limit = filter.limit || 50;
     const offset = filter.offset || 0;
 
-    // 使用新的查询helper
-    const assets = await queryProjectAssetsWithStatus({
+    // 使用新的查询函数
+    const assets = await queryProjectAssets({
       projectId: filter.projectId,
       assetType: filter.assetType,
       tagFilters: filter.tagFilters,
@@ -71,14 +72,14 @@ export async function queryAssets(
 
 /**
  * 获取项目的所有资产（不分页，用于选择器等场景）
- * 现在使用新的查询helper，自动JOIN job表并计算运行时状态
+ * 使用 Drizzle relations 自动 join 扩展表并计算运行时状态
  */
 export async function getProjectAssets(filter: {
   projectId: string;
-  assetType?: "image" | "video";
+  assetType?: AssetTypeEnum;
   tagFilters?: string[];
   orderBy?: "created" | "order";
-}): Promise<AssetWithRuntimeStatus[]> {
+}): Promise<AssetWithFullData[]> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -99,16 +100,14 @@ export async function getProjectAssets(filter: {
       return [];
     }
 
-    // 使用新的查询helper（不限制数量）
-    const assets = await queryProjectAssetsWithStatus({
+    // 使用新的查询函数（不限制数量）
+    const assets = await queryProjectAssets({
       projectId: filter.projectId,
       assetType: filter.assetType,
       tagFilters: filter.tagFilters,
-      // orderBy参数在helper中默认按创建时间排序
-      // 如果需要按order排序，可能需要扩展helper
     });
 
-    return assets;
+    return assets as AssetWithFullData[];
   } catch (error) {
     console.error("获取项目资产失败:", error);
     return [];
@@ -117,12 +116,12 @@ export async function getProjectAssets(filter: {
 
 /**
  * 按标签值查询资产
- * 现在使用新的查询helper，自动JOIN job表并计算运行时状态
+ * 使用 Drizzle relations 自动 join 扩展表并计算运行时状态
  */
 export async function getAssetsByTag(
   projectId: string,
   tagValue: string
-): Promise<AssetWithRuntimeStatus[]> {
+): Promise<AssetWithFullData[]> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -143,13 +142,13 @@ export async function getAssetsByTag(
       return [];
     }
 
-    // 使用新的查询helper，传入标签过滤
-    const assets = await queryProjectAssetsWithStatus({
+    // 使用新的查询函数，传入标签过滤
+    const assets = await queryProjectAssets({
       projectId,
       tagFilters: [tagValue],
     });
 
-    return assets;
+    return assets as AssetWithFullData[];
   } catch (error) {
     console.error("按标签查询资产失败:", error);
     return [];
@@ -158,11 +157,11 @@ export async function getAssetsByTag(
 
 /**
  * 获取资产的派生树（该资产派生出的所有资产）
- * 现在使用新的查询逻辑，自动JOIN job表并计算运行时状态
+ * 查询 generationInfo.sourceAssetIds 数组中包含指定 assetId 的派生资产
  */
 export async function getAssetDerivations(
   assetId: string
-): Promise<AssetWithRuntimeStatus[]> {
+): Promise<AssetWithFullData[]> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -171,14 +170,25 @@ export async function getAssetDerivations(
   }
 
   try {
-    // 导入queryAssetsWithStatus用于手动构建查询
-    const { queryAssetsWithStatus } = await import("@/lib/db/queries/asset-with-status");
-    
-    // 查询 sourceAssetIds 数组中包含指定 assetId 的派生资产
-    const whereClause = sql`${asset.sourceAssetIds} @> ARRAY[${assetId}]::text[]`;
+    // 先查询 generationInfo 表找到所有派生资产的 ID
+    const derivedGenInfos = await db.query.generationInfo.findMany({
+      where: sql`${generationInfo.sourceAssetIds} @> ARRAY[${assetId}]::text[]`,
+    });
+
+    if (derivedGenInfos.length === 0) {
+      return [];
+    }
+
+    const derivedAssetIds = derivedGenInfos.map((g) => g.assetId);
+
+    // 使用新的查询函数获取完整资产数据
+    const whereClause = sql`${asset.id} IN (${sql.join(
+      derivedAssetIds.map((id) => sql`${id}`),
+      sql`, `
+    )})`;
     const orderByClause = desc(asset.createdAt);
-    
-    const derivedAssets = await queryAssetsWithStatus(whereClause, orderByClause);
+
+    const derivedAssets = await queryAssetsWithFullData(whereClause, orderByClause);
 
     return derivedAssets;
   } catch (error) {
@@ -186,4 +196,3 @@ export async function getAssetDerivations(
     return [];
   }
 }
-

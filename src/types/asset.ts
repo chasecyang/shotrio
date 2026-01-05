@@ -9,7 +9,7 @@ import type { AspectRatio } from "@/lib/services/image.service";
 /**
  * 资产类型枚举（数据库层面）
  */
-export type AssetTypeEnum = "image" | "video" | "text";
+export type AssetTypeEnum = "image" | "video" | "text" | "audio";
 
 /**
  * 资产来源类型
@@ -78,6 +78,49 @@ export interface TextAssetMeta {
   lastModified?: string;      // 最后修改时间
 }
 
+/**
+ * 音频用途类型 - AI 通过此字段理解音频的用法
+ */
+export type AudioPurpose = "voiceover" | "sound_effect" | "bgm";
+
+/**
+ * 音频资产类型的meta数据
+ */
+export interface AudioMeta {
+  // 用途分类（关键字段，AI 用此判断如何使用）
+  purpose: AudioPurpose;
+
+  // 配音专属字段
+  voiceover?: {
+    character?: string;       // 角色名（对白用）
+    emotion?: string;         // 情感（happy, sad, angry, neutral）
+    language?: string;        // 语言代码 (zh-CN, en-US)
+    voiceId?: string;         // TTS 声音模型 ID
+    speakingRate?: number;    // 语速 (0.5-2.0)
+    transcript?: string;      // 音频文本内容
+  };
+
+  // 音效专属字段
+  soundEffect?: {
+    category?: string;        // 分类（explosion, footstep, ambient）
+    intensity?: string;       // 强度（soft, medium, loud）
+    environment?: string;     // 环境（indoor, outdoor）
+    isLoopable?: boolean;     // 是否可循环
+  };
+
+  // 背景音乐专属字段
+  bgm?: {
+    genre?: string;           // 风格（orchestral, electronic）
+    mood?: string;            // 情绪（tense, peaceful, exciting）
+    tempo?: number;           // BPM
+    hasVocals?: boolean;      // 是否有人声
+    isLoopable?: boolean;     // 是否可循环
+  };
+
+  // 通用字段
+  description?: string;       // 描述
+  sceneContext?: string;      // 适用场景
+}
 
 /**
  * 编辑参数（用于派生图片）
@@ -124,6 +167,7 @@ export interface AssetMeta {
   scene?: SceneMeta;
   prop?: PropMeta;
   textAsset?: TextAssetMeta;
+  audio?: AudioMeta;
   editParams?: EditParams;
   generationParams?: GenerationParams;  // 生成参数
   custom?: Record<string, unknown>;
@@ -132,94 +176,204 @@ export interface AssetMeta {
 // ===== 数据库表类型 =====
 
 /**
- * Asset表的完整类型
- * 注意：status和errorMessage已从数据库移除，改为从job动态计算
+ * Asset 基表类型（精简版）
+ * 注意：类型特定字段已移至扩展表
  */
 export interface Asset {
   id: string;
   projectId: string;
   userId: string;
-  
+
   // 基本信息
   name: string;
-  
+
   // 资产类型
   assetType: AssetTypeEnum;
-  
-  // 资产来源类型（新增）
+
+  // 资产来源类型
   sourceType: AssetSourceType;
-  
-  // 图片字段（图片类型必填）
-  imageUrl: string | null;
-  thumbnailUrl: string | null;
-  
-  // 视频字段（视频类型必填）
-  videoUrl: string | null;
-  duration: number | null; // 毫秒
-  
-  // 文本字段（文本类型必填，统一使用 Markdown 格式）
-  textContent: string | null;
-  
-  // 生成信息
-  prompt: string | null;
-  seed: number | null;
-  modelUsed: string | null;
-  
-  // 生成配置（主要用于视频）
-  generationConfig: string | null; // JSON
-  
-  // 派生关系
-  sourceAssetIds: string[] | null;  // 多个源素材ID（用于图生图）
-  
-  // 元数据
-  meta: string | null;  // JSON字符串
-  
-  // 注意：以下字段已移除，状态从job动态计算
-  // status: AssetStatus; // ❌ 已移除
-  // errorMessage: string | null; // ❌ 已移除
-  
+
+  // 元数据（JSON字符串，存储 CharacterMeta、AudioMeta 等）
+  meta: string | null;
+
   // 组织和排序
   order: number | null;
-  
+
   // 统计
   usageCount: number;
-  
+
   // 时间戳
   createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * 创建Asset时的输入类型
+ * 生成信息表类型（仅 AI 生成的素材有记录）
+ */
+export interface GenerationInfo {
+  assetId: string;
+  prompt: string | null;
+  seed: number | null;
+  modelUsed: string | null;
+  generationConfig: string | null;  // JSON
+  sourceAssetIds: string[] | null;  // 源素材 ID（派生关系）
+  createdAt: Date;
+}
+
+/**
+ * 图片数据表类型
+ */
+export interface ImageData {
+  assetId: string;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+}
+
+/**
+ * 视频数据表类型
+ */
+export interface VideoData {
+  assetId: string;
+  videoUrl: string | null;
+  duration: number | null;  // 毫秒
+}
+
+/**
+ * 文本数据表类型
+ */
+export interface TextData {
+  assetId: string;
+  textContent: string | null;
+}
+
+/**
+ * 音频数据表类型
+ */
+export interface AudioData {
+  assetId: string;
+  audioUrl: string | null;
+  duration: number | null;  // 毫秒
+  format: string | null;    // mp3, wav, m4a
+  sampleRate: number | null;  // Hz
+  bitrate: number | null;   // kbps
+  channels: number | null;  // 1(mono) / 2(stereo)
+}
+
+/**
+ * 创建 Asset 时的输入类型（基表）
  */
 export interface CreateAssetInput {
   projectId: string;
   name: string;
-  sourceType?: AssetSourceType;  // 新增：资产来源类型
-  imageUrl?: string;  // 可选，为空表示素材正在生成中
-  thumbnailUrl?: string;
-  videoUrl?: string;  // 视频URL（视频类型必填）
-  textContent?: string;  // 文本内容（文本类型必填，统一使用 Markdown 格式）
-  prompt?: string;
-  seed?: number;
-  modelUsed?: string;
-  sourceAssetIds?: string[];  // 多个源素材ID（用于图生图）
+  assetType: AssetTypeEnum;
+  sourceType: AssetSourceType;
   meta?: AssetMeta;
-  tags?: string[];  // 简化为标签值数组
+  tags?: string[];
 }
 
 /**
- * 更新Asset时的输入类型
+ * 创建生成信息的输入类型
  */
-export interface UpdateAssetInput {
-  name?: string;
-  imageUrl?: string;
-  thumbnailUrl?: string;
-  textContent?: string;
+export interface CreateGenerationInfoInput {
+  assetId: string;
   prompt?: string;
   seed?: number;
   modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
+}
+
+/**
+ * 创建图片数据的输入类型
+ */
+export interface CreateImageDataInput {
+  assetId: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+}
+
+/**
+ * 创建视频数据的输入类型
+ */
+export interface CreateVideoDataInput {
+  assetId: string;
+  videoUrl?: string;
+  duration?: number;
+}
+
+/**
+ * 创建文本数据的输入类型
+ */
+export interface CreateTextDataInput {
+  assetId: string;
+  textContent?: string;
+}
+
+/**
+ * 创建音频数据的输入类型
+ */
+export interface CreateAudioDataInput {
+  assetId: string;
+  audioUrl?: string;
+  duration?: number;
+  format?: string;
+  sampleRate?: number;
+  bitrate?: number;
+  channels?: number;
+}
+
+/**
+ * 更新 Asset 时的输入类型（基表）
+ */
+export interface UpdateAssetInput {
+  name?: string;
   meta?: AssetMeta;
+}
+
+/**
+ * 更新生成信息的输入类型
+ */
+export interface UpdateGenerationInfoInput {
+  prompt?: string;
+  seed?: number;
+  modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
+}
+
+/**
+ * 更新图片数据的输入类型
+ */
+export interface UpdateImageDataInput {
+  imageUrl?: string;
+  thumbnailUrl?: string;
+}
+
+/**
+ * 更新视频数据的输入类型
+ */
+export interface UpdateVideoDataInput {
+  videoUrl?: string;
+  duration?: number;
+}
+
+/**
+ * 更新文本数据的输入类型
+ */
+export interface UpdateTextDataInput {
+  textContent?: string;
+}
+
+/**
+ * 更新音频数据的输入类型
+ */
+export interface UpdateAudioDataInput {
+  audioUrl?: string;
+  duration?: number;
+  format?: string;
+  sampleRate?: number;
+  bitrate?: number;
+  channels?: number;
 }
 
 /**
@@ -261,6 +415,72 @@ export interface AssetWithRuntimeStatus extends Asset {
 }
 
 /**
+ * 带完整数据的 Asset（包含所有扩展表数据）
+ * 用于需要完整素材信息的场景
+ */
+export interface AssetWithFullData extends Asset {
+  // 标签
+  tags: AssetTag[];
+
+  // 生成信息（仅 generated 类型有）
+  generationInfo: GenerationInfo | null;
+
+  // 类型数据（根据 assetType 只有一个有值）
+  imageData: ImageData | null;
+  videoData: VideoData | null;
+  textData: TextData | null;
+  audioData: AudioData | null;
+
+  // 运行时状态
+  runtimeStatus: AssetStatus;
+  errorMessage: string | null;
+
+  // ========== 扁平化便捷属性 ==========
+  // 这些属性在 enrichAssetWithFullData 中自动计算，方便前端直接使用
+
+  /** 显示用 URL（缩略图优先，适用于卡片展示） */
+  displayUrl: string | null;
+  /** 媒体源 URL（图片/视频/音频的实际播放 URL） */
+  mediaUrl: string | null;
+
+  // 从 imageData 扁平化
+  /** 图片 URL */
+  imageUrl: string | null;
+  /** 缩略图 URL */
+  thumbnailUrl: string | null;
+
+  // 从 videoData 扁平化
+  /** 视频 URL */
+  videoUrl: string | null;
+
+  // 从 audioData 扁平化
+  /** 音频 URL */
+  audioUrl: string | null;
+
+  // 从 textData 扁平化
+  /** 文本内容 */
+  textContent: string | null;
+
+  // 通用
+  /** 时长（毫秒，视频或音频） */
+  duration: number | null;
+
+  // 从 generationInfo 扁平化
+  /** 生成提示词 */
+  prompt: string | null;
+  /** 种子值 */
+  seed: number | null;
+  /** 使用的模型 */
+  modelUsed: string | null;
+  /** 生成配置 */
+  generationConfig: string | null;
+  /** 源素材 ID 列表 */
+  sourceAssetIds: string[] | null;
+  /** 最新关联任务 ID（用于重试等操作） */
+  latestJobId: string | null;
+}
+
+/**
  * 带派生资产的Asset
  */
 export interface AssetWithDerivations extends Asset {
@@ -283,10 +503,10 @@ export interface AssetQueryFilter {
 
 /**
  * 资产查询结果
- * 注意：现在返回带运行时状态的Asset
+ * 返回带完整数据和运行时状态的Asset
  */
 export interface AssetQueryResult {
-  assets: AssetWithRuntimeStatus[];
+  assets: AssetWithFullData[];
   total: number;
   hasMore: boolean;
 }
@@ -294,20 +514,35 @@ export interface AssetQueryResult {
 // ===== 派生相关类型 =====
 
 /**
- * 创建派生资产的输入
+ * 创建派生资产的输入（便捷类型，内部会拆分到各表）
  */
 export interface CreateDerivedAssetInput {
   projectId: string;
-  sourceAssetIds: string[];  // 源素材ID数组
+  assetType: AssetTypeEnum;
   name: string;
-  imageUrl: string;
-  thumbnailUrl?: string;
+  meta?: AssetMeta;
+  tags?: string[];
+  editParams?: EditParams;
+
+  // 生成信息
+  sourceAssetIds: string[];
   prompt?: string;
   seed?: number;
   modelUsed?: string;
-  editParams?: EditParams;
-  meta?: AssetMeta;
-  tags?: string[];  // 简化为标签值数组
+  generationConfig?: string;
+
+  // 图片数据（assetType 为 image 时）
+  imageUrl?: string;
+  thumbnailUrl?: string;
+
+  // 视频数据（assetType 为 video 时）
+  videoUrl?: string;
+  videoDuration?: number;
+
+  // 音频数据（assetType 为 audio 时）
+  audioUrl?: string;
+  audioDuration?: number;
+  audioFormat?: string;
 }
 
 // ===== 辅助函数类型 =====

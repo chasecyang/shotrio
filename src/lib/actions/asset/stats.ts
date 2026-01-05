@@ -5,16 +5,17 @@ import { headers } from "next/headers";
 import db from "@/lib/db";
 import { asset, assetTag, project } from "@/lib/db/schemas/project";
 import { eq, and, sql } from "drizzle-orm";
-import type { AssetWithTags } from "@/types/asset";
+import type { AssetWithFullData } from "@/types/asset";
+import { isAssetReady } from "@/lib/utils/asset-status";
 
 /**
  * 统计素材类型分布
  * 纯工具函数（改为 async 以符合 Next.js Server Actions 要求）
  */
-export async function analyzeAssetsByType(assets: AssetWithTags[]) {
+export async function analyzeAssetsByType(assets: AssetWithFullData[]) {
   const stats = {
     byType: {} as Record<string, number>,
-    withoutImage: 0,
+    notReady: 0,
   };
 
   assets.forEach((asset) => {
@@ -29,8 +30,8 @@ export async function analyzeAssetsByType(assets: AssetWithTags[]) {
       stats.byType.other = (stats.byType.other || 0) + 1;
     }
 
-    if (!asset.imageUrl) {
-      stats.withoutImage++;
+    if (!isAssetReady(asset)) {
+      stats.notReady++;
     }
   });
 

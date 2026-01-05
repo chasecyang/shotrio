@@ -13,13 +13,13 @@ import { X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { createTextAsset, updateTextAssetContent } from "@/lib/actions/asset/text-asset";
 import { updateAsset } from "@/lib/actions/asset/crud";
-import type { AssetWithRuntimeStatus } from "@/types/asset";
+import type { AssetWithFullData } from "@/types/asset";
 
 interface TextAssetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  asset?: AssetWithRuntimeStatus; // 如果提供，则为编辑模式
+  asset?: AssetWithFullData; // 如果提供，则为编辑模式
   onSuccess?: () => void;
 }
 

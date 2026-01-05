@@ -99,8 +99,8 @@ export async function collectContext(context: AgentContext, projectId: string): 
         if (assetStats.byType.prop) parts.push(`- 道具: ${assetStats.byType.prop} 个`);
         if (assetStats.byType.other) parts.push(`- 其他: ${assetStats.byType.other} 个`);
         
-        if (assetStats.withoutImage > 0) {
-          parts.push(`- 待生成图片: ${assetStats.withoutImage} 个`);
+        if (assetStats.notReady > 0) {
+          parts.push(`- 待生成/处理中: ${assetStats.notReady} 个`);
         }
         
         // 获取最常用的标签（前10个）

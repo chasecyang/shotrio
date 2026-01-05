@@ -16,7 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Check, Search, ImageIcon } from "lucide-react";
 import { queryAssets } from "@/lib/actions/asset";
-import type { AssetWithRuntimeStatus } from "@/types/asset";
+import type { AssetWithFullData } from "@/types/asset";
+import { isAssetReady } from "@/lib/utils/asset-status";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ export function AssetLibraryPickerDialog({
   title = "选择素材库图片",
   description = "从素材库中选择图片作为参考",
 }: AssetLibraryPickerDialogProps) {
-  const [assets, setAssets] = useState<AssetWithRuntimeStatus[]>([]);
+  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
@@ -168,19 +169,19 @@ export function AssetLibraryPickerDialog({
                     <button
                       key={asset.id}
                       onClick={() => toggleAsset(asset.id)}
-                      disabled={!asset.imageUrl}
+                      disabled={!isAssetReady(asset)}
                       className={cn(
                         "relative group aspect-square rounded-lg overflow-hidden",
                         "border-2 transition-all",
                         isSelected
                           ? "border-primary ring-2 ring-primary/20"
                           : "border-transparent hover:border-muted-foreground/20",
-                        !asset.imageUrl && "opacity-50 cursor-not-allowed"
+                        !isAssetReady(asset) && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      {asset.imageUrl ? (
+                      {asset.displayUrl ? (
                         <Image
-                          src={asset.thumbnailUrl || asset.imageUrl}
+                          src={asset.displayUrl}
                           alt={asset.name}
                           fill
                           className="object-cover"

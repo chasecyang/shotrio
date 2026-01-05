@@ -242,10 +242,10 @@ export function TimelineClipItem({
           }}
         >
           {/* 背景缩略图 */}
-          {clip.asset.thumbnailUrl || clip.asset.imageUrl ? (
+          {clip.asset.displayUrl ? (
             <div className="absolute inset-0 opacity-30 pointer-events-none">
               <Image
-                src={clip.asset.thumbnailUrl || clip.asset.imageUrl!}
+                src={clip.asset.displayUrl}
                 alt={clip.asset.name}
                 fill
                 className="object-cover"

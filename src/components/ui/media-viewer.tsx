@@ -31,7 +31,7 @@ import { Slider } from "./slider";
 import { ScrollArea } from "./scroll-area";
 import { Badge } from "./badge";
 import { Separator } from "./separator";
-import { AssetWithRuntimeStatus } from "@/types/asset";
+import { AssetWithFullData } from "@/types/asset";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ import { toast } from "sonner";
 interface MediaViewerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  asset: AssetWithRuntimeStatus;
+  asset: AssetWithFullData;
   onRetry?: (jobId: string) => Promise<void>;
 }
 
@@ -54,10 +54,9 @@ export function MediaViewer({
   onRetry,
 }: MediaViewerProps) {
   const isVideo = asset.assetType === "video";
-  const mediaUrl = isVideo ? asset.videoUrl : asset.imageUrl;
   const isFailed = asset.runtimeStatus === "failed";
-  const errorMessage = asset.errorMessage || asset.latestJob?.errorMessage || "生成失败，请重试";
-  
+  const errorMessage = asset.errorMessage || "生成失败，请重试";
+
   // 调试信息
   React.useEffect(() => {
     if (open) {
@@ -66,19 +65,12 @@ export function MediaViewer({
         assetName: asset.name,
         isFailed,
         runtimeStatus: asset.runtimeStatus,
-        hasLatestJob: !!asset.latestJob,
-        latestJob: asset.latestJob ? {
-          id: asset.latestJob.id,
-          type: asset.latestJob.type,
-          status: asset.latestJob.status,
-          errorMessage: asset.latestJob.errorMessage,
-        } : null,
         hasOnRetry: !!onRetry,
-        mediaUrl,
+        mediaUrl: asset.mediaUrl,
         errorMessage: asset.errorMessage,
       });
     }
-  }, [open, isFailed, asset, onRetry, mediaUrl]);
+  }, [open, isFailed, asset, onRetry]);
 
   // 图片相关状态
   const [scale, setScale] = React.useState(1);
@@ -102,7 +94,7 @@ export function MediaViewer({
   const [copiedField, setCopiedField] = React.useState<string | null>(null);
 
   // 源素材状态
-  const [sourceAssets, setSourceAssets] = React.useState<AssetWithRuntimeStatus[]>([]);
+  const [sourceAssets, setSourceAssets] = React.useState<AssetWithFullData[]>([]);
   const [loadingSourceAssets, setLoadingSourceAssets] = React.useState(false);
 
   // 解析生成配置
@@ -342,10 +334,10 @@ export function MediaViewer({
   }, [isPlaying]);
 
   const handleDownload = async () => {
-    if (!mediaUrl) return;
-    
+    if (!asset.mediaUrl) return;
+
     try {
-      const response = await fetch(mediaUrl);
+      const response = await fetch(asset.mediaUrl);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -359,7 +351,7 @@ export function MediaViewer({
     } catch (error) {
       console.error("下载失败:", error);
       toast.error("下载失败");
-      window.open(mediaUrl, "_blank");
+      window.open(asset.mediaUrl, "_blank");
     }
   };
 
@@ -368,21 +360,20 @@ export function MediaViewer({
       toast.error("重试功能不可用");
       return;
     }
-    
-    if (!asset.latestJob?.id) {
+
+    if (!asset.latestJobId) {
       console.error("无法找到任务信息:", {
         assetId: asset.id,
         assetName: asset.name,
-        hasLatestJob: !!asset.latestJob,
-        latestJob: asset.latestJob,
+        latestJobId: asset.latestJobId,
       });
       toast.error("无法找到相关任务信息，请查看控制台了解详情");
       return;
     }
-    
+
     try {
-      console.log("正在重试任务:", asset.latestJob.id);
-      await onRetry(asset.latestJob.id);
+      console.log("正在重试任务:", asset.latestJobId);
+      await onRetry(asset.latestJobId);
       toast.success("已重新提交任务");
       onOpenChange(false);
     } catch (error) {
@@ -451,7 +442,7 @@ export function MediaViewer({
                   {/* 视频播放器 */}
                   <video
                     ref={videoRef}
-                    src={mediaUrl || undefined}
+                    src={asset.mediaUrl || undefined}
                     className="max-w-full max-h-full object-contain"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
@@ -531,7 +522,7 @@ export function MediaViewer({
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={mediaUrl || undefined}
+                    src={asset.mediaUrl || undefined}
                     alt={asset.name}
                     className={cn(
                       "max-w-[90%] max-h-[90vh] object-contain select-none",
@@ -614,7 +605,7 @@ export function MediaViewer({
                       </Button>
                     )}
                     {/* 下载按钮 - 有媒体URL时显示 */}
-                    {mediaUrl && (
+                    {asset.mediaUrl && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -741,9 +732,9 @@ export function MediaViewer({
                                 key={source.id}
                                 className="relative aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/10 hover:border-white/30 transition-colors group"
                               >
-                                {source.thumbnailUrl || source.imageUrl ? (
+                                {source.displayUrl ? (
                                   <Image
-                                    src={source.thumbnailUrl || source.imageUrl!}
+                                    src={source.displayUrl}
                                     alt={source.name}
                                     fill
                                     className="object-cover"

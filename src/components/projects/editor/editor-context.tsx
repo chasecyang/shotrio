@@ -6,7 +6,7 @@ import { useTaskPolling } from "@/hooks/use-task-polling";
 import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
 import { refreshProject } from "@/lib/actions/project/refresh";
-import type { GenerationHistoryItem, AssetWithRuntimeStatus } from "@/types/asset";
+import type { GenerationHistoryItem, AssetWithFullData } from "@/types/asset";
 import type { TimelineDetail } from "@/types/timeline";
 import { queryAssets } from "@/lib/actions/asset";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
@@ -58,7 +58,7 @@ export interface EditorState {
   isLoading: boolean;
 
   // 素材列表状态
-  assets: AssetWithRuntimeStatus[];
+  assets: AssetWithFullData[];
   assetsLoading: boolean;
   assetsLoaded: boolean; // 标记是否已完成首次加载
 
@@ -84,7 +84,7 @@ type EditorAction =
   | { type: "SET_MODE"; payload: EditorMode }
   | { type: "SET_TIMELINE"; payload: TimelineDetail | null }
   | { type: "UPDATE_TIMELINE"; payload: TimelineDetail }
-  | { type: "SET_ASSETS"; payload: AssetWithRuntimeStatus[] }
+  | { type: "SET_ASSETS"; payload: AssetWithFullData[] }
   | { type: "SET_ASSETS_LOADING"; payload: boolean }
   | { type: "SET_ASSET_GENERATION_MODE"; payload: "text-to-image" | "image-to-image" }
   | { type: "SET_SELECTED_SOURCE_ASSETS"; payload: string[] }

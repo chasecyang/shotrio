@@ -1,6 +1,6 @@
 "use client";
 
-import { AssetWithRuntimeStatus } from "@/types/asset";
+import { AssetWithFullData } from "@/types/asset";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,10 +20,10 @@ import { AssetProgressOverlay } from "./asset-progress-overlay";
 import type { Job } from "@/types/job";
 
 interface AssetCardProps {
-  asset: AssetWithRuntimeStatus;
+  asset: AssetWithFullData;
   isBatchSelected?: boolean;
-  onDelete: (asset: AssetWithRuntimeStatus) => void;
-  onClick: (asset: AssetWithRuntimeStatus) => void;
+  onDelete: (asset: AssetWithFullData) => void;
+  onClick: (asset: AssetWithFullData) => void;
   onSelectChange?: (assetId: string, selected: boolean) => void;
   job?: Job;
 }
@@ -49,13 +49,8 @@ export function AssetCard({
   // 检查资产是否失败
   const isFailed = asset.runtimeStatus === "failed";
   
-  // 获取 job - 优先使用传入的 job，否则使用 asset.latestJob
-  const currentJob = job || asset.latestJob || undefined;
-  
-  // 获取显示 URL（视频优先使用 thumbnailUrl，图片使用 imageUrl 或 thumbnailUrl）
-  const displayUrl = isVideo 
-    ? asset.thumbnailUrl // 视频只使用 thumbnailUrl，不使用 videoUrl（videoUrl 不是图片）
-    : asset.thumbnailUrl || asset.imageUrl;
+  // 获取 job - 使用传入的 job（运行时状态已在 asset.runtimeStatus 中计算）
+  const currentJob = job;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -143,10 +138,10 @@ export function AssetCard({
             <div className="absolute inset-0 bg-muted/50" />
             <AssetProgressOverlay asset={asset} job={currentJob} />
           </>
-        ) : displayUrl ? (
+        ) : asset.displayUrl ? (
           <>
             <Image
-              src={displayUrl}
+              src={asset.displayUrl}
               alt={asset.name}
               fill
               className="object-cover"

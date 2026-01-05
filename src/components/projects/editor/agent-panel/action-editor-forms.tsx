@@ -48,8 +48,7 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
   const [assets, setAssets] = useState<Array<{
     id: string;
     name: string;
-    imageUrl: string | null;
-    thumbnailUrl: string | null;
+    displayUrl: string | null;
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   // 使用 ref 跟踪当前请求的 assetIds，防止竞态条件
@@ -150,9 +149,9 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
           className="relative group rounded-md overflow-hidden border border-border/50 bg-background/50"
         >
           <div className="relative w-16 h-16">
-            {asset.imageUrl ? (
+            {asset.displayUrl ? (
               <Image
-                src={asset.thumbnailUrl || asset.imageUrl}
+                src={asset.displayUrl}
                 alt={asset.name}
                 fill
                 className="object-cover"

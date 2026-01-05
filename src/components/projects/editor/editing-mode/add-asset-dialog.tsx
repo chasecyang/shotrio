@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useEditor } from "../editor-context";
 import { queryAssets } from "@/lib/actions/asset";
-import { AssetWithRuntimeStatus } from "@/types/asset";
+import { AssetWithFullData } from "@/types/asset";
 import { toast } from "sonner";
 import { Video } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,7 +21,7 @@ import Image from "next/image";
 interface AddAssetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (asset: AssetWithRuntimeStatus) => void;
+  onSelect: (asset: AssetWithFullData) => void;
 }
 
 /**
@@ -31,7 +31,7 @@ export function AddAssetDialog({ open, onOpenChange, onSelect }: AddAssetDialogP
   const { state } = useEditor();
   const { project } = state;
   
-  const [assets, setAssets] = useState<AssetWithRuntimeStatus[]>([]);
+  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 加载视频素材
@@ -60,7 +60,7 @@ export function AddAssetDialog({ open, onOpenChange, onSelect }: AddAssetDialogP
     loadAssets();
   }, [open, project?.id]);
 
-  const handleSelect = (asset: AssetWithRuntimeStatus) => {
+  const handleSelect = (asset: AssetWithFullData) => {
     onSelect(asset);
     onOpenChange(false);
   };
@@ -105,9 +105,9 @@ export function AddAssetDialog({ open, onOpenChange, onSelect }: AddAssetDialogP
                 >
                   {/* 缩略图 */}
                   <div className="relative aspect-video bg-muted">
-                    {asset.thumbnailUrl || asset.imageUrl ? (
+                    {asset.displayUrl ? (
                       <Image
-                        src={asset.thumbnailUrl || asset.imageUrl!}
+                        src={asset.displayUrl}
                         alt={asset.name}
                         fill
                         className="object-cover"

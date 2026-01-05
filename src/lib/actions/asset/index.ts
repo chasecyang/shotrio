@@ -9,6 +9,7 @@ export {
   deleteAsset,
   deleteAssets,
   getAsset,
+  getAssetWithFullData,
   getAssetsByIds,
   incrementAssetUsage,
   // 视频资产

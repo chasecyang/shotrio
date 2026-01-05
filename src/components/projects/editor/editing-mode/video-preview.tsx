@@ -59,11 +59,11 @@ export function VideoPreview({ playback }: VideoPreviewProps) {
       {/* 预览画面 */}
       <div className="flex-1 flex items-center justify-center relative overflow-hidden">
         {/* 主视频元素 */}
-        {currentClip?.asset.videoUrl ? (
+        {currentClip?.asset.mediaUrl ? (
           <>
             <video
               ref={videoRef}
-              src={currentClip.asset.videoUrl}
+              src={currentClip.asset.mediaUrl}
               className="max-w-full max-h-full object-contain"
               onError={() => setVideoError(true)}
               onLoadedData={() => setVideoError(false)}
@@ -75,14 +75,10 @@ export function VideoPreview({ playback }: VideoPreviewProps) {
               preload="auto"
             />
           </>
-        ) : currentClip?.asset.thumbnailUrl || currentClip?.asset.imageUrl ? (
+        ) : currentClip?.asset.displayUrl ? (
           // 如果没有视频URL但有缩略图，显示缩略图
           <img
-            src={
-              currentClip.asset.thumbnailUrl ||
-              currentClip.asset.imageUrl ||
-              ""
-            }
+            src={currentClip.asset.displayUrl}
             alt="预览"
             className="max-w-full max-h-full object-contain"
             onError={() => setVideoError(true)}

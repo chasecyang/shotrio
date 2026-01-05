@@ -41,10 +41,10 @@ import type { ImageResolution } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAsset } from "@/lib/actions/asset";
+import { getAssetWithFullData } from "@/lib/actions/asset";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import type { AssetImageGenerationResult } from "@/types/job";
-import type { AssetWithTags } from "@/types/asset";
+import type { AssetWithFullData } from "@/types/asset";
 import { hasEnoughCredits } from "@/lib/actions/credits/balance";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { CREDIT_COSTS, PackageType } from "@/types/payment";
@@ -85,7 +85,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   
   // 从素材库选择的素材
-  const [selectedAssets, setSelectedAssets] = useState<AssetWithTags[]>([]);
+  const [selectedAssets, setSelectedAssets] = useState<AssetWithFullData[]>([]);
   
   // 表单状态（移除assetName）
   const [prompt, setPrompt] = useState("");
@@ -142,9 +142,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // 加载选中的素材详情
   useEffect(() => {
     const loadSelectedAssets = async () => {
-      const assets: AssetWithTags[] = [];
+      const assets: AssetWithFullData[] = [];
       for (const assetId of assetGeneration.selectedSourceAssets) {
-        const result = await getAsset(assetId);
+        const result = await getAssetWithFullData(assetId);
         if (result.success && result.asset) {
           assets.push(result.asset);
         }
@@ -173,11 +173,11 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // 处理从素材库选择图片
   const handleAssetPickerConfirm = async (assetIds: string[]) => {
     setSelectedSourceAssets(assetIds);
-    
+
     // 加载选中素材的详情
-    const assets: AssetWithTags[] = [];
+    const assets: AssetWithFullData[] = [];
     for (const assetId of assetIds) {
-      const result = await getAsset(assetId);
+      const result = await getAssetWithFullData(assetId);
       if (result.success && result.asset) {
         assets.push(result.asset);
       }
@@ -348,9 +348,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                     {selectedAssets.map((asset) => (
                       <div key={asset.id} className="relative group">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border bg-background">
-                          {asset.imageUrl ? (
+                          {asset.displayUrl ? (
                             <Image
-                              src={asset.thumbnailUrl || asset.imageUrl}
+                              src={asset.displayUrl}
                               alt={asset.name}
                               width={96}
                               height={96}

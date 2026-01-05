@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { X, Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { queryAssets } from "@/lib/actions/asset";
-import { AssetWithTags } from "@/types/asset";
+import { AssetWithFullData } from "@/types/asset";
+import { isAssetReady } from "@/lib/utils/asset-status";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -26,7 +27,7 @@ export function ReferenceAssetSelector({
   onSelectionChange,
   maxSelection = 14,
 }: ReferenceAssetSelectorProps) {
-  const [assets, setAssets] = useState<AssetWithTags[]>([]);
+  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -119,19 +120,19 @@ export function ReferenceAssetSelector({
                 <button
                   key={asset.id}
                   onClick={() => toggleAsset(asset.id)}
-                  disabled={!asset.imageUrl}
+                  disabled={!isAssetReady(asset)}
                   className={cn(
                     "relative group aspect-square rounded-lg overflow-hidden",
                     "border-2 transition-all",
                     isSelected
                       ? "border-primary ring-2 ring-primary/20"
                       : "border-transparent hover:border-muted-foreground/20",
-                    !asset.imageUrl && "opacity-50 cursor-not-allowed"
+                    !isAssetReady(asset) && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  {asset.imageUrl ? (
+                  {asset.displayUrl ? (
                     <Image
-                      src={asset.imageUrl}
+                      src={asset.displayUrl}
                       alt={asset.name}
                       fill
                       className="object-cover"

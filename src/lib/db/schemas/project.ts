@@ -13,7 +13,7 @@ export const projectStatusEnum = pgEnum("project_status", [
 ]);
 
 // 资产类型枚举
-export const assetTypeEnum = pgEnum("asset_type", ["image", "video", "text"]);
+export const assetTypeEnum = pgEnum("asset_type", ["image", "video", "text", "audio"]);
 
 // 资产来源类型枚举
 export const assetSourceTypeEnum = pgEnum("asset_source_type", [
@@ -26,6 +26,7 @@ export const jobTypeEnum = pgEnum("job_type", [
   "batch_image_generation", // 批量图像生成
   "asset_image_generation", // 素材图片生成
   "video_generation", // 视频生成
+  "audio_generation", // 音频生成
   "final_video_export", // 最终成片导出
 ]);
 
@@ -109,7 +110,7 @@ export const project = pgTable("project", {
     .notNull(),
 });
 
-// 2. 资产表 (Asset) - 统一的资产管理（图片和视频）
+// 2. 资产表 (Asset) - 统一的资产管理基表
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const asset: any = pgTable("asset", {
   id: text("id").primaryKey(),
@@ -122,47 +123,22 @@ export const asset: any = pgTable("asset", {
 
   // 基本信息
   name: text("name").notNull(), // 资产名称，如 "张三-正面-愤怒"
-  
+
   // 资产类型
-  assetType: assetTypeEnum("asset_type").default("image").notNull(),
-  
-  // 资产来源类型（新增）
-  sourceType: assetSourceTypeEnum("source_type").default("generated").notNull(),
-  
-  // 图片字段（图片类型必填）
-  imageUrl: text("image_url"), // 图片URL - 改为可选
-  thumbnailUrl: text("thumbnail_url"), // 缩略图URL
-  
-  // 视频字段（视频类型必填）
-  videoUrl: text("video_url"), // 视频URL
-  duration: integer("duration"), // 视频时长（毫秒）
-  
-  // 文本字段（文本类型必填）
-  textContent: text("text_content"), // 文本内容（统一使用 Markdown 格式）
-  
-  // 生成信息
-  prompt: text("prompt"), // 生成用的prompt
-  seed: integer("seed"), // 固定seed
-  modelUsed: text("model_used"), // 使用的模型
-  
-  // 生成配置（主要用于视频）
-  generationConfig: text("generation_config"), // JSON配置
-  
-  // 派生关系
-  sourceAssetIds: text("source_asset_ids").array(), // 多个源素材ID（用于图生图）
-  
+  assetType: assetTypeEnum("asset_type").notNull(),
+
+  // 资产来源类型
+  sourceType: assetSourceTypeEnum("source_type").notNull(),
+
   // 灵活的元数据字段（JSON）
-  meta: text("meta"), // JSON字符串，存储类型特定的元数据
-  
-  // 注意：status 和 errorMessage 字段已移除
-  // 状态现在从关联的 job 动态计算，详见 src/lib/utils/asset-status.ts
-  
+  meta: text("meta"), // JSON字符串，存储类型特定的元数据（CharacterMeta、AudioMeta等）
+
   // 组织和排序
   order: integer("order"), // 用于排序
-  
+
   // 统计信息
   usageCount: integer("usage_count").default(0).notNull(),
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -170,7 +146,68 @@ export const asset: any = pgTable("asset", {
     .notNull(),
 });
 
-// 2.1 资产标签表 (Asset Tag) - 多对多标签系统
+// 2.1 生成信息表 (Generation Info) - 仅 AI 生成的素材有记录
+export const generationInfo = pgTable("generation_info", {
+  assetId: text("asset_id")
+    .primaryKey()
+    .references(() => asset.id, { onDelete: "cascade" }),
+
+  // 生成参数
+  prompt: text("prompt"), // 生成用的 prompt
+  seed: integer("seed"), // 固定 seed
+  modelUsed: text("model_used"), // 使用的模型
+  generationConfig: text("generation_config"), // JSON 配置
+
+  // 派生关系
+  sourceAssetIds: text("source_asset_ids").array(), // 源素材 ID（用于图生图、文本生配音等）
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 2.2 图片数据表 (Image Data)
+export const imageData = pgTable("image_data", {
+  assetId: text("asset_id")
+    .primaryKey()
+    .references(() => asset.id, { onDelete: "cascade" }),
+
+  imageUrl: text("image_url"), // 图片 URL
+  thumbnailUrl: text("thumbnail_url"), // 缩略图 URL
+});
+
+// 2.3 视频数据表 (Video Data)
+export const videoData = pgTable("video_data", {
+  assetId: text("asset_id")
+    .primaryKey()
+    .references(() => asset.id, { onDelete: "cascade" }),
+
+  videoUrl: text("video_url"), // 视频 URL
+  duration: integer("duration"), // 视频时长（毫秒）
+});
+
+// 2.4 文本数据表 (Text Data)
+export const textData = pgTable("text_data", {
+  assetId: text("asset_id")
+    .primaryKey()
+    .references(() => asset.id, { onDelete: "cascade" }),
+
+  textContent: text("text_content"), // 文本内容（Markdown 格式）
+});
+
+// 2.5 音频数据表 (Audio Data)
+export const audioData = pgTable("audio_data", {
+  assetId: text("asset_id")
+    .primaryKey()
+    .references(() => asset.id, { onDelete: "cascade" }),
+
+  audioUrl: text("audio_url"), // 音频 URL
+  duration: integer("duration"), // 音频时长（毫秒）
+  format: text("format"), // 格式：mp3, wav, m4a
+  sampleRate: integer("sample_rate"), // 采样率 Hz
+  bitrate: integer("bitrate"), // 比特率 kbps
+  channels: integer("channels"), // 声道数：1(mono) / 2(stereo)
+});
+
+// 2.6 资产标签表 (Asset Tag) - 多对多标签系统
 export const assetTag = pgTable("asset_tag", {
   id: text("id").primaryKey(),
   assetId: text("asset_id")
@@ -261,6 +298,47 @@ export const assetRelations = relations(asset, ({ one, many }) => ({
   }),
   tags: many(assetTag),
   jobs: many(job), // 关联的任务（一个 asset 可以有多个 job，支持重试）
+  // 扩展表关系
+  generationInfo: one(generationInfo),
+  imageData: one(imageData),
+  videoData: one(videoData),
+  textData: one(textData),
+  audioData: one(audioData),
+}));
+
+export const generationInfoRelations = relations(generationInfo, ({ one }) => ({
+  asset: one(asset, {
+    fields: [generationInfo.assetId],
+    references: [asset.id],
+  }),
+}));
+
+export const imageDataRelations = relations(imageData, ({ one }) => ({
+  asset: one(asset, {
+    fields: [imageData.assetId],
+    references: [asset.id],
+  }),
+}));
+
+export const videoDataRelations = relations(videoData, ({ one }) => ({
+  asset: one(asset, {
+    fields: [videoData.assetId],
+    references: [asset.id],
+  }),
+}));
+
+export const textDataRelations = relations(textData, ({ one }) => ({
+  asset: one(asset, {
+    fields: [textData.assetId],
+    references: [asset.id],
+  }),
+}));
+
+export const audioDataRelations = relations(audioData, ({ one }) => ({
+  asset: one(asset, {
+    fields: [audioData.assetId],
+    references: [asset.id],
+  }),
 }));
 
 export const assetTagRelations = relations(assetTag, ({ one }) => ({

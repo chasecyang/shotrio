@@ -1,47 +1,33 @@
 /**
- * Asset查询的通用辅助函数
- * 
- * 提供JOIN job表并计算运行时状态的通用查询逻辑
- * 供各种asset查询函数复用
+ * Asset 查询函数
+ *
+ * 使用 Drizzle relations 自动 join 扩展表
+ * 返回 AssetWithFullData 类型，包含所有扩展数据和运行时状态
  */
 
 import db from "@/lib/db";
 import { asset, assetTag, job } from "@/lib/db/schemas/project";
 import { eq, and, inArray, sql, SQL, desc } from "drizzle-orm";
-import { enrichAssetWithStatus, enrichAssetsWithStatus } from "@/lib/utils/asset-status";
-import type { Asset, AssetWithRuntimeStatus, AssetTag } from "@/types/asset";
+import { enrichAssetWithFullData, enrichAssetsWithFullData } from "@/lib/utils/asset-status";
+import type { Asset, AssetWithFullData, AssetTag as AssetTagType } from "@/types/asset";
 import type { Job } from "@/types/job";
 
 /**
- * 查询单个资产并附加运行时状态
- * 
- * 此函数会自动JOIN关联的job表，并计算资产的运行时状态（runtimeStatus）
- * 
- * 使用场景：
- * - 需要显示资产的生成状态（pending/processing/completed/failed）
- * - 需要获取资产的错误信息（从关联的job获取）
- * - 需要访问关联的job信息（latestJob字段）
- * 
- * 状态计算规则：
- * - 上传的资产（sourceType='uploaded'）：直接返回 'completed'
- * - 生成的资产（sourceType='generated'）：
- *   - 有关联job：从job.status映射（pending/processing/completed/failed/cancelled）
- *   - 无job但有文件URL：视为 'completed'
- *   - 无job且无文件：视为 'failed'（孤立资产）
- * 
- * 注意：此函数不进行权限验证，需要调用方自行验证
- * 
- * @param assetId - 资产ID
- * @returns 带运行时状态的资产，如果不存在返回null
+ * 查询单个资产（完整数据 + 运行时状态）
  */
-export async function getAssetWithStatus(
+export async function getAssetWithFullData(
   assetId: string
-): Promise<AssetWithRuntimeStatus | null> {
-  // 查询asset及其tags
+): Promise<AssetWithFullData | null> {
+  // 使用 relations 自动 join 所有扩展表
   const assetData = await db.query.asset.findFirst({
     where: eq(asset.id, assetId),
     with: {
       tags: true,
+      generationInfo: true,
+      imageData: true,
+      videoData: true,
+      textData: true,
+      audioData: true,
     },
   });
 
@@ -49,45 +35,46 @@ export async function getAssetWithStatus(
     return null;
   }
 
-  // 查询最新的关联job（使用外键）
+  // 查询最新的关联 job
   const latestJob = await db.query.job.findFirst({
     where: and(
       eq(job.assetId, assetId),
-      inArray(job.type, ['asset_image_generation', 'video_generation'])
+      inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
     ),
     orderBy: [desc(job.createdAt)],
   });
 
-  return enrichAssetWithStatus(
+  return enrichAssetWithFullData(
     assetData as Asset,
-    assetData.tags as AssetTag[],
-    latestJob as Job | undefined
+    assetData.tags as AssetTagType[],
+    assetData.generationInfo,
+    assetData.imageData,
+    assetData.videoData,
+    assetData.textData,
+    assetData.audioData,
+    latestJob as Job | null
   );
 }
 
 /**
- * 查询多个资产并附加运行时状态
- * 
- * 这是通用的查询函数，接受where条件和排序选项
- * 自动JOIN job表并计算运行时状态
- * 
- * @param whereClause - WHERE条件（可选）
- * @param orderByClause - 排序条件（可选）
- * @param limit - 限制返回数量（可选）
- * @param offset - 偏移量（可选）
- * @returns 带运行时状态的资产数组
+ * 查询多个资产（完整数据 + 运行时状态）
  */
-export async function queryAssetsWithStatus(
+export async function queryAssetsWithFullData(
   whereClause?: SQL | undefined,
   orderByClause?: SQL | SQL[],
   limit?: number,
   offset?: number
-): Promise<AssetWithRuntimeStatus[]> {
-  // 1. 查询assets及其tags
+): Promise<AssetWithFullData[]> {
+  // 使用 relations 自动 join 所有扩展表
   const assetsData = await db.query.asset.findMany({
     where: whereClause,
     with: {
       tags: true,
+      generationInfo: true,
+      imageData: true,
+      videoData: true,
+      textData: true,
+      audioData: true,
     },
     orderBy: orderByClause,
     limit,
@@ -98,11 +85,8 @@ export async function queryAssetsWithStatus(
     return [];
   }
 
-  // 2. 提取所有assetId
+  // 批量查询所有关联的 jobs
   const assetIds = assetsData.map((a) => a.id);
-
-  // 3. 批量查询所有关联的jobs（使用外键）
-  // 使用子查询获取每个asset的最新job
   const jobsData = await db
     .select({
       assetId: job.assetId,
@@ -113,14 +97,12 @@ export async function queryAssetsWithStatus(
     .where(
       and(
         inArray(job.assetId, assetIds),
-        inArray(job.type, ['asset_image_generation', 'video_generation'])
+        inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
       )
     );
 
-  // 4. 过滤出每个asset的最新job（rn = 1）
+  // 过滤出每个 asset 的最新 job
   const latestJobs = jobsData.filter((row) => row.rn === 1);
-
-  // 5. 构建jobsMap (assetId -> Job)
   const jobsMap = new Map<string, Job>();
   for (const row of latestJobs) {
     if (row.assetId) {
@@ -128,18 +110,62 @@ export async function queryAssetsWithStatus(
     }
   }
 
-  // 6. 为所有assets附加运行时状态
-  return enrichAssetsWithStatus(
-    assetsData as Array<Asset & { tags: AssetTag[] }>,
-    jobsMap
+  return enrichAssetsWithFullData(assetsData as any, jobsMap);
+}
+
+/**
+ * 查询项目资产（带过滤和分页）
+ */
+export async function queryProjectAssets(options: {
+  projectId: string;
+  assetType?: "image" | "video" | "text" | "audio";
+  sourceType?: "generated" | "uploaded";
+  tagFilters?: string[];
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AssetWithFullData[]> {
+  const { projectId, assetType, sourceType, tagFilters, search, limit, offset } = options;
+
+  // 构建 WHERE 条件
+  const conditions: SQL[] = [eq(asset.projectId, projectId)];
+
+  if (assetType) {
+    conditions.push(eq(asset.assetType, assetType));
+  }
+
+  if (sourceType) {
+    conditions.push(eq(asset.sourceType, sourceType));
+  }
+
+  if (search) {
+    conditions.push(sql`${asset.name} ILIKE ${`%${search}%`}`);
+  }
+
+  // 标签过滤
+  if (tagFilters && tagFilters.length > 0) {
+    const assetsWithMatchingTags = await db
+      .selectDistinct({ assetId: assetTag.assetId })
+      .from(assetTag)
+      .where(inArray(assetTag.tagValue, tagFilters));
+
+    const matchingAssetIds = assetsWithMatchingTags.map((row) => row.assetId);
+    if (matchingAssetIds.length === 0) {
+      return [];
+    }
+    conditions.push(inArray(asset.id, matchingAssetIds));
+  }
+
+  return queryAssetsWithFullData(
+    and(...conditions),
+    desc(asset.createdAt),
+    limit,
+    offset
   );
 }
 
 /**
  * 统计资产数量（按状态分组）
- * 
- * @param projectId - 项目ID
- * @returns 各状态的资产数量
  */
 export async function countAssetsByStatus(projectId: string): Promise<{
   total: number;
@@ -148,12 +174,8 @@ export async function countAssetsByStatus(projectId: string): Promise<{
   processing: number;
   failed: number;
 }> {
-  // 获取所有资产及其状态
-  const assetsWithStatus = await queryAssetsWithStatus(
-    eq(asset.projectId, projectId)
-  );
+  const assetsWithStatus = await queryProjectAssets({ projectId });
 
-  // 统计各状态数量
   const counts = {
     total: assetsWithStatus.length,
     completed: 0,
@@ -169,69 +191,13 @@ export async function countAssetsByStatus(projectId: string): Promise<{
   return counts;
 }
 
-/**
- * 查询指定项目的资产（带过滤和分页）
- * 
- * @param options - 查询选项
- * @returns 带运行时状态的资产数组
- */
-export async function queryProjectAssetsWithStatus(options: {
-  projectId: string;
-  assetType?: "image" | "video" | "text";
-  sourceType?: "generated" | "uploaded";
-  tagFilters?: string[];
-  search?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<AssetWithRuntimeStatus[]> {
-  const {
-    projectId,
-    assetType,
-    sourceType,
-    tagFilters,
-    search,
-    limit,
-    offset,
-  } = options;
+// ===== 向后兼容的别名 =====
 
-  // 构建WHERE条件
-  const conditions: SQL[] = [eq(asset.projectId, projectId)];
+/** @deprecated 使用 getAssetWithFullData */
+export const getAssetWithStatus = getAssetWithFullData;
 
-  if (assetType) {
-    conditions.push(eq(asset.assetType, assetType));
-  }
+/** @deprecated 使用 queryAssetsWithFullData */
+export const queryAssetsWithStatus = queryAssetsWithFullData;
 
-  if (sourceType) {
-    conditions.push(eq(asset.sourceType, sourceType));
-  }
-
-  if (search) {
-    conditions.push(
-      sql`${asset.name} ILIKE ${`%${search}%`}`
-    );
-  }
-
-  // 如果有标签过滤，需要JOIN assetTag表
-  if (tagFilters && tagFilters.length > 0) {
-    const assetsWithMatchingTags = await db
-      .selectDistinct({ assetId: assetTag.assetId })
-      .from(assetTag)
-      .where(inArray(assetTag.tagValue, tagFilters));
-
-    const matchingAssetIds = assetsWithMatchingTags.map((row) => row.assetId);
-
-    if (matchingAssetIds.length === 0) {
-      return [];
-    }
-
-    conditions.push(inArray(asset.id, matchingAssetIds));
-  }
-
-  const whereClause = and(...conditions);
-
-  // 排序：按创建时间降序
-  const orderByClause = desc(asset.createdAt);
-
-  return queryAssetsWithStatus(whereClause, orderByClause, limit, offset);
-}
-
+/** @deprecated 使用 queryProjectAssets */
+export const queryProjectAssetsWithStatus = queryProjectAssets;

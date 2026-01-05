@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useEditor } from "./editor-context";
 import { AssetCard } from "./shared/asset-card";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
-import { AssetWithRuntimeStatus } from "@/types/asset";
+import { AssetWithFullData } from "@/types/asset";
 import { toast } from "sonner";
 import { Images } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,17 +39,17 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
 
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [assetToDelete, setAssetToDelete] = useState<AssetWithRuntimeStatus | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<AssetWithFullData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [filterOptions, setFilterOptions] = useState<AssetFilterOptions>(DEFAULT_FILTER);
 
   // 媒体查看器状态
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerAsset, setViewerAsset] = useState<AssetWithRuntimeStatus | null>(null);
+  const [viewerAsset, setViewerAsset] = useState<AssetWithFullData | null>(null);
 
   // 文本资产编辑状态
-  const [editingTextAsset, setEditingTextAsset] = useState<AssetWithRuntimeStatus | null>(null);
+  const [editingTextAsset, setEditingTextAsset] = useState<AssetWithFullData | null>(null);
 
   // 初始加载或静默刷新
   useEffect(() => {
@@ -91,7 +91,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   };
 
   // 处理素材点击 - 根据类型打开不同的查看器
-  const handleAssetClick = (asset: AssetWithRuntimeStatus) => {
+  const handleAssetClick = (asset: AssetWithFullData) => {
     if (asset.assetType === "text") {
       // 文本资产打开编辑对话框
       setEditingTextAsset(asset);
@@ -104,7 +104,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   };
 
   // 处理删除
-  const handleDelete = (asset: AssetWithRuntimeStatus) => {
+  const handleDelete = (asset: AssetWithFullData) => {
     if (selectedAssetIds.size > 0) {
       return;
     }

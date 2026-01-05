@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { createAsset, updateAsset, getAsset } from "./crud";
+import { createAsset, updateAsset, getAsset, getAssetWithFullData } from "./crud";
 import type { AssetWithTags } from "@/types/asset";
 
 /**
@@ -47,10 +47,13 @@ export async function createTextAsset(
   return createAsset({
     projectId: input.projectId,
     name: input.name,
+    assetType: "text",
     sourceType: "uploaded", // 文本资产无需 job 处理
-    textContent: input.content,
     tags: input.tags,
     meta: input.meta ? { textAsset: input.meta } : undefined,
+    textData: {
+      textContent: input.content,
+    },
   });
 }
 
@@ -87,7 +90,9 @@ export async function updateTextAssetContent(
   }
 
   return updateAsset(assetId, {
-    textContent: content,
+    textData: {
+      textContent: content,
+    },
   });
 }
 
@@ -112,7 +117,7 @@ export async function getTextAssetContent(
     return { success: false, error: "未登录" };
   }
 
-  const assetResult = await getAsset(assetId);
+  const assetResult = await getAssetWithFullData(assetId);
   if (!assetResult.success || !assetResult.asset) {
     return { success: false, error: assetResult.error || "资产不存在" };
   }

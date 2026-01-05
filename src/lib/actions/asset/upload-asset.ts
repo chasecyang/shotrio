@@ -50,10 +50,13 @@ export async function uploadAsset({
     const createResult = await createAsset({
       projectId,
       name: assetName.trim(),
-      sourceType: 'uploaded', // ✅ 标记为上传类资产，直接完成，无需job
-      imageUrl: uploadResult.url,
-      thumbnailUrl: uploadResult.url,
+      assetType: "image",
+      sourceType: "uploaded", // ✅ 标记为上传类资产，直接完成，无需job
       tags,
+      imageData: {
+        imageUrl: uploadResult.url,
+        thumbnailUrl: uploadResult.url,
+      },
     });
 
     if (!createResult.success) {

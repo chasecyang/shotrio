@@ -9,7 +9,7 @@ import { TimelineClipItem } from "./timeline-clip-item";
 import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { AddAssetDialog } from "./add-asset-dialog";
-import { AssetWithRuntimeStatus } from "@/types/asset";
+import { AssetWithFullData } from "@/types/asset";
 import { recalculateClipPositions, formatTimeDisplay } from "@/lib/utils/timeline-utils";
 import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
 
@@ -355,7 +355,7 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
   };
 
   // 处理添加素材
-  const handleAddAsset = async (asset: AssetWithRuntimeStatus) => {
+  const handleAddAsset = async (asset: AssetWithFullData) => {
     if (!timeline) return;
 
     // 计算新片段的开始时间（添加到时间轴末尾）
