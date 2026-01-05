@@ -12,6 +12,48 @@ import type { ConversationState, Message } from "./types";
 import { isAwaitingApproval } from "./approval-utils";
 
 /**
+ * 确保消息顺序符合 OpenAI API 要求
+ * 每个包含 tool_calls 的 assistant 消息后面必须紧跟对应的 tool 消息
+ *
+ * 问题场景：用户打断 agent 时，打断消息先保存（T1），rejection消息后保存（T2）
+ * 按时间排序后变成：assistant(tool_call) → user(打断) → tool(rejection)
+ * 但 OpenAI 要求：assistant(tool_call) → tool(rejection) → user(打断)
+ */
+function ensureToolCallOrder(messages: Message[]): Message[] {
+  const result: Message[] = [];
+  const usedToolMessageIndices = new Set<number>();
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+
+    // 跳过已经被移动的 tool 消息
+    if (usedToolMessageIndices.has(i)) continue;
+
+    result.push(msg);
+
+    // 如果是包含 tool_calls 的 assistant 消息
+    if (msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0) {
+      const toolCallIds = new Set(msg.tool_calls.map(tc => tc.id));
+
+      // 查找并收集所有对应的 tool 消息（可能在后面的任意位置）
+      for (let j = i + 1; j < messages.length; j++) {
+        const laterMsg = messages[j];
+        if (laterMsg.role === "tool" &&
+            laterMsg.tool_call_id &&
+            toolCallIds.has(laterMsg.tool_call_id) &&
+            !usedToolMessageIndices.has(j)) {
+          result.push(laterMsg);
+          usedToolMessageIndices.add(j);
+          toolCallIds.delete(laterMsg.tool_call_id);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * 保存用户消息
  */
 export async function saveUserMessage(conversationId: string, content: string): Promise<string> {
@@ -139,8 +181,7 @@ export async function loadConversationState(conversationId: string): Promise<Con
     }
 
     console.log(`[loadConversationState] 加载对话: ${conversationId}, 状态: ${conv.status}, 消息数: ${conv.messages.length}`);
-  
-  try {
+
     // 2. 重建消息历史
     const messages: Message[] = [];
     
@@ -206,9 +247,13 @@ export async function loadConversationState(conversationId: string): Promise<Con
         });
       }
     }
-    
-    // 5. 状态一致性检查和修复（异步，不阻塞返回）
-    if (conv.status === "awaiting_approval" && !isAwaitingApproval(messages)) {
+
+    // 5. 修正消息顺序，确保符合 OpenAI API 要求
+    // 每个包含 tool_calls 的 assistant 消息后面必须紧跟对应的 tool 消息
+    const correctedMessages = ensureToolCallOrder(messages);
+
+    // 6. 状态一致性检查和修复（异步，不阻塞返回）
+    if (conv.status === "awaiting_approval" && !isAwaitingApproval(correctedMessages)) {
       console.warn("[loadConversationState] 状态不一致，修复: awaiting_approval -> active");
       db.update(conversation)
         .set({ status: "active", updatedAt: new Date() })
@@ -219,15 +264,11 @@ export async function loadConversationState(conversationId: string): Promise<Con
     return {
       conversationId,
       projectContext: agentContext,
-      messages,
+      messages: correctedMessages,
       assistantMessageId: lastAssistantMsg?.id,
     };
   } catch (error) {
     console.error("[loadConversationState] 加载失败:", error);
-    return null;
-  }
-  } catch (error) {
-    console.error("[loadConversationState] 查询失败:", error);
     return null;
   }
 }
