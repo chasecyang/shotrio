@@ -555,7 +555,11 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {isSetArtStyle && artStyleName 
+              {isGenerateAssets 
+                ? "生成图片素材"
+                : isGenerateVideo 
+                ? "生成视频素材"
+                : isSetArtStyle && artStyleName 
                 ? `${functionCall.displayName || functionCall.name} - ${artStyleName}`
                 : (functionCall.displayName || functionCall.name)
               }
@@ -763,7 +767,11 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 disabled={isLoading}
               >
                 <Maximize2 className="h-3 w-3 mr-1" />
-                详情 & 修改
+                {isGenerateAssets 
+                  ? "查看图片参数" 
+                  : isGenerateVideo 
+                  ? "查看视频参数"
+                  : "查看详情"}
               </Button>
             )}
 
@@ -797,13 +805,17 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           <DialogHeader>
             <DialogTitle>
               {isGenerateAssets 
-                ? "编辑生成素材参数" 
+                ? "生成图片素材" 
                 : isGenerateVideo 
-                ? "编辑生成视频参数"
-                : "编辑文本资产参数"}
+                ? "生成视频素材"
+                : "创建文本资产"}
             </DialogTitle>
             <DialogDescription>
-              请在确认生成前检查并修改相关参数。
+              {isGenerateAssets 
+                ? "检查并修改图片生成参数，确认后将使用AI生成图片素材"
+                : isGenerateVideo 
+                ? "检查并修改视频生成参数，确认后将使用AI生成视频素材"
+                : "检查并修改文本资产的内容和标签信息"}
             </DialogDescription>
           </DialogHeader>
           
@@ -811,24 +823,59 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             {renderEditForm()}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              取消
-            </Button>
-            <Button 
-              onClick={() => {
-                setShowEditDialog(false);
-                // 这里我们不需要立即 confirm，而是关闭弹窗，用户可以点击卡片上的确认
-                // 或者我们可以在这里直接 confirm？
-                // 交互上：用户在弹窗改完，点击“确认修改”，应该只是保存到 editedParams？
-                // 或者是“确认并执行”？
-                // 方案：改为“确认并执行”更流畅。
-                onConfirm(functionCall.id, editedParams);
-              }}
-              disabled={insufficientBalance || isLoading}
-            >
-              确认并执行
-            </Button>
+          <DialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2">
+            {/* Credit Cost Display */}
+            <div className="flex items-center gap-2 mr-auto">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted border border-border">
+                <Coins className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">{totalCost}</span>
+                <span className="text-xs text-muted-foreground">积分</span>
+              </div>
+              {insufficientBalance && (
+                <div className="flex items-center gap-1.5 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs">余额不足 ({currentBalance})</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPurchaseDialog(true);
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    充值
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                取消
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowEditDialog(false);
+                  onConfirm(functionCall.id, editedParams);
+                }}
+                disabled={insufficientBalance || isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    执行中...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    确认并执行
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
