@@ -13,6 +13,7 @@ import { AgentPanel } from "./agent-panel/agent-panel";
 import { AssetGalleryPanel } from "./asset-gallery-panel";
 import { EditingModeLayout } from "./editing-mode/editing-mode-layout";
 import { ProjectSettingsPanel } from "./project-settings-panel";
+import { ActionEditorPanel } from "./action-editor-panel";
 import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProjectDetail } from "@/types/project";
@@ -100,7 +101,9 @@ function EditorLayoutInner({
 
         {/* 右侧：根据状态显示不同面板 */}
         <ResizablePanel defaultSize={70} minSize={40}>
-          {state.showSettings ? (
+          {state.actionEditor ? (
+            <ActionEditorPanel />
+          ) : state.showSettings ? (
             <ProjectSettingsPanel />
           ) : state.mode === "editing" ? (
             <EditingModeLayout />

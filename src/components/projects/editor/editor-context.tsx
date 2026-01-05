@@ -9,6 +9,7 @@ import { refreshProject } from "@/lib/actions/project/refresh";
 import type { GenerationHistoryItem, AssetWithRuntimeStatus } from "@/types/asset";
 import type { TimelineDetail } from "@/types/timeline";
 import { queryAssets } from "@/lib/actions/asset";
+import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 // 编辑器模式
 export type EditorMode = "asset-management" | "editing";
@@ -25,6 +26,21 @@ export interface PlaybackState {
   isPlaying: boolean;
   currentTime: number; // 相对于整个时间轴的时间（毫秒）
   currentClipIndex: number; // 当前播放的片段索引
+}
+
+// 参数编辑数据
+export interface ActionEditorData {
+  functionCall: {
+    id: string;
+    name: string;
+    displayName?: string;
+    arguments: Record<string, unknown>;
+    category: string;
+  };
+  creditCost?: CreditCost;
+  currentBalance?: number;
+  onConfirm: (id: string, modifiedParams?: Record<string, unknown>) => void;
+  onCancel: (id: string) => void;
 }
 
 // 编辑器状态
@@ -54,6 +70,10 @@ export interface EditorState {
 
   // 设置面板显示状态
   showSettings: boolean;
+
+  // 参数编辑面板状态
+  actionEditor?: ActionEditorData;
+  previousView?: "gallery" | "editing" | "settings"; // 保存切换前的视图
 }
 
 // 编辑器动作类型
@@ -74,7 +94,9 @@ type EditorAction =
   | { type: "SET_CURRENT_TIME"; payload: number }
   | { type: "SET_CURRENT_CLIP_INDEX"; payload: number }
   | { type: "UPDATE_PLAYBACK"; payload: Partial<PlaybackState> }
-  | { type: "SET_SHOW_SETTINGS"; payload: boolean };
+  | { type: "SET_SHOW_SETTINGS"; payload: boolean }
+  | { type: "SET_ACTION_EDITOR"; payload: ActionEditorData }
+  | { type: "CLEAR_ACTION_EDITOR" };
 
 // 初始状态
 const initialState: EditorState = {
@@ -233,6 +255,45 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         showSettings: action.payload,
       };
 
+    case "SET_ACTION_EDITOR": {
+      // 保存当前视图状态
+      let previousView: "gallery" | "editing" | "settings" = "gallery";
+      if (state.mode === "editing") {
+        previousView = "editing";
+      } else if (state.showSettings) {
+        previousView = "settings";
+      }
+      
+      return {
+        ...state,
+        actionEditor: action.payload,
+        previousView,
+      };
+    }
+
+    case "CLEAR_ACTION_EDITOR": {
+      // 恢复之前的视图状态
+      const updates: Partial<EditorState> = {
+        actionEditor: undefined,
+        previousView: undefined,
+      };
+      
+      if (state.previousView === "editing") {
+        updates.mode = "editing";
+      } else if (state.previousView === "settings") {
+        updates.showSettings = true;
+      } else {
+        // 默认回到素材画廊
+        updates.mode = "asset-management";
+        updates.showSettings = false;
+      }
+      
+      return {
+        ...state,
+        ...updates,
+      };
+    }
+
     default:
       return state;
   }
@@ -265,6 +326,9 @@ interface EditorContextType {
   clearGenerationHistory: () => void;
   // 设置面板相关方法
   setShowSettings: (show: boolean) => void;
+  // 参数编辑面板相关方法
+  setActionEditor: (data: ActionEditorData) => void;
+  clearActionEditor: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -393,6 +457,14 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "SET_SHOW_SETTINGS", payload: show });
   }, []);
 
+  const setActionEditor = useCallback((data: ActionEditorData) => {
+    dispatch({ type: "SET_ACTION_EDITOR", payload: data });
+  }, []);
+
+  const clearActionEditor = useCallback(() => {
+    dispatch({ type: "CLEAR_ACTION_EDITOR" });
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -407,6 +479,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       addGenerationHistory,
       clearGenerationHistory,
       setShowSettings,
+      setActionEditor,
+      clearActionEditor,
       jobs,
       refreshJobs,
     }),
@@ -422,6 +496,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       addGenerationHistory,
       clearGenerationHistory,
       setShowSettings,
+      setActionEditor,
+      clearActionEditor,
       jobs,
       refreshJobs,
     ]

@@ -3,10 +3,6 @@
 import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { 
   AlertCircle, 
@@ -26,29 +22,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 import { 
-  formatParametersForConfirmation, 
-  parsePromptReferences
+  formatParametersForConfirmation
 } from "@/lib/utils/agent-params-formatter";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
 import { getArtStyleById } from "@/lib/actions/art-style/queries";
 import Image from "next/image";
 import { useEditor } from "../editor-context";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface PendingActionMessageProps {
   functionCall: {
@@ -65,29 +45,6 @@ interface PendingActionMessageProps {
   currentBalance?: number;
   isConfirming?: boolean;
   isRejecting?: boolean;
-}
-
-// Prompt高亮组件
-function PromptWithHighlights({ 
-  prompt
-}: { 
-  prompt: string;
-}) {
-  const parts = parsePromptReferences(prompt);
-  
-  return (
-    <div className="whitespace-pre-wrap text-xs leading-relaxed">
-      {parts.map((part, i) => 
-        part.isReference ? (
-          <span key={i} className="font-medium text-primary bg-primary/10 px-1 rounded">
-            {part.text}
-          </span>
-        ) : (
-          <span key={i}>{part.text}</span>
-        )
-      )}
-    </div>
-  );
 }
 
 // 素材预览组件（支持自动刷新）
@@ -232,14 +189,11 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   isRejecting = false,
 }: PendingActionMessageProps) {
   const t = useTranslations();
+  const editor = useEditor();
   const totalCost = creditCost?.total || 0;
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
   const [artStyleName, setArtStyleName] = useState<string | null>(null);
-  
-  // 🆕 编辑状态
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editedParams, setEditedParams] = useState<Record<string, unknown>>(functionCall.arguments);
   
   // 计算整体 loading 状态
   const isLoading = isConfirming || isRejecting;
@@ -266,12 +220,12 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }
   }, [functionCall.arguments, isGenerateAssets, isGenerateVideo, isSetArtStyle, isCreateTextAsset]);
 
-  // 解析生成素材的assets数组（从editedParams读取，支持编辑）
+  // 解析生成素材的assets数组（用于预览显示）
   const generationAssets = useMemo(() => {
     if (!isGenerateAssets) return null;
     
     try {
-      const assetsArg = editedParams.assets;
+      const assetsArg = functionCall.arguments.assets;
       let assetsArray: Array<Record<string, unknown>>;
 
       // 兼容数组和JSON字符串
@@ -318,7 +272,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
       console.error("解析assets数组失败:", error);
       return null;
     }
-  }, [isGenerateAssets, editedParams]);
+  }, [isGenerateAssets, functionCall.arguments.assets]);
 
   // 获取美术风格名称
   useEffect(() => {
@@ -337,209 +291,15 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     });
   }, [isSetArtStyle, functionCall.arguments.styleId]);
 
-  // 渲染 Markdown 预览（可滚动查看完整内容）
-  const renderMarkdownPreview = (content: string) => {
-    return (
-      <div className="max-h-40 overflow-y-auto border rounded-md p-2 bg-muted/20 text-xs text-foreground/80">
-        <MarkdownRenderer content={content || "*暂无内容*"} />
-      </div>
-    );
-  };
-
-  const renderEditForm = () => {
-    if (isGenerateAssets) {
-      return (
-        generationAssets && generationAssets.length > 0 && (
-          <div className="space-y-6">
-            {generationAssets.map((asset, index) => (
-              <div key={index} className="rounded-md border p-4 space-y-4">
-                <div className="font-medium text-sm flex items-center gap-2">
-                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">#{index + 1}</span>
-                  {asset.name}
-                </div>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label>名称</Label>
-                    <Input
-                      value={asset.name}
-                      onChange={(e) => {
-                        const newAssets = [...generationAssets];
-                        newAssets[index] = { ...newAssets[index], name: e.target.value };
-                        setEditedParams({ ...editedParams, assets: newAssets });
-                      }}
-                      placeholder="资产名称"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>提示词 *</Label>
-                    <Textarea
-                      value={asset.prompt}
-                      onChange={(e) => {
-                        const newAssets = [...generationAssets];
-                        newAssets[index] = { ...newAssets[index], prompt: e.target.value };
-                        setEditedParams({ ...editedParams, assets: newAssets });
-                      }}
-                      className="min-h-[100px]"
-                      placeholder="描述你想生成的图片"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>标签</Label>
-                    <Input
-                      value={asset.tags}
-                      onChange={(e) => {
-                        const newAssets = [...generationAssets];
-                        newAssets[index] = { ...newAssets[index], tags: e.target.value };
-                        setEditedParams({ ...editedParams, assets: newAssets });
-                      }}
-                      placeholder="用逗号分隔，如: 角色, 主角"
-                    />
-                  </div>
-                  {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>参考图 ({asset.sourceAssetIds.length}张)</Label>
-                      <AssetPreview assetIds={asset.sourceAssetIds} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      );
-    }
-    
-    if (isGenerateVideo) {
-      return (
-        <div className="space-y-4">
-          <div className="grid gap-2">
-            <Label>提示词 *</Label>
-            <Textarea
-              value={editedParams.prompt as string || ""}
-              onChange={(e) => setEditedParams({ ...editedParams, prompt: e.target.value })}
-              className="min-h-[100px]"
-              placeholder="描述视频内容和镜头运动"
-            />
-          </div>
-          {editedParams.title !== undefined && (
-            <div className="grid gap-2">
-              <Label>标题</Label>
-              <Input
-                value={editedParams.title as string || ""}
-                onChange={(e) => setEditedParams({ ...editedParams, title: e.target.value })}
-                placeholder="视频标题"
-              />
-            </div>
-          )}
-          {editedParams.duration !== undefined && (
-            <div className="grid gap-2">
-              <Label>时长</Label>
-              <Select
-                value={editedParams.duration as string || "5"}
-                onValueChange={(value) => setEditedParams({ ...editedParams, duration: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5秒</SelectItem>
-                  <SelectItem value="10">10秒</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {editedParams.aspect_ratio !== undefined && (
-            <div className="grid gap-2">
-              <Label>宽高比</Label>
-              <Select
-                value={editedParams.aspect_ratio as string || "16:9"}
-                onValueChange={(value) => setEditedParams({ ...editedParams, aspect_ratio: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="16:9">16:9 (宽屏)</SelectItem>
-                  <SelectItem value="9:16">9:16 (竖屏)</SelectItem>
-                  <SelectItem value="1:1">1:1 (方形)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {/* 显示参考图 */}
-          {formattedParams.map((param) => (
-            param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-              <div key={param.key} className="space-y-2">
-                <Label>{param.label}</Label>
-                <AssetPreview assetIds={param.assetIds} />
-              </div>
-            )
-          ))}
-        </div>
-      );
-    }
-
-    if (isCreateTextAsset) {
-      return (
-        <div className="space-y-4">
-          <div className="grid gap-2">
-            <Label>名称 *</Label>
-            <Input
-              value={editedParams.name as string || ""}
-              onChange={(e) => setEditedParams({ ...editedParams, name: e.target.value })}
-              placeholder="文本资产名称，如'主角小传'、'第一幕剧本'"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label>内容 *</Label>
-            <Tabs defaultValue="edit" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="edit">编辑</TabsTrigger>
-                <TabsTrigger value="preview">预览</TabsTrigger>
-              </TabsList>
-              <TabsContent value="edit" className="mt-2">
-                <Textarea
-                  value={editedParams.content as string || ""}
-                  onChange={(e) => setEditedParams({ ...editedParams, content: e.target.value })}
-                  className="min-h-[300px] font-mono text-sm"
-                  placeholder="支持 Markdown 语法..."
-                />
-              </TabsContent>
-              <TabsContent value="preview" className="mt-2">
-                <div className="min-h-[300px] max-h-[400px] border rounded-md p-4 bg-muted/30 overflow-auto">
-                  <MarkdownRenderer content={editedParams.content as string || "*暂无内容*"} />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label>标签</Label>
-            <Input
-              value={
-                Array.isArray(editedParams.tags) 
-                  ? editedParams.tags.join(", ") 
-                  : (editedParams.tags as string || "")
-              }
-              onChange={(e) => {
-                const tagsStr = e.target.value;
-                const tagsArray = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
-                setEditedParams({ ...editedParams, tags: tagsArray });
-              }}
-              placeholder="用逗号分隔，如: 角色小传, 主角"
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">此操作暂无复杂参数可编辑，请直接确认。</p>
-        {/* 可以遍历 formattedParams 并尝试提供通用编辑，但目前需求主要针对生成类 */}
-      </div>
-    );
+  // 处理编辑参数按钮点击
+  const handleEditParams = () => {
+    editor.setActionEditor({
+      functionCall,
+      creditCost,
+      currentBalance,
+      onConfirm,
+      onCancel,
+    });
   };
 
   return (
@@ -639,19 +399,21 @@ export const PendingActionMessage = memo(function PendingActionMessage({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">名称:</span>
-                  <span className="text-xs text-foreground">{editedParams.name as string || "未命名"}</span>
+                  <span className="text-xs text-foreground">{functionCall.arguments.name as string || "未命名"}</span>
                 </div>
                 <div className="space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">内容预览:</span>
-                  {renderMarkdownPreview(editedParams.content as string || "")}
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 bg-muted/20 text-xs text-foreground/80">
+                    <MarkdownRenderer content={functionCall.arguments.content as string || "*暂无内容*"} />
+                  </div>
                 </div>
-                {editedParams.tags && (
+                {functionCall.arguments.tags && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">标签:</span>
                     <span className="text-xs text-foreground">
-                      {Array.isArray(editedParams.tags) 
-                        ? editedParams.tags.join(", ") 
-                        : editedParams.tags}
+                      {Array.isArray(functionCall.arguments.tags) 
+                        ? functionCall.arguments.tags.join(", ") 
+                        : functionCall.arguments.tags}
                     </span>
                   </div>
                 )}
@@ -760,7 +522,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             {/* Edit Button */}
             {(isGenerateAssets || isGenerateVideo || isCreateTextAsset) && (
               <Button
-                onClick={() => setShowEditDialog(true)}
+                onClick={handleEditParams}
                 variant="outline"
                 size="sm"
                 className="h-7 px-3 text-xs"
@@ -768,16 +530,16 @@ export const PendingActionMessage = memo(function PendingActionMessage({
               >
                 <Maximize2 className="h-3 w-3 mr-1" />
                 {isGenerateAssets 
-                  ? "查看图片参数" 
+                  ? "编辑图片参数" 
                   : isGenerateVideo 
-                  ? "查看视频参数"
-                  : "查看详情"}
+                  ? "编辑视频参数"
+                  : "编辑参数"}
               </Button>
             )}
 
             <Button
               onClick={() => {
-                onConfirm(functionCall.id, editedParams);
+                onConfirm(functionCall.id, undefined);
               }}
               disabled={insufficientBalance || isLoading}
               size="sm"
@@ -798,87 +560,6 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
         </div>
       </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {isGenerateAssets 
-                ? "生成图片素材" 
-                : isGenerateVideo 
-                ? "生成视频素材"
-                : "创建文本资产"}
-            </DialogTitle>
-            <DialogDescription>
-              {isGenerateAssets 
-                ? "检查并修改图片生成参数，确认后将使用AI生成图片素材"
-                : isGenerateVideo 
-                ? "检查并修改视频生成参数，确认后将使用AI生成视频素材"
-                : "检查并修改文本资产的内容和标签信息"}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            {renderEditForm()}
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2">
-            {/* Credit Cost Display */}
-            <div className="flex items-center gap-2 mr-auto">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted border border-border">
-                <Coins className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">{totalCost}</span>
-                <span className="text-xs text-muted-foreground">积分</span>
-              </div>
-              {insufficientBalance && (
-                <div className="flex items-center gap-1.5 text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-xs">余额不足 ({currentBalance})</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-6 px-2 text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPurchaseDialog(true);
-                    }}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    充值
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-                取消
-              </Button>
-              <Button 
-                onClick={() => {
-                  setShowEditDialog(false);
-                  onConfirm(functionCall.id, editedParams);
-                }}
-                disabled={insufficientBalance || isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    执行中...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    确认并执行
-                  </>
-                )}
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Purchase Dialog */}
       <PurchaseDialog
