@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FloatingChatInput } from "./floating-chat-input";
 import { FloatingAgentCard, ExpandedPosition } from "./floating-agent-card";
+import { cn } from "@/lib/utils";
 
 // localStorage keys
 const CHAT_MODE_KEY = "editor:chat-mode";
@@ -19,6 +20,8 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
   const [mode, setMode] = useState<ChatMode>("collapsed");
   const [expandedPosition, setExpandedPosition] = useState<ExpandedPosition>("left");
   const [isInitialized, setIsInitialized] = useState(false);
+  // 拖拽预览状态
+  const [targetPosition, setTargetPosition] = useState<ExpandedPosition | null>(null);
 
   // 从 localStorage 恢复状态
   useEffect(() => {
@@ -68,26 +71,87 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
     handleModeChange("collapsed");
   }, [handleModeChange]);
 
+  // 处理目标位置变更（拖拽预览）
+  const handleTargetPositionChange = useCallback((target: ExpandedPosition | null) => {
+    setTargetPosition(target);
+  }, []);
+
   // 等待初始化完成
   if (!isInitialized) {
     return null;
   }
 
+  // 预览区域组件
+  const PreviewOverlay = targetPosition && (
+    <div className="fixed inset-0 pointer-events-none z-30">
+      <div className={cn(
+        "absolute bg-primary/10 border-2 border-dashed border-primary/50 rounded-lg",
+        "transition-opacity duration-150 animate-in fade-in",
+        targetPosition === "left" && "left-3 top-3 w-[380px] h-[calc(100%-24px)]",
+        targetPosition === "right" && "right-3 top-3 w-[380px] h-[calc(100%-24px)]",
+        targetPosition === "bottom" && "bottom-4 left-4 right-4 h-[420px]"
+      )} />
+    </div>
+  );
+
+  // 底部模式：使用 absolute 定位浮动
+  if (expandedPosition === "bottom") {
+    return (
+      <>
+        {PreviewOverlay}
+        <div className="absolute inset-0 pointer-events-none z-20">
+          <div className="pointer-events-auto">
+            {mode === "collapsed" ? (
+              <FloatingChatInput
+                projectId={projectId}
+                position={expandedPosition}
+                onExpand={handleExpand}
+                onPositionChange={handlePositionChange}
+                onTargetPositionChange={handleTargetPositionChange}
+              />
+            ) : (
+              <FloatingAgentCard
+                projectId={projectId}
+                position={expandedPosition}
+                onPositionChange={handlePositionChange}
+                onCollapse={handleCollapse}
+                onTargetPositionChange={handleTargetPositionChange}
+              />
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // 左右模式：使用 flex 布局，挤压中间内容
   return (
     <>
-      {mode === "collapsed" ? (
-        <FloatingChatInput
-          projectId={projectId}
-          onExpand={handleExpand}
-        />
-      ) : (
-        <FloatingAgentCard
-          projectId={projectId}
-          position={expandedPosition}
-          onPositionChange={handlePositionChange}
-          onCollapse={handleCollapse}
-        />
-      )}
+      {PreviewOverlay}
+      <div
+        className={cn(
+          "shrink-0 h-full transition-all duration-300 ease-out",
+          expandedPosition === "right" ? "order-last" : "order-first"
+        )}
+      >
+        {mode === "collapsed" ? (
+          <FloatingChatInput
+            projectId={projectId}
+            position={expandedPosition}
+            onExpand={handleExpand}
+            onPositionChange={handlePositionChange}
+            onTargetPositionChange={handleTargetPositionChange}
+          />
+        ) : (
+          <FloatingAgentCard
+            projectId={projectId}
+            position={expandedPosition}
+            onPositionChange={handlePositionChange}
+            onCollapse={handleCollapse}
+            onTargetPositionChange={handleTargetPositionChange}
+          />
+        )}
+      </div>
     </>
   );
 }

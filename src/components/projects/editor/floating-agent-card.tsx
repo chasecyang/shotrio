@@ -62,6 +62,7 @@ interface FloatingAgentCardProps {
   onCollapse: () => void;
   autoStartMessage?: string | null;
   onAutoStartComplete?: () => void;
+  onTargetPositionChange?: (target: ExpandedPosition | null) => void;
 }
 
 // 判断是否为视频相关操作
@@ -92,6 +93,7 @@ export function FloatingAgentCard({
   onCollapse,
   autoStartMessage,
   onAutoStartComplete,
+  onTargetPositionChange,
 }: FloatingAgentCardProps) {
   const agent = useAgent();
   const editorContext = useEditor();
@@ -102,6 +104,7 @@ export function FloatingAgentCard({
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [targetPosition, setTargetPosition] = useState<ExpandedPosition | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
@@ -373,51 +376,49 @@ export function FloatingAgentCard({
       // 实时更新拖动偏移
       setDragOffset({ x: deltaX, y: deltaY });
 
-      const threshold = 100;
-
-      // 判断主要移动方向
+      const horizontalThreshold = 100;
+      const verticalThreshold = 60; // 垂直方向更容易触发
       const isHorizontalDrag = Math.abs(deltaX) > Math.abs(deltaY);
+
+      let newTarget: ExpandedPosition | null = null;
 
       if (isHorizontalDrag) {
         // 水平拖动：左右切换
-        if (position === "left" && deltaX > threshold) {
-          onPositionChange("right");
-          setIsDragging(false);
-          setDragOffset({ x: 0, y: 0 });
-        } else if (position === "right" && deltaX < -threshold) {
-          onPositionChange("left");
-          setIsDragging(false);
-          setDragOffset({ x: 0, y: 0 });
+        if (position === "left" && deltaX > horizontalThreshold) {
+          newTarget = "right";
+        } else if (position === "right" && deltaX < -horizontalThreshold) {
+          newTarget = "left";
         } else if (position === "bottom") {
-          // 从底部拖到左右
-          if (deltaX < -threshold) {
-            onPositionChange("left");
-            setIsDragging(false);
-            setDragOffset({ x: 0, y: 0 });
-          } else if (deltaX > threshold) {
-            onPositionChange("right");
-            setIsDragging(false);
-            setDragOffset({ x: 0, y: 0 });
+          if (deltaX < -horizontalThreshold) {
+            newTarget = "left";
+          } else if (deltaX > horizontalThreshold) {
+            newTarget = "right";
           }
         }
       } else {
         // 垂直拖动：上下切换
-        if ((position === "left" || position === "right") && deltaY > threshold) {
-          onPositionChange("bottom");
-          setIsDragging(false);
-          setDragOffset({ x: 0, y: 0 });
-        } else if (position === "bottom" && deltaY < -threshold) {
-          // 从底部向上拖，回到左侧
-          onPositionChange("left");
-          setIsDragging(false);
-          setDragOffset({ x: 0, y: 0 });
+        if ((position === "left" || position === "right") && deltaY > verticalThreshold) {
+          newTarget = "bottom";
+        } else if (position === "bottom" && deltaY < -verticalThreshold) {
+          newTarget = "left";
         }
       }
+
+      // 更新目标位置状态
+      setTargetPosition(newTarget);
+      onTargetPositionChange?.(newTarget);
     };
 
     const handleMouseUp = () => {
+      // 松开时才应用位置变更
+      if (targetPosition && targetPosition !== position) {
+        onPositionChange(targetPosition);
+      }
+      // 重置所有状态
       setIsDragging(false);
       setDragOffset({ x: 0, y: 0 });
+      setTargetPosition(null);
+      onTargetPositionChange?.(null);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -427,7 +428,7 @@ export function FloatingAgentCard({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, position, onPositionChange]);
+  }, [isDragging, position, onPositionChange, targetPosition, onTargetPositionChange]);
 
   // 对话管理
   const handleCreateNewConversation = useCallback(() => {

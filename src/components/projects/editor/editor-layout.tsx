@@ -87,10 +87,13 @@ function EditorLayoutInner({
       {/* 居中的模式切换Tab */}
       <ModeTabBar />
 
-      {/* 主内容区 - 相对定位容器 */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* 内容面板 - 占满整个区域 */}
-        <div className="h-full overflow-hidden">
+      {/* 主内容区 - flex 布局容器 */}
+      <div className="flex-1 flex relative overflow-hidden">
+        {/* Agent 对话组件 - 作为 flex 子元素或浮动 */}
+        <AgentChatContainer projectId={project.id} />
+
+        {/* 内容面板 - 占满剩余区域 */}
+        <div className="flex-1 h-full overflow-hidden">
           {state.actionEditor ? (
             <ActionEditorPanel />
           ) : state.showSettings ? (
@@ -101,9 +104,6 @@ function EditorLayoutInner({
             <AssetGalleryPanel userId={user.id} />
           )}
         </div>
-
-        {/* 悬浮 Agent 对话组件 */}
-        <AgentChatContainer projectId={project.id} />
       </div>
     </div>
   );
