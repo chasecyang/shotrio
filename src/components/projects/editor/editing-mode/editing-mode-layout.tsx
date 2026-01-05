@@ -14,11 +14,9 @@ import { toast } from "sonner";
 import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
 import { useVideoPlayback } from "@/hooks/use-video-playback";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Images, Film } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export function EditingModeLayout() {
-  const { state, setTimeline, setMode } = useEditor();
+  const { state, setTimeline } = useEditor();
   const { project, timeline } = state;
 
   // 自动保存
@@ -47,41 +45,14 @@ export function EditingModeLayout() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 顶部工具栏 - 始终渲染，不受 timeline 加载状态影响 */}
-      <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-        <div className="flex items-center gap-3">
-          {/* 模式切换器 */}
-          <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-1">
-            <button
-              onClick={() => setMode("asset-management")}
-              className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                "hover:bg-background/60",
-                "text-muted-foreground"
-              )}
-            >
-              <Images className="h-4 w-4" />
-              <span>素材</span>
-            </button>
-            <button
-              onClick={() => setMode("editing")}
-              className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                "hover:bg-background/60",
-                "bg-background text-foreground shadow-sm"
-              )}
-            >
-              <Film className="h-4 w-4" />
-              <span>剪辑</span>
-            </button>
-          </div>
-          {timeline && (
-            <span className="text-xs text-muted-foreground">
-              {timeline.clips.length} 个片段
-            </span>
-          )}
+      {/* 顶部信息栏 - 简化版 */}
+      {timeline && (
+        <div className="flex items-center px-4 py-2 border-b shrink-0">
+          <span className="text-xs text-muted-foreground">
+            {timeline.clips.length} 个片段
+          </span>
         </div>
-      </div>
+      )}
 
       {/* 主内容区：根据 timeline 状态条件渲染 */}
       {!timeline ? (

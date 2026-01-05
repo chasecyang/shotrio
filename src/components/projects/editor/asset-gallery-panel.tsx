@@ -6,10 +6,9 @@ import { AssetCard } from "./shared/asset-card";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithRuntimeStatus } from "@/types/asset";
 import { toast } from "sonner";
-import { Images, Film } from "lucide-react";
+import { Images } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
-import { cn } from "@/lib/utils";
 import { TextAssetDialog } from "./shared/text-asset-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -35,7 +34,7 @@ const DEFAULT_FILTER: AssetFilterOptions = {
 };
 
 export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
-  const { state, setMode, loadAssets } = useEditor();
+  const { state, loadAssets } = useEditor();
   const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
 
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
@@ -202,49 +201,18 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b shrink-0">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            {/* 模式切换器 */}
-            <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-1">
-              <button
-                onClick={() => setMode("asset-management")}
-                className={cn(
-                  "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                  "hover:bg-background/60",
-                  "bg-background text-foreground shadow-sm"
-                )}
-              >
-                <Images className="h-4 w-4" />
-                <span>素材</span>
-              </button>
-              <button
-                onClick={() => setMode("editing")}
-                className={cn(
-                  "inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                  "hover:bg-background/60",
-                  "text-muted-foreground"
-                )}
-              >
-                <Film className="h-4 w-4" />
-                <span>剪辑</span>
-              </button>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              ({filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`})
-            </span>
-          </div>
-        </div>
-        
-        {/* 筛选栏 */}
-        <div className="px-4 pb-3">
-          <AssetFilter 
+      {/* Header - 简化版，只保留筛选栏和计数 */}
+      <div className="border-b shrink-0 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <AssetFilter
             value={filterOptions}
             onChange={setFilterOptions}
             onReset={handleResetFilter}
             allAssets={allAssets}
           />
+          <span className="text-xs text-muted-foreground shrink-0">
+            {filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`} 个素材
+          </span>
         </div>
       </div>
 
