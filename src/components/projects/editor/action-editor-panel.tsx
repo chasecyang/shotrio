@@ -141,7 +141,7 @@ export function ActionEditorPanel() {
       </div>
 
       {/* Main Content */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-6 max-w-4xl mx-auto">
           {isGenerateAssets && (
             <ImageGenerationForm
