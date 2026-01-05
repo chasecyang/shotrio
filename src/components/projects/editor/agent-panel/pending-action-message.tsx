@@ -509,6 +509,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             <Button
               onClick={(e) => {
                 e.stopPropagation();
+                editor.clearActionEditor();
                 onCancel(functionCall.id);
               }}
               variant="ghost"
@@ -557,6 +558,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             <Button
               onClick={(e) => {
                 e.stopPropagation();
+                editor.clearActionEditor();
                 onConfirm(functionCall.id, undefined);
               }}
               disabled={insufficientBalance || isLoading}
