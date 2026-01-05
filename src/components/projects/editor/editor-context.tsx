@@ -303,6 +303,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 export interface LoadAssetsOptions {
   search?: string;
   tags?: string[];
+  showLoading?: boolean; // 是否显示加载状态（用于手动刷新）
 }
 
 // Context 类型
@@ -414,8 +415,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     if (!state.project?.id) return;
     if (isLoadingAssetsRef.current) return;
 
-    // 仅在首次加载时显示 loading
-    if (!state.assetsLoaded) {
+    // 首次加载或手动刷新时显示 loading
+    if (!state.assetsLoaded || options?.showLoading) {
       dispatch({ type: "SET_ASSETS_LOADING", payload: true });
     }
 

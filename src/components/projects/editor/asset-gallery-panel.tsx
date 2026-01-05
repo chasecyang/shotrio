@@ -6,7 +6,8 @@ import { AssetCard } from "./shared/asset-card";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithFullData } from "@/types/asset";
 import { toast } from "sonner";
-import { Images } from "lucide-react";
+import { Images, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
 import { TextAssetDialog } from "./shared/text-asset-dialog";
@@ -213,6 +214,15 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
           <span className="text-xs text-muted-foreground shrink-0">
             {filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`} 个素材
           </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={() => loadAssets({ search: filterOptions.search, tags: filterOptions.tags, showLoading: true })}
+            disabled={assetsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
       </div>
 
