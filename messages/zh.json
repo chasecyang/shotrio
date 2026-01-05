@@ -907,7 +907,10 @@
         "viewDetails": "查看详细参数",
         "confirmGenerate": "确认生成",
         "confirmDelete": "确认删除",
-        "executing": "执行中..."
+        "executing": "执行中...",
+        "editParams": "编辑参数",
+        "editImageParams": "编辑图片参数",
+        "editVideoParams": "编辑视频参数"
       },
       "chatInput": {
         "placeholder": "告诉我你想做什么，比如生成素材、创建视频...",

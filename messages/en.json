@@ -906,7 +906,10 @@
         "viewDetails": "View Details",
         "confirmGenerate": "Confirm Generation",
         "confirmDelete": "Confirm Delete",
-        "executing": "Executing..."
+        "executing": "Executing...",
+        "editParams": "Edit Parameters",
+        "editImageParams": "Edit Image Parameters",
+        "editVideoParams": "Edit Video Parameters"
       },
       "chatInput": {
         "placeholder": "Tell me what you want to do, like generate assets, create videos...",

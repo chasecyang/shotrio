@@ -180,7 +180,7 @@ function AssetPreview({ assetIds }: { assetIds: string[] }) {
 
 export const PendingActionMessage = memo(function PendingActionMessage({
   functionCall,
-  message,
+  message: _message,
   creditCost,
   onConfirm,
   onCancel,
@@ -188,6 +188,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   isConfirming = false,
   isRejecting = false,
 }: PendingActionMessageProps) {
+  void _message; // 保留接口兼容性，暂未使用
   const t = useTranslations();
   const editor = useEditor();
   const totalCost = creditCost?.total || 0;
@@ -208,6 +209,9 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const isGenerateVideo = functionCall.name === "generate_video_asset";
   const isCreateTextAsset = functionCall.name === "create_text_asset";
   const isSetArtStyle = functionCall.name === "set_art_style";
+
+  // 是否支持编辑参数
+  const canEdit = isGenerateAssets || isGenerateVideo || isCreateTextAsset;
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
@@ -303,10 +307,14 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   };
 
   return (
-    <div className={cn(
-      `rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`,
-      isLoading && "opacity-70 pointer-events-none"
-    )}>
+    <div
+      className={cn(
+        `rounded-lg backdrop-blur-sm border overflow-hidden ${bgColor} ${borderColor}`,
+        isLoading && "opacity-70 pointer-events-none",
+        canEdit && "cursor-pointer hover:border-primary/40 transition-colors"
+      )}
+      onClick={canEdit ? handleEditParams : undefined}
+    >
       <div className="p-3 space-y-3">
         {/* Header with Icon and Title */}
         <div className="flex items-start gap-2.5">
@@ -463,44 +471,46 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           )}
         </div>
 
-        {/* Footer: Credit Cost and Actions */}
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
-          {/* Credit Cost */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-background text-xs cursor-default">
-                <Coins className="h-3.5 w-3.5 text-primary" />
-                <span className="font-semibold text-foreground">{totalCost}</span>
-                {insufficientBalance && (
-                  <span className="flex items-center text-red-600 dark:text-red-400 ml-1">
-                    <span className="text-xs">({currentBalance})</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowPurchaseDialog(true);
-                      }}
-                      className="inline-flex items-center justify-center w-4 h-4 ml-0.5 rounded-sm text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
-                      title={t('credits.addCredits')}
-                      type="button"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {insufficientBalance 
-                ? `${t('agent.credits.total')} ${totalCost} ${t('credits.creditsUnit')} (${t('agent.credits.insufficient')}: ${currentBalance})`
-                : `${t('agent.credits.total')} ${totalCost} ${t('credits.creditsUnit')}`
-              }
-            </TooltipContent>
-          </Tooltip>
+        {/* Footer: Actions */}
+        <div
+          className="flex items-center justify-between gap-3 pt-2 border-t border-border/50"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Left: Edit + Reject */}
+          <div className="flex items-center gap-2">
+            {/* Edit Button - Icon Only */}
+            {canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditParams();
+                    }}
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={isLoading}
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {isGenerateAssets
+                    ? t('editor.agent.pendingAction.editImageParams')
+                    : isGenerateVideo
+                    ? t('editor.agent.pendingAction.editVideoParams')
+                    : t('editor.agent.pendingAction.editParams')}
+                </TooltipContent>
+              </Tooltip>
+            )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
+            {/* Reject Button */}
             <Button
-              onClick={() => onCancel(functionCall.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancel(functionCall.id);
+              }}
               variant="ghost"
               size="sm"
               className="h-7 px-3 text-xs"
@@ -518,27 +528,35 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 </>
               )}
             </Button>
-            
-            {/* Edit Button */}
-            {(isGenerateAssets || isGenerateVideo || isCreateTextAsset) && (
-              <Button
-                onClick={handleEditParams}
-                variant="outline"
-                size="sm"
-                className="h-7 px-3 text-xs"
-                disabled={isLoading}
-              >
-                <Maximize2 className="h-3 w-3 mr-1" />
-                {isGenerateAssets 
-                  ? "编辑图片参数" 
-                  : isGenerateVideo 
-                  ? "编辑视频参数"
-                  : "编辑参数"}
-              </Button>
+          </div>
+
+          {/* Right: Recharge + Accept with Credits */}
+          <div className="flex items-center gap-2">
+            {/* Recharge Button - Only when insufficient balance */}
+            {insufficientBalance && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPurchaseDialog(true);
+                    }}
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border bg-background text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                    type="button"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {t('credits.addCredits')}
+                </TooltipContent>
+              </Tooltip>
             )}
 
+            {/* Accept Button with Credits */}
             <Button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onConfirm(functionCall.id, undefined);
               }}
               disabled={insufficientBalance || isLoading}
@@ -554,6 +572,15 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 <>
                   <Check className="h-3 w-3 mr-1" />
                   {t('editor.agent.pendingAction.confirm')}
+                  {totalCost > 0 && (
+                    <span className={cn(
+                      "flex items-center ml-1.5",
+                      insufficientBalance && "text-red-300"
+                    )}>
+                      <Coins className="h-3 w-3 mr-0.5" />
+                      {totalCost}
+                    </span>
+                  )}
                 </>
               )}
             </Button>
