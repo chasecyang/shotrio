@@ -36,12 +36,6 @@ export {
   replaceAssetTags,
 } from "./tags";
 
-// 派生操作
-export {
-  createDerivedAsset,
-  copyAssetTags,
-} from "./derivation";
-
 // 上传操作
 export {
   uploadAsset,
