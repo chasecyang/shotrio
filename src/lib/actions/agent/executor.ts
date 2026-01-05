@@ -10,8 +10,22 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
-import { conversation } from "@/lib/db/schemas/project";
+import { conversation, project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
+import type { ArtStyle } from "@/types/art-style";
+
+/**
+ * 获取项目的画风prompt
+ * 优先使用新的artStyle，fallback到旧的stylePrompt
+ */
+async function getProjectStylePrompt(projectId: string): Promise<string | null> {
+  const projectData = await db.query.project.findFirst({
+    where: eq(project.id, projectId),
+    with: { artStyle: true },
+  });
+  const artStyleData = projectData?.artStyle as ArtStyle | null;
+  return artStyleData?.prompt || projectData?.stylePrompt || null;
+}
 
 // 导入所有需要的 actions
 import { updateAsset, deleteAsset } from "../asset/crud";
@@ -206,20 +220,28 @@ export async function executeFunction(
         const assetIds: string[] = [];
         const errors: string[] = [];
 
+        // 获取项目画风（用于前置拼接到prompt）
+        const stylePrompt = await getProjectStylePrompt(projectId);
+
         // 为每个素材创建记录和独立的生成任务
         const { createAssetInternal } = await import("../asset/crud");
-        
+
         for (const assetData of assets) {
           try {
             // 生成素材名称（如果未提供）
             const assetName = assetData.name || `AI生成-${Date.now()}`;
+
+            // 前置拼接项目画风到prompt
+            const finalPrompt = stylePrompt
+              ? `${stylePrompt}. ${assetData.prompt}`
+              : assetData.prompt;
 
             // 创建素材记录（包含所有生成信息，但无图片）
             const createResult = await createAssetInternal({
               projectId,
               userId: session.user.id,
               name: assetName,
-              prompt: assetData.prompt,
+              prompt: finalPrompt,
               tags: assetData.tags,
               modelUsed: "nano-banana",
               sourceAssetIds: assetData.sourceAssetIds,
@@ -303,22 +325,28 @@ export async function executeFunction(
           
           // 从校验结果中获取标准化配置
           const normalizedConfig = validationResult.normalizedConfig!;
-          
+
+          // 获取项目画风并前置拼接到prompt
+          const stylePrompt = await getProjectStylePrompt(projectId);
+          const finalPrompt = stylePrompt
+            ? `${stylePrompt}. ${normalizedConfig.prompt}`
+            : (normalizedConfig.prompt as string);
+
           // 直接使用标准化的配置构建 VideoGenerationConfig
           const generationConfig = {
-            prompt: normalizedConfig.prompt as string,
+            prompt: finalPrompt,
             start_image_url: normalizedConfig.start_image_url as string,
             end_image_url: normalizedConfig.end_image_url as string | undefined,
             duration: normalizedConfig.duration as "5" | "10" | undefined,
             aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | "1:1" | undefined,
             negative_prompt: normalizedConfig.negative_prompt as string | undefined,
           };
-          
+
           // 创建视频生成任务
           const generateResult = await createVideoAsset({
             projectId,
             name: title || "未命名视频",
-            prompt: normalizedConfig.prompt as string,
+            prompt: finalPrompt,
             referenceAssetIds,
             generationConfig,
             order,
