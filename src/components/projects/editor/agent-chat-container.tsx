@@ -94,30 +94,20 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
     </div>
   );
 
-  // 底部模式：使用 absolute 定位浮动
+  // 底部模式：使用 absolute 定位浮动，底部模式不提供收起状态
   if (expandedPosition === "bottom") {
     return (
       <>
         {PreviewOverlay}
         <div className="absolute inset-0 pointer-events-none z-20">
           <div className="pointer-events-auto">
-            {mode === "collapsed" ? (
-              <FloatingChatInput
-                projectId={projectId}
-                position={expandedPosition}
-                onExpand={handleExpand}
-                onPositionChange={handlePositionChange}
-                onTargetPositionChange={handleTargetPositionChange}
-              />
-            ) : (
-              <FloatingAgentCard
-                projectId={projectId}
-                position={expandedPosition}
-                onPositionChange={handlePositionChange}
-                onCollapse={handleCollapse}
-                onTargetPositionChange={handleTargetPositionChange}
-              />
-            )}
+            <FloatingAgentCard
+              projectId={projectId}
+              position={expandedPosition}
+              onPositionChange={handlePositionChange}
+              onCollapse={handleCollapse}
+              onTargetPositionChange={handleTargetPositionChange}
+            />
           </div>
         </div>
       </>
@@ -136,7 +126,6 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
       >
         {mode === "collapsed" ? (
           <FloatingChatInput
-            projectId={projectId}
             position={expandedPosition}
             onExpand={handleExpand}
             onPositionChange={handlePositionChange}

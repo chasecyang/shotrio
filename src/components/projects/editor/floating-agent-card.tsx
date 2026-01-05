@@ -590,39 +590,21 @@ export function FloatingAgentCard({
               </DropdownMenu>
             </div>
 
-            <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCreateNewConversation}
-                    className="shrink-0"
-                  >
-                    <MessageSquarePlus className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('editor.agent.panel.newConversation')}</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onCollapse}
-                    className="shrink-0"
-                  >
-                    <Minimize2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>收起</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCreateNewConversation}
+                  className="shrink-0"
+                >
+                  <MessageSquarePlus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('editor.agent.panel.newConversation')}</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Messages - 底部模式高度受限 */}
