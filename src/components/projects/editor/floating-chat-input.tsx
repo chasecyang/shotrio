@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-panel/agent-context";
 import { useAgentStream } from "./agent-panel/use-agent-stream";
@@ -17,7 +18,8 @@ import {
   X,
   Coins,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  GripVertical
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,9 +28,13 @@ import { generateConversationTitle } from "@/lib/actions/conversation/title-gene
 import { isAwaitingApproval, getPendingToolCall } from "@/lib/services/agent-engine/approval-utils";
 import type { AgentMessage } from "@/types/agent";
 
+export type CollapsedPosition = "left" | "right" | "bottom";
+
 interface FloatingChatInputProps {
   projectId: string;
+  position: CollapsedPosition;
   onExpand: () => void;
+  onPositionChange: (position: CollapsedPosition) => void;
 }
 
 // 判断是否为视频相关操作
@@ -152,7 +158,7 @@ function CompactPendingAction({
   );
 }
 
-export function FloatingChatInput({ projectId, onExpand }: FloatingChatInputProps) {
+export function FloatingChatInput({ projectId, position, onExpand, onPositionChange }: FloatingChatInputProps) {
   const agent = useAgent();
   const editorContext = useEditor();
   const t = useTranslations();
@@ -160,8 +166,11 @@ export function FloatingChatInput({ projectId, onExpand }: FloatingChatInputProp
   const [input, setInput] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const titleGeneratedRef = useRef<Set<string>>(new Set());
+  const dragStartXRef = useRef<number>(0);
 
   // 获取最近的消息（最多3条）
   const recentMessages = useMemo(() => {
@@ -361,88 +370,312 @@ export function FloatingChatInput({ projectId, onExpand }: FloatingChatInputProp
     }
   }, [handleSend, input]);
 
-  return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-20">
-      <div className="bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden">
-        {/* 消息预览区域 */}
-        {recentMessages.length > 0 && !isEmptyState && (
-          <div className="max-h-40 overflow-y-auto p-3 space-y-2 border-b border-border/30">
-            {recentMessages.map((msg) => (
-              <MessagePreview key={msg.id} message={msg} />
-            ))}
-            {agent.state.isLoading && !pendingAction && (
-              <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>正在思考...</span>
-              </div>
-            )}
-          </div>
-        )}
+  // 拖拽处理
+  const dragStartYRef = useRef<number>(0);
 
-        {/* Pending Action */}
-        {pendingAction && (
-          <div className="p-3 border-b border-border/30">
-            <CompactPendingAction
-              functionCall={{
-                id: pendingAction.id,
-                name: pendingAction.function.name,
-              }}
-              onConfirm={handleConfirm}
-              onCancel={handleReject}
-              isConfirming={isConfirming}
-              isRejecting={isRejecting}
-            />
-          </div>
-        )}
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStartXRef.current = e.clientX;
+    dragStartYRef.current = e.clientY;
+    e.preventDefault();
+  }, []);
 
-        {/* 输入区域 */}
-        <div className="p-3">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 relative">
-              <Textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isEmptyState ? "有什么可以帮你的？" : "继续对话..."}
-                className="min-h-[44px] max-h-[120px] resize-none border-0 bg-muted/30 focus-visible:ring-1 focus-visible:ring-ring rounded-xl px-4 py-3 pr-12"
-              />
-              <div className="absolute bottom-2 right-2">
-                {agent.state.isLoading && !input.trim() ? (
-                  <Button
-                    onClick={handleStop}
-                    size="icon"
-                    variant="destructive"
-                    className="h-8 w-8 rounded-lg"
-                  >
-                    <Square className="h-4 w-4 fill-current" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSend}
-                    disabled={!input.trim()}
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStartXRef.current;
+      const deltaY = e.clientY - dragStartYRef.current;
+
+      // 实时更新拖动偏移
+      setDragOffset({ x: deltaX, y: deltaY });
+
+      const threshold = 100;
+
+      // 判断主要移动方向
+      const isHorizontalDrag = Math.abs(deltaX) > Math.abs(deltaY);
+
+      if (isHorizontalDrag) {
+        // 水平拖动：左右切换
+        if (position === "left" && deltaX > threshold) {
+          onPositionChange("right");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        } else if (position === "right" && deltaX < -threshold) {
+          onPositionChange("left");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        } else if (position === "bottom") {
+          // 从底部拖到左右
+          if (deltaX < -threshold) {
+            onPositionChange("left");
+            setIsDragging(false);
+            setDragOffset({ x: 0, y: 0 });
+          } else if (deltaX > threshold) {
+            onPositionChange("right");
+            setIsDragging(false);
+            setDragOffset({ x: 0, y: 0 });
+          }
+        }
+      } else {
+        // 垂直拖动：上下切换
+        if ((position === "left" || position === "right") && deltaY > threshold) {
+          onPositionChange("bottom");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        } else if (position === "bottom" && deltaY < -threshold) {
+          // 从底部向上拖，回到左侧
+          onPositionChange("left");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setDragOffset({ x: 0, y: 0 });
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, position, onPositionChange]);
+
+  // 底部模式：居中输入框
+  if (position === "bottom") {
+    return (
+      <motion.div
+        animate={{
+          x: dragOffset.x,
+          y: dragOffset.y,
+          scale: isDragging ? 0.97 : 1,
+          opacity: isDragging ? 0.85 : 1,
+        }}
+        transition={isDragging ? {
+          type: "tween",
+          duration: 0,
+        } : {
+          type: "spring",
+          stiffness: 400,
+          damping: 25,
+        }}
+        className={cn(
+          "absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4",
+          isDragging && "cursor-grabbing"
+        )}
+      >
+        <div
+          className={cn(
+            "bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+          )}
+        >
+          {/* 消息预览区域 */}
+          {recentMessages.length > 0 && !isEmptyState && (
+            <div className="max-h-40 overflow-y-auto p-3 space-y-2 border-b border-border/30">
+              {recentMessages.map((msg) => (
+                <MessagePreview key={msg.id} message={msg} />
+              ))}
+              {agent.state.isLoading && !pendingAction && (
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>正在思考...</span>
+                </div>
+              )}
             </div>
+          )}
 
-            {/* 展开按钮 */}
-            <Button
-              onClick={onExpand}
-              variant="outline"
-              size="icon"
-              className="h-11 w-11 rounded-xl shrink-0"
-              title="展开对话面板"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
+          {/* Pending Action */}
+          {pendingAction && (
+            <div className="p-3 border-b border-border/30">
+              <CompactPendingAction
+                functionCall={{
+                  id: pendingAction.id,
+                  name: pendingAction.function.name,
+                }}
+                onConfirm={handleConfirm}
+                onCancel={handleReject}
+                isConfirming={isConfirming}
+                isRejecting={isRejecting}
+              />
+            </div>
+          )}
+
+          {/* 输入区域 */}
+          <div className="p-3">
+            <div className="flex items-end gap-2">
+              {/* 拖拽手柄 */}
+              <div
+                onMouseDown={handleDragStart}
+                className={cn(
+                  "p-2 rounded-lg cursor-grab hover:bg-muted/50 transition-colors shrink-0",
+                  isDragging && "cursor-grabbing"
+                )}
+                title="拖拽切换位置"
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              <div className="flex-1 relative">
+                <Textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isEmptyState ? "有什么可以帮你的？" : "继续对话..."}
+                  className="min-h-[44px] max-h-[120px] resize-none border-0 bg-muted/30 focus-visible:ring-1 focus-visible:ring-ring rounded-xl px-4 py-3 pr-12"
+                />
+                <div className="absolute bottom-2 right-2">
+                  {agent.state.isLoading && !input.trim() ? (
+                    <Button
+                      onClick={handleStop}
+                      size="icon"
+                      variant="destructive"
+                      className="h-8 w-8 rounded-lg"
+                    >
+                      <Square className="h-4 w-4 fill-current" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleSend}
+                      disabled={!input.trim()}
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* 展开按钮 */}
+              <Button
+                onClick={onExpand}
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 rounded-xl shrink-0"
+                title="展开对话面板"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
+      </motion.div>
+    );
+  }
+
+  // 左右侧边栏模式：垂直条形
+  return (
+    <motion.div
+      animate={{
+        x: dragOffset.x,
+        y: dragOffset.y,
+        scale: isDragging ? 0.97 : 1,
+        opacity: isDragging ? 0.85 : 1,
+      }}
+      transition={isDragging ? {
+        type: "tween",
+        duration: 0,
+      } : {
+        type: "spring",
+        stiffness: 400,
+        damping: 25,
+      }}
+      className={cn(
+        "w-16 h-full p-3",
+        isDragging && "cursor-grabbing"
+      )}
+    >
+      <div
+        className={cn(
+          "h-full flex flex-col items-center gap-3 py-4",
+          "bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl"
+        )}
+      >
+        {/* 拖拽手柄 */}
+        <div
+          onMouseDown={handleDragStart}
+          className={cn(
+            "p-1.5 rounded-lg cursor-grab hover:bg-muted/50 transition-colors",
+            isDragging && "cursor-grabbing"
+          )}
+          title="拖拽切换位置"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+
+        {/* Agent 图标 */}
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shrink-0">
+          <Bot className="h-5 w-5 text-primary-foreground" />
+        </div>
+
+        {/* 状态指示 */}
+        {agent.state.isLoading && (
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* 待批准操作指示 */}
+        {pendingAction && (
+          <div className="flex flex-col items-center gap-1.5">
+            <AlertCircle className="h-5 w-5 text-amber-500" />
+            <div className="flex flex-col gap-1">
+              <Button
+                onClick={handleConfirm}
+                size="icon"
+                className="h-7 w-7 rounded-lg"
+                disabled={isConfirming || isRejecting}
+              >
+                {isConfirming ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button
+                onClick={handleReject}
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-lg"
+                disabled={isConfirming || isRejecting}
+              >
+                {isRejecting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <X className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* 消息计数 */}
+        {recentMessages.length > 0 && !isEmptyState && (
+          <div className="text-xs text-muted-foreground font-medium">
+            {agent.state.messages.filter(m => m.role !== "tool").length}
+          </div>
+        )}
+
+        {/* 弹性空间 */}
+        <div className="flex-1" />
+
+        {/* 展开按钮 */}
+        <Button
+          onClick={onExpand}
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 rounded-xl shrink-0 hover:bg-primary/10"
+          title="展开对话面板"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-panel/agent-context";
 import { useAgentStream } from "./agent-panel/use-agent-stream";
@@ -25,7 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { createConversation, saveInterruptMessage, deleteConversation, updateConversationTitle } from "@/lib/actions/conversation/crud";
+import { createConversation, saveInterruptMessage, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
 import { getCreditBalance } from "@/lib/actions/credits/balance";
@@ -52,13 +53,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type ExpandedPosition = "left" | "right";
+export type ExpandedPosition = "left" | "right" | "bottom";
 
 interface FloatingAgentCardProps {
   projectId: string;
   position: ExpandedPosition;
   onPositionChange: (position: ExpandedPosition) => void;
   onCollapse: () => void;
+  autoStartMessage?: string | null;
+  onAutoStartComplete?: () => void;
 }
 
 // 判断是否为视频相关操作
@@ -77,6 +80,7 @@ function isProjectRelatedFunction(functionName: string): boolean {
   const projectRelatedFunctions = [
     'update_episode',
     'set_art_style',
+    'update_project_settings',
   ];
   return projectRelatedFunctions.includes(functionName);
 }
@@ -86,6 +90,8 @@ export function FloatingAgentCard({
   position,
   onPositionChange,
   onCollapse,
+  autoStartMessage,
+  onAutoStartComplete,
 }: FloatingAgentCardProps) {
   const agent = useAgent();
   const editorContext = useEditor();
@@ -95,6 +101,7 @@ export function FloatingAgentCard({
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
@@ -102,6 +109,7 @@ export function FloatingAgentCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const titleGeneratedRef = useRef<Set<string>>(new Set());
   const dragStartXRef = useRef<number>(0);
+  const autoStartHandledRef = useRef(false);
 
   // 空状态判断
   const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
@@ -190,6 +198,58 @@ export function FloatingAgentCard({
     fetchBalance();
   }, []);
 
+  // 自动发送来自首页的初始消息
+  useEffect(() => {
+    if (autoStartMessage && !autoStartHandledRef.current) {
+      autoStartHandledRef.current = true;
+
+      // 延迟一点确保组件完全挂载
+      const timer = setTimeout(async () => {
+        try {
+          // 创建新对话
+          const result = await createConversation({
+            projectId,
+            title: t("editor.agent.panel.newConversation"),
+            context: agent.currentContext,
+          });
+
+          if (result.success && result.conversationId) {
+            agent.dispatch({
+              type: "SET_CURRENT_CONVERSATION",
+              payload: result.conversationId,
+            });
+            agent.dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
+
+            // 更新对话标题
+            const generatedTitle = await generateConversationTitle(autoStartMessage);
+            await updateConversationTitle(result.conversationId, generatedTitle);
+            agent.dispatch({
+              type: "UPDATE_CONVERSATION_TITLE",
+              payload: { conversationId: result.conversationId, title: generatedTitle },
+            });
+
+            // 添加用户消息到 UI
+            agent.addMessage({
+              role: "user",
+              content: autoStartMessage,
+            });
+
+            // 发送消息给 Agent
+            agent.setLoading(true);
+            await sendMessage(autoStartMessage, agent.currentContext, result.conversationId);
+          }
+        } catch (error) {
+          console.error("自动发送消息失败:", error);
+          toast.error("启动对话失败");
+        } finally {
+          onAutoStartComplete?.();
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [autoStartMessage, projectId, agent, t, sendMessage, onAutoStartComplete]);
+
   // 自动滚动到底部
   useEffect(() => {
     if (scrollRef.current && isUserNearBottom) {
@@ -197,12 +257,14 @@ export function FloatingAgentCard({
     }
   }, [agent.state.messages, agent.state.isLoading, isUserNearBottom]);
 
-  // 发送消息
-  const handleSend = useCallback(async () => {
-    if (!input.trim()) return;
+  // 发送消息（支持直接传入消息内容，用于自动发送）
+  const handleSend = useCallback(async (messageOverride?: string) => {
+    const userMessage = messageOverride?.trim() || input.trim();
+    if (!userMessage) return;
 
-    const userMessage = input.trim();
-    setInput("");
+    if (!messageOverride) {
+      setInput("");
+    }
 
     if (agent.state.isLoading) {
       abort();
@@ -292,9 +354,12 @@ export function FloatingAgentCard({
   }, [handleSend, input]);
 
   // 拖拽处理
+  const dragStartYRef = useRef<number>(0);
+
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     setIsDragging(true);
     dragStartXRef.current = e.clientX;
+    dragStartYRef.current = e.clientY;
     e.preventDefault();
   }, []);
 
@@ -303,19 +368,56 @@ export function FloatingAgentCard({
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - dragStartXRef.current;
+      const deltaY = e.clientY - dragStartYRef.current;
+
+      // 实时更新拖动偏移
+      setDragOffset({ x: deltaX, y: deltaY });
+
       const threshold = 100;
 
-      if (position === "left" && deltaX > threshold) {
-        onPositionChange("right");
-        setIsDragging(false);
-      } else if (position === "right" && deltaX < -threshold) {
-        onPositionChange("left");
-        setIsDragging(false);
+      // 判断主要移动方向
+      const isHorizontalDrag = Math.abs(deltaX) > Math.abs(deltaY);
+
+      if (isHorizontalDrag) {
+        // 水平拖动：左右切换
+        if (position === "left" && deltaX > threshold) {
+          onPositionChange("right");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        } else if (position === "right" && deltaX < -threshold) {
+          onPositionChange("left");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        } else if (position === "bottom") {
+          // 从底部拖到左右
+          if (deltaX < -threshold) {
+            onPositionChange("left");
+            setIsDragging(false);
+            setDragOffset({ x: 0, y: 0 });
+          } else if (deltaX > threshold) {
+            onPositionChange("right");
+            setIsDragging(false);
+            setDragOffset({ x: 0, y: 0 });
+          }
+        }
+      } else {
+        // 垂直拖动：上下切换
+        if ((position === "left" || position === "right") && deltaY > threshold) {
+          onPositionChange("bottom");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        } else if (position === "bottom" && deltaY < -threshold) {
+          // 从底部向上拖，回到左侧
+          onPositionChange("left");
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+        }
       }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      setDragOffset({ x: 0, y: 0 });
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -375,18 +477,282 @@ export function FloatingAgentCard({
     }
   };
 
+  // 底部模式的布局
+  if (position === "bottom") {
+    return (
+      <motion.div
+        ref={cardRef}
+        animate={{
+          x: dragOffset.x,
+          y: dragOffset.y,
+          scale: isDragging ? 0.97 : 1,
+          opacity: isDragging ? 0.85 : 1,
+        }}
+        transition={isDragging ? {
+          type: "tween",
+          duration: 0,
+        } : {
+          type: "spring",
+          stiffness: 400,
+          damping: 25,
+        }}
+        className={cn(
+          "absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4",
+          isDragging && "cursor-grabbing"
+        )}
+      >
+        <div
+          className={cn(
+            "max-h-[400px]",
+            "bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl",
+            "flex flex-col overflow-hidden"
+          )}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {/* 拖拽手柄 */}
+              <div
+                onMouseDown={handleDragStart}
+                className={cn(
+                  "p-1 rounded cursor-grab hover:bg-muted/50 transition-colors",
+                  isDragging && "cursor-grabbing"
+                )}
+                title="拖拽切换位置"
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shrink-0">
+                <Bot className="h-4 w-4 text-primary-foreground" />
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex-1 justify-start min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold truncate">
+                        {agent.state.isNewConversation
+                          ? t('editor.agent.panel.newConversation')
+                          : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
+                      </h3>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[300px]">
+                  <DropdownMenuItem onClick={handleCreateNewConversation} className="font-medium">
+                    <MessageSquarePlus className="h-4 w-4 mr-2" />
+                    新建对话
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {agent.state.conversations.length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                        暂无对话历史
+                      </div>
+                    ) : (
+                      agent.state.conversations.map((conv) => {
+                        const { Icon, className } = getStatusIcon(conv.status);
+                        const isActive = conv.id === agent.state.currentConversationId;
+
+                        return (
+                          <DropdownMenuItem
+                            key={conv.id}
+                            onClick={() => agent.loadConversation(conv.id)}
+                            className={cn(
+                              "flex items-start gap-2 py-2 px-2 cursor-pointer",
+                              isActive && "bg-accent"
+                            )}
+                          >
+                            <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", className)} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{conv.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatTime(conv.lastActivityAt)}
+                              </p>
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => handleDeleteClick(conv.id, e)}
+                              className="h-6 w-6 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuItem>
+                        );
+                      })
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCreateNewConversation}
+                    className="shrink-0"
+                  >
+                    <MessageSquarePlus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('editor.agent.panel.newConversation')}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onCollapse}
+                    className="shrink-0"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>收起</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* Messages - 底部模式高度受限 */}
+          <div className="flex-1 overflow-hidden relative min-h-[100px] max-h-[200px]">
+            <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
+              <div className="py-2">
+                {isEmptyState ? (
+                  <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+                    <Bot className="mb-2 h-6 w-6 text-muted-foreground/60" />
+                    <p className="text-sm text-muted-foreground/80">
+                      {t('editor.agent.panel.emptyState')}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {agent.state.messages
+                      .filter(msg => msg.role !== "tool")
+                      .map((message) => (
+                        <ChatMessage
+                          key={message.id}
+                          message={message}
+                          currentBalance={creditBalance}
+                        />
+                      ))}
+                    {agent.state.isLoading && <TypingIndicator />}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 回到底部按钮 */}
+            {!isUserNearBottom && (
+              <div className="absolute bottom-2 right-4 z-10">
+                <Button
+                  size="icon"
+                  onClick={() => scrollToBottom(true)}
+                  className="h-8 w-8 rounded-full shadow-lg"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="border-t p-3 shrink-0 bg-background/80">
+            <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
+                className="min-h-[20px] max-h-[80px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
+                style={{ height: 'auto', minHeight: '40px' }}
+              />
+              <div className="absolute bottom-2 right-2">
+                {agent.state.isLoading && !input.trim() ? (
+                  <Button
+                    onClick={handleStop}
+                    size="icon"
+                    variant="destructive"
+                    className="h-8 w-8 rounded-lg"
+                  >
+                    <Square className="h-4 w-4 fill-current" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim()}
+                    size="icon"
+                    className="h-8 w-8 rounded-lg"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认删除</AlertDialogTitle>
+                <AlertDialogDescription>
+                  确定要删除这个对话吗？此操作无法撤销。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDelete}>
+                  删除
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // 左右侧边栏模式
   return (
-    <div
+    <motion.div
       ref={cardRef}
+      animate={{
+        x: dragOffset.x,
+        y: dragOffset.y,
+        scale: isDragging ? 0.97 : 1,
+        opacity: isDragging ? 0.85 : 1,
+      }}
+      transition={isDragging ? {
+        type: "tween",
+        duration: 0,
+      } : {
+        type: "spring",
+        stiffness: 400,
+        damping: 25,
+      }}
       className={cn(
-        "absolute top-4 bottom-4 w-[380px] z-20",
-        "bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl",
-        "flex flex-col overflow-hidden",
-        "transition-all duration-300 ease-out",
-        position === "left" ? "left-4" : "right-4",
-        isDragging && "cursor-grabbing opacity-80"
+        "w-[380px] h-full p-3",
+        isDragging && "cursor-grabbing"
       )}
     >
+      <div
+        className={cn(
+          "h-full",
+          "bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl",
+          "flex flex-col overflow-hidden"
+        )}
+      >
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -568,7 +934,7 @@ export function FloatingAgentCard({
               </Button>
             ) : (
               <Button
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={!input.trim()}
                 size="icon"
                 className="h-8 w-8 rounded-lg"
@@ -602,6 +968,7 @@ export function FloatingAgentCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </motion.div>
   );
 }
