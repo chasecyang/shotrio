@@ -113,6 +113,7 @@ export interface VideoGenerationConfig {
   duration?: "5" | "10";         // 视频时长（秒）
   aspect_ratio?: "16:9" | "9:16" | "1:1";  // 宽高比
   negative_prompt?: string;      // 负面提示词
+  type?: string;                 // 生成类型（向后兼容）
 }
 
 /**

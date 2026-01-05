@@ -177,7 +177,7 @@ export async function countAssetsByStatus(projectId: string): Promise<{
  */
 export async function queryProjectAssetsWithStatus(options: {
   projectId: string;
-  assetType?: "image" | "video";
+  assetType?: "image" | "video" | "text";
   sourceType?: "generated" | "uploaded";
   tagFilters?: string[];
   search?: string;

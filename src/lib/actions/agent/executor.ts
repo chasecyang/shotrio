@@ -306,19 +306,19 @@ export async function executeFunction(
           
           // 直接使用标准化的配置构建 VideoGenerationConfig
           const generationConfig = {
-            prompt: normalizedConfig.prompt,
-            start_image_url: normalizedConfig.start_image_url,
-            end_image_url: normalizedConfig.end_image_url,
-            duration: normalizedConfig.duration,
-            aspect_ratio: normalizedConfig.aspect_ratio,
-            negative_prompt: normalizedConfig.negative_prompt,
+            prompt: normalizedConfig.prompt as string,
+            start_image_url: normalizedConfig.start_image_url as string,
+            end_image_url: normalizedConfig.end_image_url as string | undefined,
+            duration: normalizedConfig.duration as "5" | "10" | undefined,
+            aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | "1:1" | undefined,
+            negative_prompt: normalizedConfig.negative_prompt as string | undefined,
           };
           
           // 创建视频生成任务
           const generateResult = await createVideoAsset({
             projectId,
             name: title || "未命名视频",
-            prompt: normalizedConfig.prompt,
+            prompt: normalizedConfig.prompt as string,
             referenceAssetIds,
             generationConfig,
             order,
@@ -454,14 +454,12 @@ export async function executeFunction(
       case "create_text_asset": {
         const name = parameters.name as string;
         const content = parameters.content as string;
-        const format = (parameters.format as "markdown" | "plain") || "markdown";
         const tags = (parameters.tags as string[]) || [];
 
         const createResult = await createTextAsset({
           projectId,
           name,
           content,
-          format,
           tags,
         });
 
@@ -505,7 +503,6 @@ export async function executeFunction(
               id: asset.id,
               name: asset.name,
               content: contentResult.content || "",
-              format: contentResult.format || "markdown",
               tags: asset.tags.map(t => t.tagValue),
               createdAt: asset.createdAt,
             };

@@ -202,7 +202,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header - 简化版，只保留筛选栏和计数 */}
-      <div className="border-b shrink-0 px-4 py-3">
+      <div className="shrink-0 px-4 py-3">
         <div className="flex items-center gap-3">
           <AssetFilter
             value={filterOptions}

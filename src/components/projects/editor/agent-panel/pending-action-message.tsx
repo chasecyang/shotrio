@@ -407,16 +407,16 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                     <MarkdownRenderer content={functionCall.arguments.content as string || "*暂无内容*"} />
                   </div>
                 </div>
-                {functionCall.arguments.tags && (
+                {functionCall.arguments.tags ? (
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">标签:</span>
                     <span className="text-xs text-foreground">
-                      {Array.isArray(functionCall.arguments.tags) 
-                        ? functionCall.arguments.tags.join(", ") 
-                        : functionCall.arguments.tags}
+                      {Array.isArray(functionCall.arguments.tags)
+                        ? functionCall.arguments.tags.join(", ")
+                        : String(functionCall.arguments.tags)}
                     </span>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           ) : isSetArtStyle ? (
