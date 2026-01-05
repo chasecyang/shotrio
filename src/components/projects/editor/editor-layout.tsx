@@ -88,12 +88,12 @@ function EditorLayoutInner({
       <ModeTabBar />
 
       {/* 主内容区 - flex 布局容器 */}
-      <div className="flex-1 flex relative overflow-hidden">
+      <div className="flex-1 flex relative overflow-hidden p-3 gap-3">
         {/* Agent 对话组件 - 作为 flex 子元素或浮动 */}
         <AgentChatContainer projectId={project.id} />
 
-        {/* 内容面板 - 占满剩余区域 */}
-        <div className="flex-1 h-full overflow-hidden">
+        {/* 内容面板 - 占满剩余区域，添加卡片包裹 */}
+        <div className="flex-1 h-full overflow-hidden bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
           {state.actionEditor ? (
             <ActionEditorPanel />
           ) : state.showSettings ? (

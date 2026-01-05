@@ -743,7 +743,7 @@ export function FloatingAgentCard({
         damping: 25,
       }}
       className={cn(
-        "w-[380px] h-full p-3",
+        "w-[380px] h-full",
         isDragging && "cursor-grabbing"
       )}
     >
