@@ -181,6 +181,7 @@ export const videoData = pgTable("video_data", {
     .references(() => asset.id, { onDelete: "cascade" }),
 
   videoUrl: text("video_url"), // 视频 URL
+  thumbnailUrl: text("thumbnail_url"), // 视频缩略图 URL
   duration: integer("duration"), // 视频时长（毫秒）
 });
 

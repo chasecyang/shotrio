@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/db";
-import { asset } from "@/lib/db/schemas/project";
+import { asset, generationInfo, videoData } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 import { generateVideo, getVideoServiceProvider } from "@/lib/services/video-service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
@@ -52,24 +52,28 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       workerToken
     );
 
-    // 1. 查询 asset 记录（assetType='video'）
+    // 1. 查询 asset 记录（assetType='video'，加载扩展表）
     const assetData = await db.query.asset.findFirst({
       where: and(
         eq(asset.id, assetId),
         eq(asset.assetType, "video")
       ),
+      with: {
+        generationInfo: true,
+        videoData: true,
+      },
     });
 
     if (!assetData) {
       throw new Error("视频资产不存在");
     }
 
-    if (!assetData.generationConfig) {
-      throw new Error("视频生成配置不存在");
+    if (!assetData.generationInfo?.generationConfig) {
+      throw new Error("视频生成配置不存在（generationInfo）");
     }
 
-    // 2. 解析视频生成配置
-    const config: VideoGenerationConfig = JSON.parse(assetData.generationConfig);
+    // 2. 解析视频生成配置（从 generationInfo 表读取）
+    const config: VideoGenerationConfig = JSON.parse(assetData.generationInfo.generationConfig);
     
     // 向后兼容：如果没有 type 字段，默认为 reference-to-video
     const type = config.type || "reference-to-video";
@@ -244,15 +248,30 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       // 缩略图生成失败不影响视频本身的可用性
     }
 
-    // 9. 更新 asset 记录（只更新实际内容，不更新状态）
+    // 9. 更新扩展表（新架构：写入 videoData 表）
     // 注意：状态现在从job动态计算，不需要手动更新
     await db
-      .update(asset)
-      .set({
+      .insert(videoData)
+      .values({
+        assetId: assetId,
         videoUrl: uploadResult.url,
         thumbnailUrl: thumbnailUrl || null,
         duration: videoDuration * 1000, // 转换为毫秒
-        // status: "completed", // ❌ 已移除：状态从job计算
+      })
+      .onConflictDoUpdate({
+        target: videoData.assetId,
+        set: {
+          videoUrl: uploadResult.url,
+          thumbnailUrl: thumbnailUrl || null,
+          duration: videoDuration * 1000,
+        },
+      });
+
+    // 更新 asset 的 updatedAt
+    await db
+      .update(asset)
+      .set({
+        updatedAt: new Date(),
       })
       .where(eq(asset.id, assetId));
 
@@ -319,12 +338,15 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       workerToken
     );
 
-    // 获取所有视频资产
+    // 获取所有视频资产（加载 videoData 扩展表）
     const videos = await db.query.asset.findMany({
       where: (asset, { inArray, and, eq }) => and(
         inArray(asset.id, videoIds),
         eq(asset.assetType, "video")
       ),
+      with: {
+        videoData: true,
+      },
     });
 
     if (videos.length === 0) {
@@ -332,8 +354,8 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     }
 
     // 过滤出已完成的视频（有 videoUrl 的视频）
-    // 注意：asset.status 已移除，改为检查 videoUrl 是否存在
-    const completedVideos = videos.filter((v) => v.videoUrl);
+    // 注意：videoUrl 现在在 videoData 表中
+    const completedVideos = videos.filter((v) => v.videoData?.videoUrl);
 
     if (completedVideos.length === 0) {
       throw new Error("没有已完成的视频");
@@ -353,8 +375,8 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       .map((id) => completedVideos.find((v) => v.id === id))
       .filter((v): v is NonNullable<typeof v> => v !== undefined);
 
-    // 计算总时长（duration 现在是毫秒，需要转换为秒）
-    const totalDuration = sortedVideos.reduce((sum, v) => sum + ((v.duration || 0) / 1000), 0);
+    // 计算总时长（duration 现在在 videoData 表中，是毫秒，需要转换为秒）
+    const totalDuration = sortedVideos.reduce((sum, v) => sum + ((v.videoData?.duration || 0) / 1000), 0);
 
     await updateJobProgress(
       {
@@ -365,12 +387,12 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       workerToken
     );
 
-    // 基础实现：返回视频列表供前端处理
+    // 基础实现：返回视频列表供前端处理（从 videoData 读取）
     const videoList = sortedVideos.map((v, index) => ({
       videoId: v.id,
       order: index + 1,
-      videoUrl: v.videoUrl!,
-      duration: (v.duration || 0) / 1000, // 转换为秒
+      videoUrl: v.videoData!.videoUrl!,
+      duration: (v.videoData?.duration || 0) / 1000, // 转换为秒
     }));
 
     await updateJobProgress(
