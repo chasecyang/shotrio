@@ -131,7 +131,7 @@ export function enrichAssetWithFullData(
       case "image":
         return imageData?.thumbnailUrl || imageData?.imageUrl || null;
       case "video":
-        return imageData?.thumbnailUrl || null; // 视频使用图片缩略图
+        return videoData?.thumbnailUrl || null;
       default:
         return null;
     }
