@@ -281,6 +281,108 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     category: "read",
     needsConfirmation: false,
   },
+
+  // ============================================
+  // 时间轴剪辑工具
+  // ============================================
+  {
+    name: "query_timeline",
+    description: "查询当前项目的时间轴状态。返回：总时长、片段列表、每个片段的素材详情（ID、名称、prompt、标签、时长、位置等）。执行剪辑前应先调用此函数了解现状。",
+    displayName: "查询时间轴",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+    category: "read",
+    needsConfirmation: false,
+  },
+  {
+    name: "add_clip",
+    description: "添加素材到时间轴。默认添加到末尾，也可指定插入位置。视频素材默认使用原始时长，图片素材需指定时长。",
+    displayName: "添加片段",
+    parameters: {
+      type: "object",
+      properties: {
+        assetId: {
+          type: "string",
+          description: "素材ID（必填）",
+        },
+        duration: {
+          type: "number",
+          description: "显示时长（毫秒），图片必填，视频可选",
+        },
+        insertAt: {
+          type: "string",
+          description: "插入位置：'end'（默认）|'start'|clipId（在该片段后插入）",
+        },
+        trimStart: {
+          type: "number",
+          description: "素材入点（毫秒），默认0",
+        },
+        trimEnd: {
+          type: "number",
+          description: "素材出点（毫秒），默认到结尾",
+        },
+      },
+      required: ["assetId"],
+    },
+    category: "modification",
+    needsConfirmation: true,
+  },
+  {
+    name: "remove_clip",
+    description: "从时间轴移除片段。移除后自动波纹编辑：后续片段自动前移，保持连续。",
+    displayName: "移除片段",
+    parameters: {
+      type: "object",
+      properties: {
+        clipId: {
+          type: "string",
+          description: "要移除的片段ID",
+        },
+      },
+      required: ["clipId"],
+    },
+    category: "modification",
+    needsConfirmation: true,
+  },
+  {
+    name: "update_clip",
+    description: "更新片段属性。可修改：时长、裁剪点、顺序位置、替换素材。一次调用可修改多个属性。",
+    displayName: "更新片段",
+    parameters: {
+      type: "object",
+      properties: {
+        clipId: {
+          type: "string",
+          description: "片段ID（必填）",
+        },
+        duration: {
+          type: "number",
+          description: "新时长（毫秒）",
+        },
+        trimStart: {
+          type: "number",
+          description: "新入点（毫秒）",
+        },
+        trimEnd: {
+          type: "number",
+          description: "新出点（毫秒）",
+        },
+        moveToPosition: {
+          type: "number",
+          description: "移动到指定顺序位置（0=最前）",
+        },
+        replaceWithAssetId: {
+          type: "string",
+          description: "替换为新素材ID",
+        },
+      },
+      required: ["clipId"],
+    },
+    category: "modification",
+    needsConfirmation: true,
+  },
 ];
 
 /**

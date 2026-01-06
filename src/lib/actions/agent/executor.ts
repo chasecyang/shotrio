@@ -39,10 +39,21 @@ import {
   getVideoAssets,
   createVideoAsset,
 } from "../asset/crud";
-import { 
+import {
   createTextAsset,
   getTextAssetContent,
 } from "../asset/text-asset";
+import {
+  getOrCreateProjectTimeline,
+  getProjectTimeline,
+} from "../timeline/timeline-actions";
+import {
+  addClipToTimeline,
+  removeClip as removeClipAction,
+  updateClip as updateClipAction,
+  reorderClips,
+} from "../timeline/clip-actions";
+import { getAssetWithFullData } from "../asset/crud";
 
 /**
  * 执行单个 function call
@@ -595,6 +606,331 @@ export async function executeFunction(
             errors: errors.length > 0 ? errors : undefined,
           },
           error: successCount === 0 ? `所有删除失败: ${errors.join("; ")}` : undefined,
+        };
+        break;
+      }
+
+      // ============================================
+      // 时间轴剪辑类
+      // ============================================
+      case "query_timeline": {
+        const timelineResult = await getOrCreateProjectTimeline(projectId);
+
+        if (!timelineResult.success || !timelineResult.timeline) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: timelineResult.error || "无法获取或创建时间轴",
+          };
+          break;
+        }
+
+        const timelineData = timelineResult.timeline;
+
+        // 格式化返回数据，包含素材详情
+        const formattedClips = timelineData.clips.map((clip) => ({
+          id: clip.id,
+          order: clip.order,
+          startTime: clip.startTime,
+          duration: clip.duration,
+          trimStart: clip.trimStart,
+          trimEnd: clip.trimEnd,
+          asset: {
+            id: clip.asset.id,
+            name: clip.asset.name,
+            type: clip.asset.assetType,
+            prompt: clip.asset.prompt,
+            tags: clip.asset.tags.map((t) => t.tagValue),
+            originalDuration: clip.asset.duration,
+          },
+        }));
+
+        result = {
+          functionCallId: functionCall.id,
+          success: true,
+          data: {
+            timeline: {
+              id: timelineData.id,
+              duration: timelineData.duration,
+              clipCount: timelineData.clips.length,
+            },
+            clips: formattedClips,
+            message:
+              timelineData.clips.length === 0
+                ? "时间轴为空，没有任何片段"
+                : `时间轴共 ${timelineData.clips.length} 个片段，总时长 ${Math.round(timelineData.duration / 1000)} 秒`,
+          },
+        };
+        break;
+      }
+
+      case "add_clip": {
+        const assetId = parameters.assetId as string;
+        const duration = parameters.duration as number | undefined;
+        const insertAt = parameters.insertAt as string | undefined;
+        const trimStart = parameters.trimStart as number | undefined;
+        const trimEnd = parameters.trimEnd as number | undefined;
+
+        // 获取或创建时间轴
+        const timelineResult = await getOrCreateProjectTimeline(projectId);
+        if (!timelineResult.success || !timelineResult.timeline) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: timelineResult.error || "无法获取或创建时间轴",
+          };
+          break;
+        }
+        const timelineData = timelineResult.timeline;
+
+        // 获取素材信息以确定时长
+        const assetResult = await getAssetWithFullData(assetId);
+        if (!assetResult.success || !assetResult.asset) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: assetResult.error || `素材 ${assetId} 不存在`,
+          };
+          break;
+        }
+        const assetData = assetResult.asset;
+
+        // 计算片段时长
+        let clipDuration = duration;
+        if (!clipDuration) {
+          if (assetData.assetType === "video" && assetData.duration) {
+            clipDuration = assetData.duration;
+          } else if (assetData.assetType === "image") {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "图片素材必须指定 duration 参数",
+            };
+            break;
+          }
+        }
+
+        // 计算插入位置
+        let startTime: number | undefined;
+        let order: number | undefined;
+
+        if (insertAt === "start") {
+          startTime = 0;
+          order = 0;
+        } else if (insertAt && insertAt !== "end") {
+          // insertAt 是 clipId，在该片段后插入
+          const targetClip = timelineData.clips.find((c) => c.id === insertAt);
+          if (targetClip) {
+            startTime = targetClip.startTime + targetClip.duration;
+            order = targetClip.order + 1;
+          }
+        }
+        // 默认 'end'：startTime 和 order 使用 addClipToTimeline 的默认值
+
+        const addResult = await addClipToTimeline(timelineData.id, {
+          assetId,
+          duration: clipDuration,
+          startTime,
+          order,
+          trimStart: trimStart ?? 0,
+          trimEnd,
+        });
+
+        if (addResult.success) {
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              message: `已添加素材"${assetData.name}"到时间轴`,
+              clipCount: addResult.timeline?.clips.length,
+              timelineDuration: addResult.timeline?.duration,
+            },
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: addResult.error || "添加片段失败",
+          };
+        }
+        break;
+      }
+
+      case "remove_clip": {
+        const clipId = parameters.clipId as string;
+
+        const removeResult = await removeClipAction(clipId);
+
+        if (removeResult.success) {
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              message: "已移除片段，后续片段已自动前移",
+              clipCount: removeResult.timeline?.clips.length,
+              timelineDuration: removeResult.timeline?.duration,
+            },
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: removeResult.error || "移除片段失败",
+          };
+        }
+        break;
+      }
+
+      case "update_clip": {
+        const clipId = parameters.clipId as string;
+        const duration = parameters.duration as number | undefined;
+        const trimStart = parameters.trimStart as number | undefined;
+        const trimEnd = parameters.trimEnd as number | undefined;
+        const moveToPosition = parameters.moveToPosition as number | undefined;
+        const replaceWithAssetId = parameters.replaceWithAssetId as string | undefined;
+
+        // 获取时间轴
+        const timelineData = await getProjectTimeline(projectId);
+        if (!timelineData) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "时间轴不存在",
+          };
+          break;
+        }
+
+        const updates: string[] = [];
+
+        // 1. 更新基本属性（时长、裁剪点、替换素材）
+        const updateInput: {
+          duration?: number;
+          trimStart?: number;
+          trimEnd?: number;
+          assetId?: string;
+        } = {};
+
+        if (duration !== undefined) {
+          updateInput.duration = duration;
+          updates.push(`时长改为 ${duration}ms`);
+        }
+        if (trimStart !== undefined) {
+          updateInput.trimStart = trimStart;
+          updates.push(`入点改为 ${trimStart}ms`);
+        }
+        if (trimEnd !== undefined) {
+          updateInput.trimEnd = trimEnd;
+          updates.push(`出点改为 ${trimEnd}ms`);
+        }
+        if (replaceWithAssetId !== undefined) {
+          // 替换素材需要特殊处理：更新 assetId
+          // 注意：现有的 updateClip 不支持直接更新 assetId
+          // 这里我们先删除再添加
+          const targetClip = timelineData.clips.find((c) => c.id === clipId);
+          if (!targetClip) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: `片段 ${clipId} 不存在`,
+            };
+            break;
+          }
+
+          // 获取新素材信息
+          const newAssetResult = await getAssetWithFullData(replaceWithAssetId);
+          if (!newAssetResult.success || !newAssetResult.asset) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: newAssetResult.error || `素材 ${replaceWithAssetId} 不存在`,
+            };
+            break;
+          }
+          const newAsset = newAssetResult.asset;
+
+          // 删除旧片段
+          await removeClipAction(clipId);
+
+          // 添加新片段到相同位置
+          await addClipToTimeline(timelineData.id, {
+            assetId: replaceWithAssetId,
+            duration: duration ?? targetClip.duration,
+            startTime: targetClip.startTime,
+            order: targetClip.order,
+            trimStart: trimStart ?? 0,
+            trimEnd,
+          });
+
+          updates.push(`素材替换为"${newAsset.name}"`);
+
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              message: `片段已更新：${updates.join("，")}`,
+            },
+          };
+          break;
+        }
+
+        // 执行普通更新
+        if (Object.keys(updateInput).length > 0) {
+          const updateResult = await updateClipAction(clipId, updateInput);
+          if (!updateResult.success) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: updateResult.error || "更新片段失败",
+            };
+            break;
+          }
+        }
+
+        // 2. 处理移动位置
+        if (moveToPosition !== undefined) {
+          const currentClip = timelineData.clips.find((c) => c.id === clipId);
+          if (!currentClip) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: `片段 ${clipId} 不存在`,
+            };
+            break;
+          }
+
+          // 重新排序：将目标片段移到指定位置
+          const otherClips = timelineData.clips
+            .filter((c) => c.id !== clipId)
+            .sort((a, b) => a.order - b.order);
+
+          const newOrder: { clipId: string; order: number }[] = [];
+          const insertIndex = Math.min(moveToPosition, otherClips.length);
+
+          for (let i = 0; i < otherClips.length; i++) {
+            if (i === insertIndex) {
+              newOrder.push({ clipId, order: newOrder.length });
+            }
+            newOrder.push({ clipId: otherClips[i].id, order: newOrder.length });
+          }
+
+          // 如果 insertIndex 等于 otherClips.length，则添加到末尾
+          if (insertIndex >= otherClips.length) {
+            newOrder.push({ clipId, order: newOrder.length });
+          }
+
+          await reorderClips(timelineData.id, newOrder);
+          updates.push(`移动到位置 ${moveToPosition}`);
+        }
+
+        result = {
+          functionCallId: functionCall.id,
+          success: true,
+          data: {
+            message:
+              updates.length > 0
+                ? `片段已更新：${updates.join("，")}`
+                : "没有需要更新的内容",
+          },
         };
         break;
       }
