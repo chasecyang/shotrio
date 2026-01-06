@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useEditor } from "./editor-context";
 import { AssetCard } from "./shared/asset-card";
+import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithFullData } from "@/types/asset";
 import { toast } from "sonner";
@@ -23,7 +24,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MediaViewer } from "@/components/ui/media-viewer";
-import { AssetFilter, AssetFilterOptions } from "./shared/asset-filter";
+import {
+  AssetFilter,
+  AssetFilterOptions,
+  SortOption,
+} from "./shared/asset-filter";
+import { UNCATEGORIZED_GROUP } from "@/lib/constants/asset-tags";
 
 interface AssetGalleryPanelProps {
   userId: string;
@@ -31,8 +37,94 @@ interface AssetGalleryPanelProps {
 
 const DEFAULT_FILTER: AssetFilterOptions = {
   assetTypes: [],
-  tags: [],
+  sort: "createdAt",
 };
+
+// 统计所有标签出现次数
+function countTagOccurrences(
+  assets: AssetWithFullData[]
+): Map<string, number> {
+  const tagCounts = new Map<string, number>();
+
+  assets.forEach((asset) => {
+    const tags = asset.tags?.map((t) => t.tagValue) || [];
+    tags.forEach((tag) => {
+      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+    });
+  });
+
+  return tagCounts;
+}
+
+// 按标签分组素材
+function groupAssetsByTag(
+  assets: AssetWithFullData[],
+  tagCounts: Map<string, number>
+): Map<string, AssetWithFullData[]> {
+  const groups = new Map<string, AssetWithFullData[]>();
+
+  assets.forEach((asset) => {
+    const tags = asset.tags?.map((t) => t.tagValue) || [];
+
+    if (tags.length === 0) {
+      const group = groups.get(UNCATEGORIZED_GROUP) || [];
+      group.push(asset);
+      groups.set(UNCATEGORIZED_GROUP, group);
+    } else {
+      // 按标签出现次数排序，取出现最多的标签作为主标签
+      const sortedTags = [...tags].sort((a, b) => {
+        const countA = tagCounts.get(a) || 0;
+        const countB = tagCounts.get(b) || 0;
+        return countB - countA;
+      });
+      const primaryTag = sortedTags[0];
+
+      const group = groups.get(primaryTag) || [];
+      group.push(asset);
+      groups.set(primaryTag, group);
+    }
+  });
+
+  return groups;
+}
+
+// 对分组按素材数量排序
+function sortGroups(
+  groups: Map<string, AssetWithFullData[]>
+): [string, AssetWithFullData[]][] {
+  return Array.from(groups.entries()).sort(
+    ([tagA, assetsA], [tagB, assetsB]) => {
+      if (tagA === UNCATEGORIZED_GROUP) return 1;
+      if (tagB === UNCATEGORIZED_GROUP) return -1;
+      return assetsB.length - assetsA.length;
+    }
+  );
+}
+
+// 排序素材
+function sortAssets(
+  assets: AssetWithFullData[],
+  sortOption: SortOption
+): AssetWithFullData[] {
+  const sorted = [...assets];
+
+  switch (sortOption) {
+    case "createdAt":
+      sorted.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      break;
+    case "name":
+      sorted.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+      break;
+    case "usageCount":
+      sorted.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
+      break;
+  }
+
+  return sorted;
+}
 
 export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   const { state, loadAssets } = useEditor();
@@ -40,65 +132,77 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
 
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [assetToDelete, setAssetToDelete] = useState<AssetWithFullData | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<AssetWithFullData | null>(
+    null
+  );
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
-  const [filterOptions, setFilterOptions] = useState<AssetFilterOptions>(DEFAULT_FILTER);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [filterOptions, setFilterOptions] =
+    useState<AssetFilterOptions>(DEFAULT_FILTER);
 
   // 媒体查看器状态
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerAsset, setViewerAsset] = useState<AssetWithFullData | null>(null);
+  const [viewerAsset, setViewerAsset] = useState<AssetWithFullData | null>(
+    null
+  );
 
   // 文本资产编辑状态
-  const [editingTextAsset, setEditingTextAsset] = useState<AssetWithFullData | null>(null);
+  const [editingTextAsset, setEditingTextAsset] =
+    useState<AssetWithFullData | null>(null);
 
   // 初始加载或静默刷新
   useEffect(() => {
     if (!project?.id) return;
-    // 始终调用 loadAssets，但只有首次加载时才会显示 skeleton
-    loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
-  }, [project?.id, loadAssets, filterOptions.search, filterOptions.tags]);
+    loadAssets({ search: filterOptions.search });
+  }, [project?.id, loadAssets, filterOptions.search]);
 
-  // 监听素材创建事件（用于手动上传素材或作为兜底刷新机制）
-  // 注意：Agent生成素材的刷新由 useTaskRefresh 统一处理
+  // 监听素材创建事件
   useEffect(() => {
     const handleAssetCreated = () => {
-      loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
+      loadAssets({ search: filterOptions.search });
     };
 
     window.addEventListener("asset-created", handleAssetCreated);
     return () => {
       window.removeEventListener("asset-created", handleAssetCreated);
     };
-  }, [loadAssets, filterOptions.search, filterOptions.tags]);
+  }, [loadAssets, filterOptions.search]);
 
-  // 客户端筛选逻辑（用于素材类型筛选）
+  // 客户端筛选和排序逻辑
   const filteredAssets = useMemo(() => {
     let result = [...allAssets];
 
-    // 素材类型筛选（image/video）
+    // 素材类型筛选
     if (filterOptions.assetTypes.length > 0) {
-      result = result.filter(asset => 
+      result = result.filter((asset) =>
         filterOptions.assetTypes.includes(asset.assetType)
       );
     }
 
+    // 排序
+    result = sortAssets(result, filterOptions.sort);
+
     return result;
-  }, [allAssets, filterOptions.assetTypes]);
+  }, [allAssets, filterOptions.assetTypes, filterOptions.sort]);
 
-  // 重置筛选
-  const handleResetFilter = () => {
-    setFilterOptions(DEFAULT_FILTER);
-  };
+  // 分组后的素材
+  const groupedAssets = useMemo(() => {
+    const tagCounts = countTagOccurrences(filteredAssets);
+    const groups = groupAssetsByTag(filteredAssets, tagCounts);
+    return sortGroups(groups);
+  }, [filteredAssets]);
 
-  // 处理素材点击 - 根据类型打开不同的查看器
+  // 是否显示分组视图
+  const showGroupedView = filteredAssets.length > 0;
+
+  // 处理素材点击
   const handleAssetClick = (asset: AssetWithFullData) => {
     if (asset.assetType === "text") {
-      // 文本资产打开编辑对话框
       setEditingTextAsset(asset);
       setTextAssetDialogOpen(true);
     } else {
-      // 图片/视频打开媒体查看器
       setViewerAsset(asset);
       setViewerOpen(true);
     }
@@ -140,7 +244,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
         const count = deletedIds.length;
         toast.success(`已删除 ${count} 个素材`);
         setSelectedAssetIds(new Set());
-        await loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
+        await loadAssets({ search: filterOptions.search });
       } else {
         toast.error(result.error || "删除失败");
       }
@@ -179,7 +283,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
 
   // 处理上传成功
   const handleUploadSuccess = () => {
-    loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
+    loadAssets({ search: filterOptions.search });
   };
 
   // 处理重试
@@ -188,7 +292,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
       const result = await retryJob(jobId);
       if (result.success) {
         toast.success("已重新提交任务");
-        await loadAssets({ search: filterOptions.search, tags: filterOptions.tags });
+        await loadAssets({ search: filterOptions.search });
       } else {
         toast.error(result.error || "重试失败");
       }
@@ -202,34 +306,42 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header - 简化版，只保留筛选栏和计数 */}
-      <div className="shrink-0 px-4 py-3">
+      {/* Header */}
+      <div className="shrink-0 px-4 py-3 border-b">
         <div className="flex items-center gap-3">
-          <AssetFilter
-            value={filterOptions}
-            onChange={setFilterOptions}
-            onReset={handleResetFilter}
-            allAssets={allAssets}
-          />
-          <span className="text-xs text-muted-foreground shrink-0">
-            {filteredAssets.length}{allAssets.length !== filteredAssets.length && ` / ${allAssets.length}`} 个素材
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            onClick={() => loadAssets({ search: filterOptions.search, tags: filterOptions.tags, showLoading: true })}
-            disabled={assetsLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`} />
-          </Button>
+          <AssetFilter value={filterOptions} onChange={setFilterOptions} />
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-muted-foreground shrink-0">
+              {filteredAssets.length}
+              {allAssets.length !== filteredAssets.length &&
+                ` / ${allAssets.length}`}{" "}
+              个素材
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={() =>
+                loadAssets({
+                  search: filterOptions.search,
+                  showLoading: true,
+                })
+              }
+              disabled={assetsLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* 素材网格 */}
+      {/* 素材区域 */}
       <div className="flex-1 overflow-auto">
         <div className="p-4">
           {!assetsLoaded && assetsLoading ? (
+            // 加载骨架屏
             <div
               className="grid gap-3"
               style={{
@@ -245,6 +357,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
               ))}
             </div>
           ) : filteredAssets.length === 0 ? (
+            // 空状态
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mb-4">
                 <Images className="w-8 h-8 text-primary" />
@@ -255,11 +368,27 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
               <p className="text-sm text-muted-foreground text-center max-w-sm">
                 {allAssets.length === 0
                   ? "暂无素材"
-                  : "尝试调整筛选条件查看更多素材"
-                }
+                  : "尝试调整筛选条件查看更多素材"}
               </p>
             </div>
+          ) : showGroupedView ? (
+            // 分组视图
+            <div className="space-y-2">
+              {groupedAssets.map(([groupName, assets]) => (
+                <AssetGroup
+                  key={groupName}
+                  title={groupName}
+                  count={assets.length}
+                  assets={assets}
+                  selectedAssetIds={selectedAssetIds}
+                  onAssetClick={handleAssetClick}
+                  onAssetDelete={handleDelete}
+                  onSelectChange={handleSelectChange}
+                />
+              ))}
+            </div>
           ) : (
+            // 普通网格视图
             <div
               className="grid gap-3"
               style={{
@@ -319,7 +448,7 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 媒体查看器 - 支持图片和视频 */}
+      {/* 媒体查看器 */}
       {viewerAsset && (
         <MediaViewer
           open={viewerOpen}
@@ -342,4 +471,3 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
     </div>
   );
 }
-

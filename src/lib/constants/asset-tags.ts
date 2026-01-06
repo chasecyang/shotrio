@@ -1,6 +1,6 @@
 /**
  * 资产标签预设配置
- * 
+ *
  * 这些是系统提供的快捷标签，用户可以快速选择
  * 用户也可以添加完全自定义的标签
  */
@@ -32,4 +32,9 @@ export type PresetTag = typeof PRESET_TAGS[number];
 export function isPresetTag(tag: string): tag is PresetTag {
   return PRESET_TAGS.includes(tag as PresetTag);
 }
+
+/**
+ * 未分类分组名称
+ */
+export const UNCATEGORIZED_GROUP = "未分类";
 
