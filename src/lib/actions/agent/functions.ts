@@ -83,7 +83,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产。基于起始帧（必填）和结束帧（可选）生成视频过渡动画。系统会自动使用配置的视频服务提供商（Kling 或 Veo）。
+    description: `生成视频资产。基于起始帧（必填）和结束帧（可选）生成视频过渡动画。使用 Veo3 视频生成服务，时长固定为 8 秒。
 
 ## 使用说明
 
@@ -93,8 +93,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - **prompt**（必填）：详细描述视频内容和镜头运动（≥10字符）
 - **start_image_url**（必填）：起始帧图片的资产ID或URL
 - **end_image_url**（可选）：结束帧图片的资产ID或URL，不提供则由AI自动生成过渡
-- **duration**（可选）：视频时长，"5" 或 "10" 秒，默认 "5"
-- **aspect_ratio**（可选）：宽高比，"16:9"、"9:16" 或 "1:1"，默认 "16:9"
+- **aspect_ratio**（可选）：宽高比，"16:9" 或 "9:16"，默认 "16:9"
 
 **示例：**
 \`\`\`json
@@ -102,7 +101,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   "prompt": "Smooth camera push-in. Cinematic transition from winter to spring.",
   "start_image_url": "asset-winter-scene",
   "end_image_url": "asset-spring-scene",
-  "duration": "5",
   "title": "冬春季节过渡"
 }
 \`\`\`
@@ -110,7 +108,8 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 **注意事项：**
 1. prompt 应该详细描述镜头运动和画面内容
 2. 图片资产ID需要从 query_assets 查询获得
-3. 视频生成需要一定时间，任务创建后可通过轮询查看状态
+3. 视频时长固定为 8 秒（Veo3 限制）
+4. 视频生成需要一定时间，任务创建后可通过轮询查看状态
 `,
     displayName: "生成视频资产",
     parameters: {
@@ -128,13 +127,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "string",
           description: "结束帧（可选），图片资产的ID或URL。不提供则由AI生成过渡",
         },
-        duration: {
-          type: "string",
-          description: "视频时长（可选），字符串 '5' 或 '10'，默认 '5'",
-        },
         aspect_ratio: {
           type: "string",
-          description: "宽高比（可选），'16:9'、'9:16' 或 '1:1'，默认 '16:9'",
+          description: "宽高比（可选），'16:9' 或 '9:16'，默认 '16:9'",
         },
         negative_prompt: {
           type: "string",

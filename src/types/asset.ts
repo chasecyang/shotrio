@@ -144,17 +144,17 @@ export interface GenerationParams {
 
 /**
  * 视频配置（用于生成）
- * 
+ *
  * 统一的首尾帧生成方式：
  * - 基于起始帧（必填）和结束帧（可选）生成视频
  * - 系统会自动使用配置的视频服务提供商（Kling 或 Veo）
+ * - Veo3 固定时长 8 秒，不支持 1:1 宽高比
  */
 export interface VideoGenerationConfig {
   prompt: string;                // 视频描述（必填）
   start_image_url: string;       // 起始帧（必填）
   end_image_url?: string;        // 结束帧（可选）
-  duration?: "5" | "10";         // 视频时长（秒）
-  aspect_ratio?: "16:9" | "9:16" | "1:1";  // 宽高比
+  aspect_ratio?: "16:9" | "9:16";  // 宽高比（Veo3 不支持 1:1）
   negative_prompt?: string;      // 负面提示词
   type?: string;                 // 生成类型（向后兼容）
 }

@@ -82,15 +82,14 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
     console.log(`[Worker] 配置:`, {
       type,
       prompt: config.prompt,
-      duration: config.duration,
       aspectRatio: config.aspect_ratio,
     });
 
     // 注意：不需要手动更新asset状态为processing
     // 状态从关联的job动态计算，job已经在startJob时被设置为processing
 
-    // 3. 计算积分消费
-    const videoDuration = parseInt(config.duration || "5");
+    // 3. 计算积分消费（Veo3 固定 8 秒）
+    const videoDuration = 8;
     const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
     
     await updateJobProgress(

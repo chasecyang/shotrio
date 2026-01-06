@@ -53,12 +53,11 @@ async function generateVideoWithKling(
 
   console.log(`[VideoService] 使用 Kling 首尾帧生成视频`);
 
-  // 直接调用首尾帧过渡 API
+  // 直接调用首尾帧过渡 API（不传 duration，使用默认值）
   const videoResult = await generateKlingO1ImageToVideo({
     prompt: config.prompt,
     start_image_url: config.start_image_url,
     end_image_url: config.end_image_url,
-    duration: config.duration,
     negative_prompt: config.negative_prompt,
   });
 

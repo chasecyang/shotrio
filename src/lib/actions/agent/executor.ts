@@ -359,13 +359,12 @@ export async function executeFunction(
             ? `${stylePrompt}. ${normalizedConfig.prompt}`
             : (normalizedConfig.prompt as string);
 
-          // 直接使用标准化的配置构建 VideoGenerationConfig
+          // 直接使用标准化的配置构建 VideoGenerationConfig（Veo3 固定 8 秒）
           const generationConfig = {
             prompt: finalPrompt,
             start_image_url: normalizedConfig.start_image_url as string,
             end_image_url: normalizedConfig.end_image_url as string | undefined,
-            duration: normalizedConfig.duration as "5" | "10" | undefined,
-            aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | "1:1" | undefined,
+            aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | undefined,
             negative_prompt: normalizedConfig.negative_prompt as string | undefined,
           };
 

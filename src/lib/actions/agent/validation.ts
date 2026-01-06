@@ -65,7 +65,7 @@ export async function validateFunctionParameters(
 
 /**
  * 校验 generate_video_asset 参数
- * 统一的首尾帧生成方式
+ * 统一的首尾帧生成方式（Veo3 固定 8 秒）
  */
 function validateGenerateVideoParams(params: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
@@ -83,14 +83,9 @@ function validateGenerateVideoParams(params: Record<string, unknown>): Validatio
     errors.push("start_image_url 是必填字段");
   }
 
-  // 3. 校验 duration 格式（可选）
-  if (params.duration && typeof params.duration === 'string' && !["5", "10"].includes(params.duration)) {
-    errors.push("duration 必须是字符串 '5' 或 '10'");
-  }
-
-  // 4. 校验 aspect_ratio 格式（可选）
-  if (params.aspect_ratio && typeof params.aspect_ratio === 'string' && !["16:9", "9:16", "1:1"].includes(params.aspect_ratio)) {
-    errors.push("aspect_ratio 必须是 '16:9'、'9:16' 或 '1:1'");
+  // 3. 校验 aspect_ratio 格式（可选，Veo3 不支持 1:1）
+  if (params.aspect_ratio && typeof params.aspect_ratio === 'string' && !["16:9", "9:16"].includes(params.aspect_ratio)) {
+    errors.push("aspect_ratio 必须是 '16:9' 或 '9:16'");
   }
 
   return {
@@ -101,8 +96,7 @@ function validateGenerateVideoParams(params: Record<string, unknown>): Validatio
       prompt: typeof params.prompt === 'string' ? params.prompt.trim() : '',
       start_image_url: params.start_image_url as string,
       end_image_url: params.end_image_url as string | undefined,
-      duration: (params.duration as string) || "5",
-      aspect_ratio: params.aspect_ratio as "16:9" | "9:16" | "1:1" | undefined,
+      aspect_ratio: params.aspect_ratio as "16:9" | "9:16" | undefined,
       negative_prompt: params.negative_prompt as string | undefined,
     },
   };
