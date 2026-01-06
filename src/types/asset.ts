@@ -235,6 +235,7 @@ export interface ImageData {
 export interface VideoData {
   assetId: string;
   videoUrl: string | null;
+  thumbnailUrl: string | null;  // 视频缩略图 URL
   duration: number | null;  // 毫秒
 }
 
@@ -298,6 +299,7 @@ export interface CreateImageDataInput {
 export interface CreateVideoDataInput {
   assetId: string;
   videoUrl?: string;
+  thumbnailUrl?: string;
   duration?: number;
 }
 
@@ -354,6 +356,7 @@ export interface UpdateImageDataInput {
  */
 export interface UpdateVideoDataInput {
   videoUrl?: string;
+  thumbnailUrl?: string;
   duration?: number;
 }
 
