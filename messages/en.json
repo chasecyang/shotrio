@@ -586,23 +586,23 @@
       "imageGeneration": {
         "title": "AI Image Generation",
         "description": "Generate high-quality character, scene, and prop images with AI",
-        "feature1": "8 credits per image",
+        "feature1": "6 credits per image",
         "feature2": "Multiple resolutions available",
         "feature3": "Support for reference images"
       },
       "videoGeneration": {
         "title": "AI Video Generation",
-        "description": "Generate amazing video content with AI",
-        "feature1": "20 credits/sec (with audio)",
-        "feature2": "Up to 10 seconds per video",
-        "feature3": "No audio: only 12 credits/sec"
+        "description": "Powered by Google Veo 3.1 — Industry-leading video model",
+        "feature1": "6 credits/sec",
+        "feature2": "~8 seconds per video",
+        "feature3": "Audio included"
       }
     },
     "faq": {
       "title": "Frequently Asked Questions",
       "q1": {
         "question": "What can I use credits for?",
-        "answer": "Credits are used to generate AI images and videos. Image generation costs 8 credits per image, video generation costs 20 credits per second (with audio) or 12 credits per second (no audio)."
+        "answer": "Credits are used to generate AI images and videos. Image generation costs 6 credits per image, video generation costs 6 credits per second."
       },
       "q2": {
         "question": "Do credits expire?",
@@ -721,7 +721,7 @@
     },
     "costs": {
       "imageGeneration": "Image generation: {credits} credits/image",
-      "videoGeneration": "Video generation: {credits} credits/second"
+      "videoGeneration": "Video (Veo 3.1): {credits} credits/sec"
     },
     "errors": {
       "insufficientCredits": "Insufficient credits",

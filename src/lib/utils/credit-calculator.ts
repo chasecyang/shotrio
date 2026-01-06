@@ -14,7 +14,7 @@ export interface CreditBreakdown {
   functionCallId: string;
   functionName: string;
   credits: number;
-  details?: string; // 如 "3张图片 × 8积分" 或 "5秒视频 × 20积分/秒"
+  details?: string; // 如 "3张图片 × 6积分" 或 "8秒视频 × 6积分/秒"
 }
 
 /**
@@ -27,13 +27,13 @@ export interface CreditCost {
 
 /**
  * 根据视频时长（毫秒）计算积分
+ * Veo 3.1 按实际秒数计费，向上取整
  */
 export function calculateVideoCredits(durationMs: number): { credits: number; seconds: number } {
-  const seconds = durationMs / 1000;
-  const klingDuration = seconds > 5 ? 10 : 5;
-  const credits = klingDuration * CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND;
-  
-  return { credits, seconds: klingDuration };
+  const seconds = Math.ceil(durationMs / 1000);
+  const credits = seconds * CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND;
+
+  return { credits, seconds };
 }
 
 /**
@@ -78,10 +78,10 @@ export function estimateFunctionCallCredits(
       }
 
       case "generate_video_asset": {
-        // 视频生成：直接从 parameters 读取 duration
-        const duration = (parameters as { duration?: string }).duration === "10" ? 10 : 5;
+        // 视频生成：Veo 3.1 默认生成约 8 秒视频
+        const duration = 8;
         const { credits, seconds } = calculateVideoCredits(duration * 1000);
-        
+
         return {
           functionCallId: id,
           functionName: name,

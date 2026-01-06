@@ -131,8 +131,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
 
 // 积分消费配置 (1美金 = 10积分)
 export const CREDIT_COSTS = {
-  IMAGE_GENERATION: 8, // Nano Banana 图片生成：8积分/张 ($0.08, 成本$0.039, 利润率51%)
-  VIDEO_GENERATION_PER_SECOND: 20, // Kling 视频生成（带音频）：20积分/秒 ($0.20, 成本$0.14, 利润率30%)
-  VIDEO_GENERATION_NO_AUDIO_PER_SECOND: 12, // Kling 视频生成（无音频）：12积分/秒 ($0.12, 成本$0.07, 利润率71%)
+  IMAGE_GENERATION: 6, // Nano Banana 图片生成：6积分/张 ($0.06, 成本$0.03, 利润率50%)
+  VIDEO_GENERATION_PER_SECOND: 6, // Veo 3.1 视频生成：6积分/秒 ($0.06, 成本$0.0125, 利润率79%)
 } as const;
 
