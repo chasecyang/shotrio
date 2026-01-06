@@ -4,20 +4,7 @@
 
 ## 支持的服务提供商
 
-### 1. Kling O1 (默认)
-
-**提供商**: fal.ai  
-**模型**: Kling Video O1 Standard  
-**特点**:
-- 支持首尾帧过渡 (image-to-video)
-- 支持多图参考生成 (reference-to-video)
-- 支持视频续写 (video-to-video)
-- 支持角色一致性 (elements)
-- 原生音频生成
-
-**价格**: 按秒计费，具体见 `CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND`
-
-### 2. Veo 3.1
+### 1. Veo 3.1 (默认)
 
 **提供商**: kie.ai (Google)  
 **模型**: Veo 3.1 Fast / Quality  
@@ -35,6 +22,19 @@
 - 不支持视频续写 (video-to-video)
 - 视频时长约8秒（固定）
 
+### 2. Kling O1
+
+**提供商**: fal.ai
+**模型**: Kling Video O1 Standard
+**特点**:
+- 支持首尾帧过渡 (image-to-video)
+- 支持多图参考生成 (reference-to-video)
+- 支持视频续写 (video-to-video)
+- 支持角色一致性 (elements)
+- 原生音频生成
+
+**价格**: 按秒计费，具体见 `CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND`
+
 ## 环境变量配置
 
 ### 基础配置
@@ -43,35 +43,35 @@
 
 ```bash
 # 视频服务提供商选择
-# 可选值: "kling" (默认) | "veo"
-VIDEO_SERVICE_PROVIDER=kling
+# 可选值: "veo" (默认) | "kling"
+VIDEO_SERVICE_PROVIDER=veo
 
-# Kling 服务配置 (fal.ai)
-FAL_KEY=your_fal_api_key
-
-# Veo 服务配置 (kie.ai)
+# Veo 服务配置 (kie.ai) - 默认
 KIE_API_KEY=your_kie_api_key
+
+# Kling 服务配置 (fal.ai) - 备用
+FAL_KEY=your_fal_api_key
 ```
 
-### 切换到 Veo 3.1
+### 切换到 Kling O1
 
-如果要使用 Veo 3.1 服务，只需修改环境变量：
+如果要使用 Kling O1 服务，修改环境变量：
+
+```bash
+VIDEO_SERVICE_PROVIDER=kling
+FAL_KEY=your_fal_api_key
+```
+
+### 使用默认 Veo 3.1
+
+Veo 3.1 是默认服务，设置：
 
 ```bash
 VIDEO_SERVICE_PROVIDER=veo
 KIE_API_KEY=your_kie_api_key
 ```
 
-### 回退到 Kling O1
-
-如果要回退到 Kling O1（默认），设置：
-
-```bash
-VIDEO_SERVICE_PROVIDER=kling
-FAL_KEY=your_fal_api_key
-```
-
-或者直接移除 `VIDEO_SERVICE_PROVIDER` 环境变量（默认使用 Kling）。
+或者直接移除 `VIDEO_SERVICE_PROVIDER` 环境变量（默认使用 Veo 3.1）。
 
 ## 使用方法
 
@@ -172,18 +172,18 @@ Agent 的 `generate_video_asset` 功能会自动使用配置的服务：
 
 ### 本地开发
 
-建议使用 Kling O1，功能更全面：
+建议使用默认的 Veo 3.1，性价比高：
 
 ```bash
-VIDEO_SERVICE_PROVIDER=kling
+VIDEO_SERVICE_PROVIDER=veo
 ```
 
 ### 生产环境
 
-根据成本和需求选择：
+根据需求选择：
 
-- **成本优先**: 使用 Veo 3.1
-- **功能优先**: 使用 Kling O1
+- **默认**: 使用 Veo 3.1（性价比最优）
+- **功能优先**: 使用 Kling O1（支持视频续写等高级功能）
 - **混合使用**: 根据任务类型动态切换（需额外开发）
 
 ## 架构说明
@@ -243,15 +243,15 @@ async function generateVideoWithRunway(config: VideoGenerationConfig) {
 
 export async function generateVideo(config: VideoGenerationConfig) {
   const provider = getVideoServiceProvider();
-  
+
   switch (provider) {
     case "runway":
       return await generateVideoWithRunway(config);
-    case "veo":
-      return await generateVideoWithVeo(config);
     case "kling":
-    default:
       return await generateVideoWithKling(config);
+    case "veo":
+    default:
+      return await generateVideoWithVeo(config);
   }
 }
 ```
