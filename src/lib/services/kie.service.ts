@@ -403,11 +403,11 @@ export interface Veo3VideoDetails {
   msg: string;
   data: {
     taskId: string;
-    status: "pending" | "processing" | "completed" | "failed";
-    videoUrl?: string;
-    thumbnailUrl?: string;
-    duration?: number;
-    error?: string;
+    successFlag: 0 | 1 | 2 | 3; // 0=生成中, 1=成功, 2=失败, 3=失败
+    response?: {
+      resultUrls?: string[];
+    };
+    errorMessage?: string;
   };
 }
 
@@ -440,15 +440,15 @@ export interface Veo3VideoOutput {
 
 /**
  * 使用 Veo 3.1 生成视频
- * 
+ *
  * 支持三种生成模式：
  * - TEXT_2_VIDEO: 纯文本生成视频
  * - FIRST_AND_LAST_FRAMES_2_VIDEO: 首尾帧过渡（1-2张图片）
  * - REFERENCE_2_VIDEO: 基于参考图生成（1-3张图片，仅支持 veo3_fast 和 16:9）
- * 
+ *
  * 价格：Google官方价格的 25%
  * 视频时长：约8秒
- * 
+ *
  * @see https://docs.kie.ai/veo3-api/generate-veo-3-video
  */
 export async function generateVeo3Video(
@@ -473,7 +473,6 @@ export async function generateVeo3Video(
   // 自动判断生成类型
   let generationType = input.generationType;
   if (!generationType && processedImageUrls && processedImageUrls.length > 0) {
-    // 如果有图片但没指定类型，默认使用 FIRST_AND_LAST_FRAMES_2_VIDEO
     generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
   }
 
@@ -485,7 +484,7 @@ export async function generateVeo3Video(
     aspectRatio: input.aspectRatio || "16:9",
     ...(input.seeds && { seeds: input.seeds }),
     ...(input.callBackUrl && { callBackUrl: input.callBackUrl }),
-    enableTranslation: input.enableTranslation !== false, // 默认true
+    enableTranslation: input.enableTranslation !== false,
     ...(input.watermark && { watermark: input.watermark }),
   };
 
@@ -507,7 +506,7 @@ export async function generateVeo3Video(
   }
 
   const data = await response.json() as Veo3GenerateResponse;
-  
+
   if (data.code !== 200 || !data.data?.taskId) {
     throw new Error(`Veo3 生成失败: ${data.msg || "未知错误"}`);
   }
@@ -522,20 +521,24 @@ export async function generateVeo3Video(
 
 /**
  * 获取 Veo 3.1 视频生成任务详情
- * 
+ *
  * @param taskId 任务ID
+ * @see https://docs.kie.ai/veo3-api/generate-veo-3-video
  */
 export async function getVeo3VideoDetails(
   taskId: string
 ): Promise<Veo3VideoOutput> {
   const apiKey = getKieApiKey();
 
-  const response = await fetch(`${KIE_API_BASE_URL}/veo/details/${taskId}`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-    },
-  });
+  const response = await fetch(
+    `${KIE_API_BASE_URL}/veo/record-info?taskId=${encodeURIComponent(taskId)}`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     const error = await response.text();
@@ -544,22 +547,46 @@ export async function getVeo3VideoDetails(
   }
 
   const data = await response.json() as Veo3VideoDetails;
-  
+
   if (data.code !== 200) {
     throw new Error(`Veo3 详情查询失败: ${data.msg || "未知错误"}`);
   }
 
+  // 根据 successFlag 转换状态
+  // 0=生成中, 1=成功, 2=失败, 3=失败
+  let status: Veo3VideoOutput["status"];
+  let videoUrl: string | undefined;
+
+  switch (data.data.successFlag) {
+    case 0:
+      status = "processing";
+      break;
+    case 1:
+      status = "completed";
+      // resultUrls 在 response 对象内，是数组
+      if (data.data.response?.resultUrls?.[0]) {
+        videoUrl = data.data.response.resultUrls[0];
+      }
+      break;
+    case 2:
+    case 3:
+      status = "failed";
+      break;
+    default:
+      status = "pending";
+  }
+
   return {
     taskId: data.data.taskId,
-    status: data.data.status,
-    videoUrl: data.data.videoUrl,
-    error: data.data.error,
+    status,
+    videoUrl,
+    error: data.data.errorMessage,
   };
 }
 
 /**
  * 轮询等待 Veo 3.1 视频生成完成
- * 
+ *
  * @param taskId 任务ID
  * @param maxAttempts 最大尝试次数（默认60次，约10分钟）
  * @param interval 轮询间隔（毫秒，默认10秒）
@@ -570,24 +597,55 @@ export async function waitForVeo3Video(
   interval = 10000
 ): Promise<Veo3VideoOutput> {
   let attempts = 0;
+  let consecutiveErrors = 0;
+  const maxConsecutiveErrors = 5;
 
   while (attempts < maxAttempts) {
-    const details = await getVeo3VideoDetails(taskId);
+    try {
+      const details = await getVeo3VideoDetails(taskId);
+      consecutiveErrors = 0; // 成功后重置错误计数
 
-    if (details.status === "completed" && details.videoUrl) {
-      console.log(`[Kie Veo3] 视频生成完成: ${details.videoUrl}`);
-      return details;
+      if (details.status === "completed" && details.videoUrl) {
+        console.log(`[Kie Veo3] 视频生成完成: ${details.videoUrl}`);
+        return details;
+      }
+
+      if (details.status === "failed") {
+        throw new Error(`Veo3 视频生成失败: ${details.error || "未知错误"}`);
+      }
+
+      attempts++;
+      console.log(`[Kie Veo3] 等待视频生成... (${attempts}/${maxAttempts})`);
+
+      // 等待指定时间后继续轮询
+      await new Promise(resolve => setTimeout(resolve, interval));
+    } catch (error) {
+      // 检查是否是网络错误（可重试）
+      const isNetworkError = error instanceof Error && (
+        error.message.includes("fetch failed") ||
+        error.message.includes("ECONNRESET") ||
+        error.message.includes("ETIMEDOUT") ||
+        error.message.includes("network")
+      );
+
+      if (isNetworkError) {
+        consecutiveErrors++;
+        console.warn(`[Kie Veo3] 网络错误 (${consecutiveErrors}/${maxConsecutiveErrors}):`, error instanceof Error ? error.message : error);
+
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          throw new Error(`Veo3 连续网络错误超过 ${maxConsecutiveErrors} 次，放弃重试`);
+        }
+
+        // 指数退避：2s, 4s, 8s, 16s, 32s
+        const backoff = Math.min(2000 * Math.pow(2, consecutiveErrors - 1), 32000);
+        console.log(`[Kie Veo3] ${backoff / 1000}秒后重试...`);
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        continue;
+      }
+
+      // 非网络错误直接抛出
+      throw error;
     }
-
-    if (details.status === "failed") {
-      throw new Error(`Veo3 视频生成失败: ${details.error || "未知错误"}`);
-    }
-
-    attempts++;
-    console.log(`[Kie Veo3] 等待视频生成... (${attempts}/${maxAttempts})`);
-    
-    // 等待指定时间后继续轮询
-    await new Promise(resolve => setTimeout(resolve, interval));
   }
 
   throw new Error(`Veo3 视频生成超时（已尝试 ${maxAttempts} 次）`);

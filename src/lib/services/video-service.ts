@@ -1,13 +1,13 @@
 /**
  * 视频生成服务抽象层
- * 
+ *
  * 提供统一的接口，支持多个视频生成服务提供商：
- * - Kling (fal.ai) - 默认提供商
- * - Veo 3.1 (kie.ai) - Google 的视频生成模型
- * 
+ * - Veo 3.1 (kie.ai) - 默认提供商，Google 的视频生成模型
+ * - Kling (fal.ai) - 备用提供商
+ *
  * 通过环境变量 VIDEO_SERVICE_PROVIDER 配置：
- * - "kling" (默认) - 使用 Kling O1 模型
- * - "veo" - 使用 Veo 3.1 模型
+ * - "veo" (默认) - 使用 Veo 3.1 模型
+ * - "kling" - 使用 Kling O1 模型
  */
 
 import type { VideoGenerationConfig } from "@/types/asset";
@@ -33,13 +33,13 @@ export interface VideoServiceOutput {
  */
 export function getVideoServiceProvider(): VideoServiceProvider {
   const provider = process.env.VIDEO_SERVICE_PROVIDER?.toLowerCase();
-  
-  if (provider === "veo") {
-    return "veo";
+
+  if (provider === "kling") {
+    return "kling";
   }
-  
-  // 默认使用 Kling
-  return "kling";
+
+  // 默认使用 Veo 3.1
+  return "veo";
 }
 
 // ============= Kling 服务适配器 =============
