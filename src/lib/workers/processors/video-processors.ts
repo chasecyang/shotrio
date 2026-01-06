@@ -85,6 +85,35 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       aspectRatio: config.aspect_ratio,
     });
 
+    // 3. 将 Asset ID 转换为真实的图片 URL
+    const resolveImageUrl = async (assetIdOrUrl: string): Promise<string> => {
+      // 如果已经是 HTTP URL，直接返回
+      if (assetIdOrUrl.startsWith("http")) {
+        return assetIdOrUrl;
+      }
+      // 否则当作 Asset ID 处理，从数据库查询真实 URL
+      const imageAsset = await db.query.asset.findFirst({
+        where: eq(asset.id, assetIdOrUrl),
+        with: {
+          imageData: true,
+        },
+      });
+      if (!imageAsset?.imageData?.imageUrl) {
+        throw new Error(`无法找到图片资产或图片 URL: ${assetIdOrUrl}`);
+      }
+      return imageAsset.imageData.imageUrl;
+    };
+
+    // 解析起始帧和结束帧的真实 URL
+    if (config.start_image_url) {
+      config.start_image_url = await resolveImageUrl(config.start_image_url);
+      console.log(`[Worker] 起始帧 URL: ${config.start_image_url}`);
+    }
+    if (config.end_image_url) {
+      config.end_image_url = await resolveImageUrl(config.end_image_url);
+      console.log(`[Worker] 结束帧 URL: ${config.end_image_url}`);
+    }
+
     // 注意：不需要手动更新asset状态为processing
     // 状态从关联的job动态计算，job已经在startJob时被设置为processing
 
