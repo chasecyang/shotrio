@@ -78,11 +78,8 @@ export function estimateFunctionCallCredits(
       }
 
       case "generate_video_asset": {
-        // 视频生成：支持 imageToVideoConfig 和 referenceToVideoConfig
-        const imageToVideoConfig = parameters.imageToVideoConfig as { duration?: string } | undefined;
-        const referenceToVideoConfig = parameters.referenceToVideoConfig as { duration?: string } | undefined;
-        const config = imageToVideoConfig || referenceToVideoConfig;
-        const duration = config?.duration === "10" ? 10 : 5;
+        // 视频生成：直接从 parameters 读取 duration
+        const duration = (parameters as { duration?: string }).duration === "10" ? 10 : 5;
         const { credits, seconds } = calculateVideoCredits(duration * 1000);
         
         return {

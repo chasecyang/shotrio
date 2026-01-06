@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Metadata } from "next";
 import { generatePageMetadata, pricingMetadata } from "@/lib/seo/metadata";
+import { CREDIT_COSTS } from "@/types/payment";
 
 export async function generateMetadata({
   params,
@@ -96,11 +97,11 @@ export default async function PricingPage() {
                 <div className="flex flex-wrap justify-center gap-4 mb-12">
                   <Badge variant="outline" className="px-4 py-2 text-sm font-normal gap-2">
                     <ImageIcon className="w-4 h-4" aria-hidden="true" />
-                    {t("credits.costs.imageGeneration", { credits: 8 })}
+                    {t("credits.costs.imageGeneration", { credits: CREDIT_COSTS.IMAGE_GENERATION })}
                   </Badge>
                   <Badge variant="outline" className="px-4 py-2 text-sm font-normal gap-2">
                     <Video className="w-4 h-4" />
-                    {t("credits.costs.videoGeneration", { credits: 20 })}
+                    {t("credits.costs.videoGeneration", { credits: CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND })}
                   </Badge>
                 </div>
               </FadeIn>

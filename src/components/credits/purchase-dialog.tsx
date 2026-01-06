@@ -17,7 +17,7 @@ import { createCheckoutSession } from "@/lib/actions/payment/checkout";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import type { CreditPackage, PackageType } from "@/types/payment";
-import { CREDIT_PACKAGES } from "@/types/payment";
+import { CREDIT_PACKAGES, CREDIT_COSTS } from "@/types/payment";
 
 interface PurchaseDialogProps {
   open: boolean;
@@ -139,8 +139,8 @@ export function PurchaseDialog({
                       {/* Value description */}
                       <p className="text-xs text-center text-muted-foreground">
                         {t("packages.value", {
-                          images: Math.floor(totalCredits / 8),
-                          seconds: Math.floor(totalCredits / 20),
+                          images: Math.floor(totalCredits / CREDIT_COSTS.IMAGE_GENERATION),
+                          seconds: Math.floor(totalCredits / CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND),
                         })}
                       </p>
                     </CardContent>

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Zap, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
-import { CREDIT_PACKAGES } from "@/types/payment";
+import { CREDIT_PACKAGES, CREDIT_COSTS } from "@/types/payment";
 import type { PackageType } from "@/types/payment";
 import { useTranslations } from "next-intl";
 
@@ -88,8 +88,8 @@ export function PricingClientWrapper() {
                   {/* Value description */}
                   <p className="text-xs text-center text-muted-foreground">
                     {t("packages.value", {
-                      images: Math.floor(totalCredits / 8),
-                      seconds: Math.floor(totalCredits / 20),
+                      images: Math.floor(totalCredits / CREDIT_COSTS.IMAGE_GENERATION),
+                      seconds: Math.floor(totalCredits / CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND),
                     })}
                   </p>
 
