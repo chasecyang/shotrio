@@ -277,6 +277,21 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }
   }, [isGenerateAssets, functionCall.arguments.assets]);
 
+  // 解析视频生成参数
+  const videoGenerationParams = useMemo(() => {
+    if (!isGenerateVideo) return null;
+
+    const args = functionCall.arguments;
+    return {
+      prompt: (args.prompt as string) || "",
+      startImageUrl: (args.start_image_url as string) || "",
+      endImageUrl: (args.end_image_url as string) || undefined,
+      duration: (args.duration as string) || "5",
+      aspectRatio: (args.aspect_ratio as string) || "16:9",
+      title: (args.title as string) || undefined,
+    };
+  }, [isGenerateVideo, functionCall.arguments]);
+
   // 获取美术风格名称
   useEffect(() => {
     if (!isSetArtStyle) return;
@@ -376,28 +391,57 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 ))}
               </div>
             )
-          ) : isGenerateVideo ? (
-            /* 生成视频：只读显示 */
+          ) : isGenerateVideo && videoGenerationParams ? (
+            /* 生成视频：显示核心参数 */
             <div className="rounded-md bg-background/50 border border-border/50 p-3">
-              <div className="space-y-1.5">
-                {formattedParams.map((param) => (
-                  <div key={param.key} className="space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-muted-foreground shrink-0">
-                        {param.label}:
-                      </span>
-                      <span className="text-xs text-foreground break-words">
-                        {param.value}
-                      </span>
-                    </div>
-                    {/* 如果是素材引用参数，显示图片预览 */}
-                    {param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-                      <div className="pl-0 pt-1">
-                        <AssetPreview assetIds={param.assetIds} />
-                      </div>
-                    )}
+              <div className="space-y-2.5">
+                {/* 提示词 */}
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">提示词:</span>
+                  <p className="text-xs text-foreground break-words line-clamp-2">
+                    {videoGenerationParams.prompt}
+                  </p>
+                </div>
+
+                {/* 标题（可选） */}
+                {videoGenerationParams.title && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">标题:</span>
+                    <span className="text-xs text-foreground">{videoGenerationParams.title}</span>
                   </div>
-                ))}
+                )}
+
+                {/* 时长和宽高比 */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">时长:</span>
+                    <span className="text-xs text-foreground">{videoGenerationParams.duration}秒</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">宽高比:</span>
+                    <span className="text-xs text-foreground">{videoGenerationParams.aspectRatio}</span>
+                  </div>
+                </div>
+
+                {/* 起始帧和结束帧预览 */}
+                <div className="flex gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">起始帧</span>
+                    </div>
+                    <AssetPreview assetIds={[videoGenerationParams.startImageUrl]} />
+                  </div>
+                  {videoGenerationParams.endImageUrl && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground">结束帧</span>
+                      </div>
+                      <AssetPreview assetIds={[videoGenerationParams.endImageUrl]} />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : isCreateTextAsset ? (

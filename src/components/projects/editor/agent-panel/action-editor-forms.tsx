@@ -14,11 +14,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, ImageIcon, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { queryAssets } from "@/lib/actions/asset";
+import { AssetWithFullData } from "@/types/asset";
+import { isAssetReady } from "@/lib/utils/asset-status";
+import { cn } from "@/lib/utils";
 import { getAssetsByIds } from "@/lib/actions/asset";
 import { useEditor } from "../editor-context";
 import { parsePromptReferences } from "@/lib/utils/agent-params-formatter";
-import { formatParametersForConfirmation } from "@/lib/utils/agent-params-formatter";
 
 // Prompt高亮组件
 export function PromptWithHighlights({ 
@@ -295,6 +305,168 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
   );
 }
 
+// 单选素材选择器组件
+interface SingleAssetSelectorProps {
+  projectId: string;
+  selectedAssetId: string | undefined;
+  onSelect: (assetId: string | undefined) => void;
+  label: string;
+  allowClear?: boolean;
+  assetType?: "image" | "video";
+}
+
+function SingleAssetSelector({
+  projectId,
+  selectedAssetId,
+  onSelect,
+  label,
+  allowClear = false,
+  assetType = "image",
+}: SingleAssetSelectorProps) {
+  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<{
+    id: string;
+    name: string;
+    displayUrl: string | null;
+  } | null>(null);
+
+  // 加载选中的素材信息
+  useEffect(() => {
+    if (!selectedAssetId) {
+      setSelectedAsset(null);
+      return;
+    }
+
+    getAssetsByIds([selectedAssetId]).then((result) => {
+      if (result.success && result.assets && result.assets.length > 0) {
+        setSelectedAsset(result.assets[0]);
+      }
+    });
+  }, [selectedAssetId]);
+
+  // 打开选择器时加载素材列表
+  useEffect(() => {
+    if (!isOpen || assets.length > 0) return;
+
+    async function loadAssets() {
+      setIsLoading(true);
+      try {
+        const result = await queryAssets({
+          projectId,
+          assetType,
+          limit: 50,
+        });
+        setAssets(result.assets);
+      } catch (error) {
+        console.error("加载素材失败:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadAssets();
+  }, [isOpen, projectId, assetType, assets.length]);
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "relative w-20 h-20 rounded-lg border-2 border-dashed",
+                "flex items-center justify-center overflow-hidden",
+                "hover:border-primary/50 transition-colors",
+                selectedAsset ? "border-solid border-border" : "border-muted-foreground/30"
+              )}
+            >
+              {selectedAsset?.displayUrl ? (
+                <Image
+                  src={selectedAsset.displayUrl}
+                  alt={selectedAsset.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3" align="start">
+            <ScrollArea className="h-[280px]">
+              {isLoading ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
+                  ))}
+                </div>
+              ) : assets.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  暂无可用素材
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {assets.filter(isAssetReady).map((asset) => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => {
+                        onSelect(asset.id);
+                        setIsOpen(false);
+                      }}
+                      className={cn(
+                        "relative aspect-square rounded-lg overflow-hidden",
+                        "border-2 transition-all",
+                        selectedAssetId === asset.id
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-transparent hover:border-muted-foreground/30"
+                      )}
+                    >
+                      {asset.displayUrl ? (
+                        <Image
+                          src={asset.displayUrl}
+                          alt={asset.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-muted" />
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                        <p className="text-[10px] text-white truncate">{asset.name}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
+        {selectedAsset && (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm truncate">{selectedAsset.name}</p>
+          </div>
+        )}
+        {allowClear && selectedAssetId && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onSelect(undefined)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // 视频生成表单
 interface VideoGenerationFormProps {
   params: Record<string, unknown>;
@@ -302,36 +474,38 @@ interface VideoGenerationFormProps {
 }
 
 export function VideoGenerationForm({ params, onChange }: VideoGenerationFormProps) {
-  const formattedParams = useMemo(() => {
-    return formatParametersForConfirmation(params);
-  }, [params]);
+  const { state } = useEditor();
+  const projectId = state.project?.id || "";
 
   return (
     <div className="space-y-4">
+      {/* 提示词 */}
       <div className="grid gap-2">
         <Label>提示词 *</Label>
         <Textarea
-          value={params.prompt as string || ""}
+          value={(params.prompt as string) || ""}
           onChange={(e) => onChange({ ...params, prompt: e.target.value })}
           className="min-h-[100px]"
           placeholder="描述视频内容和镜头运动"
         />
       </div>
-      {params.title !== undefined && (
-        <div className="grid gap-2">
-          <Label>标题</Label>
-          <Input
-            value={params.title as string || ""}
-            onChange={(e) => onChange({ ...params, title: e.target.value })}
-            placeholder="视频标题"
-          />
-        </div>
-      )}
-      {params.duration !== undefined && (
+
+      {/* 标题 */}
+      <div className="grid gap-2">
+        <Label>标题</Label>
+        <Input
+          value={(params.title as string) || ""}
+          onChange={(e) => onChange({ ...params, title: e.target.value })}
+          placeholder="视频标题"
+        />
+      </div>
+
+      {/* 时长和宽高比 */}
+      <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label>时长</Label>
           <Select
-            value={params.duration as string || "5"}
+            value={(params.duration as string) || "5"}
             onValueChange={(value) => onChange({ ...params, duration: value })}
           >
             <SelectTrigger>
@@ -343,12 +517,10 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
             </SelectContent>
           </Select>
         </div>
-      )}
-      {params.aspect_ratio !== undefined && (
         <div className="grid gap-2">
           <Label>宽高比</Label>
           <Select
-            value={params.aspect_ratio as string || "16:9"}
+            value={(params.aspect_ratio as string) || "16:9"}
             onValueChange={(value) => onChange({ ...params, aspect_ratio: value })}
           >
             <SelectTrigger>
@@ -361,16 +533,26 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
             </SelectContent>
           </Select>
         </div>
-      )}
-      {/* 显示参考图 */}
-      {formattedParams.map((param) => (
-        param.isAssetReference && param.assetIds && param.assetIds.length > 0 && (
-          <div key={param.key} className="space-y-2">
-            <Label>{param.label}</Label>
-            <AssetPreview assetIds={param.assetIds} />
-          </div>
-        )
-      ))}
+      </div>
+
+      {/* 起始帧和结束帧 */}
+      <div className="grid grid-cols-2 gap-4">
+        <SingleAssetSelector
+          projectId={projectId}
+          selectedAssetId={params.start_image_url as string | undefined}
+          onSelect={(assetId) => onChange({ ...params, start_image_url: assetId })}
+          label="起始帧 *"
+          assetType="image"
+        />
+        <SingleAssetSelector
+          projectId={projectId}
+          selectedAssetId={params.end_image_url as string | undefined}
+          onSelect={(assetId) => onChange({ ...params, end_image_url: assetId })}
+          label="结束帧（可选）"
+          allowClear
+          assetType="image"
+        />
+      </div>
     </div>
   );
 }
