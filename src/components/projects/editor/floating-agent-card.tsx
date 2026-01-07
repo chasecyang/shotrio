@@ -66,25 +66,20 @@ interface FloatingAgentCardProps {
   onTargetPositionChange?: (target: ExpandedPosition | null) => void;
 }
 
-// 判断是否为视频相关操作
-function isVideoRelatedFunction(functionName: string): boolean {
-  const videoRelatedFunctions = [
+// 判断是否为素材相关操作
+function isAssetModifyingFunction(functionName: string): boolean {
+  return [
     'generate_video_asset',
     'generate_image_asset',
+    'create_text_asset',
     'update_asset',
     'delete_asset',
-  ];
-  return videoRelatedFunctions.includes(functionName);
+  ].includes(functionName);
 }
 
 // 判断是否为项目相关操作
 function isProjectRelatedFunction(functionName: string): boolean {
-  const projectRelatedFunctions = [
-    'update_episode',
-    'set_project_info',
-    'update_project_settings',
-  ];
-  return projectRelatedFunctions.includes(functionName);
+  return ['update_episode', 'set_project_info'].includes(functionName);
 }
 
 // 判断是否为消耗积分的操作
@@ -173,15 +168,21 @@ export function FloatingAgentCard({
   // Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
     onToolCallEnd: (toolName: string, success: boolean) => {
-      if (success && isVideoRelatedFunction(toolName)) {
+      if (!success) return;
+
+      if (isAssetModifyingFunction(toolName)) {
         editorContext.refreshJobs();
+        window.dispatchEvent(new CustomEvent("asset-created"));
       }
-      if (success && isProjectRelatedFunction(toolName)) {
-        editorContext.refreshJobs();
+
+      if (isProjectRelatedFunction(toolName)) {
         window.dispatchEvent(new CustomEvent("project-changed"));
       }
-      if (success && isCreditConsumingFunction(toolName)) {
-        window.dispatchEvent(new CustomEvent("credits-changed"));
+
+      if (isCreditConsumingFunction(toolName)) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("credits-changed"));
+        }, 1000);
       }
     },
     onComplete: () => {

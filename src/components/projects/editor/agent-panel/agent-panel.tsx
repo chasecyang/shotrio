@@ -44,24 +44,20 @@ interface AgentPanelProps {
   projectId: string;
 }
 
-// 判断是否为视频相关操作
-function isVideoRelatedFunction(functionName: string): boolean {
-  const videoRelatedFunctions = [
+// 判断是否为素材相关操作
+function isAssetModifyingFunction(functionName: string): boolean {
+  return [
     'generate_video_asset',
     'generate_image_asset',
+    'create_text_asset',
     'update_asset',
     'delete_asset',
-  ];
-  return videoRelatedFunctions.includes(functionName);
+  ].includes(functionName);
 }
 
-// 判断是否为项目/剧集相关操作（需要刷新项目数据）
+// 判断是否为项目相关操作
 function isProjectRelatedFunction(functionName: string): boolean {
-  const projectRelatedFunctions = [
-    'update_episode',
-    'set_project_info',
-  ];
-  return projectRelatedFunctions.includes(functionName);
+  return ['update_episode', 'set_project_info'].includes(functionName);
 }
 
 // 判断是否为消耗积分的操作
@@ -159,21 +155,22 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 使用 Agent Stream Hook
   const { sendMessage, abort, resumeConversation } = useAgentStream({
     onToolCallEnd: (toolName: string, success: boolean) => {
-      if (success && isVideoRelatedFunction(toolName)) {
-        console.log("[AgentPanel] 素材相关操作完成，刷新任务列表");
-        // 刷新jobs，useTaskRefresh会自动监听job变化并触发素材库刷新
+      if (!success) return;
+
+      if (isAssetModifyingFunction(toolName)) {
         editorContext.refreshJobs();
+        window.dispatchEvent(new CustomEvent("asset-created"));
       }
 
-      if (success && isProjectRelatedFunction(toolName)) {
-        console.log("[AgentPanel] 项目相关操作完成，刷新项目数据");
-        editorContext.refreshJobs();
+      if (isProjectRelatedFunction(toolName)) {
         window.dispatchEvent(new CustomEvent("project-changed"));
       }
 
-      if (success && isCreditConsumingFunction(toolName)) {
-        console.log("[AgentPanel] 积分消耗操作完成，刷新余额");
-        window.dispatchEvent(new CustomEvent("credits-changed"));
+      if (isCreditConsumingFunction(toolName)) {
+        // 延迟刷新，等待后端处理完成
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("credits-changed"));
+        }, 1000);
       }
     },
     onComplete: () => {

@@ -85,10 +85,10 @@ export function ActionEditorPanel() {
     setIsConfirming(true);
     try {
       await onConfirm(functionCall.id, editedParams);
-      // 确认后自动返回之前的视图
       clearActionEditor();
     } catch (error) {
       console.error("确认操作失败:", error);
+      clearActionEditor();
     } finally {
       setIsConfirming(false);
     }

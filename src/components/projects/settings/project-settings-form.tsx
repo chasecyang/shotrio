@@ -74,6 +74,9 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
     data: formData,
     originalData,
     onSave: handleAutoSave,
+    onSaveSuccess: () => {
+      window.dispatchEvent(new CustomEvent("project-changed"));
+    },
     delay: 1000,
   });
 

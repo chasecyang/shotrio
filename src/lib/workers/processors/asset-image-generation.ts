@@ -201,7 +201,7 @@ async function processAssetImageGenerationInternal(
       const sourceAssets = await db.query.asset.findMany({
         where: inArray(asset.id, sourceAssetIds),
         with: {
-          imageData: true,
+          imageDataList: true,
         },
       });
 
@@ -209,8 +209,12 @@ async function processAssetImageGenerationInternal(
         throw new Error("未找到源素材");
       }
 
+      // 获取激活版本的图片 URL
       const imageUrls = sourceAssets
-        .map((a) => a.imageData?.imageUrl)
+        .map((a) => {
+          const activeImageData = (a.imageDataList as Array<{ isActive: boolean; imageUrl: string | null }>)?.find((v) => v.isActive);
+          return activeImageData?.imageUrl;
+        })
         .filter((url): url is string => url !== null && url !== undefined);
 
       if (imageUrls.length === 0) {

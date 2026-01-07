@@ -6,6 +6,7 @@ interface UseAutoSaveOptions<T> {
   data: T;
   originalData: T;
   onSave: (data: T) => Promise<{ success: boolean; error?: string }>;
+  onSaveSuccess?: () => void;
   delay?: number;
   savedDisplayTime?: number;
 }
@@ -14,6 +15,7 @@ export function useAutoSave<T>({
   data,
   originalData,
   onSave,
+  onSaveSuccess,
   delay = 1500,
   savedDisplayTime = 3000,
 }: UseAutoSaveOptions<T>) {
@@ -38,6 +40,7 @@ export function useAutoSave<T>({
 
           if (result.success) {
             setSaveStatus("saved");
+            onSaveSuccess?.();
 
             if (savedTimeoutRef.current) {
               clearTimeout(savedTimeoutRef.current);
