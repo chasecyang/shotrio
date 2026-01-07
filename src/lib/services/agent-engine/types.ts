@@ -5,12 +5,6 @@
 import type { AgentContext, EngineMessage } from "@/types/agent";
 
 /**
- * 使用统一的 Message 类型
- * @deprecated 使用 EngineMessage 替代
- */
-export type Message = EngineMessage;
-
-/**
  * 流式事件类型
  */
 export type AgentStreamEvent =
@@ -37,7 +31,7 @@ export interface AgentEngineConfig {
 export interface ConversationState {
   conversationId: string;
   projectContext: AgentContext;
-  messages: Message[];
+  messages: EngineMessage[];
   assistantMessageId?: string;
 }
 

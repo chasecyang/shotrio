@@ -190,14 +190,3 @@ export async function countAssetsByStatus(projectId: string): Promise<{
 
   return counts;
 }
-
-// ===== 向后兼容的别名 =====
-
-/** @deprecated 使用 getAssetWithFullData */
-export const getAssetWithStatus = getAssetWithFullData;
-
-/** @deprecated 使用 queryAssetsWithFullData */
-export const queryAssetsWithStatus = queryAssetsWithFullData;
-
-/** @deprecated 使用 queryProjectAssets */
-export const queryProjectAssetsWithStatus = queryProjectAssets;

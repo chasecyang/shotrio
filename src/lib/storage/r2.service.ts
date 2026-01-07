@@ -41,9 +41,6 @@ export enum AssetCategory {
   OTHER = "other",           // 其他
 }
 
-// 保持向后兼容
-export const ImageCategory = AssetCategory;
-
 export interface UploadOptions {
   userId: string;               // 用户ID（必填）
   category?: AssetCategory;     // 资产分类（默认为 OTHER）

@@ -11,7 +11,6 @@
  */
 
 import type { VideoGenerationConfig } from "@/types/asset";
-import { getImageUrl } from "@/lib/storage/r2.service";
 
 // ============= 服务提供商类型 =============
 
@@ -147,16 +146,4 @@ export async function generateVideo(
   }
 }
 
-/**
- * 处理图片 URL（将 R2 key 转换为公开 URL）
- * 
- * @deprecated 使用 getImageUrl from @/lib/storage/r2.service
- */
-export async function processImageUrl(url: string): Promise<string> {
-  if (!url.startsWith("http")) {
-    const publicUrl = getImageUrl(url);
-    return publicUrl || url;
-  }
-  return url;
-}
 

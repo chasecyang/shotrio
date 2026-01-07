@@ -6,8 +6,11 @@ import OpenAI from "openai";
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 import { executeFunction } from "@/lib/actions/agent/executor";
 import { collectContext } from "@/lib/actions/agent/context-collector";
-import type { AgentContext, FunctionCall } from "@/types/agent";
+import type { AgentContext, FunctionCall, EngineMessage } from "@/types/agent";
 import db from "@/lib/db";
+
+// 从 EngineMessage 中提取 ToolCall 类型
+type ToolCall = NonNullable<EngineMessage["tool_calls"]>[number];
 import { conversation } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 
@@ -15,7 +18,6 @@ import type {
   AgentStreamEvent,
   AgentEngineConfig,
   ConversationState,
-  Message,
 } from "./types";
 import { buildSystemPrompt } from "./prompts";
 import { convertToOpenAITools, getOpenAIClient } from "./openai-utils";
@@ -186,11 +188,12 @@ export class AgentEngine {
         // 🔄 同时更新消息历史中的 tool call 参数
         // 找到包含此 tool call 的 assistant 消息
         const assistantMsg = state.messages.find(
-          m => m.role === "assistant" && 
-          m.tool_calls?.some(tc => tc.id === pendingToolCall.id)
+          (m): m is EngineMessage & { tool_calls: ToolCall[] } =>
+            m.role === "assistant" &&
+            m.tool_calls?.some((tc: ToolCall) => tc.id === pendingToolCall.id) === true
         );
-        if (assistantMsg && assistantMsg.tool_calls) {
-          const toolCallIndex = assistantMsg.tool_calls.findIndex(tc => tc.id === pendingToolCall.id);
+        if (assistantMsg) {
+          const toolCallIndex = assistantMsg.tool_calls.findIndex((tc: ToolCall) => tc.id === pendingToolCall.id);
           if (toolCallIndex !== -1) {
             assistantMsg.tool_calls[toolCallIndex].function.arguments = JSON.stringify(modifiedParams);
           }
@@ -213,11 +216,11 @@ export class AgentEngine {
       // 以确保符合 OpenAI API 的要求：tool messages 必须紧跟 assistant message with tool_calls
       
       const lastAssistantIndex = state.messages.findLastIndex(
-        m => m.role === "assistant" && 
-        m.tool_calls?.some(tc => tc.id === pendingToolCall.id)
+        m => m.role === "assistant" &&
+        m.tool_calls?.some((tc: ToolCall) => tc.id === pendingToolCall.id)
       );
 
-      const toolMessage: Message = {
+      const toolMessage: EngineMessage = {
         role: "tool",
         content: rejectionContent,
         tool_call_id: pendingToolCall.id,
@@ -378,7 +381,7 @@ export class AgentEngine {
         });
 
       // 构建完整的 AI 消息
-      const response: Message = {
+      const response: EngineMessage = {
         role: "assistant",
         content: currentContent,
         tool_calls: parsedToolCalls.length > 0 
@@ -540,7 +543,7 @@ export class AgentEngine {
     const errorMessage = `参数校验失败:\n${errors.map(e => `- ${e}`).join("\n")}`;
 
     // 创建错误 tool message
-    const toolMessage: Message = {
+    const toolMessage: EngineMessage = {
       role: "tool",
       content: JSON.stringify({
         success: false,
@@ -601,7 +604,7 @@ export class AgentEngine {
         : undefined;
 
       // 创建工具消息
-      const toolMessage: Message = {
+      const toolMessage: EngineMessage = {
         role: "tool",
         content: JSON.stringify({
           success: result.success,
@@ -651,7 +654,7 @@ export class AgentEngine {
       };
 
       // 创建错误tool message
-      const errorToolMessage: Message = {
+      const errorToolMessage: EngineMessage = {
         role: "tool",
         content: JSON.stringify({
           success: false,

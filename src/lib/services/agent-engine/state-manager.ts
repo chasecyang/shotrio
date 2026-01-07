@@ -7,8 +7,8 @@ import { conversation, conversationMessage } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { collectContext } from "@/lib/actions/agent/context-collector";
 import { buildSystemPrompt } from "./prompts";
-import type { AgentContext } from "@/types/agent";
-import type { ConversationState, Message } from "./types";
+import type { AgentContext, EngineMessage } from "@/types/agent";
+import type { ConversationState } from "./types";
 import { isAwaitingApproval } from "./approval-utils";
 
 /**
@@ -19,8 +19,8 @@ import { isAwaitingApproval } from "./approval-utils";
  * 按时间排序后变成：assistant(tool_call) → user(打断) → tool(rejection)
  * 但 OpenAI 要求：assistant(tool_call) → tool(rejection) → user(打断)
  */
-function ensureToolCallOrder(messages: Message[]): Message[] {
-  const result: Message[] = [];
+function ensureToolCallOrder(messages: EngineMessage[]): EngineMessage[] {
+  const result: EngineMessage[] = [];
   const usedToolMessageIndices = new Set<number>();
 
   for (let i = 0; i < messages.length; i++) {
@@ -183,7 +183,7 @@ export async function loadConversationState(conversationId: string): Promise<Con
     console.log(`[loadConversationState] 加载对话: ${conversationId}, 状态: ${conv.status}, 消息数: ${conv.messages.length}`);
 
     // 2. 重建消息历史
-    const messages: Message[] = [];
+    const messages: EngineMessage[] = [];
     
     // 添加系统消息
     messages.push({ role: "system", content: buildSystemPrompt() });
@@ -224,7 +224,7 @@ export async function loadConversationState(conversationId: string): Promise<Con
         messages.push({ role: "user", content: msg.content });
       } else if (msg.role === "assistant") {
         // 从数据库读取 tool_calls
-        let toolCalls: Message["tool_calls"] = undefined;
+        let toolCalls: EngineMessage["tool_calls"] = undefined;
         if (msg.toolCalls) {
           try {
             toolCalls = JSON.parse(msg.toolCalls);

@@ -678,13 +678,6 @@ export async function createVideoAsset(data: {
     const assetId = randomUUID();
     const jobId = randomUUID();
 
-    // 向后兼容：如果 generationConfig 没有 type 字段，自动设置为 reference-to-video
-    const config = { ...data.generationConfig };
-    if (!config.type) {
-      config.type = "reference-to-video";
-      console.log(`[createVideoAsset] 向后兼容：自动设置 type=reference-to-video`);
-    }
-
     // 1. 创建 asset 基表记录
     await db.insert(asset).values({
       id: assetId,
@@ -701,7 +694,7 @@ export async function createVideoAsset(data: {
     await db.insert(generationInfo).values({
       assetId,
       prompt: data.prompt,
-      generationConfig: JSON.stringify(config),
+      generationConfig: JSON.stringify(data.generationConfig),
       sourceAssetIds: data.referenceAssetIds ?? null,
     });
 

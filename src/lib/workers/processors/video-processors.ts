@@ -74,9 +74,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     // 2. 解析视频生成配置（从 generationInfo 表读取）
     const config: VideoGenerationConfig = JSON.parse(assetData.generationInfo.generationConfig);
-    
-    // 向后兼容：如果没有 type 字段，默认为 reference-to-video
-    const type = config.type || "reference-to-video";
+    const type = config.type;
 
     console.log(`[Worker] 视频生成类型: ${type}`);
     console.log(`[Worker] 配置:`, {

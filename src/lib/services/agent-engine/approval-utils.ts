@@ -4,7 +4,7 @@
  */
 
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
-import type { Message } from "./types";
+import type { EngineMessage } from "@/types/agent";
 
 /**
  * 待审批信息
@@ -29,7 +29,7 @@ export interface ApprovalInfo {
  * 核心逻辑：找到最后一条 assistant 消息中，
  * 第一个需要确认且未执行的 tool call
  */
-export function findPendingApproval(messages: Message[]): ApprovalInfo | null {
+export function findPendingApproval(messages: EngineMessage[]): ApprovalInfo | null {
   // 1. 找到最后一条 assistant 消息
   const lastAssistant = messages
     .filter(m => m.role === "assistant")
@@ -68,7 +68,7 @@ export function findPendingApproval(messages: Message[]): ApprovalInfo | null {
 /**
  * 检查对话是否处于等待审批状态
  */
-export function isAwaitingApproval(messages: Message[]): boolean {
+export function isAwaitingApproval(messages: EngineMessage[]): boolean {
   return findPendingApproval(messages) !== null;
 }
 
@@ -76,7 +76,7 @@ export function isAwaitingApproval(messages: Message[]): boolean {
  * 获取需要确认的 tool call（用于执行）
  * 返回原始的 tool call 对象
  */
-export function getPendingToolCall(messages: Message[]) {
+export function getPendingToolCall(messages: EngineMessage[]) {
   const approval = findPendingApproval(messages);
   return approval?.toolCall || null;
 }

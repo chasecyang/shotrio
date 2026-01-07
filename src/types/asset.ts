@@ -156,7 +156,7 @@ export interface VideoGenerationConfig {
   end_image_url?: string;        // 结束帧（可选）
   aspect_ratio?: "16:9" | "9:16";  // 宽高比（Veo3 不支持 1:1）
   negative_prompt?: string;      // 负面提示词
-  type?: string;                 // 生成类型（向后兼容）
+  type: string;                  // 生成类型（image-to-video | reference-to-video）
 }
 
 /**

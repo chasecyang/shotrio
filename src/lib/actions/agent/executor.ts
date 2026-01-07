@@ -361,6 +361,7 @@ export async function executeFunction(
 
           // 直接使用标准化的配置构建 VideoGenerationConfig（Veo3 固定 8 秒）
           const generationConfig = {
+            type: "image-to-video",
             prompt: finalPrompt,
             start_image_url: normalizedConfig.start_image_url as string,
             end_image_url: normalizedConfig.end_image_url as string | undefined,
