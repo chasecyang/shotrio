@@ -7,6 +7,8 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { ChatwootProvider } from '@/components/integrations/chatwoot-provider';
+import { UmamiScript } from '@/components/integrations/umami-script';
+import { ClarityScript } from '@/components/integrations/clarity-script';
 import { getCurrentUser } from '@/lib/auth/auth-utils';
 import { generatePageMetadata, homepageMetadata } from '@/lib/seo/metadata';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -75,6 +77,10 @@ export default async function RootLayout({
   
   return (
     <html lang={lang} suppressHydrationWarning>
+      <head>
+        <UmamiScript />
+        <ClarityScript />
+      </head>
       <body
         className={`${syne.variable} ${manrope.variable} ${notoSansSC.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}
       >
