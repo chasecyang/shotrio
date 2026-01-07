@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { createConversation, saveInterruptMessage, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
-import { getCreditBalance } from "@/lib/actions/credits/balance";
+import { useCreditsInfo } from "@/hooks/use-credits-info";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,6 +86,11 @@ function isProjectRelatedFunction(functionName: string): boolean {
   return projectRelatedFunctions.includes(functionName);
 }
 
+// 判断是否为消耗积分的操作
+function isCreditConsumingFunction(functionName: string): boolean {
+  return ['generate_video_asset', 'generate_image_asset'].includes(functionName);
+}
+
 export function FloatingAgentCard({
   projectId,
   position,
@@ -98,9 +103,10 @@ export function FloatingAgentCard({
   const agent = useAgent();
   const editorContext = useEditor();
   const t = useTranslations();
+  const { balance } = useCreditsInfo();
+  const creditBalance = balance ?? undefined;
 
   const [input, setInput] = useState("");
-  const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -173,6 +179,9 @@ export function FloatingAgentCard({
         editorContext.refreshJobs();
         window.dispatchEvent(new CustomEvent("project-changed"));
       }
+      if (success && isCreditConsumingFunction(toolName)) {
+        window.dispatchEvent(new CustomEvent("credits-changed"));
+      }
     },
     onComplete: () => {
       agent.setLoading(false);
@@ -185,21 +194,6 @@ export function FloatingAgentCard({
       }
     },
   });
-
-  // 获取用户积分余额
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const result = await getCreditBalance();
-        if (result.success && result.balance) {
-          setCreditBalance(result.balance.balance);
-        }
-      } catch (error) {
-        console.error("获取积分余额失败:", error);
-      }
-    }
-    fetchBalance();
-  }, []);
 
   // 自动发送来自首页的初始消息
   useEffect(() => {

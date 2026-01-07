@@ -1,7 +1,8 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import db from "@/lib/db";
-import { asset, generationInfo, videoData } from "@/lib/db/schemas/project";
+import { asset, videoData } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 import { generateVideo, getVideoServiceProvider } from "@/lib/services/video-service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
@@ -59,8 +60,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         eq(asset.assetType, "video")
       ),
       with: {
-        generationInfo: true,
-        videoData: true,
+        videoDataList: true,
       },
     });
 
@@ -68,12 +68,15 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       throw new Error("视频资产不存在");
     }
 
-    if (!assetData.generationInfo?.generationConfig) {
-      throw new Error("视频生成配置不存在（generationInfo）");
+    // 找到激活版本
+    const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive) ?? assetData.videoDataList?.[0];
+
+    if (!activeVideoData?.generationConfig) {
+      throw new Error("视频生成配置不存在（videoData）");
     }
 
-    // 2. 解析视频生成配置（从 generationInfo 表读取）
-    const config: VideoGenerationConfig = JSON.parse(assetData.generationInfo.generationConfig);
+    // 2. 解析视频生成配置（从 videoData 表读取）
+    const config: VideoGenerationConfig = JSON.parse(activeVideoData.generationConfig);
     const type = config.type;
 
     console.log(`[Worker] 视频生成类型: ${type}`);
@@ -276,22 +279,47 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     // 9. 更新扩展表（新架构：写入 videoData 表）
     // 注意：状态现在从job动态计算，不需要手动更新
-    await db
-      .insert(videoData)
-      .values({
-        assetId: assetId,
-        videoUrl: uploadResult.url,
-        thumbnailUrl: thumbnailUrl || null,
-        duration: videoDuration * 1000, // 转换为毫秒
-      })
-      .onConflictDoUpdate({
-        target: videoData.assetId,
-        set: {
+    const videoDataId = jobData.videoDataId;
+
+    if (videoDataId) {
+      // 新架构：通过 videoDataId 更新具体版本记录
+      await db
+        .update(videoData)
+        .set({
+          videoUrl: uploadResult.url,
+          thumbnailUrl: thumbnailUrl || null,
+          duration: videoDuration * 1000, // 转换为毫秒
+          modelUsed: "veo-2",
+        })
+        .where(eq(videoData.id, videoDataId));
+    } else {
+      // 迁移兼容：查找现有 videoData 或创建新记录
+      const existingVideoData = await db.query.videoData.findFirst({
+        where: eq(videoData.assetId, assetId),
+      });
+
+      if (existingVideoData) {
+        // 更新现有记录
+        await db
+          .update(videoData)
+          .set({
+            videoUrl: uploadResult.url,
+            thumbnailUrl: thumbnailUrl || null,
+            duration: videoDuration * 1000,
+          })
+          .where(eq(videoData.id, existingVideoData.id));
+      } else {
+        // 创建新记录
+        await db.insert(videoData).values({
+          id: randomUUID(),
+          assetId: assetId,
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
           duration: videoDuration * 1000,
-        },
-      });
+          isActive: true,
+        });
+      }
+    }
 
     // 更新 asset 的 updatedAt
     await db

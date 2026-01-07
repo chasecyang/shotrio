@@ -8,6 +8,20 @@
       "when": 1767679356280,
       "tag": "0000_stiff_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767774487461,
+      "tag": "0001_parched_thaddeus_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767776881842,
+      "tag": "0002_burly_paibok",
+      "breakpoints": true
     }
   ]
 }

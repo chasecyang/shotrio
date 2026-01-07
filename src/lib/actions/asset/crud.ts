@@ -6,7 +6,6 @@ import db from "@/lib/db";
 import {
   asset,
   assetTag,
-  generationInfo,
   imageData,
   videoData,
   textData,
@@ -21,12 +20,10 @@ import type {
   AssetMeta,
   AssetWithTags,
   AssetWithFullData,
-  CreateGenerationInfoInput,
   CreateImageDataInput,
   CreateVideoDataInput,
   CreateTextDataInput,
   CreateAudioDataInput,
-  UpdateGenerationInfoInput,
   UpdateImageDataInput,
   UpdateVideoDataInput,
   UpdateTextDataInput,
@@ -46,10 +43,7 @@ interface CreateAssetFullInput {
   tags?: string[];
   order?: number;
 
-  // 生成信息（仅 generated 类型需要）
-  generationInfo?: Omit<CreateGenerationInfoInput, "assetId">;
-
-  // 类型数据（根据 assetType 选择）
+  // 类型数据（根据 assetType 选择，包含生成信息）
   imageData?: Omit<CreateImageDataInput, "assetId">;
   videoData?: Omit<CreateVideoDataInput, "assetId">;
   textData?: Omit<CreateTextDataInput, "assetId">;
@@ -63,10 +57,7 @@ interface UpdateAssetFullInput {
   meta?: AssetMeta;
   order?: number;
 
-  // 生成信息更新
-  generationInfo?: UpdateGenerationInfoInput;
-
-  // 类型数据更新（根据 assetType）
+  // 类型数据更新（根据 assetType，包含生成信息）
   imageData?: UpdateImageDataInput;
   videoData?: UpdateVideoDataInput;
   textData?: UpdateTextDataInput;
@@ -76,20 +67,26 @@ interface UpdateAssetFullInput {
 /**
  * 内部函数：创建新资产（不需要session，由worker调用）
  *
- * 使用新的多表结构：
+ * 使用版本化结构：
  * - 基表 asset：共享字段
- * - generationInfo：AI 生成信息（仅 generated 类型）
- * - imageData/videoData/textData/audioData：类型特定数据
+ * - imageData/videoData：包含版本和生成信息（合并了 generationInfo）
+ * - textData/audioData：暂不做版本化
+ *
+ * @returns 返回 imageDataId 或 videoDataId 用于 job 关联
  */
 export async function createAssetInternal(
   input: CreateAssetFullInput & { userId: string }
 ): Promise<{
   success: boolean;
   asset?: AssetWithTags;
+  imageDataId?: string;
+  videoDataId?: string;
   error?: string;
 }> {
   try {
     const assetId = randomUUID();
+    let imageDataId: string | undefined;
+    let videoDataId: string | undefined;
 
     // 1. 插入基表 asset
     await db.insert(asset).values({
@@ -104,38 +101,43 @@ export async function createAssetInternal(
       usageCount: 0,
     });
 
-    // 2. 插入生成信息（仅 generated 类型）
-    if (input.sourceType === "generated" && input.generationInfo) {
-      await db.insert(generationInfo).values({
-        assetId,
-        prompt: input.generationInfo.prompt ?? null,
-        seed: input.generationInfo.seed ?? null,
-        modelUsed: input.generationInfo.modelUsed ?? null,
-        generationConfig: input.generationInfo.generationConfig ?? null,
-        sourceAssetIds: input.generationInfo.sourceAssetIds ?? null,
-      });
-    }
-
-    // 3. 插入类型特定数据
+    // 2. 插入类型特定数据（版本化结构，包含生成信息）
     switch (input.assetType) {
-      case "image":
-        if (input.imageData) {
-          await db.insert(imageData).values({
-            assetId,
-            imageUrl: input.imageData.imageUrl ?? null,
-            thumbnailUrl: input.imageData.thumbnailUrl ?? null,
-          });
-        }
+      case "image": {
+        // 创建 imageData 记录（带版本 ID 和生成信息）
+        imageDataId = randomUUID();
+        await db.insert(imageData).values({
+          id: imageDataId,
+          assetId,
+          imageUrl: input.imageData?.imageUrl ?? null,
+          thumbnailUrl: input.imageData?.thumbnailUrl ?? null,
+          prompt: input.imageData?.prompt ?? null,
+          seed: input.imageData?.seed ?? null,
+          modelUsed: input.imageData?.modelUsed ?? null,
+          generationConfig: input.imageData?.generationConfig ?? null,
+          sourceAssetIds: input.imageData?.sourceAssetIds ?? null,
+          isActive: true,
+        });
         break;
-      case "video":
-        if (input.videoData) {
-          await db.insert(videoData).values({
-            assetId,
-            videoUrl: input.videoData.videoUrl ?? null,
-            duration: input.videoData.duration ?? null,
-          });
-        }
+      }
+      case "video": {
+        // 创建 videoData 记录（带版本 ID 和生成信息）
+        videoDataId = randomUUID();
+        await db.insert(videoData).values({
+          id: videoDataId,
+          assetId,
+          videoUrl: input.videoData?.videoUrl ?? null,
+          thumbnailUrl: input.videoData?.thumbnailUrl ?? null,
+          duration: input.videoData?.duration ?? null,
+          prompt: input.videoData?.prompt ?? null,
+          seed: input.videoData?.seed ?? null,
+          modelUsed: input.videoData?.modelUsed ?? null,
+          generationConfig: input.videoData?.generationConfig ?? null,
+          sourceAssetIds: input.videoData?.sourceAssetIds ?? null,
+          isActive: true,
+        });
         break;
+      }
       case "text":
         if (input.textData) {
           await db.insert(textData).values({
@@ -154,6 +156,11 @@ export async function createAssetInternal(
             sampleRate: input.audioData.sampleRate ?? null,
             bitrate: input.audioData.bitrate ?? null,
             channels: input.audioData.channels ?? null,
+            prompt: input.audioData.prompt ?? null,
+            seed: input.audioData.seed ?? null,
+            modelUsed: input.audioData.modelUsed ?? null,
+            generationConfig: input.audioData.generationConfig ?? null,
+            sourceAssetIds: input.audioData.sourceAssetIds ?? null,
           });
         }
         break;
@@ -189,7 +196,12 @@ export async function createAssetInternal(
       console.log("无法revalidate路径（worker环境）");
     }
 
-    return { success: true, asset: createdAsset as AssetWithTags };
+    return {
+      success: true,
+      asset: createdAsset as AssetWithTags,
+      imageDataId,
+      videoDataId,
+    };
   } catch (error) {
     console.error("创建资产失败:", error);
     return {
@@ -259,41 +271,31 @@ export async function updateAsset(
       await db.update(asset).set(baseUpdateData).where(eq(asset.id, assetId));
     }
 
-    // 2. 更新生成信息（如果提供）
-    if (input.generationInfo) {
-      const genUpdateData: Record<string, unknown> = {};
-      if (input.generationInfo.prompt !== undefined)
-        genUpdateData.prompt = input.generationInfo.prompt;
-      if (input.generationInfo.seed !== undefined)
-        genUpdateData.seed = input.generationInfo.seed;
-      if (input.generationInfo.modelUsed !== undefined)
-        genUpdateData.modelUsed = input.generationInfo.modelUsed;
-      if (input.generationInfo.generationConfig !== undefined)
-        genUpdateData.generationConfig = input.generationInfo.generationConfig;
-      if (input.generationInfo.sourceAssetIds !== undefined)
-        genUpdateData.sourceAssetIds = input.generationInfo.sourceAssetIds;
-
-      if (Object.keys(genUpdateData).length > 0) {
-        await db
-          .update(generationInfo)
-          .set(genUpdateData)
-          .where(eq(generationInfo.assetId, assetId));
-      }
-    }
-
-    // 3. 更新类型特定数据
+    // 2. 更新类型特定数据（更新激活版本，包含生成信息）
     if (input.imageData) {
       const imgUpdateData: Record<string, unknown> = {};
       if (input.imageData.imageUrl !== undefined)
         imgUpdateData.imageUrl = input.imageData.imageUrl;
       if (input.imageData.thumbnailUrl !== undefined)
         imgUpdateData.thumbnailUrl = input.imageData.thumbnailUrl;
+      // 支持更新生成信息
+      if (input.imageData.prompt !== undefined)
+        imgUpdateData.prompt = input.imageData.prompt;
+      if (input.imageData.seed !== undefined)
+        imgUpdateData.seed = input.imageData.seed;
+      if (input.imageData.modelUsed !== undefined)
+        imgUpdateData.modelUsed = input.imageData.modelUsed;
+      if (input.imageData.generationConfig !== undefined)
+        imgUpdateData.generationConfig = input.imageData.generationConfig;
+      if (input.imageData.sourceAssetIds !== undefined)
+        imgUpdateData.sourceAssetIds = input.imageData.sourceAssetIds;
 
       if (Object.keys(imgUpdateData).length > 0) {
+        // 更新激活版本
         await db
           .update(imageData)
           .set(imgUpdateData)
-          .where(eq(imageData.assetId, assetId));
+          .where(and(eq(imageData.assetId, assetId), eq(imageData.isActive, true)));
       }
     }
 
@@ -301,14 +303,28 @@ export async function updateAsset(
       const vidUpdateData: Record<string, unknown> = {};
       if (input.videoData.videoUrl !== undefined)
         vidUpdateData.videoUrl = input.videoData.videoUrl;
+      if (input.videoData.thumbnailUrl !== undefined)
+        vidUpdateData.thumbnailUrl = input.videoData.thumbnailUrl;
       if (input.videoData.duration !== undefined)
         vidUpdateData.duration = input.videoData.duration;
+      // 支持更新生成信息
+      if (input.videoData.prompt !== undefined)
+        vidUpdateData.prompt = input.videoData.prompt;
+      if (input.videoData.seed !== undefined)
+        vidUpdateData.seed = input.videoData.seed;
+      if (input.videoData.modelUsed !== undefined)
+        vidUpdateData.modelUsed = input.videoData.modelUsed;
+      if (input.videoData.generationConfig !== undefined)
+        vidUpdateData.generationConfig = input.videoData.generationConfig;
+      if (input.videoData.sourceAssetIds !== undefined)
+        vidUpdateData.sourceAssetIds = input.videoData.sourceAssetIds;
 
       if (Object.keys(vidUpdateData).length > 0) {
+        // 更新激活版本
         await db
           .update(videoData)
           .set(vidUpdateData)
-          .where(eq(videoData.assetId, assetId));
+          .where(and(eq(videoData.assetId, assetId), eq(videoData.isActive, true)));
       }
     }
 
@@ -339,6 +355,17 @@ export async function updateAsset(
         audUpdateData.bitrate = input.audioData.bitrate;
       if (input.audioData.channels !== undefined)
         audUpdateData.channels = input.audioData.channels;
+      // 生成信息
+      if (input.audioData.prompt !== undefined)
+        audUpdateData.prompt = input.audioData.prompt;
+      if (input.audioData.seed !== undefined)
+        audUpdateData.seed = input.audioData.seed;
+      if (input.audioData.modelUsed !== undefined)
+        audUpdateData.modelUsed = input.audioData.modelUsed;
+      if (input.audioData.generationConfig !== undefined)
+        audUpdateData.generationConfig = input.audioData.generationConfig;
+      if (input.audioData.sourceAssetIds !== undefined)
+        audUpdateData.sourceAssetIds = input.audioData.sourceAssetIds;
 
       if (Object.keys(audUpdateData).length > 0) {
         await db
@@ -527,9 +554,8 @@ export async function getAssetWithFullData(assetId: string): Promise<{
       where: eq(asset.id, assetId),
       with: {
         tags: true,
-        generationInfo: true,
-        imageData: true,
-        videoData: true,
+        imageDataList: true,
+        videoDataList: true,
         textData: true,
         audioData: true,
       },
@@ -558,9 +584,8 @@ export async function getAssetWithFullData(assetId: string): Promise<{
     const enrichedAsset = enrichAssetWithFullData(
       assetData as import("@/types/asset").Asset,
       assetData.tags,
-      assetData.generationInfo,
-      assetData.imageData,
-      assetData.videoData,
+      assetData.imageDataList,
+      assetData.videoDataList,
       assetData.textData,
       assetData.audioData,
       latestJob as import("@/types/job").Job | null
@@ -676,6 +701,7 @@ export async function createVideoAsset(data: {
 
   try {
     const assetId = randomUUID();
+    const videoDataId = randomUUID();
     const jobId = randomUUID();
 
     // 1. 创建 asset 基表记录
@@ -690,22 +716,20 @@ export async function createVideoAsset(data: {
       usageCount: 0,
     });
 
-    // 2. 创建 generationInfo 记录
-    await db.insert(generationInfo).values({
+    // 2. 创建 videoData 记录（版本化结构，包含生成信息）
+    await db.insert(videoData).values({
+      id: videoDataId,
       assetId,
+      videoUrl: null,
+      thumbnailUrl: null,
+      duration: null,
       prompt: data.prompt,
       generationConfig: JSON.stringify(data.generationConfig),
       sourceAssetIds: data.referenceAssetIds ?? null,
+      isActive: true,
     });
 
-    // 3. 创建 videoData 记录（初始为空，worker 完成后更新）
-    await db.insert(videoData).values({
-      assetId,
-      videoUrl: null,
-      duration: null,
-    });
-
-    // 4. 插入标签
+    // 3. 插入标签
     if (data.tags && data.tags.length > 0) {
       await db.insert(assetTag).values(
         data.tags.map((tagValue) => ({
@@ -716,7 +740,7 @@ export async function createVideoAsset(data: {
       );
     }
 
-    // 5. 创建 job 任务
+    // 5. 创建 job 任务（关联到版本）
     await db.insert(job).values({
       id: jobId,
       userId: session.user.id,
@@ -724,6 +748,7 @@ export async function createVideoAsset(data: {
       type: "video_generation",
       status: "pending",
       assetId: assetId,
+      videoDataId: videoDataId,
       inputData: {},
       progress: 0,
       currentStep: 0,
@@ -848,12 +873,12 @@ export async function updateVideoAsset(
       await db.update(asset).set(baseUpdateData).where(eq(asset.id, assetId));
     }
 
-    // 2. 更新 generationInfo（如果更新 prompt）
+    // 2. 更新 videoData（如果更新 prompt）
     if (data.prompt !== undefined) {
       await db
-        .update(generationInfo)
+        .update(videoData)
         .set({ prompt: data.prompt })
-        .where(eq(generationInfo.assetId, assetId));
+        .where(and(eq(videoData.assetId, assetId), eq(videoData.isActive, true)));
     }
 
     revalidatePath(`/[lang]/projects/${existingAsset.projectId}`, "page");
@@ -920,21 +945,16 @@ export async function createAudioAsset(data: {
       usageCount: 0,
     });
 
-    // 2. 创建 generationInfo 记录
-    await db.insert(generationInfo).values({
-      assetId,
-      prompt: data.prompt ?? null,
-      sourceAssetIds: data.sourceAssetIds ?? null,
-    });
-
-    // 3. 创建 audioData 记录（初始为空，worker 完成后更新）
+    // 2. 创建 audioData 记录（包含生成信息，初始音频为空，worker 完成后更新）
     await db.insert(audioData).values({
       assetId,
       audioUrl: null,
       duration: null,
+      prompt: data.prompt ?? null,
+      sourceAssetIds: data.sourceAssetIds ?? null,
     });
 
-    // 4. 插入标签
+    // 3. 插入标签
     if (data.tags && data.tags.length > 0) {
       await db.insert(assetTag).values(
         data.tags.map((tagValue) => ({
@@ -945,7 +965,7 @@ export async function createAudioAsset(data: {
       );
     }
 
-    // 5. 创建 job 任务
+    // 4. 创建 job 任务
     await db.insert(job).values({
       id: jobId,
       userId: session.user.id,
@@ -958,7 +978,7 @@ export async function createAudioAsset(data: {
       currentStep: 0,
     });
 
-    // 6. 查询创建的资产及其标签
+    // 5. 查询创建的资产及其标签
     const createdAsset = await db.query.asset.findFirst({
       where: eq(asset.id, assetId),
       with: {
@@ -1031,4 +1051,312 @@ export async function uploadAudioAsset(data: {
       channels: data.channels,
     },
   });
+}
+
+// ===== 版本管理函数 =====
+
+/**
+ * 创建新版本（用于重新生成功能）
+ */
+export async function createAssetVersion(
+  assetId: string,
+  input: Omit<CreateImageDataInput, "assetId"> | Omit<CreateVideoDataInput, "assetId">
+): Promise<{
+  success: boolean;
+  versionId?: string;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 验证权限
+    const existingAsset = await db.query.asset.findFirst({
+      where: eq(asset.id, assetId),
+    });
+
+    if (!existingAsset) {
+      return { success: false, error: "资产不存在" };
+    }
+
+    if (existingAsset.userId !== session.user.id) {
+      return { success: false, error: "无权限" };
+    }
+
+    const versionId = randomUUID();
+
+    // 根据资产类型创建版本
+    if (existingAsset.assetType === "image") {
+      const imgInput = input as Omit<CreateImageDataInput, "assetId">;
+
+      // 先将所有版本设为非激活
+      await db
+        .update(imageData)
+        .set({ isActive: false })
+        .where(eq(imageData.assetId, assetId));
+
+      // 创建新版本
+      await db.insert(imageData).values({
+        id: versionId,
+        assetId,
+        imageUrl: imgInput.imageUrl ?? null,
+        thumbnailUrl: imgInput.thumbnailUrl ?? null,
+        prompt: imgInput.prompt ?? null,
+        seed: imgInput.seed ?? null,
+        modelUsed: imgInput.modelUsed ?? null,
+        generationConfig: imgInput.generationConfig ?? null,
+        sourceAssetIds: imgInput.sourceAssetIds ?? null,
+        isActive: true,
+      });
+    } else if (existingAsset.assetType === "video") {
+      const vidInput = input as Omit<CreateVideoDataInput, "assetId">;
+
+      // 先将所有版本设为非激活
+      await db
+        .update(videoData)
+        .set({ isActive: false })
+        .where(eq(videoData.assetId, assetId));
+
+      // 创建新版本
+      await db.insert(videoData).values({
+        id: versionId,
+        assetId,
+        videoUrl: vidInput.videoUrl ?? null,
+        thumbnailUrl: vidInput.thumbnailUrl ?? null,
+        duration: vidInput.duration ?? null,
+        prompt: vidInput.prompt ?? null,
+        seed: vidInput.seed ?? null,
+        modelUsed: vidInput.modelUsed ?? null,
+        generationConfig: vidInput.generationConfig ?? null,
+        sourceAssetIds: vidInput.sourceAssetIds ?? null,
+        isActive: true,
+      });
+    } else {
+      return { success: false, error: "该资产类型不支持版本化" };
+    }
+
+    try {
+      revalidatePath(`/[lang]/projects/${existingAsset.projectId}`, "page");
+    } catch {
+      console.log("无法revalidate路径");
+    }
+
+    return { success: true, versionId };
+  } catch (error) {
+    console.error("创建版本失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "创建版本失败",
+    };
+  }
+}
+
+/**
+ * 设置激活版本
+ */
+export async function setActiveVersion(
+  assetId: string,
+  versionId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 验证权限
+    const existingAsset = await db.query.asset.findFirst({
+      where: eq(asset.id, assetId),
+    });
+
+    if (!existingAsset) {
+      return { success: false, error: "资产不存在" };
+    }
+
+    if (existingAsset.userId !== session.user.id) {
+      return { success: false, error: "无权限" };
+    }
+
+    if (existingAsset.assetType === "image") {
+      // 验证版本存在
+      const version = await db.query.imageData.findFirst({
+        where: and(eq(imageData.id, versionId), eq(imageData.assetId, assetId)),
+      });
+
+      if (!version) {
+        return { success: false, error: "版本不存在" };
+      }
+
+      // 将所有版本设为非激活
+      await db
+        .update(imageData)
+        .set({ isActive: false })
+        .where(eq(imageData.assetId, assetId));
+
+      // 激活指定版本
+      await db
+        .update(imageData)
+        .set({ isActive: true })
+        .where(eq(imageData.id, versionId));
+    } else if (existingAsset.assetType === "video") {
+      // 验证版本存在
+      const version = await db.query.videoData.findFirst({
+        where: and(eq(videoData.id, versionId), eq(videoData.assetId, assetId)),
+      });
+
+      if (!version) {
+        return { success: false, error: "版本不存在" };
+      }
+
+      // 将所有版本设为非激活
+      await db
+        .update(videoData)
+        .set({ isActive: false })
+        .where(eq(videoData.assetId, assetId));
+
+      // 激活指定版本
+      await db
+        .update(videoData)
+        .set({ isActive: true })
+        .where(eq(videoData.id, versionId));
+    } else {
+      return { success: false, error: "该资产类型不支持版本化" };
+    }
+
+    try {
+      revalidatePath(`/[lang]/projects/${existingAsset.projectId}`, "page");
+    } catch {
+      console.log("无法revalidate路径");
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("设置激活版本失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "设置激活版本失败",
+    };
+  }
+}
+
+/**
+ * 删除版本
+ */
+export async function deleteAssetVersion(
+  versionId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 先尝试在 imageData 中查找
+    const imageDataVersion = await db.query.imageData.findFirst({
+      where: eq(imageData.id, versionId),
+    });
+
+    let assetType: "image" | "video" = "image";
+    let version: { id: string; assetId: string; isActive: boolean } | null = null;
+
+    if (imageDataVersion) {
+      version = imageDataVersion;
+    } else {
+      // 在 videoData 中查找
+      const videoDataVersion = await db.query.videoData.findFirst({
+        where: eq(videoData.id, versionId),
+      });
+      if (videoDataVersion) {
+        version = videoDataVersion;
+        assetType = "video";
+      }
+    }
+
+    if (!version) {
+      return { success: false, error: "版本不存在" };
+    }
+
+    // 验证权限
+    const existingAsset = await db.query.asset.findFirst({
+      where: eq(asset.id, version.assetId),
+    });
+
+    if (!existingAsset || existingAsset.userId !== session.user.id) {
+      return { success: false, error: "无权限" };
+    }
+
+    // 检查是否是激活版本
+    if (version.isActive) {
+      // 查找其他版本
+      const otherVersions = assetType === "image"
+        ? await db.query.imageData.findMany({
+            where: and(
+              eq(imageData.assetId, version.assetId),
+              eq(imageData.isActive, false)
+            ),
+            orderBy: (imageData, { desc }) => [desc(imageData.createdAt)],
+            limit: 1,
+          })
+        : await db.query.videoData.findMany({
+            where: and(
+              eq(videoData.assetId, version.assetId),
+              eq(videoData.isActive, false)
+            ),
+            orderBy: (videoData, { desc }) => [desc(videoData.createdAt)],
+            limit: 1,
+          });
+
+      if (otherVersions.length === 0) {
+        return { success: false, error: "无法删除唯一版本" };
+      }
+
+      // 激活最新的其他版本
+      if (assetType === "image") {
+        await db
+          .update(imageData)
+          .set({ isActive: true })
+          .where(eq(imageData.id, otherVersions[0].id));
+      } else {
+        await db
+          .update(videoData)
+          .set({ isActive: true })
+          .where(eq(videoData.id, otherVersions[0].id));
+      }
+    }
+
+    // 删除版本
+    if (assetType === "image") {
+      await db.delete(imageData).where(eq(imageData.id, versionId));
+    } else {
+      await db.delete(videoData).where(eq(videoData.id, versionId));
+    }
+
+    try {
+      revalidatePath(`/[lang]/projects/${existingAsset.projectId}`, "page");
+    } catch {
+      console.log("无法revalidate路径");
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("删除版本失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "删除版本失败",
+    };
+  }
 }

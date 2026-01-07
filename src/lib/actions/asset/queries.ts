@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { asset, generationInfo, project } from "@/lib/db/schemas/project";
+import { asset, imageData, videoData, audioData, project } from "@/lib/db/schemas/project";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type {
   AssetTypeEnum,
@@ -157,7 +157,7 @@ export async function getAssetsByTag(
 
 /**
  * 获取资产的派生树（该资产派生出的所有资产）
- * 查询 generationInfo.sourceAssetIds 数组中包含指定 assetId 的派生资产
+ * 查询 imageData/videoData/audioData.sourceAssetIds 数组中包含指定 assetId 的派生资产
  */
 export async function getAssetDerivations(
   assetId: string
@@ -170,20 +170,36 @@ export async function getAssetDerivations(
   }
 
   try {
-    // 先查询 generationInfo 表找到所有派生资产的 ID
-    const derivedGenInfos = await db.query.generationInfo.findMany({
-      where: sql`${generationInfo.sourceAssetIds} @> ARRAY[${assetId}]::text[]`,
-    });
+    // 从 imageData、videoData、audioData 表查询派生资产 ID
+    const derivedAssetIds = new Set<string>();
 
-    if (derivedGenInfos.length === 0) {
+    // 查询 imageData
+    const derivedImageData = await db.query.imageData.findMany({
+      where: sql`${imageData.sourceAssetIds} @> ARRAY[${assetId}]::text[]`,
+    });
+    derivedImageData.forEach((d) => derivedAssetIds.add(d.assetId));
+
+    // 查询 videoData
+    const derivedVideoData = await db.query.videoData.findMany({
+      where: sql`${videoData.sourceAssetIds} @> ARRAY[${assetId}]::text[]`,
+    });
+    derivedVideoData.forEach((d) => derivedAssetIds.add(d.assetId));
+
+    // 查询 audioData
+    const derivedAudioData = await db.query.audioData.findMany({
+      where: sql`${audioData.sourceAssetIds} @> ARRAY[${assetId}]::text[]`,
+    });
+    derivedAudioData.forEach((d) => derivedAssetIds.add(d.assetId));
+
+    if (derivedAssetIds.size === 0) {
       return [];
     }
 
-    const derivedAssetIds = derivedGenInfos.map((g) => g.assetId);
+    const assetIdsArray = Array.from(derivedAssetIds);
 
     // 使用新的查询函数获取完整资产数据
     const whereClause = sql`${asset.id} IN (${sql.join(
-      derivedAssetIds.map((id) => sql`${id}`),
+      assetIdsArray.map((id) => sql`${id}`),
       sql`, `
     )})`;
     const orderByClause = desc(asset.createdAt);

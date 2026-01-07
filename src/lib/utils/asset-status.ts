@@ -10,7 +10,6 @@ import type {
   AssetStatus,
   AssetWithFullData,
   AssetTag,
-  GenerationInfo,
   ImageData,
   VideoData,
   TextData,
@@ -114,24 +113,33 @@ export function getAssetErrorMessage(
 
 /**
  * 为资产附加运行时状态和扁平化便捷属性
+ *
+ * @param imageDataList - 图片数据版本列表（新版本化结构）
+ * @param videoDataList - 视频数据版本列表（新版本化结构）
  */
 export function enrichAssetWithFullData(
   asset: Asset,
   tags: AssetTag[],
-  generationInfo: GenerationInfo | null,
-  imageData: ImageData | null,
-  videoData: VideoData | null,
+  imageDataList: ImageData[],
+  videoDataList: VideoData[],
   textData: TextData | null,
   audioData: AudioData | null,
   latestJob?: Job | null
 ): AssetWithFullData {
+  // 找到激活版本
+  const activeImageData = imageDataList.find((v) => v.isActive) ?? imageDataList[0] ?? null;
+  const activeVideoData = videoDataList.find((v) => v.isActive) ?? videoDataList[0] ?? null;
+
+  // 计算版本数
+  const versionCount = imageDataList.length + videoDataList.length;
+
   // 计算 displayUrl：显示用 URL，优先缩略图
   const displayUrl = (() => {
     switch (asset.assetType) {
       case "image":
-        return imageData?.thumbnailUrl || imageData?.imageUrl || null;
+        return activeImageData?.thumbnailUrl || activeImageData?.imageUrl || null;
       case "video":
-        return videoData?.thumbnailUrl || null;
+        return activeVideoData?.thumbnailUrl || null;
       default:
         return null;
     }
@@ -141,9 +149,9 @@ export function enrichAssetWithFullData(
   const mediaUrl = (() => {
     switch (asset.assetType) {
       case "image":
-        return imageData?.imageUrl || null;
+        return activeImageData?.imageUrl || null;
       case "video":
-        return videoData?.videoUrl || null;
+        return activeVideoData?.videoUrl || null;
       case "audio":
         return audioData?.audioUrl || null;
       default:
@@ -152,33 +160,45 @@ export function enrichAssetWithFullData(
   })();
 
   // 计算 duration：视频或音频时长
-  const duration = videoData?.duration ?? audioData?.duration ?? null;
+  const duration = activeVideoData?.duration ?? audioData?.duration ?? null;
+
+  // 从激活版本获取生成信息
+  const prompt = activeImageData?.prompt ?? activeVideoData?.prompt ?? audioData?.prompt ?? null;
+  const seed = activeImageData?.seed ?? activeVideoData?.seed ?? audioData?.seed ?? null;
+  const modelUsed = activeImageData?.modelUsed ?? activeVideoData?.modelUsed ?? audioData?.modelUsed ?? null;
+  const generationConfig = activeImageData?.generationConfig ?? activeVideoData?.generationConfig ?? audioData?.generationConfig ?? null;
+  const sourceAssetIds = activeImageData?.sourceAssetIds ?? activeVideoData?.sourceAssetIds ?? audioData?.sourceAssetIds ?? null;
 
   return {
     ...asset,
     tags,
-    generationInfo,
-    imageData,
-    videoData,
+    // 当前激活版本
+    imageData: activeImageData,
+    videoData: activeVideoData,
     textData,
     audioData,
-    runtimeStatus: calculateAssetStatus(asset, latestJob, imageData, videoData, textData, audioData),
+    // 所有版本列表
+    imageDataList,
+    videoDataList,
+    versionCount,
+    // 运行时状态
+    runtimeStatus: calculateAssetStatus(asset, latestJob, activeImageData, activeVideoData, textData, audioData),
     errorMessage: getAssetErrorMessage(asset, latestJob),
 
     // 扁平化便捷属性
     displayUrl,
     mediaUrl,
-    imageUrl: imageData?.imageUrl ?? null,
-    thumbnailUrl: imageData?.thumbnailUrl ?? null,
-    videoUrl: videoData?.videoUrl ?? null,
+    imageUrl: activeImageData?.imageUrl ?? null,
+    thumbnailUrl: activeImageData?.thumbnailUrl ?? activeVideoData?.thumbnailUrl ?? null,
+    videoUrl: activeVideoData?.videoUrl ?? null,
     audioUrl: audioData?.audioUrl ?? null,
     textContent: textData?.textContent ?? null,
     duration,
-    prompt: generationInfo?.prompt ?? null,
-    seed: generationInfo?.seed ?? null,
-    modelUsed: generationInfo?.modelUsed ?? null,
-    generationConfig: generationInfo?.generationConfig ?? null,
-    sourceAssetIds: generationInfo?.sourceAssetIds ?? null,
+    prompt,
+    seed,
+    modelUsed,
+    generationConfig,
+    sourceAssetIds,
     latestJobId: latestJob?.id ?? null,
   };
 }
@@ -200,9 +220,8 @@ export function enrichAssetsWithFullData(
     createdAt: Date;
     updatedAt: Date;
     tags: AssetTag[];
-    generationInfo: GenerationInfo | null;
-    imageData: ImageData | null;
-    videoData: VideoData | null;
+    imageDataList: ImageData[];
+    videoDataList: VideoData[];
     textData: TextData | null;
     audioData: AudioData | null;
   }>,
@@ -213,9 +232,8 @@ export function enrichAssetsWithFullData(
     return enrichAssetWithFullData(
       assetData as Asset,
       assetData.tags,
-      assetData.generationInfo,
-      assetData.imageData,
-      assetData.videoData,
+      assetData.imageDataList ?? [],
+      assetData.videoDataList ?? [],
       assetData.textData,
       assetData.audioData,
       latestJob

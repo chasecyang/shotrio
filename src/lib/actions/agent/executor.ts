@@ -289,10 +289,14 @@ export async function executeFunction(
               assetType: "image",
               sourceType: "generated",
               tags: assetData.tags,
-              generationInfo: {
+              imageData: {
                 prompt: finalPrompt,
                 modelUsed: "nano-banana",
                 sourceAssetIds: assetData.sourceAssetIds,
+                generationConfig: JSON.stringify({
+                  aspectRatio: "16:9",
+                  numImages: 1,
+                }),
               },
               meta: {
                 generationParams: {
@@ -315,8 +319,9 @@ export async function executeFunction(
               userId: session.user.id,
               projectId,
               type: "asset_image_generation",
-              assetId: assetId, // 外键关联
-              inputData: {}, // 所有生成信息已存储在 asset 表中
+              assetId: assetId,
+              imageDataId: createResult.imageDataId,
+              inputData: {},
             });
 
             if (jobResult.success && jobResult.jobId) {

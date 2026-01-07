@@ -80,9 +80,14 @@ export async function generateAssetImage(
       name: assetName,
       assetType: "image",
       sourceType: "generated", // ✅ 标记为生成类资产，状态从job计算
-      generationInfo: {
+      imageData: {
         prompt: prompt.trim(),
         modelUsed: "nano-banana",
+        generationConfig: JSON.stringify({
+          aspectRatio: aspectRatio,
+          resolution: resolution,
+          numImages: numImages,
+        }),
       },
       meta: {
         generationParams: {
@@ -101,20 +106,22 @@ export async function generateAssetImage(
     }
 
     const assetId = createResult.asset.id;
+    const imageDataId = createResult.imageDataId;
 
-    // 第二步：创建图片生成任务
+    // 第二步：创建图片生成任务（关联到版本）
     const jobResult = await createJob({
       userId: session.user.id,
       projectId,
       type: "asset_image_generation",
-      assetId: assetId, // 外键关联
-      inputData: {}, // 所有生成信息已存储在 asset 表中
+      assetId: assetId, // 外键关联（向后兼容）
+      imageDataId: imageDataId, // 关联到具体版本
+      inputData: {}, // 所有生成信息已存储在 imageData 中
     });
 
     if (!jobResult.success || !jobResult.jobId) {
-      return { 
-        success: false, 
-        error: jobResult.error || "创建任务失败" 
+      return {
+        success: false,
+        error: jobResult.error || "创建任务失败"
       };
     }
 
@@ -179,10 +186,15 @@ export async function editAssetImage(
       name: assetName,
       assetType: "image",
       sourceType: "generated", // ✅ 标记为生成类资产
-      generationInfo: {
+      imageData: {
         prompt: editPrompt.trim(),
         modelUsed: "nano-banana",
         sourceAssetIds: sourceAssetIds,
+        generationConfig: JSON.stringify({
+          aspectRatio: aspectRatio,
+          resolution: resolution,
+          numImages: numImages,
+        }),
       },
       meta: {
         generationParams: {
@@ -201,20 +213,22 @@ export async function editAssetImage(
     }
 
     const assetId = createResult.asset.id;
+    const imageDataId = createResult.imageDataId;
 
-    // 第二步：创建图片生成任务
+    // 第二步：创建图片生成任务（关联到版本）
     const jobResult = await createJob({
       userId: session.user.id,
       projectId,
       type: "asset_image_generation",
-      assetId: assetId, // 外键关联
-      inputData: {}, // 所有生成信息已存储在 asset 表中
+      assetId: assetId, // 外键关联（向后兼容）
+      imageDataId: imageDataId, // 关联到具体版本
+      inputData: {}, // 所有生成信息已存储在 imageData 中
     });
 
     if (!jobResult.success || !jobResult.jobId) {
-      return { 
-        success: false, 
-        error: jobResult.error || "创建任务失败" 
+      return {
+        success: false,
+        error: jobResult.error || "创建任务失败"
       };
     }
 

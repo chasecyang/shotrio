@@ -6,7 +6,7 @@
  */
 
 import db from "@/lib/db";
-import { asset, assetTag, job } from "@/lib/db/schemas/project";
+import { asset, assetTag, job, imageData, videoData } from "@/lib/db/schemas/project";
 import { eq, and, inArray, sql, SQL, desc } from "drizzle-orm";
 import { enrichAssetWithFullData, enrichAssetsWithFullData } from "@/lib/utils/asset-status";
 import type { Asset, AssetWithFullData, AssetTag as AssetTagType } from "@/types/asset";
@@ -23,9 +23,12 @@ export async function getAssetWithFullData(
     where: eq(asset.id, assetId),
     with: {
       tags: true,
-      generationInfo: true,
-      imageData: true,
-      videoData: true,
+      imageDataList: {
+        orderBy: desc(imageData.createdAt),
+      },
+      videoDataList: {
+        orderBy: desc(videoData.createdAt),
+      },
       textData: true,
       audioData: true,
     },
@@ -35,21 +38,40 @@ export async function getAssetWithFullData(
     return null;
   }
 
-  // 查询最新的关联 job
-  const latestJob = await db.query.job.findFirst({
-    where: and(
-      eq(job.assetId, assetId),
-      inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
-    ),
-    orderBy: [desc(job.createdAt)],
-  });
+  // 找到激活版本
+  const activeImageData = assetData.imageDataList?.find((v: any) => v.isActive) ?? null;
+  const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive) ?? null;
+
+  // 查询激活版本关联的最新 job
+  let latestJob = null;
+  if (activeImageData?.id) {
+    latestJob = await db.query.job.findFirst({
+      where: eq(job.imageDataId, activeImageData.id),
+      orderBy: [desc(job.createdAt)],
+    });
+  } else if (activeVideoData?.id) {
+    latestJob = await db.query.job.findFirst({
+      where: eq(job.videoDataId, activeVideoData.id),
+      orderBy: [desc(job.createdAt)],
+    });
+  }
+
+  // 如果新关联没找到，回退到旧的 assetId 关联（迁移兼容）
+  if (!latestJob) {
+    latestJob = await db.query.job.findFirst({
+      where: and(
+        eq(job.assetId, assetId),
+        inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
+      ),
+      orderBy: [desc(job.createdAt)],
+    });
+  }
 
   return enrichAssetWithFullData(
     assetData as Asset,
     assetData.tags as AssetTagType[],
-    assetData.generationInfo,
-    assetData.imageData,
-    assetData.videoData,
+    assetData.imageDataList ?? [],
+    assetData.videoDataList ?? [],
     assetData.textData,
     assetData.audioData,
     latestJob as Job | null
@@ -70,9 +92,12 @@ export async function queryAssetsWithFullData(
     where: whereClause,
     with: {
       tags: true,
-      generationInfo: true,
-      imageData: true,
-      videoData: true,
+      imageDataList: {
+        orderBy: desc(imageData.createdAt),
+      },
+      videoDataList: {
+        orderBy: desc(videoData.createdAt),
+      },
       textData: true,
       audioData: true,
     },
@@ -85,28 +110,88 @@ export async function queryAssetsWithFullData(
     return [];
   }
 
-  // 批量查询所有关联的 jobs
+  // 收集所有激活版本的 ID
+  const imageDataIds: string[] = [];
+  const videoDataIds: string[] = [];
   const assetIds = assetsData.map((a) => a.id);
-  const jobsData = await db
-    .select({
-      assetId: job.assetId,
-      job: job,
-      rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.assetId} ORDER BY ${job.createdAt} DESC)`,
-    })
-    .from(job)
-    .where(
-      and(
-        inArray(job.assetId, assetIds),
-        inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
-      )
-    );
 
-  // 过滤出每个 asset 的最新 job
-  const latestJobs = jobsData.filter((row) => row.rn === 1);
+  for (const assetData of assetsData) {
+    const activeImageData = assetData.imageDataList?.find((v: any) => v.isActive);
+    const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive);
+    if (activeImageData?.id) imageDataIds.push(activeImageData.id);
+    if (activeVideoData?.id) videoDataIds.push(activeVideoData.id);
+  }
+
+  // 批量查询所有关联的 jobs（优先通过版本 ID，回退到 assetId）
   const jobsMap = new Map<string, Job>();
-  for (const row of latestJobs) {
-    if (row.assetId) {
-      jobsMap.set(row.assetId, row.job as Job);
+
+  // 查询版本关联的 jobs
+  if (imageDataIds.length > 0) {
+    const imageJobs = await db
+      .select({
+        imageDataId: job.imageDataId,
+        job: job,
+        rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.imageDataId} ORDER BY ${job.createdAt} DESC)`,
+      })
+      .from(job)
+      .where(inArray(job.imageDataId, imageDataIds));
+
+    for (const row of imageJobs) {
+      if (row.rn === 1 && row.imageDataId) {
+        // 找到对应的 assetId
+        const assetData = assetsData.find((a: any) =>
+          a.imageDataList?.some((v: any) => v.id === row.imageDataId)
+        );
+        if (assetData) {
+          jobsMap.set(assetData.id, row.job as Job);
+        }
+      }
+    }
+  }
+
+  if (videoDataIds.length > 0) {
+    const videoJobs = await db
+      .select({
+        videoDataId: job.videoDataId,
+        job: job,
+        rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.videoDataId} ORDER BY ${job.createdAt} DESC)`,
+      })
+      .from(job)
+      .where(inArray(job.videoDataId, videoDataIds));
+
+    for (const row of videoJobs) {
+      if (row.rn === 1 && row.videoDataId) {
+        const assetData = assetsData.find((a: any) =>
+          a.videoDataList?.some((v: any) => v.id === row.videoDataId)
+        );
+        if (assetData && !jobsMap.has(assetData.id)) {
+          jobsMap.set(assetData.id, row.job as Job);
+        }
+      }
+    }
+  }
+
+  // 回退：查询通过 assetId 关联的 jobs（迁移兼容）
+  const assetsWithoutJobs = assetIds.filter((id) => !jobsMap.has(id));
+  if (assetsWithoutJobs.length > 0) {
+    const fallbackJobs = await db
+      .select({
+        assetId: job.assetId,
+        job: job,
+        rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.assetId} ORDER BY ${job.createdAt} DESC)`,
+      })
+      .from(job)
+      .where(
+        and(
+          inArray(job.assetId, assetsWithoutJobs),
+          inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
+        )
+      );
+
+    for (const row of fallbackJobs) {
+      if (row.rn === 1 && row.assetId && !jobsMap.has(row.assetId)) {
+        jobsMap.set(row.assetId, row.job as Job);
+      }
     }
   }
 

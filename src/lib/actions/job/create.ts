@@ -92,7 +92,9 @@ export async function createJob(params: CreateJobParams): Promise<{
       projectId: params.projectId || null,
       type: params.type,
       status: "pending",
-      assetId: params.assetId || null, // 关联的资产ID
+      assetId: params.assetId || null, // 关联的资产ID（向后兼容）
+      imageDataId: params.imageDataId || null, // 关联的图片版本ID
+      videoDataId: params.videoDataId || null, // 关联的视频版本ID
       progress: 0,
       currentStep: 0,
       totalSteps: params.totalSteps || null,
@@ -198,7 +200,9 @@ export async function createChildJob(params: CreateJobParams): Promise<{
       projectId: params.projectId || null,
       type: params.type,
       status: "pending",
-      assetId: params.assetId || null, // 关联的资产ID
+      assetId: params.assetId || null, // 关联的资产ID（向后兼容）
+      imageDataId: params.imageDataId || null, // 关联的图片版本ID
+      videoDataId: params.videoDataId || null, // 关联的视频版本ID
       progress: 0,
       currentStep: 0,
       totalSteps: params.totalSteps || null,

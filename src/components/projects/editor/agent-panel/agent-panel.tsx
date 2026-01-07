@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, Square, ArrowDown, ChevronDown, MessageSquarePlus, Trash2, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { getCreditBalance } from "@/lib/actions/credits/balance";
+import { useCreditsInfo } from "@/hooks/use-credits-info";
 import { createConversation, updateConversationTitle, saveInterruptMessage } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
@@ -63,13 +63,19 @@ function isProjectRelatedFunction(functionName: string): boolean {
   return projectRelatedFunctions.includes(functionName);
 }
 
+// 判断是否为消耗积分的操作
+function isCreditConsumingFunction(functionName: string): boolean {
+  return ['generate_video_asset', 'generate_image_asset'].includes(functionName);
+}
+
 export function AgentPanel({ projectId }: AgentPanelProps) {
   const agent = useAgent();
   const editorContext = useEditor();
   const t = useTranslations();
-  
+  const { balance } = useCreditsInfo();
+  const creditBalance = balance ?? undefined;
+
   const [input, setInput] = useState("");
-  const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
   const [isUserNearBottom, setIsUserNearBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   // 跟踪每个对话是否已经生成过标题，避免重复生成
@@ -77,7 +83,9 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
   // 对话删除确认对话框
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
-  
+  // 跟踪是否已处理 pending 消息
+  const hasSentPendingRef = useRef(false);
+
   // 空状态判断
   const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
 
@@ -155,11 +163,16 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         // 刷新jobs，useTaskRefresh会自动监听job变化并触发素材库刷新
         editorContext.refreshJobs();
       }
-      
+
       if (success && isProjectRelatedFunction(toolName)) {
         console.log("[AgentPanel] 项目相关操作完成，刷新项目数据");
         editorContext.refreshJobs();
         window.dispatchEvent(new CustomEvent("project-changed"));
+      }
+
+      if (success && isCreditConsumingFunction(toolName)) {
+        console.log("[AgentPanel] 积分消耗操作完成，刷新余额");
+        window.dispatchEvent(new CustomEvent("credits-changed"));
       }
     },
     onComplete: () => {
@@ -180,27 +193,44 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
     },
   });
 
-  // 获取用户积分余额
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const result = await getCreditBalance();
-        if (result.success && result.balance) {
-          setCreditBalance(result.balance.balance);
-        }
-      } catch (error) {
-        console.error("获取积分余额失败:", error);
-      }
-    }
-    fetchBalance();
-  }, []);
-
   // 条件自动滚动到底部：只在用户位于底部时滚动
   useEffect(() => {
     if (scrollRef.current && isUserNearBottom) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [agent.state.messages, agent.state.isLoading, isUserNearBottom]);
+
+  // 处理从首页 Header 输入框创建的 pending 消息
+  useEffect(() => {
+    const pending = sessionStorage.getItem("pendingAgentMessage");
+    if (pending && !hasSentPendingRef.current) {
+      hasSentPendingRef.current = true;
+      sessionStorage.removeItem("pendingAgentMessage");
+
+      try {
+        const { conversationId, message } = JSON.parse(pending);
+
+        // 设置当前对话
+        agent.dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
+        agent.dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
+
+        // 添加用户消息到 UI
+        agent.addMessage({ role: "user", content: message });
+
+        // 生成对话标题
+        updateConversationTitleFromMessage(conversationId, message);
+
+        // 刷新对话列表
+        agent.refreshConversations(true);
+
+        // 触发 AI 流式响应
+        agent.setLoading(true);
+        sendMessage(message, agent.currentContext, conversationId);
+      } catch (error) {
+        console.error("[AgentPanel] 处理 pending 消息失败:", error);
+      }
+    }
+  }, [agent, sendMessage, updateConversationTitleFromMessage]);
 
   // 发送消息
   const handleSend = useCallback(async () => {

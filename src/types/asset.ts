@@ -208,35 +208,44 @@ export interface Asset {
 }
 
 /**
- * 生成信息表类型（仅 AI 生成的素材有记录）
+ * 图片数据表类型（支持版本化）
+ * 一个 asset 可以有多个 imageData 记录，每个代表一个版本
  */
-export interface GenerationInfo {
+export interface ImageData {
+  id: string;
   assetId: string;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  // 从 generationInfo 合并的生成信息
   prompt: string | null;
   seed: number | null;
   modelUsed: string | null;
-  generationConfig: string | null;  // JSON
-  sourceAssetIds: string[] | null;  // 源素材 ID（派生关系）
+  generationConfig: string | null;
+  sourceAssetIds: string[] | null;
+  // 版本控制
+  isActive: boolean;
   createdAt: Date;
 }
 
 /**
- * 图片数据表类型
- */
-export interface ImageData {
-  assetId: string;
-  imageUrl: string | null;
-  thumbnailUrl: string | null;
-}
-
-/**
- * 视频数据表类型
+ * 视频数据表类型（支持版本化）
+ * 一个 asset 可以有多个 videoData 记录，每个代表一个版本
  */
 export interface VideoData {
+  id: string;
   assetId: string;
   videoUrl: string | null;
-  thumbnailUrl: string | null;  // 视频缩略图 URL
+  thumbnailUrl: string | null;
   duration: number | null;  // 毫秒
+  // 从 generationInfo 合并的生成信息
+  prompt: string | null;
+  seed: number | null;
+  modelUsed: string | null;
+  generationConfig: string | null;
+  sourceAssetIds: string[] | null;
+  // 版本控制
+  isActive: boolean;
+  createdAt: Date;
 }
 
 /**
@@ -258,6 +267,12 @@ export interface AudioData {
   sampleRate: number | null;  // Hz
   bitrate: number | null;   // kbps
   channels: number | null;  // 1(mono) / 2(stereo)
+  // 生成信息
+  prompt: string | null;
+  seed: number | null;
+  modelUsed: string | null;
+  generationConfig: string | null;
+  sourceAssetIds: string[] | null;
 }
 
 /**
@@ -273,34 +288,38 @@ export interface CreateAssetInput {
 }
 
 /**
- * 创建生成信息的输入类型
- */
-export interface CreateGenerationInfoInput {
-  assetId: string;
-  prompt?: string;
-  seed?: number;
-  modelUsed?: string;
-  generationConfig?: string;
-  sourceAssetIds?: string[];
-}
-
-/**
- * 创建图片数据的输入类型
+ * 创建图片数据（版本）的输入类型
  */
 export interface CreateImageDataInput {
   assetId: string;
   imageUrl?: string;
   thumbnailUrl?: string;
+  // 生成信息
+  prompt?: string;
+  seed?: number;
+  modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
+  // 版本控制
+  isActive?: boolean;
 }
 
 /**
- * 创建视频数据的输入类型
+ * 创建视频数据（版本）的输入类型
  */
 export interface CreateVideoDataInput {
   assetId: string;
   videoUrl?: string;
   thumbnailUrl?: string;
   duration?: number;
+  // 生成信息
+  prompt?: string;
+  seed?: number;
+  modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
+  // 版本控制
+  isActive?: boolean;
 }
 
 /**
@@ -322,6 +341,12 @@ export interface CreateAudioDataInput {
   sampleRate?: number;
   bitrate?: number;
   channels?: number;
+  // 生成信息
+  prompt?: string;
+  seed?: number;
+  modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
 }
 
 /**
@@ -333,9 +358,12 @@ export interface UpdateAssetInput {
 }
 
 /**
- * 更新生成信息的输入类型
+ * 更新图片数据（版本）的输入类型
  */
-export interface UpdateGenerationInfoInput {
+export interface UpdateImageDataInput {
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  // 生成信息
   prompt?: string;
   seed?: number;
   modelUsed?: string;
@@ -344,20 +372,18 @@ export interface UpdateGenerationInfoInput {
 }
 
 /**
- * 更新图片数据的输入类型
- */
-export interface UpdateImageDataInput {
-  imageUrl?: string;
-  thumbnailUrl?: string;
-}
-
-/**
- * 更新视频数据的输入类型
+ * 更新视频数据（版本）的输入类型
  */
 export interface UpdateVideoDataInput {
   videoUrl?: string;
   thumbnailUrl?: string;
   duration?: number;
+  // 生成信息
+  prompt?: string;
+  seed?: number;
+  modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
 }
 
 /**
@@ -377,6 +403,12 @@ export interface UpdateAudioDataInput {
   sampleRate?: number;
   bitrate?: number;
   channels?: number;
+  // 生成信息
+  prompt?: string;
+  seed?: number;
+  modelUsed?: string;
+  generationConfig?: string;
+  sourceAssetIds?: string[];
 }
 
 /**
@@ -425,14 +457,18 @@ export interface AssetWithFullData extends Asset {
   // 标签
   tags: AssetTag[];
 
-  // 生成信息（仅 generated 类型有）
-  generationInfo: GenerationInfo | null;
-
-  // 类型数据（根据 assetType 只有一个有值）
+  // 当前激活版本（便捷访问）
   imageData: ImageData | null;
   videoData: VideoData | null;
   textData: TextData | null;
   audioData: AudioData | null;
+
+  // 所有版本列表（用于版本历史 UI）
+  imageDataList: ImageData[];
+  videoDataList: VideoData[];
+
+  // 版本数量
+  versionCount: number;
 
   // 运行时状态
   runtimeStatus: AssetStatus;
@@ -468,7 +504,7 @@ export interface AssetWithFullData extends Asset {
   /** 时长（毫秒，视频或音频） */
   duration: number | null;
 
-  // 从 generationInfo 扁平化
+  // 从激活版本 (imageData/videoData) 扁平化的生成信息
   /** 生成提示词 */
   prompt: string | null;
   /** 种子值 */

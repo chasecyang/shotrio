@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { BetaBanner } from "@/components/ui/beta-banner";
 import { Link } from "@/i18n/routing";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
-import { 
-  ArrowRight, 
-  Sparkles, 
-  FileText, 
+import { HeroQuickStart } from "@/components/home/hero-quick-start";
+import { getCurrentUser } from "@/lib/auth/auth-utils";
+import {
+  ArrowRight,
+  Sparkles,
+  FileText,
   Layout,
   FolderOpen,
   Bot,
@@ -19,6 +21,7 @@ import { getTranslations } from "next-intl/server";
 
 export default async function Home() {
   const t = await getTranslations("home");
+  const user = await getCurrentUser();
 
   const features = [
     {
@@ -127,19 +130,23 @@ export default async function Home() {
               </FadeIn>
               
               <FadeIn delay={0.3}>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <Link href="/login">
-                    <Button size="lg" className="h-14 px-8 text-lg rounded-full">
-                      {t("getStarted")}
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                  <Link href="/pricing">
-                    <Button variant="outline" size="lg" className="h-14 px-8 text-lg rounded-full border-primary/20 hover:bg-primary/5">
-                      {t("pricing.viewPricing")}
-                    </Button>
-                  </Link>
-                </div>
+                {user ? (
+                  <HeroQuickStart />
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <Link href="/login">
+                      <Button size="lg" className="h-14 px-8 text-lg rounded-full">
+                        {t("getStarted")}
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </Link>
+                    <Link href="/pricing">
+                      <Button variant="outline" size="lg" className="h-14 px-8 text-lg rounded-full border-primary/20 hover:bg-primary/5">
+                        {t("pricing.viewPricing")}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </FadeIn>
             </div>
           </div>

@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import db from "@/lib/db";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import { verifyProjectOwnership } from "../utils/validation";
@@ -12,33 +13,33 @@ import type {
   AssetImageGenerationResult,
 } from "@/types/job";
 import type { AspectRatio } from "@/lib/services/image.service";
-import { asset, generationInfo, imageData } from "@/lib/db/schemas/project";
-import { inArray, eq } from "drizzle-orm";
+import { asset, imageData } from "@/lib/db/schemas/project";
+import { inArray, eq, and } from "drizzle-orm";
 
 /**
  * 处理素材图片生成任务
- * 从 asset 读取所有生成信息
+ * 从 imageData 版本记录读取所有生成信息
  */
 export async function processAssetImageGeneration(
   jobData: Job,
   workerToken: string
 ): Promise<void> {
-  // 从外键读取 assetId
-  if (!jobData.assetId) {
-    throw new Error("Job 缺少 assetId 关联");
-  }
-
+  // 优先从 imageDataId 读取版本 ID，回退到 assetId（迁移兼容）
+  const imageDataId = jobData.imageDataId;
   const assetId = jobData.assetId;
 
+  if (!imageDataId && !assetId) {
+    throw new Error("Job 缺少 imageDataId 或 assetId 关联");
+  }
+
   try {
-    await processAssetImageGenerationInternal(jobData, workerToken, assetId);
+    await processAssetImageGenerationInternal(jobData, workerToken, assetId!, imageDataId);
   } catch (error) {
     console.error(`[Worker] 图片生成任务失败:`, error);
-    
+
     // 注意：不再手动更新asset状态，状态从job自动计算
     // job会在外层被标记为failed，asset状态会自动反映失败
-    // ❌ 已移除：手动更新asset.status和errorMessage
-    
+
     throw error;
   }
 }
@@ -46,10 +47,11 @@ export async function processAssetImageGeneration(
 async function processAssetImageGenerationInternal(
   jobData: Job,
   workerToken: string,
-  assetId: string
+  assetId: string,
+  imageDataId?: string | null
 ): Promise<void> {
 
-  // 从 asset 读取所有生成信息
+  // 从 asset 和 imageData 读取所有生成信息
   await updateJobProgress(
     {
       jobId: jobData.id,
@@ -59,13 +61,11 @@ async function processAssetImageGenerationInternal(
     workerToken
   );
 
-  // 查询 asset 获取生成所需的所有信息（加载扩展表）
+  // 查询 asset 获取基本信息
   const assetData = await db.query.asset.findFirst({
     where: eq(asset.id, assetId),
     with: {
       tags: true,
-      generationInfo: true,
-      imageData: true,
     },
   });
 
@@ -81,28 +81,67 @@ async function processAssetImageGenerationInternal(
     }
   }
 
-  // 从 generationInfo 读取生成参数
-  const prompt = assetData.generationInfo?.prompt;
+  // 从 imageData 读取生成参数
+  let prompt: string | null = null;
+  let sourceAssetIds: string[] = [];
+  let generationConfig: string | null = null;
+
+  if (imageDataId) {
+    // 通过 imageDataId 查询（优先）
+    const imageDataRecord = await db.query.imageData.findFirst({
+      where: eq(imageData.id, imageDataId),
+    });
+
+    if (imageDataRecord) {
+      prompt = imageDataRecord.prompt;
+      sourceAssetIds = imageDataRecord.sourceAssetIds || [];
+      generationConfig = imageDataRecord.generationConfig;
+    }
+  } else if (assetId) {
+    // fallback：通过 assetId 查询激活版本
+    const imageDataRecord = await db.query.imageData.findFirst({
+      where: and(eq(imageData.assetId, assetId), eq(imageData.isActive, true)),
+    });
+
+    if (imageDataRecord) {
+      prompt = imageDataRecord.prompt;
+      sourceAssetIds = imageDataRecord.sourceAssetIds || [];
+      generationConfig = imageDataRecord.generationConfig;
+    }
+  }
+
   if (!prompt) {
-    throw new Error("Asset 缺少 prompt（generationInfo）");
+    throw new Error("缺少 prompt（imageData）");
   }
 
   const projectId = assetData.projectId;
   const assetName = assetData.name;
   const assetTags = assetData.tags.map((t: { tagValue: string }) => t.tagValue);
-  const sourceAssetIds = assetData.generationInfo?.sourceAssetIds || [];
-  
-  // 从 meta 中读取生成参数
-  let meta = null;
-  try {
-    meta = assetData.meta ? JSON.parse(assetData.meta) : null;
-  } catch {
-    meta = null;
+
+  // 从 meta 或 generationConfig 中读取生成参数
+  let aspectRatio = "16:9";
+  let numImages = 1;
+
+  // 优先从 generationConfig 读取（新架构）
+  if (generationConfig) {
+    try {
+      const config = JSON.parse(generationConfig);
+      aspectRatio = config.aspectRatio || aspectRatio;
+      numImages = config.numImages || numImages;
+    } catch {
+      // ignore
+    }
+  } else {
+    // 回退到 meta（迁移兼容）
+    try {
+      const meta = assetData.meta ? JSON.parse(assetData.meta) : null;
+      const generationParams = meta?.generationParams || {};
+      aspectRatio = generationParams.aspectRatio || aspectRatio;
+      numImages = generationParams.numImages || numImages;
+    } catch {
+      // ignore
+    }
   }
-  
-  const generationParams = meta?.generationParams || {};
-  const aspectRatio = generationParams.aspectRatio || "16:9";
-  const numImages = generationParams.numImages || 1;
   
   await updateJobProgress(
     {
@@ -281,30 +320,42 @@ async function processAssetImageGenerationInternal(
       throw new Error(`上传图片失败: ${uploadResult.error}`);
     }
 
-    // 更新扩展表（新架构：写入 imageData 和 generationInfo 表）
-    // 1. 写入 imageData 表（upsert）
-    await db
-      .insert(imageData)
-      .values({
-        assetId: assetId,
-        imageUrl: uploadResult.url,
-        thumbnailUrl: uploadResult.url,
-      })
-      .onConflictDoUpdate({
-        target: imageData.assetId,
-        set: {
+    // 更新 imageData 版本记录
+    if (imageDataId) {
+      await db
+        .update(imageData)
+        .set({
           imageUrl: uploadResult.url,
           thumbnailUrl: uploadResult.url,
-        },
+          modelUsed: "nano-banana",
+        })
+        .where(eq(imageData.id, imageDataId));
+    } else {
+      // 查找现有 imageData 或创建新记录
+      const existingImageData = await db.query.imageData.findFirst({
+        where: eq(imageData.assetId, assetId),
       });
 
-    // 2. 更新 generationInfo 表的 modelUsed
-    await db
-      .update(generationInfo)
-      .set({
-        modelUsed: "nano-banana",
-      })
-      .where(eq(generationInfo.assetId, assetId));
+      if (existingImageData) {
+        await db
+          .update(imageData)
+          .set({
+            imageUrl: uploadResult.url,
+            thumbnailUrl: uploadResult.url,
+            modelUsed: "nano-banana",
+          })
+          .where(eq(imageData.id, existingImageData.id));
+      } else {
+        await db.insert(imageData).values({
+          id: randomUUID(),
+          assetId: assetId,
+          imageUrl: uploadResult.url,
+          thumbnailUrl: uploadResult.url,
+          modelUsed: "nano-banana",
+          isActive: true,
+        });
+      }
+    }
 
     // 3. 更新 asset 的 updatedAt
     await db

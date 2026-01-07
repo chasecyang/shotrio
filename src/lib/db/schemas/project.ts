@@ -146,43 +146,59 @@ export const asset: any = pgTable("asset", {
     .notNull(),
 });
 
-// 2.1 生成信息表 (Generation Info) - 仅 AI 生成的素材有记录
-export const generationInfo = pgTable("generation_info", {
+// 2.2 图片数据表 (Image Data) - 支持版本化，一个 asset 可以有多个 imageData
+export const imageData = pgTable("image_data", {
+  // 独立主键，支持多版本
+  id: text("id").primaryKey(),
+
+  // 外键关联到 asset（一对多）
   assetId: text("asset_id")
-    .primaryKey()
+    .notNull()
     .references(() => asset.id, { onDelete: "cascade" }),
 
-  // 生成参数
-  prompt: text("prompt"), // 生成用的 prompt
-  seed: integer("seed"), // 固定 seed
-  modelUsed: text("model_used"), // 使用的模型
-  generationConfig: text("generation_config"), // JSON 配置
+  // 图片数据
+  imageUrl: text("image_url"),
+  thumbnailUrl: text("thumbnail_url"),
 
-  // 派生关系
-  sourceAssetIds: text("source_asset_ids").array(), // 源素材 ID（用于图生图、文本生配音等）
+  // 从 generationInfo 合并的生成信息
+  prompt: text("prompt"),
+  seed: integer("seed"),
+  modelUsed: text("model_used"),
+  generationConfig: text("generation_config"), // JSON
+  sourceAssetIds: text("source_asset_ids").array(),
+
+  // 版本控制
+  isActive: boolean("is_active").default(true).notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// 2.2 图片数据表 (Image Data)
-export const imageData = pgTable("image_data", {
-  assetId: text("asset_id")
-    .primaryKey()
-    .references(() => asset.id, { onDelete: "cascade" }),
-
-  imageUrl: text("image_url"), // 图片 URL
-  thumbnailUrl: text("thumbnail_url"), // 缩略图 URL
-});
-
-// 2.3 视频数据表 (Video Data)
+// 2.3 视频数据表 (Video Data) - 支持版本化，一个 asset 可以有多个 videoData
 export const videoData = pgTable("video_data", {
+  // 独立主键，支持多版本
+  id: text("id").primaryKey(),
+
+  // 外键关联到 asset（一对多）
   assetId: text("asset_id")
-    .primaryKey()
+    .notNull()
     .references(() => asset.id, { onDelete: "cascade" }),
 
-  videoUrl: text("video_url"), // 视频 URL
-  thumbnailUrl: text("thumbnail_url"), // 视频缩略图 URL
+  // 视频数据
+  videoUrl: text("video_url"),
+  thumbnailUrl: text("thumbnail_url"),
   duration: integer("duration"), // 视频时长（毫秒）
+
+  // 从 generationInfo 合并的生成信息
+  prompt: text("prompt"),
+  seed: integer("seed"),
+  modelUsed: text("model_used"),
+  generationConfig: text("generation_config"), // JSON
+  sourceAssetIds: text("source_asset_ids").array(),
+
+  // 版本控制
+  isActive: boolean("is_active").default(true).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 2.4 文本数据表 (Text Data)
@@ -206,6 +222,13 @@ export const audioData = pgTable("audio_data", {
   sampleRate: integer("sample_rate"), // 采样率 Hz
   bitrate: integer("bitrate"), // 比特率 kbps
   channels: integer("channels"), // 声道数：1(mono) / 2(stereo)
+
+  // 生成信息（从 generationInfo 合并）
+  prompt: text("prompt"),
+  seed: integer("seed"),
+  modelUsed: text("model_used"),
+  generationConfig: text("generation_config"), // JSON
+  sourceAssetIds: text("source_asset_ids").array(),
 });
 
 // 2.6 资产标签表 (Asset Tag) - 多对多标签系统
@@ -234,8 +257,12 @@ export const job: any = pgTable("job", {
   type: jobTypeEnum("type").notNull(),
   status: jobStatusEnum("status").default("pending").notNull(),
 
-  // 关联的资产ID（可选，仅 video_generation 和 asset_image_generation 类型使用）
+  // 关联的资产ID（保留用于向后兼容）
   assetId: text("asset_id").references(() => asset.id, { onDelete: "cascade" }),
+
+  // 关联的版本ID（新增，用于精确追踪哪个版本的任务）
+  imageDataId: text("image_data_id").references(() => imageData.id, { onDelete: "cascade" }),
+  videoDataId: text("video_data_id").references(() => videoData.id, { onDelete: "cascade" }),
 
   // 任务依赖关系
   parentJobId: text("parent_job_id").references(() => job.id, { onDelete: "cascade" }),
@@ -299,33 +326,27 @@ export const assetRelations = relations(asset, ({ one, many }) => ({
   }),
   tags: many(assetTag),
   jobs: many(job), // 关联的任务（一个 asset 可以有多个 job，支持重试）
-  // 扩展表关系
-  generationInfo: one(generationInfo),
-  imageData: one(imageData),
-  videoData: one(videoData),
+  // 扩展表关系 - imageData 和 videoData 改为 many 支持版本化
+  imageDataList: many(imageData), // 多版本支持
+  videoDataList: many(videoData), // 多版本支持
   textData: one(textData),
   audioData: one(audioData),
 }));
 
-export const generationInfoRelations = relations(generationInfo, ({ one }) => ({
-  asset: one(asset, {
-    fields: [generationInfo.assetId],
-    references: [asset.id],
-  }),
-}));
-
-export const imageDataRelations = relations(imageData, ({ one }) => ({
+export const imageDataRelations = relations(imageData, ({ one, many }) => ({
   asset: one(asset, {
     fields: [imageData.assetId],
     references: [asset.id],
   }),
+  jobs: many(job), // 关联的生成任务
 }));
 
-export const videoDataRelations = relations(videoData, ({ one }) => ({
+export const videoDataRelations = relations(videoData, ({ one, many }) => ({
   asset: one(asset, {
     fields: [videoData.assetId],
     references: [asset.id],
   }),
+  jobs: many(job), // 关联的生成任务
 }));
 
 export const textDataRelations = relations(textData, ({ one }) => ({
@@ -361,6 +382,15 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   asset: one(asset, {
     fields: [job.assetId],
     references: [asset.id],
+  }),
+  // 版本关联（新增）
+  imageData: one(imageData, {
+    fields: [job.imageDataId],
+    references: [imageData.id],
+  }),
+  videoData: one(videoData, {
+    fields: [job.videoDataId],
+    references: [videoData.id],
   }),
   parentJob: one(job, {
     fields: [job.parentJobId],

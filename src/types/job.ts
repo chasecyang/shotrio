@@ -19,7 +19,9 @@ export interface Job {
   projectId: string | null;
   type: JobType;
   status: JobStatus;
-  assetId: string | null; // 关联的资产ID（可选，仅 video_generation 和 asset_image_generation 使用）
+  assetId: string | null; // 关联的资产ID（保留用于向后兼容）
+  imageDataId: string | null; // 关联的图片版本ID
+  videoDataId: string | null; // 关联的视频版本ID
   parentJobId?: string | null; // 父任务ID
   progress: number; // 0-100
   totalSteps: number | null;
@@ -109,7 +111,9 @@ export interface CreateJobParams {
   userId: string;
   projectId?: string;
   type: JobType;
-  assetId?: string; // 关联的资产ID（可选）
+  assetId?: string; // 关联的资产ID（可选，保留用于向后兼容）
+  imageDataId?: string; // 关联的图片版本ID
+  videoDataId?: string; // 关联的视频版本ID
   inputData: unknown;
   totalSteps?: number;
   parentJobId?: string; // 父任务ID
