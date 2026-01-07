@@ -47,6 +47,9 @@ export interface AgentState {
 
   // 是否处于"新对话"模式（懒创建）
   isNewConversation: boolean;
+
+  // 是否启用自动执行模式（当前会话有效）
+  isAutoAcceptEnabled: boolean;
 }
 
 /**
@@ -63,7 +66,8 @@ type AgentAction =
   | { type: "SET_LOADING_CONVERSATIONS"; payload: boolean }
   | { type: "SET_REFRESHING_CONVERSATIONS"; payload: boolean }
   | { type: "SET_NEW_CONVERSATION"; payload: boolean }
-  | { type: "UPDATE_CONVERSATION_TITLE"; payload: { conversationId: string; title: string } };
+  | { type: "UPDATE_CONVERSATION_TITLE"; payload: { conversationId: string; title: string } }
+  | { type: "SET_AUTO_ACCEPT"; payload: boolean };
 
 /**
  * 初始状态
@@ -76,6 +80,7 @@ const initialState: AgentState = {
   isLoadingConversations: false,
   isRefreshingConversations: false,
   isNewConversation: true, // 默认进入新对话模式，提升用户体验
+  isAutoAcceptEnabled: false, // 默认关闭自动执行模式
 };
 
 /**
@@ -155,6 +160,12 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
         ),
       };
 
+    case "SET_AUTO_ACCEPT":
+      return {
+        ...state,
+        isAutoAcceptEnabled: action.payload,
+      };
+
     default:
       return state;
   }
@@ -176,6 +187,8 @@ interface AgentContextValue {
   createNewConversation: () => void;
   deleteConversationById: (conversationId: string) => Promise<void>;
   refreshConversations: (silent?: boolean) => Promise<void>;
+  // 自动执行模式
+  setAutoAccept: (enabled: boolean) => void;
   // 当前上下文（从 EditorContext 获取）
   currentContext: AgentContextType;
 }
@@ -271,6 +284,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
         dispatch({ type: "LOAD_HISTORY", payload: result.messages });
         dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
         dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
+        dispatch({ type: "SET_AUTO_ACCEPT", payload: false }); // 切换对话时重置自动模式
       } else {
         toast.error(result.error || "加载对话失败");
       }
@@ -290,6 +304,8 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
     // 清空当前对话ID
     dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
+    // 重置自动模式
+    dispatch({ type: "SET_AUTO_ACCEPT", payload: false });
   }, []);
 
   // 删除对话
@@ -341,6 +357,10 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     dispatch({ type: "SET_LOADING", payload: loading });
   }, []);
 
+  const setAutoAccept = useCallback((enabled: boolean) => {
+    dispatch({ type: "SET_AUTO_ACCEPT", payload: enabled });
+  }, []);
+
   // 创建稳定的 currentContext（使用 useMemo 缓存，避免每次都创建新对象）
   const currentContext = useMemo((): AgentContextType => {
     // 将 Job 对象转换为序列化友好的格式（只保留 collectContext 需要的字段）
@@ -369,6 +389,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       updateMessage,
       clearMessages,
       setLoading,
+      setAutoAccept,
       loadConversation,
       createNewConversation,
       deleteConversationById,
@@ -382,6 +403,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       updateMessage,
       clearMessages,
       setLoading,
+      setAutoAccept,
       loadConversation,
       createNewConversation,
       deleteConversationById,

@@ -935,6 +935,8 @@
         "emptyState": "Craft Your Story",
         "scrollToBottom": "Scroll to Bottom",
         "aiGenerating": "Agent is creating",
+        "autoMode": "Auto Mode",
+        "autoModeDescription": "When enabled, Agent actions will be automatically confirmed",
         "suggestions": {
           "title": "Quick Start",
           "clickToUse": "Click to use",

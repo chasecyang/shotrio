@@ -95,6 +95,31 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
     estimate();
   }, [approvalInfo]);
 
+  // 自动执行模式：当启用时自动确认待批准操作
+  useEffect(() => {
+    if (
+      approvalInfo &&
+      agent.state.isAutoAcceptEnabled &&
+      !isConfirming &&
+      !isRejecting
+    ) {
+      // 检查积分余额
+      const totalCost = creditCost?.total || 0;
+      if (currentBalance !== undefined && totalCost > currentBalance) {
+        toast.warning("积分不足，无法自动执行");
+        return;
+      }
+
+      // 延迟 500ms 后自动确认（给 UI 渲染时间）
+      const timer = setTimeout(() => {
+        console.log("[AutoAccept] 自动确认操作:", approvalInfo.toolCall.id);
+        handleConfirmAction(approvalInfo.toolCall.id, undefined);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [approvalInfo, agent.state.isAutoAcceptEnabled, isConfirming, isRejecting, creditCost, currentBalance]);
+
   // 使用 Agent Stream Hook（仅用于恢复对话）
   const { resumeConversation } = useAgentStream();
 

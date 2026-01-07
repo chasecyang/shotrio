@@ -52,6 +52,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AutoModeToggle } from "./agent-panel/auto-mode-toggle";
 
 export type ExpandedPosition = "left" | "right" | "bottom";
 
@@ -584,6 +585,8 @@ export function FloatingAgentCard({
               </DropdownMenu>
             </div>
 
+            <AutoModeToggle />
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -812,6 +815,8 @@ export function FloatingAgentCard({
         </div>
 
         <div className="flex items-center gap-1">
+          <AutoModeToggle />
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

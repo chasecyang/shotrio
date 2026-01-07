@@ -38,6 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AutoModeToggle } from "./auto-mode-toggle";
 
 interface AgentPanelProps {
   projectId: string;
@@ -478,11 +479,13 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
             </DropdownMenu>
           </div>
 
+          <AutoModeToggle />
+
           {/* New Conversation Button */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={handleCreateNewConversation}
                 className="shrink-0"

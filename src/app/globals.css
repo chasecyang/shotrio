@@ -359,4 +359,18 @@
   .scale-hover:active {
     transform: scale(0.96);
   }
+
+  /* Auto Mode Indicator Pulse */
+  @keyframes auto-mode-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 oklch(0.60 0.16 40 / 0.6);
+    }
+    50% {
+      box-shadow: 0 0 8px 3px oklch(0.60 0.16 40 / 0);
+    }
+  }
+
+  .auto-mode-indicator {
+    animation: auto-mode-pulse 2s ease-in-out infinite;
+  }
 }
