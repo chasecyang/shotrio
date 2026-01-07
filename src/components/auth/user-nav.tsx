@@ -18,7 +18,7 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Settings, Shield, Languages, Check, ChevronsUpDown, Wallet } from "lucide-react";
+import { LogOut, Shield, Languages, Check, ChevronsUpDown, Wallet } from "lucide-react";
 import { useTranslations, useLocale } from 'next-intl';
 import { routing } from "@/i18n/routing";
 import { toast } from "sonner";
@@ -120,14 +120,6 @@ function UserNavSidebar({ user }: { user: UserNavProps['user'] }) {
                 <Wallet className="mr-2 h-4 w-4" />
                 <span>{t('nav.creditsCenter')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                <span>{t('nav.profile') || 'Profile'}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>{t('admin.settings')}</span>
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             
             <DropdownMenuSeparator />
@@ -225,14 +217,6 @@ function UserNavDefault({ user }: { user: UserNavProps['user'] }) {
           <DropdownMenuItem onClick={() => router.push('/credits')} className="cursor-pointer">
             <Wallet className="mr-2 h-4 w-4" />
             <span>{t('nav.creditsCenter')}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            <span>{t('nav.profile') || 'Profile'}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>{t('admin.settings')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         
