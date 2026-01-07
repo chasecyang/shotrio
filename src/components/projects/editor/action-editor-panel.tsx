@@ -190,15 +190,6 @@ export function ActionEditorPanel() {
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">余额不足 ({currentBalance})</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2"
-                  onClick={() => setShowPurchaseDialog(true)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  充值
-                </Button>
               </div>
             )}
           </div>
@@ -223,8 +214,14 @@ export function ActionEditorPanel() {
               )}
             </Button>
             <Button
-              onClick={handleConfirm}
-              disabled={insufficientBalance || isLoading}
+              onClick={() => {
+                if (insufficientBalance) {
+                  setShowPurchaseDialog(true);
+                } else {
+                  handleConfirm();
+                }
+              }}
+              disabled={isLoading}
             >
               {isConfirming ? (
                 <>

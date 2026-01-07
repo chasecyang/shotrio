@@ -595,37 +595,20 @@ export const PendingActionMessage = memo(function PendingActionMessage({
             </Button>
           </div>
 
-          {/* Right: Recharge + Accept with Credits */}
+          {/* Right: Accept with Credits */}
           <div className="flex items-center gap-2">
-            {/* Recharge Button - Only when insufficient balance */}
-            {insufficientBalance && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPurchaseDialog(true);
-                    }}
-                    className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border bg-background text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
-                    type="button"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('credits.addCredits')}
-                </TooltipContent>
-              </Tooltip>
-            )}
-
             {/* Accept Button with Credits */}
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                editor.clearActionEditor();
-                onConfirm(functionCall.id, undefined);
+                if (insufficientBalance) {
+                  setShowPurchaseDialog(true);
+                } else {
+                  editor.clearActionEditor();
+                  onConfirm(functionCall.id, undefined);
+                }
               }}
-              disabled={insufficientBalance || isLoading}
+              disabled={isLoading}
               size="sm"
               className="h-7 px-3 text-xs"
             >
