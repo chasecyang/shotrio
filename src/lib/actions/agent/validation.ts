@@ -36,8 +36,8 @@ export async function validateFunctionParameters(
       case "generate_image_asset":
         return validateGenerateAssetsParams(params);
 
-      case "set_art_style":
-        return validateSetArtStyleParams(params);
+      case "set_project_info":
+        return validateSetProjectInfoParams(params);
 
       // 其他 function 暂不校验（默认通过）
       case "query_context":
@@ -148,17 +148,30 @@ function validateGenerateAssetsParams(params: Record<string, unknown>): Validati
 }
 
 /**
- * 校验 set_art_style 参数
+ * 校验 set_project_info 参数
  */
-function validateSetArtStyleParams(params: Record<string, unknown>): ValidationResult {
+function validateSetProjectInfoParams(params: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // 校验 styleId（必填）
-  if (!params.styleId || typeof params.styleId !== 'string') {
-    errors.push("styleId 是必填字段，请先使用 query_context 获取可用的美术风格列表");
-  } else if (params.styleId.trim().length === 0) {
-    errors.push("styleId 不能为空");
+  const hasTitle = params.title !== undefined;
+  const hasDescription = params.description !== undefined;
+  const hasStyleId = params.styleId !== undefined;
+
+  // 至少需要一个字段
+  if (!hasTitle && !hasDescription && !hasStyleId) {
+    errors.push("至少需要提供 title、description 或 styleId 中的一个字段");
+  }
+
+  // 校验各字段类型
+  if (hasTitle && typeof params.title !== 'string') {
+    errors.push("title 必须是字符串");
+  }
+  if (hasDescription && typeof params.description !== 'string') {
+    errors.push("description 必须是字符串");
+  }
+  if (hasStyleId && typeof params.styleId !== 'string') {
+    errors.push("styleId 必须是字符串");
   }
 
   return {

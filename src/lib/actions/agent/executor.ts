@@ -98,11 +98,33 @@ export async function executeFunction(
       // 查询类
       // ============================================
       case "query_context": {
+        const includeProjectInfo = parameters.includeProjectInfo !== false; // 默认true
         const includeAssets = parameters.includeAssets !== false; // 默认true
         const includeVideos = parameters.includeVideos !== false; // 默认true
         const includeArtStyles = parameters.includeArtStyles !== false; // 默认true
 
         const contextData: Record<string, unknown> = {};
+
+        // 包含项目信息
+        if (includeProjectInfo) {
+          const projectData = await db.query.project.findFirst({
+            where: eq(project.id, projectId),
+            with: { artStyle: true },
+          });
+
+          if (projectData) {
+            const artStyleData = projectData.artStyle as ArtStyle | null;
+            contextData.projectInfo = {
+              title: projectData.title,
+              description: projectData.description,
+              currentStyle: artStyleData ? {
+                id: artStyleData.id,
+                name: artStyleData.name,
+                prompt: artStyleData.prompt,
+              } : null,
+            };
+          }
+        }
 
         // 包含视频列表
         if (includeVideos) {
@@ -478,26 +500,43 @@ export async function executeFunction(
         break;
       }
 
-      case "set_art_style": {
-        // 验证参数
-        if (!parameters.styleId) {
+      case "set_project_info": {
+        const { title, description, styleId } = parameters as {
+          title?: string;
+          description?: string;
+          styleId?: string;
+        };
+
+        // 至少需要一个字段
+        if (!title && !description && !styleId) {
           result = {
             functionCallId: functionCall.id,
             success: false,
-            error: "缺少必需参数: styleId",
+            error: "至少需要提供 title、description 或 styleId 中的一个字段",
           };
           break;
         }
 
-        const updateResult = await updateProject(
-          projectId,
-          { styleId: parameters.styleId as string }
-        );
+        const updateData: Record<string, string> = {};
+        if (title !== undefined) updateData.title = title;
+        if (description !== undefined) updateData.description = description;
+        if (styleId !== undefined) updateData.styleId = styleId;
+
+        const updateResult = await updateProject(projectId, updateData);
+
+        // 构建更新字段列表用于返回
+        const updatedFields: string[] = [];
+        if (title !== undefined) updatedFields.push("标题");
+        if (description !== undefined) updatedFields.push("描述");
+        if (styleId !== undefined) updatedFields.push("美术风格");
 
         result = {
           functionCallId: functionCall.id,
           success: updateResult.success,
-          data: updateResult.data,
+          data: {
+            ...updateResult.data,
+            updatedFields,
+          },
           error: updateResult.error,
         };
         break;

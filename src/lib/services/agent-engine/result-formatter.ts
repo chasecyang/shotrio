@@ -18,17 +18,19 @@ export function formatFunctionResult(
       // 查询类
       // ============================================
       case "query_context": {
-        const contextData = data as { 
-          episode?: unknown; 
-          videos?: { total?: number; completed?: number; processing?: number; list?: unknown[] }; 
-          assets?: { total?: number }; 
-          artStyles?: unknown[] 
+        const contextData = data as {
+          projectInfo?: { title?: string; description?: string; currentStyle?: unknown };
+          episode?: unknown;
+          videos?: { total?: number; completed?: number; processing?: number; list?: unknown[] };
+          assets?: { total?: number };
+          artStyles?: unknown[]
         };
         const parts: string[] = [];
+        if (contextData.projectInfo) parts.push("项目信息");
         if (contextData.episode) parts.push("剧集");
         if (contextData.videos) parts.push(`视频(${contextData.videos.total || 0})`);
         if (contextData.assets) parts.push(`素材(${contextData.assets.total || 0})`);
-        if (contextData.artStyles) parts.push("美术风格");
+        if (contextData.artStyles) parts.push("美术风格列表");
         return parts.length > 0 ? `已查询: ${parts.join("、")}` : "已查询项目上下文";
       }
 
@@ -76,8 +78,12 @@ export function formatFunctionResult(
         return "已更新资产";
       }
 
-      case "set_art_style": {
-        return "已设置项目美术风格";
+      case "set_project_info": {
+        const resultData = data as { updatedFields?: string[] };
+        if (resultData.updatedFields && resultData.updatedFields.length > 0) {
+          return `已更新项目${resultData.updatedFields.join("、")}`;
+        }
+        return "已更新项目信息";
       }
 
       // ============================================

@@ -14,11 +14,15 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "query_context",
-    description: "查询项目完整上下文，包括视频列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
+    description: "查询项目完整上下文，包括项目信息（标题、描述、当前画风）、视频列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
     displayName: "查询项目上下文",
     parameters: {
       type: "object",
       properties: {
+        includeProjectInfo: {
+          type: "boolean",
+          description: "是否包含项目基础信息（标题、描述、当前画风），默认true",
+        },
         includeAssets: {
           type: "boolean",
           description: "是否包含素材库信息，默认true",
@@ -179,18 +183,25 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: true,
   },
   {
-    name: "set_art_style",
-    description: "为项目设置美术风格。风格会影响所有后续图像生成的整体外观和氛围。先用 query_context 获取可用风格列表，然后使用风格对象的 id 字段作为 styleId 参数。",
-    displayName: "设置美术风格",
+    name: "set_project_info",
+    description: "设置项目信息，包括标题、描述、美术风格。至少需要提供一个字段。设置美术风格前先用 query_context 获取可用风格列表，然后使用风格对象的 id 字段作为 styleId 参数。",
+    displayName: "设置项目信息",
     parameters: {
       type: "object",
       properties: {
+        title: {
+          type: "string",
+          description: "项目标题",
+        },
+        description: {
+          type: "string",
+          description: "项目描述",
+        },
         styleId: {
           type: "string",
-          description: "美术风格的唯一标识符。必须使用 query_context 返回的 artStyles 数组中某个风格对象的 id 字段（例如：artStyles[0].id），不要使用 name 字段",
+          description: "美术风格的唯一标识符。必须使用 query_context 返回的 artStyles 数组中某个风格对象的 id 字段",
         },
       },
-      required: ["styleId"],
     },
     category: "modification",
     needsConfirmation: true,

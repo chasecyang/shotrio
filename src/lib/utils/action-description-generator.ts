@@ -86,8 +86,14 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         return count > 0 ? `修改 ${count} 个资产` : "修改资产";
       }
 
-      case "set_art_style":
-        return "设置美术风格";
+      case "set_project_info": {
+        const params = parameters as { title?: string; description?: string; styleId?: string };
+        const fields: string[] = [];
+        if (params.title) fields.push("标题");
+        if (params.description) fields.push("描述");
+        if (params.styleId) fields.push("美术风格");
+        return fields.length > 0 ? `设置项目${fields.join("、")}` : "设置项目信息";
+      }
 
       // ============================================
       // 删除类操作

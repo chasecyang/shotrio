@@ -207,21 +207,21 @@ export const PendingActionMessage = memo(function PendingActionMessage({
   const isGenerateAssets = functionCall.name === "generate_image_asset";
   const isGenerateVideo = functionCall.name === "generate_video_asset";
   const isCreateTextAsset = functionCall.name === "create_text_asset";
-  const isSetArtStyle = functionCall.name === "set_art_style";
+  const isSetProjectInfo = functionCall.name === "set_project_info";
 
   // 是否支持编辑参数
   const canEdit = isGenerateAssets || isGenerateVideo || isCreateTextAsset;
 
   // 格式化参数（针对特殊操作特殊处理）
   const formattedParams = useMemo(() => {
-    if (isGenerateAssets || isGenerateVideo || isSetArtStyle || isCreateTextAsset) {
+    if (isGenerateAssets || isGenerateVideo || isSetProjectInfo || isCreateTextAsset) {
       // 这些操作需要单独处理
       return [];
     } else {
       // 其他操作：使用标准格式化
       return formatParametersForConfirmation(functionCall.arguments);
     }
-  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo, isSetArtStyle, isCreateTextAsset]);
+  }, [functionCall.arguments, isGenerateAssets, isGenerateVideo, isSetProjectInfo, isCreateTextAsset]);
 
   // 解析生成素材的assets数组（用于预览显示）
   const generationAssets = useMemo(() => {
@@ -292,10 +292,10 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     };
   }, [isGenerateVideo, functionCall.arguments]);
 
-  // 获取美术风格名称
+  // 获取美术风格名称（仅当 set_project_info 包含 styleId 时）
   useEffect(() => {
-    if (!isSetArtStyle) return;
-    
+    if (!isSetProjectInfo) return;
+
     const styleId = functionCall.arguments.styleId as string;
     if (!styleId) return;
 
@@ -307,7 +307,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
     }).catch((error) => {
       console.error("获取美术风格名称失败:", error);
     });
-  }, [isSetArtStyle, functionCall.arguments.styleId]);
+  }, [isSetProjectInfo, functionCall.arguments.styleId]);
 
   // 处理编辑参数按钮点击
   const handleEditParams = () => {
@@ -337,12 +337,19 @@ export const PendingActionMessage = memo(function PendingActionMessage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">
-              {isGenerateAssets 
+              {isGenerateAssets
                 ? "生成图片素材"
-                : isGenerateVideo 
+                : isGenerateVideo
                 ? "生成视频素材"
-                : isSetArtStyle && artStyleName 
-                ? `${functionCall.displayName || functionCall.name} - ${artStyleName}`
+                : isSetProjectInfo
+                ? (() => {
+                    const args = functionCall.arguments as { title?: string; description?: string; styleId?: string };
+                    const fields: string[] = [];
+                    if (args.title) fields.push("标题");
+                    if (args.description) fields.push("描述");
+                    if (args.styleId) fields.push(artStyleName ? `美术风格(${artStyleName})` : "美术风格");
+                    return fields.length > 0 ? `设置项目${fields.join("、")}` : "设置项目信息";
+                  })()
                 : (functionCall.displayName || functionCall.name)
               }
             </p>
@@ -470,20 +477,34 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                 ) : null}
               </div>
             </div>
-          ) : isSetArtStyle ? (
-            /* 设置美术风格：显示风格名称 */
-            <div className="rounded-md bg-background/50 border border-border/50 p-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">美术风格:</span>
-                {artStyleName ? (
-                  <span className="text-xs text-foreground font-medium">{artStyleName}</span>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">加载中...</span>
-                  </div>
-                )}
-              </div>
+          ) : isSetProjectInfo ? (
+            /* 设置项目信息：显示标题、描述、美术风格 */
+            <div className="rounded-md bg-background/50 border border-border/50 p-2.5 space-y-1.5">
+              {(functionCall.arguments as { title?: string }).title && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">标题:</span>
+                  <span className="text-xs text-foreground">{(functionCall.arguments as { title?: string }).title}</span>
+                </div>
+              )}
+              {(functionCall.arguments as { description?: string }).description && (
+                <div className="flex items-start gap-2">
+                  <span className="text-xs font-medium text-muted-foreground shrink-0">描述:</span>
+                  <span className="text-xs text-foreground break-words">{(functionCall.arguments as { description?: string }).description}</span>
+                </div>
+              )}
+              {(functionCall.arguments as { styleId?: string }).styleId && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">美术风格:</span>
+                  {artStyleName ? (
+                    <span className="text-xs text-foreground font-medium">{artStyleName}</span>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">加载中...</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             /* 其他操作：使用格式化参数展示 */

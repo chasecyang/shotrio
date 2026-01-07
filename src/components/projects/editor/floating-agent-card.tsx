@@ -80,7 +80,7 @@ function isVideoRelatedFunction(functionName: string): boolean {
 function isProjectRelatedFunction(functionName: string): boolean {
   const projectRelatedFunctions = [
     'update_episode',
-    'set_art_style',
+    'set_project_info',
     'update_project_settings',
   ];
   return projectRelatedFunctions.includes(functionName);
