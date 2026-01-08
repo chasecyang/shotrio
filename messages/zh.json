@@ -88,7 +88,9 @@
     "hero": {
       "title": "用心创作",
       "titleHighlight": "好漫剧",
-      "subtitle": "强大的可控性 × AI智能辅助，掌控创作的每个细节"
+      "subtitle": "强大的可控性 × AI智能辅助，掌控创作的每个细节",
+      "inputPlaceholder": "告诉我你想创作什么...",
+      "inputHint": "按 Enter 开始创作"
     },
     "features": {
       "title": "完整的创作工具链",
@@ -510,6 +512,12 @@
     }
   },
   "tools": {
+  },
+  "feedback": {
+    "chatWithUs": "联系我们",
+    "needHelp": "需要帮助？",
+    "giveFeedback": "反馈意见",
+    "openChat": "打开聊天"
   },
   "pricing": {
     "title": "定价方案",

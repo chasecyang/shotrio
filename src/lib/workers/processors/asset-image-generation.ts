@@ -331,7 +331,7 @@ async function processAssetImageGenerationInternal(
         .set({
           imageUrl: uploadResult.url,
           thumbnailUrl: uploadResult.url,
-          modelUsed: "nano-banana",
+          modelUsed: "nano-banana-pro",
         })
         .where(eq(imageData.id, imageDataId));
     } else {
@@ -346,7 +346,7 @@ async function processAssetImageGenerationInternal(
           .set({
             imageUrl: uploadResult.url,
             thumbnailUrl: uploadResult.url,
-            modelUsed: "nano-banana",
+            modelUsed: "nano-banana-pro",
           })
           .where(eq(imageData.id, existingImageData.id));
       } else {
@@ -355,7 +355,7 @@ async function processAssetImageGenerationInternal(
           assetId: assetId,
           imageUrl: uploadResult.url,
           thumbnailUrl: uploadResult.url,
-          modelUsed: "nano-banana",
+          modelUsed: "nano-banana-pro",
           isActive: true,
         });
       }

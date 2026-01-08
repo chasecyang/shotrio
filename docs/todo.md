@@ -5,7 +5,7 @@
 []首页支持对话框创建项目
 [x]agent function用户没有积分的时候，应该弹付费提示
 []agent function的扩大icon改成编辑icon
-[]使用nano banana pro模型
+[x]使用nano banana pro模型
 []header余额没有随着agent扣款而刷新
 []提供重新生成图片的能力
 
@@ -33,5 +33,8 @@
 []让AI也能自定义美术风格
 []让用户可以上传图片，自定义美术风格
 
+[]change log页面
+
 []job中的parent job是不是可以废弃
 []参数页面accept操作后，不应该一直loading
+[]对话框输入中，icon太大了

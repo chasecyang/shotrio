@@ -291,7 +291,7 @@ export async function executeFunction(
               tags: assetData.tags,
               imageData: {
                 prompt: finalPrompt,
-                modelUsed: "nano-banana",
+                modelUsed: "nano-banana-pro",
                 sourceAssetIds: assetData.sourceAssetIds,
                 generationConfig: JSON.stringify({
                   aspectRatio: "16:9",

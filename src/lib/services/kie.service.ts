@@ -211,51 +211,41 @@ export interface NanoBananaProInput {
   output_format?: "png" | "jpg";
 }
 
-// ============= Nano Banana 文生图接口 =============
+// ============= Nano Banana Pro 文生图接口 =============
 
 /**
- * 使用 Kie.ai Nano Banana 模型生成图像（文生图）
- * 价格：约 $0.02/张
+ * 使用 Kie.ai Nano Banana Pro 模型生成图像（文生图）
+ * 固定使用 2K 分辨率
+ * 价格：约 $0.12/张
  */
 export async function generateImage(
   input: TextToImageInput
 ): Promise<GenerateImageOutput> {
-  // 将 AspectRatio 转换为 ImageSize
-  const imageSize = input.aspect_ratio === "auto" 
-    ? "1:1" 
+  // 转换参数格式适配 Pro 版本
+  const aspectRatio = input.aspect_ratio === "auto"
+    ? "1:1"
     : (input.aspect_ratio ?? "1:1");
 
-  // Kie.ai 不支持 webp，转换为 png
-  const outputFormat = input.output_format === "webp" 
-    ? "png" 
-    : (input.output_format ?? "png");
+  // Pro 版本不支持 webp/jpeg，转换为 png
+  const outputFormat = input.output_format === "webp" || input.output_format === "jpeg"
+    ? "png"
+    : (input.output_format === "jpg" ? "jpg" : "png");
 
-  const taskInput = {
+  // 调用 Pro 版本
+  return generateImagePro({
     prompt: input.prompt,
-    output_format: outputFormat,
-    image_size: imageSize,
-  };
-
-  // 创建任务
-  const taskId = await createTask("google/nano-banana", taskInput);
-
-  // 等待任务完成
-  const imageUrls = await waitForTaskCompletion(taskId);
-
-  // 转换为标准格式
-  const images: GeneratedImage[] = imageUrls.map(url => ({ url }));
-
-  return {
-    images,
-    description: input.prompt,
-  };
+    aspect_ratio: aspectRatio as AspectRatio,
+    resolution: "2K",
+    output_format: outputFormat as "png" | "jpg",
+  });
 }
 
-// ============= Nano Banana Edit 图生图接口 =============
+// ============= Nano Banana Pro 图生图接口 =============
 
 /**
- * 使用 Kie.ai Nano Banana Edit 模型编辑/转换图像（图生图）
- * 支持最多10张参考图
+ * 使用 Kie.ai Nano Banana Pro 模型编辑/转换图像（图生图）
+ * 固定使用 2K 分辨率，支持最多8张参考图
+ * 价格：约 $0.12/张
  */
 export async function editImage(
   input: ImageToImageInput
@@ -271,36 +261,27 @@ export async function editImage(
     })
   );
 
-  // 将 AspectRatio 转换为 ImageSize
-  const imageSize = !input.aspect_ratio || input.aspect_ratio === "auto" 
-    ? "16:9" 
+  // Pro 版本最多支持 8 张图片
+  const limitedUrls = processedUrls.slice(0, 8);
+
+  // 转换参数格式适配 Pro 版本
+  const aspectRatio = !input.aspect_ratio || input.aspect_ratio === "auto"
+    ? "16:9"
     : input.aspect_ratio;
 
-  // Kie.ai 不支持 webp，转换为 png
-  const outputFormat = input.output_format === "webp" 
-    ? "png" 
-    : (input.output_format ?? "png");
+  // Pro 版本不支持 webp/jpeg，转换为 png
+  const outputFormat = input.output_format === "webp" || input.output_format === "jpeg"
+    ? "png"
+    : (input.output_format === "jpg" ? "jpg" : "png");
 
-  const taskInput = {
+  // 调用 Pro 版本，传入图片作为 image_input
+  return generateImagePro({
     prompt: input.prompt,
-    image_urls: processedUrls,
-    output_format: outputFormat,
-    image_size: imageSize,
-  };
-
-  // 创建任务
-  const taskId = await createTask("google/nano-banana-edit", taskInput);
-
-  // 等待任务完成
-  const imageUrls = await waitForTaskCompletion(taskId);
-
-  // 转换为标准格式
-  const images: GeneratedImage[] = imageUrls.map(url => ({ url }));
-
-  return {
-    images,
-    description: input.prompt,
-  };
+    image_input: limitedUrls,
+    aspect_ratio: aspectRatio as AspectRatio,
+    resolution: "2K",
+    output_format: outputFormat as "png" | "jpg",
+  });
 }
 
 // ============= Nano Banana Pro 接口 =============
@@ -336,7 +317,7 @@ export async function generateImagePro(
   };
 
   // 创建任务
-  const taskId = await createTask("google/nano-banana-pro", taskInput);
+  const taskId = await createTask("nano-banana-pro", taskInput);
 
   // 等待任务完成
   const imageUrls = await waitForTaskCompletion(taskId);
@@ -348,31 +329,6 @@ export async function generateImagePro(
     images,
     description: input.prompt,
   };
-}
-
-// ============= 兼容性函数 =============
-
-/**
- * 智能选择使用标准版或 Edit 版本
- * 如果提供了参考图则使用 Edit，否则使用标准版
- */
-export async function generateImageSmart(
-  input: TextToImageInput & Partial<ImageToImageInput>
-): Promise<GenerateImageOutput> {
-  if (input.image_urls && input.image_urls.length > 0) {
-    return editImage({
-      prompt: input.prompt,
-      image_urls: input.image_urls,
-      output_format: input.output_format,
-      aspect_ratio: input.aspect_ratio,
-    });
-  } else {
-    return generateImage({
-      prompt: input.prompt,
-      output_format: input.output_format,
-      aspect_ratio: input.aspect_ratio,
-    });
-  }
 }
 
 // ============= Veo 3.1 视频生成类型定义 =============

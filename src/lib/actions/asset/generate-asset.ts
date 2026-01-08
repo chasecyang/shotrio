@@ -82,7 +82,7 @@ export async function generateAssetImage(
       sourceType: "generated", // ✅ 标记为生成类资产，状态从job计算
       imageData: {
         prompt: prompt.trim(),
-        modelUsed: "nano-banana",
+        modelUsed: "nano-banana-pro",
         generationConfig: JSON.stringify({
           aspectRatio: aspectRatio,
           resolution: resolution,
@@ -168,8 +168,8 @@ export async function editAssetImage(
       return { success: false, error: "请选择参考素材" };
     }
 
-    if (sourceAssetIds.length > 14) {
-      return { success: false, error: "最多支持 14 张参考图" };
+    if (sourceAssetIds.length > 8) {
+      return { success: false, error: "最多支持 8 张参考图" };
     }
 
     if (!editPrompt || !editPrompt.trim()) {
@@ -188,7 +188,7 @@ export async function editAssetImage(
       sourceType: "generated", // ✅ 标记为生成类资产
       imageData: {
         prompt: editPrompt.trim(),
-        modelUsed: "nano-banana",
+        modelUsed: "nano-banana-pro",
         sourceAssetIds: sourceAssetIds,
         generationConfig: JSON.stringify({
           aspectRatio: aspectRatio,

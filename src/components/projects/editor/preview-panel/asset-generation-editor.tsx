@@ -409,12 +409,12 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                 {/* 模型选择 */}
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-background">
                   <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Select value="nano-banana" disabled>
+                  <Select value="nano-banana-pro" disabled>
                     <SelectTrigger className="h-auto border-0 p-0 bg-transparent focus:ring-0 text-xs font-medium">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="nano-banana">Nano Banana</SelectItem>
+                      <SelectItem value="nano-banana-pro">Nano Banana Pro 2K</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

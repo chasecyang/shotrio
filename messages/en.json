@@ -172,7 +172,9 @@
     "hero": {
       "title": "Create Great",
       "titleHighlight": "Micro-Dramas",
-      "subtitle": "Powerful Control × AI Assistance — Master Every Detail of Your Creation"
+      "subtitle": "Powerful Control × AI Assistance — Master Every Detail of Your Creation",
+      "inputPlaceholder": "Tell me what you want to create...",
+      "inputHint": "Press Enter to start creating"
     },
     "features": {
       "title": "Complete Creation Toolchain",
@@ -387,6 +389,7 @@
         "button": "Filter",
         "title": "Filter by Type",
         "subtitle": "Character / Scene / Prop",
+        "placeholder": "Filter by type (Character / Scene / Prop)",
         "clearAll": "Clear All",
         "noTags": "No tags available",
         "noTagsHint": "You can add character, scene, prop tags when creating assets",
@@ -755,6 +758,12 @@
   },
   "tools": {
   },
+  "feedback": {
+    "chatWithUs": "Chat with us",
+    "needHelp": "Need help?",
+    "giveFeedback": "Give feedback",
+    "openChat": "Open chat"
+  },
   "agent": {
     "credits": {
       "total": "Total Cost",
@@ -990,7 +999,8 @@
         "uploading": "Uploading...",
         "uploadProgress": "Upload Progress",
         "success": "Asset uploaded successfully",
-        "error": "Upload failed"
+        "error": "Upload failed",
+        "cancel": "Cancel"
       },
       "detail": {
         "title": "Asset Details",
