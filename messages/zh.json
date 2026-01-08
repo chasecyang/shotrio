@@ -521,10 +521,10 @@
   },
   "tasks": {
     "types": {
-      "batch_image_generation": "批量图像生成",
-      "asset_image_generation": "素材图片生成",
-      "video_generation": "视频生成",
-      "final_video_export": "最终成片导出",
+      "asset_image": "图片生成",
+      "asset_video": "视频生成",
+      "asset_audio": "音频生成",
+      "final_video_export": "成片导出",
       "unknown": "未知任务"
     },
     "status": {

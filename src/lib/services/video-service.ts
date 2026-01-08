@@ -48,7 +48,7 @@ async function generateVideoWithKling(
 ): Promise<VideoServiceOutput> {
   const {
     generateKlingO1ImageToVideo,
-  } = await import("@/lib/services/fal.service");
+  } = await import("@/lib/services/fal");
 
   console.log(`[VideoService] 使用 Kling 首尾帧生成视频`);
 

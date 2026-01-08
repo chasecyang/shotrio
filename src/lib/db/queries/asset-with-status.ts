@@ -61,7 +61,7 @@ export async function getAssetWithFullData(
     latestJob = await db.query.job.findFirst({
       where: and(
         eq(job.assetId, assetId),
-        inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
+        inArray(job.type, ['asset_image', 'asset_video', 'asset_audio'])
       ),
       orderBy: [desc(job.createdAt)],
     });
@@ -184,7 +184,7 @@ export async function queryAssetsWithFullData(
       .where(
         and(
           inArray(job.assetId, assetsWithoutJobs),
-          inArray(job.type, ['asset_image_generation', 'video_generation', 'audio_generation'])
+          inArray(job.type, ['asset_image', 'asset_video', 'asset_audio'])
         )
       );
 

@@ -10,6 +10,7 @@ import {
   processFinalVideoExport,
 } from "./processors/video-processors";
 import { processAssetImageGeneration } from "./processors/asset-image-generation";
+import { processAudioGeneration } from "./processors/audio-generation";
 
 /**
  * 注册所有处理器
@@ -17,8 +18,9 @@ import { processAssetImageGeneration } from "./processors/asset-image-generation
  */
 export function registerAllProcessors(): void {
   registry.registerAll({
-    asset_image_generation: processAssetImageGeneration,
-    video_generation: processVideoGeneration,
+    asset_image: processAssetImageGeneration,
+    asset_video: processVideoGeneration,
+    asset_audio: processAudioGeneration,
     final_video_export: processFinalVideoExport,
   });
 

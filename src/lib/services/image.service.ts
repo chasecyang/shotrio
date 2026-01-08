@@ -16,7 +16,7 @@ import type {
   GenerateImageOutput,
   TextToImageInput,
   ImageToImageInput,
-} from "@/lib/services/fal.service";
+} from "@/lib/services/fal";
 
 // 重新导出类型供其他文件使用
 export type {
@@ -56,7 +56,7 @@ export async function generateImage(
     const { generateImage: kieGenerateImage } = await import("@/lib/services/kie");
     return kieGenerateImage(input);
   } else {
-    const { generateImage: falGenerateImage } = await import("@/lib/services/fal.service");
+    const { generateImage: falGenerateImage } = await import("@/lib/services/fal");
     return falGenerateImage(input);
   }
 }
@@ -73,7 +73,7 @@ export async function editImage(
     const { editImage: kieEditImage } = await import("@/lib/services/kie");
     return kieEditImage(input);
   } else {
-    const { editImage: falEditImage } = await import("@/lib/services/fal.service");
+    const { editImage: falEditImage } = await import("@/lib/services/fal");
     return falEditImage(input);
   }
 }

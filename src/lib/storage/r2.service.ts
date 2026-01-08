@@ -26,16 +26,34 @@ export const ALLOWED_VIDEO_TYPES = [
   "video/quicktime",
 ] as const;
 
+// 允许的音频格式
+export const ALLOWED_AUDIO_TYPES = [
+  "audio/mpeg",      // mp3
+  "audio/mp3",       // mp3 (alias)
+  "audio/wav",       // wav
+  "audio/x-wav",     // wav (alias)
+  "audio/ogg",       // ogg
+  "audio/opus",      // opus
+  "audio/aac",       // aac
+  "audio/m4a",       // m4a
+  "audio/x-m4a",     // m4a (alias)
+  "audio/webm",      // webm audio
+] as const;
+
 // 最大文件大小 (10MB)
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // 最大视频文件大小 (100MB)
 export const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
 
+// 最大音频文件大小 (50MB)
+export const MAX_AUDIO_SIZE = 50 * 1024 * 1024;
+
 // 资产分类枚举（适用于所有用户资产）
 export enum AssetCategory {
   AVATARS = "avatars",       // 头像图片
   VIDEOS = "videos",         // 视频
+  AUDIOS = "audios",         // 音频
   PROJECTS = "projects",     // 项目图片
   THUMBNAILS = "thumbnails", // 视频缩略图
   OTHER = "other",           // 其他
@@ -342,6 +360,125 @@ export async function uploadVideoToR2(
     };
   } catch (error) {
     console.error("上传视频到 R2 失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "上传失败",
+    };
+  }
+}
+
+/**
+ * 上传音频到 R2
+ *
+ * @param input - File 对象或音频 URL
+ * @param options - 上传选项（必须包含 userId）
+ */
+export async function uploadAudioToR2(
+  input: File | string,
+  options: UploadOptions
+): Promise<{
+  success: boolean;
+  url?: string;
+  key?: string;
+  error?: string;
+}> {
+  try {
+    if (!options.userId) {
+      return { success: false, error: "缺少用户ID" };
+    }
+
+    const category = options.category || AssetCategory.AUDIOS;
+    const metadata = options.metadata || {};
+
+    let buffer: Buffer;
+    let contentType: string;
+    let fileName: string;
+    let fileSize: number;
+
+    // 判断输入类型：File 对象或 URL 字符串
+    if (typeof input === "string") {
+      // 从 URL 下载音频
+      const response = await fetch(input);
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `下载音频失败: ${response.statusText}`
+        };
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = response.headers.get("content-type") || "audio/mpeg";
+      fileSize = buffer.length;
+
+      // 从 content-type 生成文件名
+      let ext = "mp3";
+      if (contentType.includes("wav")) ext = "wav";
+      else if (contentType.includes("ogg")) ext = "ogg";
+      else if (contentType.includes("opus")) ext = "opus";
+      else if (contentType.includes("m4a") || contentType.includes("aac")) ext = "m4a";
+      else if (contentType.includes("webm")) ext = "webm";
+
+      fileName = `downloaded-audio.${ext}`;
+      metadata.originalUrl = input;
+    } else {
+      // File 对象
+      if (input.size > MAX_AUDIO_SIZE) {
+        return {
+          success: false,
+          error: `音频文件大小超过限制。最大允许: ${MAX_AUDIO_SIZE / 1024 / 1024}MB`,
+        };
+      }
+
+      const arrayBuffer = await input.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = input.type;
+      fileName = input.name;
+      fileSize = input.size;
+
+      metadata.originalName = input.name;
+    }
+
+    // 验证文件大小
+    if (fileSize > MAX_AUDIO_SIZE) {
+      return {
+        success: false,
+        error: `音频文件大小超过限制。最大允许: ${MAX_AUDIO_SIZE / 1024 / 1024}MB`,
+      };
+    }
+
+    // 生成 Key (包含 userId 和 category)
+    const key = generateStorageKey(fileName, options.userId, category);
+
+    const command = new PutObjectCommand({
+      Bucket: R2_CONFIG.bucketName,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ContentLength: fileSize,
+      Metadata: {
+        userId: options.userId,
+        category,
+        uploadedAt: new Date().toISOString(),
+        ...metadata
+      },
+    });
+
+    await r2Client.send(command);
+
+    const url = getPublicUrl(key);
+
+    if (!url) {
+      throw new Error("未配置 R2_PUBLIC_DOMAIN，无法生成访问链接");
+    }
+
+    return {
+      success: true,
+      url,
+      key,
+    };
+  } catch (error) {
+    console.error("上传音频到 R2 失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "上传失败",

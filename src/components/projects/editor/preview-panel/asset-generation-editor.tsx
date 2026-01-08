@@ -126,7 +126,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // 当前正在执行的任务
   const currentJob = useMemo(() => {
     if (!currentJobId) return null;
-    return jobs.find(job => job.id === currentJobId && job.type === "asset_image_generation");
+    return jobs.find(job => job.id === currentJobId && job.type === "asset_image");
   }, [currentJobId, jobs]);
 
   // 是否正在生成

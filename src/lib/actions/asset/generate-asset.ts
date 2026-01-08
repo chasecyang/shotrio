@@ -112,7 +112,7 @@ export async function generateAssetImage(
     const jobResult = await createJob({
       userId: session.user.id,
       projectId,
-      type: "asset_image_generation",
+      type: "asset_image",
       assetId: assetId, // 外键关联（向后兼容）
       imageDataId: imageDataId, // 关联到具体版本
       inputData: {}, // 所有生成信息已存储在 imageData 中
@@ -219,7 +219,7 @@ export async function editAssetImage(
     const jobResult = await createJob({
       userId: session.user.id,
       projectId,
-      type: "asset_image_generation",
+      type: "asset_image",
       assetId: assetId, // 外键关联（向后兼容）
       imageDataId: imageDataId, // 关联到具体版本
       inputData: {}, // 所有生成信息已存储在 imageData 中
@@ -306,7 +306,7 @@ export async function regenerateAssetImage(
     const jobResult = await createJob({
       userId: session.user.id,
       projectId: existingAsset.projectId,
-      type: "asset_image_generation",
+      type: "asset_image",
       assetId: assetId,
       imageDataId: versionResult.versionId,
       inputData: {},

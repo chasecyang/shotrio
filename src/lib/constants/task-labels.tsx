@@ -4,11 +4,10 @@ import {
   Loader2,
   Clock,
   Ban,
-  Users,
   Sparkles,
   Film,
-  Images,
   Video,
+  Music,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { JobType, JobStatus } from "@/types/job";
@@ -23,9 +22,9 @@ export interface TaskTypeConfig {
 
 // Icon name mapping for task types
 export const TASK_TYPE_ICONS: Record<JobType, string> = {
-  batch_image_generation: "Images",
-  asset_image_generation: "Sparkles",
-  video_generation: "Video",
+  asset_image: "Sparkles",
+  asset_video: "Video",
+  asset_audio: "Music",
   final_video_export: "Film",
 };
 
@@ -71,11 +70,10 @@ export const VIEWABLE_TASK_TYPES: JobType[] = [];
  * Icon mapping
  */
 const iconMap = {
-  Users,
   Sparkles,
   Film,
-  Images,
   Video,
+  Music,
   Clock,
   Loader2,
   CheckCircle2,

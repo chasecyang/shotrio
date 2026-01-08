@@ -1,9 +1,9 @@
 // 任务类型定义
 
 export type JobType =
-  | "batch_image_generation" // 批量图像生成
-  | "asset_image_generation" // 素材图片生成
-  | "video_generation" // 视频生成
+  | "asset_image" // 素材图片生成
+  | "asset_video" // 素材视频生成
+  | "asset_audio" // 素材音频生成（音效/背景音乐）
   | "final_video_export"; // 最终成片导出
 
 export type JobStatus = 
@@ -39,24 +39,6 @@ export interface Job {
 
 // 各种任务的输入数据类型
 
-export interface BatchImageGenerationInput {
-  prompts: Array<{
-    id: string;
-    prompt: string;
-  }>;
-  aspectRatio?: string;
-  resolution?: string;
-}
-
-export interface BatchImageGenerationResult {
-  results: Array<{
-    id: string;
-    imageUrl: string;
-    success: boolean;
-    error?: string;
-  }>;
-}
-
 export interface VideoGenerationResult {
   videoUrl: string;
   duration: number;
@@ -74,6 +56,15 @@ export interface AssetImageGenerationResult {
   successCount: number;
   failedCount: number;
   errors?: string[];
+}
+
+// 音频生成结果
+export interface AudioGenerationResult {
+  assetId: string;
+  audioUrl: string;
+  duration?: number; // 毫秒
+  format?: string;
+  audioType: "sound_effect" | "bgm";
 }
 
 

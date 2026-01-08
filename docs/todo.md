@@ -19,6 +19,8 @@
 
 []agent function 的刷新问题，接受任务后，没有自动刷新
 []首页添加更多的视频demo
+[]不存在所谓的batch image generation
+[]统一job type名称
 
 []user menu添加我的项目，用户可以快速进入到自己的项目中
 [*]agent 支持 auto accept？

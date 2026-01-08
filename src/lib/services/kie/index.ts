@@ -28,3 +28,17 @@ export {
   type Veo3GenerateInput,
   type Veo3VideoOutput,
 } from "./video";
+
+// 音频生成
+export {
+  generateSoundEffect,
+  generateMusic,
+  getMusicTaskDetails,
+  waitForMusic,
+  type SoundEffectInput,
+  type SoundEffectOutput,
+  type SoundEffectOutputFormat,
+  type MusicGenerationInput,
+  type MusicGenerationOutput,
+  type SunoModel,
+} from "./audio";

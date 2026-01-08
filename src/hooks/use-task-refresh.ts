@@ -19,18 +19,25 @@ interface RefreshStrategy {
  * 任务类型 -> 刷新策略映射
  */
 const TASK_REFRESH_MAP: Record<string, RefreshStrategy> = {
-  // 素材生成
-  asset_image_generation: {
+  // 素材图片生成
+  asset_image: {
     type: "asset",
     refreshOn: ["pending", "processing", "completed", "failed"],
     debounce: 300, // 防抖300ms，避免过于频繁刷新
   },
 
-  // 视频生成
-  video_generation: {
+  // 素材视频生成
+  asset_video: {
     type: "asset",
     refreshOn: ["pending", "processing", "completed", "failed"],
     debounce: 500, // 防抖500ms，避免过于频繁刷新
+  },
+
+  // 素材音频生成
+  asset_audio: {
+    type: "asset",
+    refreshOn: ["pending", "processing", "completed", "failed"],
+    debounce: 300,
   },
 
   // 最终导出

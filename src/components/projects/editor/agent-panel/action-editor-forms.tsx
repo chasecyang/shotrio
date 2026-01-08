@@ -113,10 +113,10 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
 
   // 监听 jobs 变化，自动刷新相关素材
   useEffect(() => {
-    // 检查是否有相关的 asset_image_generation 任务完成
+    // 检查是否有相关的 asset_image 任务完成
     const completedAssetJobs = jobs.filter(
       (job) =>
-        job.type === "asset_image_generation" &&
+        job.type === "asset_image" &&
         job.status === "completed" &&
         job.inputData
     );

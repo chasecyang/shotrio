@@ -23,10 +23,9 @@ export const assetSourceTypeEnum = pgEnum("asset_source_type", [
 
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
-  "batch_image_generation", // 批量图像生成
-  "asset_image_generation", // 素材图片生成
-  "video_generation", // 视频生成
-  "audio_generation", // 音频生成
+  "asset_image", // 素材图片生成
+  "asset_video", // 素材视频生成
+  "asset_audio", // 素材音频生成
   "final_video_export", // 最终成片导出
 ]);
 

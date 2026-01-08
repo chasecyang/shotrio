@@ -318,7 +318,7 @@ export async function executeFunction(
             const jobResult = await createJob({
               userId: session.user.id,
               projectId,
-              type: "asset_image_generation",
+              type: "asset_image",
               assetId: assetId,
               imageDataId: createResult.imageDataId,
               inputData: {},

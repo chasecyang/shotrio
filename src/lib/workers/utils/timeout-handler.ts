@@ -15,7 +15,7 @@ const TIMEOUT_CONFIG = {
   // 大部分任务10分钟超时
   default: 10,
   // 视频生成任务可能需要更长时间
-  video_generation: 30,
+  asset_video: 30,
   final_video_export: 60,
 };
 

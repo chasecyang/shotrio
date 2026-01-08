@@ -773,9 +773,9 @@
   },
   "tasks": {
     "types": {
-      "batch_image_generation": "Batch Image Generation",
-      "asset_image_generation": "Asset Image Generation",
-      "video_generation": "Video Generation",
+      "asset_image": "Image Generation",
+      "asset_video": "Video Generation",
+      "asset_audio": "Audio Generation",
       "final_video_export": "Final Video Export",
       "unknown": "Unknown Task"
     },
