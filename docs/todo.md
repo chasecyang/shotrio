@@ -8,7 +8,7 @@
 [x]使用nano banana pro模型
 []header余额没有随着agent扣款而刷新
 [x]提供重新生成图片的能力
-[]用户未登录的时候也要让他可以看到输入框
+[x]用户未登录的时候也要让他可以看到输入框
 []导出能力
 []agent英文化
 []用户拒绝给他一个输入框他可以回复消息
@@ -19,11 +19,11 @@
 
 []agent function 的刷新问题，接受任务后，没有自动刷新
 []首页添加更多的视频demo
-[]不存在所谓的batch image generation
-[]统一job type名称
+[x]不存在所谓的batch image generation
+[x]统一job type名称
 
 []user menu添加我的项目，用户可以快速进入到自己的项目中
-[*]agent 支持 auto accept？
+[x]agent 支持 auto accept？
 []确认一下AI有没有删除剧本的能力
 
 

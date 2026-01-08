@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { TaskProgressBar } from "./task-progress-bar";
 import { RotateCcw, X as XIcon, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getErrorMessageKey } from "@/lib/utils/error-sanitizer";
 import type { Job } from "@/types/job";
 import { 
   getTaskTypeLabel, 
@@ -147,7 +148,7 @@ export function TaskItem({
         {job.status === "failed" && job.errorMessage && (
           <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-2">
             <p className="text-xs text-red-600 dark:text-red-400">
-              {job.errorMessage}
+              {t(getErrorMessageKey(job.errorMessage))}
             </p>
           </div>
         )}

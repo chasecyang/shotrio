@@ -263,7 +263,18 @@
     "resourceNotFound": "Resource not found",
     "alreadyExists": "Already exists",
     "creditsRequired": "Credits must be greater than 0",
-    "maxUsesRequired": "Max uses must be greater than 0"
+    "maxUsesRequired": "Max uses must be greater than 0",
+    "generation": {
+      "timeout": "Task took too long, please try again later",
+      "network": "Network connection unstable, please check and retry",
+      "serviceFailed": "AI service temporarily unavailable, please try later",
+      "insufficientCredits": "Insufficient credits, please recharge",
+      "unauthorized": "You don't have permission for this action",
+      "resourceNotFound": "Requested resource not found",
+      "uploadFailed": "File upload failed, please retry",
+      "generationFailed": "Generation failed, please retry",
+      "unknown": "Operation failed, please try again later"
+    }
   },
   "sidebar": {
     "discover": "Dashboard"

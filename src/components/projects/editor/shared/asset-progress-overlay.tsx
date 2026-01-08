@@ -1,6 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { getErrorMessageKey } from "@/lib/utils/error-sanitizer";
 import type { Job } from "@/types/job";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
@@ -15,9 +17,12 @@ interface AssetProgressOverlayProps {
  * 显示进度百分比、进度条、动画效果和失败状态
  */
 export function AssetProgressOverlay({ job, asset, className }: AssetProgressOverlayProps) {
+  const t = useTranslations();
+
   // 失败状态
   if (asset?.runtimeStatus === "failed") {
-    const errorMessage = asset.errorMessage || job?.errorMessage || "生成失败，请重试";
+    const rawError = asset.errorMessage || job?.errorMessage;
+    const errorMessage = t(getErrorMessageKey(rawError));
     
     return (
       <div

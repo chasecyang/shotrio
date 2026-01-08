@@ -172,7 +172,18 @@
     "resourceNotFound": "资源不存在",
     "alreadyExists": "已存在",
     "creditsRequired": "积分数量必须大于0",
-    "maxUsesRequired": "最大使用次数必须大于0"
+    "maxUsesRequired": "最大使用次数必须大于0",
+    "generation": {
+      "timeout": "任务处理时间过长，请稍后重试",
+      "network": "网络连接不稳定，请检查网络后重试",
+      "serviceFailed": "AI服务暂时不可用，请稍后重试",
+      "insufficientCredits": "积分不足，请充值后继续",
+      "unauthorized": "您没有权限执行此操作",
+      "resourceNotFound": "请求的资源不存在",
+      "uploadFailed": "文件上传失败，请重试",
+      "generationFailed": "生成失败，请重试",
+      "unknown": "操作失败，请稍后重试"
+    }
   },
   "sidebar": {
     "discover": "控制台"
