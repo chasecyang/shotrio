@@ -28,15 +28,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AssetDetailView } from "./shared/asset-detail-view";
 import {
-  AssetFilter,
   AssetFilterOptions,
   SortOption,
+  AssetTypeTabs,
+  AssetSearchSort,
 } from "./shared/asset-filter";
 import { UNCATEGORIZED_GROUP } from "@/lib/constants/asset-tags";
-
-interface AssetGalleryPanelProps {
-  userId: string;
-}
 
 const DEFAULT_FILTER: AssetFilterOptions = {
   assetTypes: [],
@@ -129,7 +126,7 @@ function sortAssets(
   return sorted;
 }
 
-export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
+export function AssetGalleryPanel() {
   const {
     state,
     loadAssets,
@@ -392,33 +389,50 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="shrink-0 px-4 py-3 border-b">
-        <div className="flex items-center gap-3">
-          <AssetFilter value={filterOptions} onChange={setFilterOptions} />
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-muted-foreground shrink-0">
-              {filteredAssets.length}
-              {allAssets.length !== filteredAssets.length &&
-                ` / ${allAssets.length}`}{" "}
-              个素材
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={() =>
-                loadAssets({
-                  search: filterOptions.search,
-                  showLoading: true,
-                })
-              }
-              disabled={assetsLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
-          </div>
+      <div className="shrink-0 px-4 py-3 border-b space-y-2">
+        {/* 第一行：类型Tab + 刷新按钮 */}
+        <div className="flex items-center justify-between gap-3">
+          <AssetTypeTabs
+            value={filterOptions.assetTypes}
+            onChange={(types) =>
+              setFilterOptions({ ...filterOptions, assetTypes: types })
+            }
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={() =>
+              loadAssets({
+                search: filterOptions.search,
+                showLoading: true,
+              })
+            }
+            disabled={assetsLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`}
+            />
+          </Button>
+        </div>
+        {/* 第二行：搜索框 + 排序 + 素材计数 */}
+        <div className="flex items-center gap-2">
+          <AssetSearchSort
+            search={filterOptions.search}
+            sort={filterOptions.sort}
+            onSearchChange={(search) =>
+              setFilterOptions({ ...filterOptions, search })
+            }
+            onSortChange={(sort) =>
+              setFilterOptions({ ...filterOptions, sort })
+            }
+          />
+          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+            {filteredAssets.length}
+            {allAssets.length !== filteredAssets.length &&
+              ` / ${allAssets.length}`}{" "}
+            个素材
+          </span>
         </div>
       </div>
 

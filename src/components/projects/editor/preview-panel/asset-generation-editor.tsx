@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,10 +42,9 @@ import type { ImageResolution } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAssetWithFullData } from "@/lib/actions/asset";
+import { getAssetsByIds } from "@/lib/actions/asset";
 import { useTaskPolling } from "@/hooks/use-task-polling";
 import type { AssetImageGenerationResult } from "@/types/job";
-import type { AssetWithFullData } from "@/types/asset";
 import { hasEnoughCredits } from "@/lib/actions/credits/balance";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { CREDIT_COSTS, PackageType } from "@/types/payment";
@@ -88,9 +87,16 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // UI 状态
   const [showAdvancedParams, setShowAdvancedParams] = useState(false);
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
-  
-  // 从素材库选择的素材
-  const [selectedAssets, setSelectedAssets] = useState<AssetWithFullData[]>([]);
+
+  // 从素材库选择的素材（只保留显示必需的字段）
+  const [selectedAssets, setSelectedAssets] = useState<Array<{
+    id: string;
+    name: string;
+    displayUrl: string | null;
+  }>>([]);
+
+  // 用于防止竞态条件
+  const currentRequestRef = useRef<string>("");
   
   // 表单状态（移除assetName）
   const [prompt, setPrompt] = useState("");
@@ -167,24 +173,29 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     }
   }, [currentJob, tToast, isEditing, clearEditingAsset]);
 
-  // 加载选中的素材详情
+  // 加载选中的素材详情（使用 ref 防止竞态条件）
   useEffect(() => {
-    const loadSelectedAssets = async () => {
-      const assets: AssetWithFullData[] = [];
-      for (const assetId of assetGeneration.selectedSourceAssets) {
-        const result = await getAssetWithFullData(assetId);
-        if (result.success && result.asset) {
-          assets.push(result.asset);
-        }
+    const requestId = JSON.stringify(assetGeneration.selectedSourceAssets.slice().sort());
+    currentRequestRef.current = requestId;
+
+    if (assetGeneration.selectedSourceAssets.length === 0) {
+      setSelectedAssets([]);
+      return;
+    }
+
+    const loadAssets = async () => {
+      const result = await getAssetsByIds(assetGeneration.selectedSourceAssets);
+      // 只有当请求仍然有效时才更新状态
+      if (currentRequestRef.current === requestId && result.success && result.assets) {
+        setSelectedAssets(result.assets);
       }
-      setSelectedAssets(assets);
     };
 
-    if (assetGeneration.selectedSourceAssets.length > 0) {
-      loadSelectedAssets();
-    } else {
-      setSelectedAssets([]);
-    }
+    loadAssets();
+
+    return () => {
+      currentRequestRef.current = "";
+    };
   }, [assetGeneration.selectedSourceAssets]);
 
   // 智能占位符：根据是否有参考图动态显示
@@ -198,19 +209,9 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
     return tEditor("placeholders.withoutReference");
   }, [selectedAssets.length, tEditor]);
 
-  // 处理从素材库选择图片
-  const handleAssetPickerConfirm = async (assetIds: string[]) => {
+  // 处理从素材库选择图片（只设置 ID，由 useEffect 统一加载）
+  const handleAssetPickerConfirm = (assetIds: string[]) => {
     setSelectedSourceAssets(assetIds);
-
-    // 加载选中素材的详情
-    const assets: AssetWithFullData[] = [];
-    for (const assetId of assetIds) {
-      const result = await getAssetWithFullData(assetId);
-      if (result.success && result.asset) {
-        assets.push(result.asset);
-      }
-    }
-    setSelectedAssets(assets);
     toast.success(tEditor("selectedImages", { count: assetIds.length }));
   };
 
@@ -413,7 +414,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted/50">
-                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
                             </div>
                           )}
                         </div>

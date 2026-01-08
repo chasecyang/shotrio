@@ -35,9 +35,10 @@ import { createJob } from "../job";
 import { getSystemArtStyles } from "../art-style/queries";
 import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
-import { 
+import {
   getVideoAssets,
   createVideoAsset,
+  createAudioAsset,
 } from "../asset/crud";
 import {
   createTextAsset,
@@ -976,6 +977,239 @@ export async function executeFunction(
                 : "没有需要更新的内容",
           },
         };
+        break;
+      }
+
+      // ============================================
+      // 音频生成类
+      // ============================================
+      case "generate_sound_effect": {
+        const prompt = parameters.prompt as string;
+        const name = parameters.name as string | undefined;
+        const duration = parameters.duration as number | undefined;
+        const isLoopable = parameters.is_loopable as boolean | undefined;
+        const tags = parameters.tags as string[] | undefined;
+
+        // 参数校验
+        if (!prompt || prompt.length < 3) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "prompt 不能为空且至少 3 个字符",
+          };
+          break;
+        }
+
+        try {
+          // 构建 AudioMeta
+          const audioMeta = {
+            audio: {
+              purpose: "sound_effect" as const,
+              description: prompt,
+              soundEffect: {
+                isLoopable: isLoopable,
+              },
+            },
+          };
+
+          // 如果指定了时长，存储到 audioMeta 中
+          if (duration !== undefined) {
+            audioMeta.audio.soundEffect = {
+              ...audioMeta.audio.soundEffect,
+              duration: Math.min(Math.max(duration, 0.5), 22),
+            } as typeof audioMeta.audio.soundEffect & { duration?: number };
+          }
+
+          // 创建音频资产和 Job
+          const createResult = await createAudioAsset({
+            projectId,
+            name: name || `音效-${Date.now()}`,
+            prompt: prompt,
+            meta: audioMeta,
+            tags: tags || ["音效"],
+          });
+
+          if (createResult.success && createResult.data) {
+            result = {
+              functionCallId: functionCall.id,
+              success: true,
+              data: {
+                assetId: createResult.data.asset.id,
+                jobId: createResult.data.jobId,
+                message: "音效生成任务已创建",
+              },
+            };
+          } else {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: createResult.error || "创建音效生成任务失败",
+            };
+          }
+        } catch (error) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: error instanceof Error ? error.message : "生成音效失败",
+          };
+        }
+        break;
+      }
+
+      case "generate_bgm": {
+        const prompt = parameters.prompt as string;
+        const name = parameters.name as string | undefined;
+        const genre = parameters.genre as string | undefined;
+        const mood = parameters.mood as string | undefined;
+        const instrumental = (parameters.instrumental as boolean) ?? true;
+        const tags = parameters.tags as string[] | undefined;
+
+        if (!prompt || prompt.length < 5) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "prompt 不能为空且至少 5 个字符",
+          };
+          break;
+        }
+
+        try {
+          const audioMeta = {
+            audio: {
+              purpose: "bgm" as const,
+              description: prompt,
+              bgm: {
+                genre: genre,
+                mood: mood,
+                hasVocals: !instrumental,
+              },
+            },
+          };
+
+          const createResult = await createAudioAsset({
+            projectId,
+            name: name || `BGM-${Date.now()}`,
+            prompt: prompt,
+            meta: audioMeta,
+            tags: tags || ["BGM"],
+          });
+
+          if (createResult.success && createResult.data) {
+            result = {
+              functionCallId: functionCall.id,
+              success: true,
+              data: {
+                assetId: createResult.data.asset.id,
+                jobId: createResult.data.jobId,
+                message: "背景音乐生成任务已创建",
+              },
+            };
+          } else {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: createResult.error || "创建背景音乐生成任务失败",
+            };
+          }
+        } catch (error) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: error instanceof Error ? error.message : "生成背景音乐失败",
+          };
+        }
+        break;
+      }
+
+      case "generate_dialogue": {
+        const text = parameters.text as string;
+        const voiceId = parameters.voice_id as string;
+        const name = parameters.name as string | undefined;
+        const emotion = parameters.emotion as string | undefined;
+        const speed = parameters.speed as number | undefined;
+        const pitch = parameters.pitch as number | undefined;
+        const tags = parameters.tags as string[] | undefined;
+
+        // 参数校验
+        if (!text || text.length < 1) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "text 不能为空",
+          };
+          break;
+        }
+
+        if (!voiceId) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: "voice_id 不能为空",
+          };
+          break;
+        }
+
+        // 验证音色 ID
+        const { isValidVoiceId, getVoiceDisplayName } = await import(
+          "@/lib/config/voices"
+        );
+        if (!isValidVoiceId(voiceId)) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: `无效的音色 ID: ${voiceId}，请使用系统预设音色`,
+          };
+          break;
+        }
+
+        try {
+          const audioMeta = {
+            audio: {
+              purpose: "voiceover" as const,
+              description: text,
+              voiceover: {
+                voiceId: voiceId,
+                emotion: emotion,
+                speakingRate: speed,
+                pitch: pitch,
+                transcript: text,
+              },
+            },
+          };
+
+          const voiceDisplayName = getVoiceDisplayName(voiceId);
+          const createResult = await createAudioAsset({
+            projectId,
+            name: name || `台词-${voiceDisplayName}-${Date.now()}`,
+            prompt: text, // prompt 存储原文
+            meta: audioMeta,
+            tags: tags || ["台词", "配音"],
+          });
+
+          if (createResult.success && createResult.data) {
+            result = {
+              functionCallId: functionCall.id,
+              success: true,
+              data: {
+                assetId: createResult.data.asset.id,
+                jobId: createResult.data.jobId,
+                message: `台词生成任务已创建（音色：${voiceDisplayName}）`,
+              },
+            };
+          } else {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: createResult.error || "创建台词生成任务失败",
+            };
+          }
+        } catch (error) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: error instanceof Error ? error.message : "生成台词失败",
+          };
+        }
         break;
       }
 

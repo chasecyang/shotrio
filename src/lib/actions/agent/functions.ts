@@ -389,6 +389,208 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     category: "modification",
     needsConfirmation: true,
   },
+
+  // ============================================
+  // 音频生成工具（需要确认）
+  // ============================================
+  {
+    name: "generate_sound_effect",
+    description: `生成音效资产。使用 ElevenLabs Sound Effect V2 生成高质量音效。
+
+## 使用说明
+
+**适用场景：** 脚步声、爆炸声、环境音、UI 音效等
+
+**参数要求：**
+- **prompt**（必填）：英文音效描述，如 "footsteps on wooden floor", "thunder rumbling in distance"
+- **name**（可选）：资产名称，便于识别
+- **duration**（可选）：时长 0.5-22 秒，不指定则自动
+- **is_loopable**（可选）：是否生成可循环音效
+- **tags**（可选）：标签数组，如 ["音效", "脚步", "室内"]
+
+**示例：**
+\`\`\`json
+{
+  "prompt": "heavy rain on window with distant thunder",
+  "name": "暴风雨环境音",
+  "duration": 10,
+  "is_loopable": true,
+  "tags": ["音效", "环境", "雨声"]
+}
+\`\`\`
+
+**积分消耗：** 1 积分/次`,
+    displayName: "生成音效",
+    parameters: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "音效描述（必填，英文），详细描述音效内容",
+        },
+        name: {
+          type: "string",
+          description: "资产名称（可选），便于识别和管理",
+        },
+        duration: {
+          type: "number",
+          description: "音效时长（可选），0.5-22 秒",
+        },
+        is_loopable: {
+          type: "boolean",
+          description: "是否可循环（可选），适合背景环境音",
+        },
+        tags: {
+          type: "array",
+          description: "标签数组（可选），用于分类和筛选",
+          items: { type: "string" },
+        },
+      },
+      required: ["prompt"],
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
+  {
+    name: "generate_bgm",
+    description: `生成背景音乐资产。使用 Suno AI 生成高质量背景音乐。
+
+## 使用说明
+
+**适用场景：** 场景配乐、情绪渲染、片头片尾音乐等
+
+**参数要求：**
+- **prompt**（必填）：音乐描述或歌词，描述风格、情绪、节奏
+- **name**（可选）：资产名称
+- **genre**（可选）：音乐风格，如 "orchestral", "electronic", "jazz"
+- **mood**（可选）：情绪氛围，如 "tense", "peaceful", "exciting"
+- **instrumental**（可选）：是否纯音乐（无人声），默认 true
+- **tags**（可选）：标签数组
+
+**示例：**
+\`\`\`json
+{
+  "prompt": "Epic orchestral music with rising tension, suitable for action scene climax",
+  "name": "紧张动作配乐",
+  "genre": "orchestral",
+  "mood": "tense",
+  "instrumental": true,
+  "tags": ["BGM", "史诗", "动作"]
+}
+\`\`\`
+
+**积分消耗：** 10 积分/次`,
+    displayName: "生成背景音乐",
+    parameters: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "音乐描述（必填），描述风格、情绪、节奏等",
+        },
+        name: {
+          type: "string",
+          description: "资产名称（可选）",
+        },
+        genre: {
+          type: "string",
+          description: "音乐风格（可选），如 orchestral, electronic, jazz, rock",
+        },
+        mood: {
+          type: "string",
+          description: "情绪氛围（可选），如 tense, peaceful, exciting, melancholic",
+        },
+        instrumental: {
+          type: "boolean",
+          description: "是否纯音乐（可选），默认 true（无人声）",
+        },
+        tags: {
+          type: "array",
+          description: "标签数组（可选）",
+          items: { type: "string" },
+        },
+      },
+      required: ["prompt"],
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
+  {
+    name: "generate_dialogue",
+    description: `生成台词配音资产。使用 MiniMax Speech TTS 将文本转换为高质量语音。
+
+## 使用说明
+
+**适用场景：** 角色对白、旁白、画外音等
+
+**参数要求：**
+- **text**（必填）：要朗读的文本内容（支持中英文）
+- **voice_id**（必填）：音色ID，使用系统预设音色
+- **name**（可选）：资产名称，建议包含角色名便于管理
+- **emotion**（可选）：情感表达，happy/sad/angry/fearful/neutral 等
+- **speed**（可选）：语速 0.5-2.0，默认 1.0
+- **pitch**（可选）：音调 -12 到 12，默认 0
+- **tags**（可选）：标签数组，建议包含角色名
+
+**可用音色：**
+- 男声：青涩青年(male-qn-qingse)、精英男声(male-qn-jingying)、霸道总裁(male-qn-badao)、阳光大学生(male-qn-daxuesheng)、磁性男主播(presenter_male)、沧桑大叔(audiobook_male_1)
+- 女声：温柔少女(female-shaonv)、知性御姐(female-yujie)、成熟女性(female-chengshu)、甜美萝莉(female-tianmei)、女主播(presenter_female)、温婉女声(audiobook_female_1)
+
+**示例：**
+\`\`\`json
+{
+  "text": "我终于找到你了，等这一刻已经等了很久。",
+  "voice_id": "male-qn-qingse",
+  "name": "张三-紧张台词",
+  "emotion": "fearful",
+  "speed": 0.9,
+  "tags": ["台词", "张三", "紧张"]
+}
+\`\`\`
+
+**注意：** 同一角色的台词应使用相同的 voice_id 以保持一致性。
+
+**积分消耗：** 约 0.6 积分/100字`,
+    displayName: "生成台词配音",
+    parameters: {
+      type: "object",
+      properties: {
+        text: {
+          type: "string",
+          description: "台词文本（必填），支持中英文，建议单次不超过 500 字",
+        },
+        voice_id: {
+          type: "string",
+          description: "音色ID（必填），参考可用音色列表",
+        },
+        name: {
+          type: "string",
+          description: "资产名称（可选），建议包含角色名",
+        },
+        emotion: {
+          type: "string",
+          description: "情感表达（可选）：happy/sad/angry/fearful/disgusted/surprised/neutral",
+          enum: ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"],
+        },
+        speed: {
+          type: "number",
+          description: "语速（可选），0.5-2.0，默认 1.0",
+        },
+        pitch: {
+          type: "number",
+          description: "音调（可选），-12 到 12，默认 0",
+        },
+        tags: {
+          type: "array",
+          description: "标签数组（可选），建议包含角色名如 ['台词', '角色名']",
+          items: { type: "string" },
+        },
+      },
+      required: ["text", "voice_id"],
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
 ];
 
 /**

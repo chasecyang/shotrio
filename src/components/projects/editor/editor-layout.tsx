@@ -101,7 +101,7 @@ function EditorLayoutInner({
           ) : state.mode === "editing" ? (
             <EditingModeLayout />
           ) : (
-            <AssetGalleryPanel userId={user.id} />
+            <AssetGalleryPanel />
           )}
         </div>
       </div>

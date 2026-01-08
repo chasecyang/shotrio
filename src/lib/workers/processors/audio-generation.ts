@@ -8,6 +8,7 @@ import {
   generateMusic,
   waitForMusic,
 } from "@/lib/services/audio.service";
+import { generateSpeech } from "@/lib/services/fal/speech";
 import { uploadAudioToR2, AssetCategory } from "@/lib/storage/r2.service";
 import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
 import { CREDIT_COSTS } from "@/types/payment";
@@ -115,12 +116,21 @@ async function processAudioGenerationInternal(
   );
 
   // 步骤2: 根据类型计算积分并扣除
-  const creditCost =
-    purpose === "sound_effect"
-      ? CREDIT_COSTS.SOUND_EFFECT_GENERATION
-      : CREDIT_COSTS.MUSIC_GENERATION;
+  let creditCost: number;
+  let audioTypeLabel: string;
 
-  const audioTypeLabel = purpose === "sound_effect" ? "音效" : "背景音乐";
+  if (purpose === "sound_effect") {
+    creditCost = CREDIT_COSTS.SOUND_EFFECT_GENERATION;
+    audioTypeLabel = "音效";
+  } else if (purpose === "bgm") {
+    creditCost = CREDIT_COSTS.MUSIC_GENERATION;
+    audioTypeLabel = "背景音乐";
+  } else {
+    // voiceover: 按字符数计算，1 积分/100字 (成本$0.06/1000字, 利润率40%)
+    const charCount = prompt.length;
+    creditCost = Math.max(1, Math.ceil(charCount / 100));
+    audioTypeLabel = "台词配音";
+  }
 
   await updateJobProgress(
     {
@@ -180,7 +190,7 @@ async function processAudioGenerationInternal(
       audioUrl = result.audioUrl;
       format = result.format || "mp3";
       duration = result.duration;
-    } else {
+    } else if (purpose === "bgm") {
       // 背景音乐生成
       const bgmConfig = audioMeta.bgm || {};
 
@@ -212,6 +222,42 @@ async function processAudioGenerationInternal(
 
       audioUrl = completedMusic.audioUrl;
       duration = completedMusic.duration;
+      format = "mp3";
+    } else {
+      // 台词配音生成（voiceover）
+      const voiceoverConfig = audioMeta.voiceover || {};
+
+      await updateJobProgress(
+        {
+          jobId: jobData.id,
+          progress: 30,
+          progressMessage: "正在合成语音...",
+        },
+        workerToken
+      );
+
+      const speechResult = await generateSpeech({
+        prompt: prompt, // 台词文本
+        voice_id: voiceoverConfig.voiceId || "female-shaonv",
+        speed: voiceoverConfig.speakingRate,
+        pitch: voiceoverConfig.pitch as number | undefined,
+        emotion: voiceoverConfig.emotion as
+          | "happy"
+          | "sad"
+          | "angry"
+          | "fearful"
+          | "disgusted"
+          | "surprised"
+          | "neutral"
+          | undefined,
+      });
+
+      if (!speechResult.audio?.url) {
+        throw new Error("语音合成失败：未返回音频URL");
+      }
+
+      audioUrl = speechResult.audio.url;
+      duration = speechResult.duration_ms;
       format = "mp3";
     }
   } catch (error) {
@@ -278,6 +324,16 @@ async function processAudioGenerationInternal(
     );
 
     // 步骤5: 更新或创建 audioData 记录
+    // 根据类型选择模型名称
+    let modelUsed: string;
+    if (purpose === "sound_effect") {
+      modelUsed = "elevenlabs/sound-effect-v2";
+    } else if (purpose === "bgm") {
+      modelUsed = "suno/v4.5";
+    } else {
+      modelUsed = "minimax/speech-2.6-turbo";
+    }
+
     if (existingAudioData) {
       // 更新现有记录
       await db
@@ -286,10 +342,7 @@ async function processAudioGenerationInternal(
           audioUrl: uploadResult.url,
           duration: duration,
           format: format,
-          modelUsed:
-            purpose === "sound_effect"
-              ? "elevenlabs/sound-effect-v2"
-              : "suno/v4.5",
+          modelUsed: modelUsed,
         })
         .where(eq(audioData.assetId, assetId));
     } else {
@@ -300,10 +353,7 @@ async function processAudioGenerationInternal(
         duration: duration,
         format: format,
         prompt: prompt,
-        modelUsed:
-          purpose === "sound_effect"
-            ? "elevenlabs/sound-effect-v2"
-            : "suno/v4.5",
+        modelUsed: modelUsed,
       });
     }
 
@@ -330,7 +380,7 @@ async function processAudioGenerationInternal(
       audioUrl: uploadResult.url,
       duration: duration,
       format: format,
-      audioType: purpose === "sound_effect" ? "sound_effect" : "bgm",
+      audioType: purpose, // "sound_effect" | "bgm" | "voiceover"
     };
 
     await completeJob(

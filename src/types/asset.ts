@@ -97,6 +97,7 @@ export interface AudioMeta {
     language?: string;        // 语言代码 (zh-CN, en-US)
     voiceId?: string;         // TTS 声音模型 ID
     speakingRate?: number;    // 语速 (0.5-2.0)
+    pitch?: number;           // 音调 (-12 to 12)
     transcript?: string;      // 音频文本内容
   };
 

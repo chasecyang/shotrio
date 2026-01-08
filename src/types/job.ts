@@ -64,7 +64,7 @@ export interface AudioGenerationResult {
   audioUrl: string;
   duration?: number; // 毫秒
   format?: string;
-  audioType: "sound_effect" | "bgm";
+  audioType: "sound_effect" | "bgm" | "voiceover";
 }
 
 
