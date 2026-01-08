@@ -6,6 +6,7 @@ import { useAgent } from "./agent-panel/agent-context";
 import { Bot, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
+import { useTranslations } from "next-intl";
 
 interface FloatingChatInputProps {
   onExpand: () => void;
@@ -13,6 +14,7 @@ interface FloatingChatInputProps {
 
 export function FloatingChatInput({ onExpand }: FloatingChatInputProps) {
   const agent = useAgent();
+  const t = useTranslations("editor");
 
   // 检查是否有待批准的操作
   const hasPendingAction = useMemo(() => {
@@ -40,7 +42,7 @@ export function FloatingChatInput({ onExpand }: FloatingChatInputProps) {
         "flex items-center justify-center",
         "transition-shadow duration-200"
       )}
-      title="展开 Agent 对话"
+      title={t("expandAgent")}
     >
       {/* Bot 图标 */}
       {agent.state.isLoading ? (

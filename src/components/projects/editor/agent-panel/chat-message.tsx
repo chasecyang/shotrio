@@ -19,13 +19,18 @@ interface ChatMessageProps {
   currentBalance?: number;
 }
 
+import { useTranslations } from "next-intl";
+
 // 中断标记组件
-const InterruptedBadge = () => (
-  <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 mt-2">
-    <Hand className="h-3.5 w-3.5" />
-    <span>已中断</span>
-  </div>
-);
+const InterruptedBadge = () => {
+  const t = useTranslations("editor");
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 mt-2">
+      <Hand className="h-3.5 w-3.5" />
+      <span>{t("interrupted")}</span>
+    </div>
+  );
+};
 
 export const ChatMessage = memo(function ChatMessage({ message, currentBalance }: ChatMessageProps) {
   const isUser = message.role === "user";

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 interface StyleSelectorProps {
   styles: ArtStyle[];
@@ -13,12 +14,14 @@ interface StyleSelectorProps {
 }
 
 export function StyleSelector({ styles, selectedStyleId, onSelect }: StyleSelectorProps) {
+  const t = useTranslations("projects.assets");
+
   if (styles.length === 0) {
     return (
       <div className="flex items-center justify-center p-12 text-center border-2 border-dashed rounded-lg">
         <div>
           <Palette className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">暂无可用风格</p>
+          <p className="text-sm text-muted-foreground">{t("noStyles")}</p>
         </div>
       </div>
     );

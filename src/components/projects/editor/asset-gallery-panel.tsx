@@ -6,7 +6,7 @@ import { AssetCard } from "./shared/asset-card";
 import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { regenerateAssetImage } from "@/lib/actions/asset/generate-asset";
-import { regenerateVideoAsset, setActiveVersion } from "@/lib/actions/asset/crud";
+import { regenerateVideoAsset } from "@/lib/actions/asset/crud";
 import { AssetWithFullData, ImageResolution } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import { toast } from "sonner";
@@ -373,22 +373,6 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
     setSelectedAsset(null);
   };
 
-  // 处理设置活跃版本
-  const handleSetActiveVersion = async (assetId: string, versionId: string) => {
-    try {
-      const result = await setActiveVersion(assetId, versionId);
-      if (result.success) {
-        toast.success("已切换到此版本");
-        await loadAssets({ search: filterOptions.search });
-      } else {
-        toast.error(result.error || "切换版本失败");
-      }
-    } catch (error) {
-      console.error("切换版本失败:", error);
-      toast.error("切换版本失败");
-    }
-  };
-
   if (!project) return null;
 
   // 如果有选中的素材，显示详情视图
@@ -487,7 +471,6 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
                   onSelectChange={handleSelectChange}
                   onRegenerate={handleRegenerate}
                   onEdit={handleEdit}
-                  onSetActiveVersion={handleSetActiveVersion}
                 />
               ))}
             </div>
@@ -509,7 +492,6 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
                   onSelectChange={handleSelectChange}
                   onRegenerate={handleRegenerate}
                   onEdit={handleEdit}
-                  onSetActiveVersion={handleSetActiveVersion}
                 />
               ))}
             </div>

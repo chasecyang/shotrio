@@ -29,7 +29,10 @@
     "aiSuggestion": "AI 建议",
     "accept": "接受",
     "reject": "拒绝",
-    "aiGenerateOptimize": "AI 生成/优化"
+    "aiGenerateOptimize": "AI 生成/优化",
+    "generationFailed": "生成失败，请重试",
+    "viewerHint": "双击放大 · 滚轮缩放 · 拖拽平移",
+    "preview": "预览"
   },
   "beta": {
     "label": "BETA",
@@ -340,6 +343,16 @@
         "grid": "网格视图",
         "list": "列表视图"
       },
+      "search": "搜索素材...",
+      "clear": "清除",
+      "noMatch": "未找到匹配的素材",
+      "noImages": "暂无图片素材",
+      "createFirst": "请先在素材库中创建一些图片素材",
+      "selectFromLibrary": "选择素材库图片",
+      "selectAsReference": "从素材库中选择图片作为参考",
+      "selected": "已选 {current}/{max}",
+      "confirmSelection": "确认选择 ({count})",
+      "noStyles": "暂无可用风格",
       "generation": {
         "title": "AI 创作素材",
         "subtitle": "使用 AI 创作角色、场景、道具等图片素材",
@@ -395,6 +408,17 @@
           "generated": "成功创作 {count} 张图片并保存到创作素材库"
         }
       }
+    },
+    "textAsset": {
+      "editTitle": "编辑文本资产",
+      "createTitle": "创建文本资产",
+      "name": "资产名称",
+      "namePlaceholder": "例如：张三角色小传",
+      "tags": "标签",
+      "tagsPlaceholder": "输入标签后按回车",
+      "content": "内容",
+      "noContent": "*暂无内容*",
+      "markdownSupport": "支持 Markdown 语法..."
     }
   },
   "footer": {
@@ -896,6 +920,46 @@
       "title": "暂不支持移动端",
       "description": "Editor 编辑器需要更大的屏幕空间，请使用电脑访问以获得最佳体验。",
       "backToProjects": "返回项目列表"
+    },
+    "projectSettings": "项目设置",
+    "expandAgent": "展开 Agent 对话",
+    "interrupted": "已中断",
+    "clips": "{count} 个片段",
+    "versionHistory": "版本历史",
+    "versions": "{count} 个版本",
+    "seconds": "{count}秒",
+    "times": "{count}次",
+    "assetGeneration": {
+      "title": "AI 创作素材",
+      "advancedParams": "高级参数",
+      "aspectRatio": "宽高比",
+      "resolution": "分辨率",
+      "quantity": "数量",
+      "images": "{count} 张",
+      "processing": "处理中",
+      "generate": "生成",
+      "creating": "AI 正在创作中...",
+      "failed": "创作失败",
+      "success": "创作成功",
+      "savedToLibrary": "图片已自动保存到素材库，AI 已智能命名和打标签",
+      "selectReference": "点击从素材库选择参考图片",
+      "multipleReference": "可选择多张图片作为创作参考",
+      "selectedImages": "已选择 {count} 张参考图",
+      "successGenerated": "成功生成 {count} 张图片",
+      "aspectRatios": {
+        "ultrawide": "21:9 (超宽)",
+        "widescreen": "16:9 (宽屏)",
+        "standard32": "3:2",
+        "standard43": "4:3",
+        "square": "1:1 (方形)",
+        "portrait34": "3:4 (竖版)",
+        "portrait23": "2:3",
+        "portrait916": "9:16 (竖屏)"
+      },
+      "placeholders": {
+        "withReference": "基于参考图进行创作，例如：调整为温暖的日落色调，保持人物姿势和表情不变...",
+        "withoutReference": "详细描述你想要创作的内容，例如：一位30岁的亚洲女性，短发，现代职业装，自信的微笑..."
+      }
     },
     "agent": {
       "conversationStatus": {

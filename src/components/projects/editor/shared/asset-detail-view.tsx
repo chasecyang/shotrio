@@ -36,6 +36,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { updateAsset, getProjectAssets } from "@/lib/actions/asset";
 import { TagEditor } from "./tag-editor";
+import { AssetVersionPanel } from "./asset-version-panel";
 
 interface AssetDetailViewProps {
   asset: AssetWithFullData;
@@ -673,6 +674,17 @@ export function AssetDetailView({
                   onTagsChange={handleTagsChange}
                 />
               </div>
+
+              {/* 版本历史 */}
+              {asset.versionCount > 1 && (
+                <>
+                  <Separator />
+                  <AssetVersionPanel
+                    asset={asset}
+                    onVersionChange={onAssetUpdated}
+                  />
+                </>
+              )}
 
               {/* Prompt */}
               {asset.prompt && (

@@ -10,9 +10,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Video, Play, FileText, RefreshCw, Pencil, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
-import type { ImageData, VideoData } from "@/types/asset";
+import { Trash2, Video, Play, FileText, RefreshCw, Pencil } from "lucide-react";
+import { useState } from "react";
+import { VersionCountBadge } from "./asset-version-panel";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -28,19 +28,7 @@ interface AssetCardProps {
   onSelectChange?: (assetId: string, selected: boolean) => void;
   onRegenerate?: (asset: AssetWithFullData) => void;
   onEdit?: (asset: AssetWithFullData) => void;
-  onSetActiveVersion?: (assetId: string, versionId: string) => void;
   job?: Job;
-}
-
-// 版本信息类型
-interface VersionInfo {
-  id: string;
-  url: string | null;
-  thumbnailUrl: string | null;
-  isActive: boolean;
-  isGenerating: boolean;
-  prompt: string | null;
-  createdAt: Date;
 }
 
 export function AssetCard({
@@ -51,97 +39,29 @@ export function AssetCard({
   onSelectChange,
   onRegenerate,
   onEdit,
-  onSetActiveVersion,
   job,
 }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [displayedVersionIndex, setDisplayedVersionIndex] = useState(0);
 
   // 检查资产类型
   const isVideo = asset.assetType === "video";
   const isText = asset.assetType === "text";
-  const isImage = asset.assetType === "image";
 
   // 检查是否可以重新生成/编辑（仅 AI 生成的素材且有 prompt）
   const isGenerated = asset.sourceType === "generated";
 
-  // 计算版本列表（从 imageDataList 或 videoDataList）
-  const versions = useMemo((): VersionInfo[] => {
-    if (isImage && asset.imageDataList && asset.imageDataList.length > 0) {
-      return asset.imageDataList.map((img: ImageData) => ({
-        id: img.id,
-        url: img.imageUrl,
-        thumbnailUrl: img.thumbnailUrl,
-        isActive: img.isActive,
-        isGenerating: !img.imageUrl, // 没有 URL 说明正在生成
-        prompt: img.prompt,
-        createdAt: img.createdAt,
-      }));
-    }
-    if (isVideo && asset.videoDataList && asset.videoDataList.length > 0) {
-      return asset.videoDataList.map((vid: VideoData) => ({
-        id: vid.id,
-        url: vid.videoUrl,
-        thumbnailUrl: vid.thumbnailUrl,
-        isActive: vid.isActive,
-        isGenerating: !vid.videoUrl && !vid.thumbnailUrl, // 没有 URL 说明正在生成
-        prompt: vid.prompt,
-        createdAt: vid.createdAt,
-      }));
-    }
-    // 单版本或无版本信息时返回空数组
-    return [];
-  }, [asset.imageDataList, asset.videoDataList, isImage, isVideo]);
-
-  // 是否有多个版本
-  const hasMultipleVersions = versions.length > 1;
-
-  // 当前显示的版本
-  const displayedVersion = versions[displayedVersionIndex] || null;
-
-  // 当前显示的版本是否正在生成
-  const isDisplayedVersionGenerating = displayedVersion?.isGenerating ?? false;
-
-  // 当前显示的版本是否是活跃版本
-  const isDisplayedVersionActive = displayedVersion?.isActive ?? true;
-
-  // 当 versions 变化时，如果有新的生成完成的版本，自动切换到该版本
-  useEffect(() => {
-    // 如果新版本生成完成（最后一个版本从生成中变为完成），自动切换
-    if (versions.length > 0) {
-      const lastVersion = versions[versions.length - 1];
-      if (lastVersion && !lastVersion.isGenerating && lastVersion.isActive) {
-        setDisplayedVersionIndex(versions.length - 1);
-      }
-    }
-  }, [versions]);
-
-  // 计算显示的 URL
-  const displayUrl = useMemo(() => {
-    if (displayedVersion) {
-      return displayedVersion.thumbnailUrl || displayedVersion.url;
-    }
-    return asset.displayUrl;
-  }, [displayedVersion, asset.displayUrl]);
-
-  // 检查整个资产是否正在生成中（用于兜底情况：没有版本数据时）
-  const isAssetGenerating = asset.runtimeStatus === "processing" || asset.runtimeStatus === "pending";
-
-  // 最终的 isGenerating 判断
-  const isGenerating = versions.length > 0 ? isDisplayedVersionGenerating : isAssetGenerating;
+  // 检查资产是否正在生成中
+  const isGenerating = asset.runtimeStatus === "processing" || asset.runtimeStatus === "pending";
 
   // 检查资产是否失败
   const isFailed = asset.runtimeStatus === "failed";
 
-  // 获取 job - 使用传入的 job（运行时状态已在 asset.runtimeStatus 中计算）
+  // 获取 job
   const currentJob = job;
 
-  // 当前显示版本的 prompt
-  const displayedPrompt = displayedVersion?.prompt ?? asset.prompt;
-
-  // 是否可以重新生成（基于当前显示的版本）
-  const canRegenerate = isGenerated && !isText && !!displayedPrompt;
+  // 是否可以重新生成
+  const canRegenerate = isGenerated && !isText && !!asset.prompt;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -154,34 +74,6 @@ export function AssetCard({
 
   const handleDragEnd = () => {
     setIsDragging(false);
-  };
-
-  // 版本切换处理
-  const handlePrevVersion = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (displayedVersionIndex > 0) {
-      setDisplayedVersionIndex(displayedVersionIndex - 1);
-    }
-  };
-
-  const handleNextVersion = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (displayedVersionIndex < versions.length - 1) {
-      setDisplayedVersionIndex(displayedVersionIndex + 1);
-    }
-  };
-
-  const handleVersionDotClick = (index: number) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDisplayedVersionIndex(index);
-  };
-
-  // 设置活跃版本
-  const handleSetActiveVersion = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (displayedVersion && onSetActiveVersion && !isDisplayedVersionActive) {
-      onSetActiveVersion(asset.id, displayedVersion.id);
-    }
   };
 
   return (
@@ -257,10 +149,10 @@ export function AssetCard({
             <div className="absolute inset-0 bg-muted/50" />
             <AssetProgressOverlay asset={asset} job={currentJob} />
           </>
-        ) : displayUrl ? (
+        ) : asset.displayUrl ? (
           <>
             <Image
-              src={displayUrl}
+              src={asset.displayUrl}
               alt={asset.name}
               fill
               className="object-cover"
@@ -300,54 +192,9 @@ export function AssetCard({
           </div>
         )}
 
-        {/* 版本导航 - 仅当有多个版本时显示 */}
-        {hasMultipleVersions && (
-          <>
-            {/* 左右箭头 - hover 时显示 */}
-            {isHovered && !isGenerating && (
-              <>
-                {displayedVersionIndex > 0 && (
-                  <button
-                    onClick={handlePrevVersion}
-                    className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white backdrop-blur-sm transition-all hover:scale-110"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                )}
-                {displayedVersionIndex < versions.length - 1 && (
-                  <button
-                    onClick={handleNextVersion}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white backdrop-blur-sm transition-all hover:scale-110"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                )}
-              </>
-            )}
-
-            {/* 版本指示点 - 始终显示 */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-sm">
-              {versions.map((version, index) => (
-                <button
-                  key={version.id}
-                  onClick={handleVersionDotClick(index)}
-                  className={cn(
-                    "transition-all flex items-center justify-center",
-                    version.isGenerating
-                      ? "w-3 h-3 text-white/90"
-                      : index === displayedVersionIndex
-                        ? "w-2 h-2 rounded-full bg-white"
-                        : "w-1.5 h-1.5 rounded-full bg-white/50 hover:bg-white/80"
-                  )}
-                >
-                  {version.isGenerating && (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+        {/* 版本数量标记 */}
+        {!onSelectChange && <VersionCountBadge count={asset.versionCount} />}
+        {onSelectChange && !isBatchSelected && !isHovered && <VersionCountBadge count={asset.versionCount} />}
 
         {/* 底部操作栏 */}
         {isHovered && !isGenerating && !isFailed && (
@@ -393,24 +240,6 @@ export function AssetCard({
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
                       重新生成
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                {/* 使用此版本按钮 - 仅当查看非活跃版本时显示 */}
-                {hasMultipleVersions && !isDisplayedVersionActive && onSetActiveVersion && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 bg-primary/80 hover:bg-primary text-white hover:text-white backdrop-blur-sm transition-all hover:scale-105"
-                        onClick={handleSetActiveVersion}
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">
-                      使用此版本
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -501,10 +330,10 @@ export function AssetCard({
       </div>
 
       {/* Prompt 显示区域 */}
-      {displayedPrompt && (
+      {asset.prompt && (
         <div className="px-3 pb-2">
           <p className="text-xs text-muted-foreground line-clamp-2">
-            {displayedPrompt}
+            {asset.prompt}
           </p>
         </div>
       )}

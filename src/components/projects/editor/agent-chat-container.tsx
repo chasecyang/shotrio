@@ -16,8 +16,8 @@ interface AgentChatContainerProps {
 }
 
 export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
-  // 状态：默认收起模式
-  const [mode, setMode] = useState<ChatMode>("collapsed");
+  // 状态：默认展开模式
+  const [mode, setMode] = useState<ChatMode>("expanded");
   const [expandedPosition, setExpandedPosition] = useState<ExpandedPosition>("left");
   const [isInitialized, setIsInitialized] = useState(false);
   // 拖拽预览状态（仅展开时使用）

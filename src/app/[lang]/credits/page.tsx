@@ -18,10 +18,16 @@ import { CREDIT_PACKAGES } from "@/types/payment";
 import { CreditsPurchaseClient } from "./purchase-client";
 import { getTranslations } from "next-intl/server";
 
-export const metadata = {
-  title: "积分中心",
-  description: "购买积分、查看余额和交易记录",
-};
+import type { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  // Note: We can't use getTranslations in generateMetadata with full i18n
+  // so we'll use static values that match the default locale
+  return {
+    title: "Credit Center | 积分中心",
+    description: "Purchase credits, check balance and transaction history",
+  };
+}
 
 async function BalanceSection() {
   const t = await getTranslations("credits");

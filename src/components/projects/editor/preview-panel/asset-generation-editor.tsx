@@ -57,15 +57,15 @@ interface AssetGenerationEditorProps {
 }
 
 // 宽高比选项
-const ASPECT_RATIO_OPTIONS: Array<{ label: string; value: AspectRatio }> = [
-  { label: "21:9 (超宽)", value: "21:9" },
-  { label: "16:9 (宽屏)", value: "16:9" },
-  { label: "3:2", value: "3:2" },
-  { label: "4:3", value: "4:3" },
-  { label: "1:1 (方形)", value: "1:1" },
-  { label: "3:4 (竖版)", value: "3:4" },
-  { label: "2:3", value: "2:3" },
-  { label: "9:16 (竖屏)", value: "9:16" },
+const ASPECT_RATIO_OPTIONS: Array<{ labelKey: string; value: AspectRatio }> = [
+  { labelKey: "aspectRatios.ultrawide", value: "21:9" },
+  { labelKey: "aspectRatios.widescreen", value: "16:9" },
+  { labelKey: "aspectRatios.standard32", value: "3:2" },
+  { labelKey: "aspectRatios.standard43", value: "4:3" },
+  { labelKey: "aspectRatios.square", value: "1:1" },
+  { labelKey: "aspectRatios.portrait34", value: "3:4" },
+  { labelKey: "aspectRatios.portrait23", value: "2:3" },
+  { labelKey: "aspectRatios.portrait916", value: "9:16" },
 ];
 
 export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps) {
@@ -78,6 +78,8 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   const { assetGeneration } = state;
   const { editingAsset, prefillParams } = assetGeneration;
   const t = useTranslations("credits");
+  const tEditor = useTranslations("editor.assetGeneration");
+  const tCommon = useTranslations("common");
   const tToast = useTranslations("toasts");
 
   // 使用任务轮询
@@ -141,7 +143,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       try {
         const result: AssetImageGenerationResult = (currentJob.resultData || {}) as AssetImageGenerationResult;
         setGeneratedAssets(result.assets || []);
-        toast.success(`成功生成 ${result.assets?.length || 0} 张图片`);
+        toast.success(tEditor("successGenerated", { count: result.assets?.length || 0 }));
 
         // 注意：素材列表刷新由 editor-context.tsx 中的 useTaskRefresh 统一处理
 
@@ -188,13 +190,13 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   // 智能占位符：根据是否有参考图动态显示
   const placeholder = useMemo(() => {
     const hasImages = selectedAssets.length > 0;
-    
+
     if (hasImages) {
-      return "基于参考图进行创作，例如：调整为温暖的日落色调，保持人物姿势和表情不变...";
+      return tEditor("placeholders.withReference");
     }
-    
-    return "详细描述你想要创作的内容，例如：一位30岁的亚洲女性，短发，现代职业装，自信的微笑...";
-  }, [selectedAssets.length]);
+
+    return tEditor("placeholders.withoutReference");
+  }, [selectedAssets.length, tEditor]);
 
   // 处理从素材库选择图片
   const handleAssetPickerConfirm = async (assetIds: string[]) => {
@@ -209,7 +211,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       }
     }
     setSelectedAssets(assets);
-    toast.success(`已选择 ${assetIds.length} 张参考图`);
+    toast.success(tEditor("selectedImages", { count: assetIds.length }));
   };
 
   const handleRemoveSelectedAsset = (assetId: string) => {
@@ -296,7 +298,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">AI 创作素材</h2>
+            <h2 className="text-lg font-semibold">{tEditor("title")}</h2>
           </div>
           <Badge variant="outline" className="text-xs">Nano Banana</Badge>
         </div>
@@ -387,10 +389,10 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-medium text-foreground">
-                      点击从素材库选择参考图片
+                      {tEditor("selectReference")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      可选择多张图片作为创作参考
+                      {tEditor("multipleReference")}
                     </p>
                   </div>
                 </div>
@@ -481,7 +483,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                       className="h-7 px-3 gap-1 text-xs"
                     >
                       <Settings className="w-3.5 h-3.5" />
-                      高级参数
+                      {tEditor("advancedParams")}
                       <ChevronDown className={cn(
                         "w-3.5 h-3.5 transition-transform",
                         showAdvancedParams && "rotate-180"
@@ -493,7 +495,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                     <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-3">
                       {/* 宽高比 */}
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">宽高比</Label>
+                        <Label className="text-xs text-muted-foreground">{tEditor("aspectRatio")}</Label>
                         <Select value={aspectRatio} onValueChange={(v) => setAspectRatio(v as AspectRatio)} disabled={isGenerating}>
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />
@@ -501,7 +503,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                           <SelectContent>
                             {ASPECT_RATIO_OPTIONS.map((option) => (
                               <SelectItem key={option.value} value={option.value} className="text-xs">
-                                {option.label}
+                                {tEditor(option.labelKey)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -510,7 +512,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
                       {/* 分辨率 */}
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">分辨率</Label>
+                        <Label className="text-xs text-muted-foreground">{tEditor("resolution")}</Label>
                         <Select value={resolution} onValueChange={(v) => setResolution(v as ImageResolution)} disabled={isGenerating}>
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />
@@ -525,16 +527,16 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
 
                       {/* 生成数量 */}
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">数量</Label>
+                        <Label className="text-xs text-muted-foreground">{tEditor("quantity")}</Label>
                         <Select value={numImages.toString()} onValueChange={(v) => setNumImages(parseInt(v))} disabled={isGenerating}>
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1" className="text-xs">1 张</SelectItem>
-                            <SelectItem value="2" className="text-xs">2 张</SelectItem>
-                            <SelectItem value="3" className="text-xs">3 张</SelectItem>
-                            <SelectItem value="4" className="text-xs">4 张</SelectItem>
+                            <SelectItem value="1" className="text-xs">{tEditor("images", { count: 1 })}</SelectItem>
+                            <SelectItem value="2" className="text-xs">{tEditor("images", { count: 2 })}</SelectItem>
+                            <SelectItem value="3" className="text-xs">{tEditor("images", { count: 3 })}</SelectItem>
+                            <SelectItem value="4" className="text-xs">{tEditor("images", { count: 4 })}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -553,12 +555,12 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                     {isGenerating ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        处理中
+                        {tEditor("processing")}
                       </>
                     ) : (
                       <>
                         <Send className="w-3.5 h-3.5" />
-                        生成
+                        {tEditor("generate")}
                       </>
                     )}
                   </Button>
@@ -574,7 +576,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
-                <span className="text-sm font-medium">AI 正在创作中...</span>
+                <span className="text-sm font-medium">{tEditor("creating")}</span>
                 <Badge variant="secondary" className="text-xs ml-auto">
                   {currentJob.progress}%
                 </Badge>
@@ -595,10 +597,10 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium">创作失败</span>
+                <span className="text-sm font-medium">{tEditor("failed")}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                {currentJob.errorMessage || "未知错误"}
+                {currentJob.errorMessage || tCommon("error")}
               </p>
             </CardContent>
           </Card>
@@ -610,11 +612,11 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-                <span className="text-sm font-medium">创作成功</span>
-                <Badge variant="secondary" className="text-xs">{generatedAssets.length} 张</Badge>
+                <span className="text-sm font-medium">{tEditor("success")}</span>
+                <Badge variant="secondary" className="text-xs">{tEditor("images", { count: generatedAssets.length })}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                图片已自动保存到素材库，AI 已智能命名和打标签
+                {tEditor("savedToLibrary")}
               </p>
               <div className="grid grid-cols-4 gap-3">
                 {generatedAssets.map((asset) => (

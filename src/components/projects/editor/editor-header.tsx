@@ -13,6 +13,7 @@ import { EditorCreditsButton } from "./editor-credits-button";
 import { BetaBadge } from "@/components/ui/beta-badge";
 import { useEditor } from "./editor-context";
 import type { EditorProject, EditorUser } from "./editor-types";
+import { useTranslations } from "next-intl";
 
 interface EditorHeaderProps {
   projectId: string;
@@ -26,6 +27,7 @@ export function EditorHeader({
   user,
 }: EditorHeaderProps) {
   const { setShowSettings } = useEditor();
+  const t = useTranslations("editor");
 
   return (
     <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 gap-4 shrink-0">
@@ -61,7 +63,7 @@ export function EditorHeader({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>项目设置</p>
+              <p>{t("projectSettings")}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

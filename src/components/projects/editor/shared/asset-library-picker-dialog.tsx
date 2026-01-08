@@ -20,6 +20,7 @@ import type { AssetWithFullData } from "@/types/asset";
 import { isAssetReady } from "@/lib/utils/asset-status";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface AssetLibraryPickerDialogProps {
   open: boolean;
@@ -39,13 +40,19 @@ export function AssetLibraryPickerDialog({
   selectedAssetIds,
   onConfirm,
   maxSelection = 10,
-  title = "选择素材库图片",
-  description = "从素材库中选择图片作为参考",
+  title,
+  description,
 }: AssetLibraryPickerDialogProps) {
+  const t = useTranslations("projects.assets");
+  const tCommon = useTranslations("common");
+  const tToast = useTranslations("toasts");
   const [assets, setAssets] = useState<AssetWithFullData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
+
+  const dialogTitle = title || t("selectFromLibrary");
+  const dialogDescription = description || t("selectAsReference");
 
   // 加载素材库图片
   useEffect(() => {
@@ -66,8 +73,8 @@ export function AssetLibraryPickerDialog({
         );
         setAssets(imageAssets);
       } catch (error) {
-        console.error("加载素材失败:", error);
-        toast.error("加载素材失败");
+        console.error("Failed to load assets:", error);
+        toast.error(tToast("error.loadAssetFailed"));
       } finally {
         setIsLoading(false);
       }
@@ -89,7 +96,7 @@ export function AssetLibraryPickerDialog({
       setTempSelectedIds(tempSelectedIds.filter((id) => id !== assetId));
     } else {
       if (tempSelectedIds.length >= maxSelection) {
-        toast.warning(`最多只能选择 ${maxSelection} 张图片`);
+        toast.warning(t("selected", { current: maxSelection, max: maxSelection }));
         return;
       }
       setTempSelectedIds([...tempSelectedIds, assetId]);
@@ -118,8 +125,8 @@ export function AssetLibraryPickerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col gap-4 min-h-0">
@@ -128,14 +135,14 @@ export function AssetLibraryPickerDialog({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="搜索素材名称或标签..."
+                placeholder={t("search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
             <Badge variant="secondary">
-              已选 {tempSelectedIds.length}/{maxSelection}
+              {t("selected", { current: tempSelectedIds.length, max: maxSelection })}
             </Badge>
           </div>
 
@@ -153,11 +160,11 @@ export function AssetLibraryPickerDialog({
                   <ImageIcon className="w-8 h-8 text-primary" />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery ? "未找到匹配的素材" : "暂无图片素材"}
+                  {searchQuery ? t("noMatch") : t("noImages")}
                 </p>
                 {!searchQuery && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    请先在素材库中创建一些图片素材
+                    {t("createFirst")}
                   </p>
                 )}
               </div>
@@ -219,13 +226,13 @@ export function AssetLibraryPickerDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            取消
+            {tCommon("cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={tempSelectedIds.length === 0}
           >
-            确认选择 ({tempSelectedIds.length})
+            {t("confirmSelection", { count: tempSelectedIds.length })}
           </Button>
         </div>
       </DialogContent>

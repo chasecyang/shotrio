@@ -13,6 +13,7 @@ import { AssetWithFullData } from "@/types/asset";
 import { isAssetReady } from "@/lib/utils/asset-status";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface ReferenceAssetSelectorProps {
   projectId: string;
@@ -27,6 +28,8 @@ export function ReferenceAssetSelector({
   onSelectionChange,
   maxSelection = 14,
 }: ReferenceAssetSelectorProps) {
+  const t = useTranslations("projects.assets");
+  const tToast = useTranslations("toasts");
   const [assets, setAssets] = useState<AssetWithFullData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,8 +45,8 @@ export function ReferenceAssetSelector({
         });
         setAssets(result.assets);
       } catch (error) {
-        console.error("加载素材失败:", error);
-        toast.error("加载素材失败");
+        console.error("Failed to load assets:", error);
+        toast.error(tToast("error.loadAssetFailed"));
       } finally {
         setIsLoading(false);
       }
@@ -64,7 +67,7 @@ export function ReferenceAssetSelector({
       onSelectionChange(selectedAssetIds.filter((id) => id !== assetId));
     } else {
       if (selectedAssetIds.length >= maxSelection) {
-        toast.error(`最多选择 ${maxSelection} 张参考图`);
+        toast.error(t("selected", { current: maxSelection, max: maxSelection }));
         return;
       }
       onSelectionChange([...selectedAssetIds, assetId]);
@@ -83,7 +86,7 @@ export function ReferenceAssetSelector({
         <div className="flex-1 relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="搜索素材..."
+            placeholder={t("search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8"
@@ -95,7 +98,7 @@ export function ReferenceAssetSelector({
         {selectedAssetIds.length > 0 && (
           <Button variant="ghost" size="sm" onClick={clearSelection}>
             <X className="h-4 w-4 mr-1" />
-            清除
+            {t("clear")}
           </Button>
         )}
       </div>
@@ -110,7 +113,7 @@ export function ReferenceAssetSelector({
           </div>
         ) : filteredAssets.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {searchQuery ? "未找到匹配的素材" : "暂无素材"}
+            {searchQuery ? t("noMatch") : t("empty")}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">

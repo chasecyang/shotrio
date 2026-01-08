@@ -14,10 +14,13 @@ import { toast } from "sonner";
 import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
 import { useVideoPlayback } from "@/hooks/use-video-playback";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 
 export function EditingModeLayout() {
   const { state, setTimeline } = useEditor();
   const { project, timeline } = state;
+  const t = useTranslations("editor");
+  const tToast = useTranslations("toasts");
 
   // 自动保存
   useTimelineAutosave(timeline);
@@ -34,7 +37,7 @@ export function EditingModeLayout() {
       if (result.success && result.timeline) {
         setTimeline(result.timeline);
       } else {
-        toast.error(result.error || "加载时间轴失败");
+        toast.error(result.error || tToast("error.loadTimelineFailed"));
       }
     };
 
@@ -49,7 +52,7 @@ export function EditingModeLayout() {
       {timeline && (
         <div className="flex items-center px-4 py-2 border-b shrink-0">
           <span className="text-xs text-muted-foreground">
-            {timeline.clips.length} 个片段
+            {t("clips", { count: timeline.clips.length })}
           </span>
         </div>
       )}

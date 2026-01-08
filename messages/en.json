@@ -29,7 +29,10 @@
     "aiSuggestion": "AI Suggestion",
     "accept": "Accept",
     "reject": "Reject",
-    "aiGenerateOptimize": "AI Generate/Optimize"
+    "aiGenerateOptimize": "AI Generate/Optimize",
+    "generationFailed": "Generation failed, please retry",
+    "viewerHint": "Double-click to zoom · Scroll to scale · Drag to pan",
+    "preview": "Preview"
   },
   "beta": {
     "label": "BETA",
@@ -431,6 +434,16 @@
         "grid": "Grid View",
         "list": "List View"
       },
+      "search": "Search assets...",
+      "clear": "Clear",
+      "noMatch": "No matching assets",
+      "noImages": "No image assets",
+      "createFirst": "Please create image assets in library first",
+      "selectFromLibrary": "Select Library Images",
+      "selectAsReference": "Select images from library as reference",
+      "selected": "Selected {current}/{max}",
+      "confirmSelection": "Confirm Selection ({count})",
+      "noStyles": "No available styles",
       "generation": {
         "title": "AI Asset Generation",
         "subtitle": "Generate images from text descriptions using AI",
@@ -486,6 +499,17 @@
           "generated": "Successfully generated {count} image(s) and saved to asset library"
         }
       }
+    },
+    "textAsset": {
+      "editTitle": "Edit Text Asset",
+      "createTitle": "Create Text Asset",
+      "name": "Asset Name",
+      "namePlaceholder": "E.g.: John character biography",
+      "tags": "Tags",
+      "tagsPlaceholder": "Enter tag and press Enter",
+      "content": "Content",
+      "noContent": "*No content*",
+      "markdownSupport": "Supports Markdown syntax..."
     }
   },
   "footer": {
@@ -896,6 +920,46 @@
       "title": "Desktop Only",
       "description": "The Editor requires a larger screen. Please visit on a desktop device for the best experience.",
       "backToProjects": "Back to Projects"
+    },
+    "projectSettings": "Project Settings",
+    "expandAgent": "Expand Agent Conversation",
+    "interrupted": "Interrupted",
+    "clips": "{count} clips",
+    "versionHistory": "Version History",
+    "versions": "{count} versions",
+    "seconds": "{count}s",
+    "times": "{count} times",
+    "assetGeneration": {
+      "title": "AI Creative Assets",
+      "advancedParams": "Advanced Parameters",
+      "aspectRatio": "Aspect Ratio",
+      "resolution": "Resolution",
+      "quantity": "Quantity",
+      "images": "{count} images",
+      "processing": "Processing",
+      "generate": "Generate",
+      "creating": "AI is creating...",
+      "failed": "Creation failed",
+      "success": "Creation successful",
+      "savedToLibrary": "Images saved to library with AI-generated names and tags",
+      "selectReference": "Click to select reference images from library",
+      "multipleReference": "Select multiple images as reference",
+      "selectedImages": "Selected {count} reference images",
+      "successGenerated": "Successfully generated {count} images",
+      "aspectRatios": {
+        "ultrawide": "21:9 (Ultra-wide)",
+        "widescreen": "16:9 (Widescreen)",
+        "standard32": "3:2",
+        "standard43": "4:3",
+        "square": "1:1 (Square)",
+        "portrait34": "3:4 (Portrait)",
+        "portrait23": "2:3",
+        "portrait916": "9:16 (Vertical)"
+      },
+      "placeholders": {
+        "withReference": "Create based on reference images, e.g.: Adjust to warm sunset tones, keep pose and expression...",
+        "withoutReference": "Describe what you want to create, e.g.: A 30-year-old Asian woman, short hair, professional attire..."
+      }
     },
     "agent": {
       "conversationStatus": {
