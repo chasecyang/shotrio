@@ -5,7 +5,7 @@ import { getUserProjects } from "@/lib/actions/project";
 export default async function ProjectsPage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/?login=true&redirect=/projects");
   }
 
   const projects = await getUserProjects();

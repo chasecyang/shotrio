@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MediaViewer } from "@/components/ui/media-viewer";
+import { AssetDetailView } from "./shared/asset-detail-view";
 import {
   AssetFilter,
   AssetFilterOptions,
@@ -142,9 +142,8 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   const [filterOptions, setFilterOptions] =
     useState<AssetFilterOptions>(DEFAULT_FILTER);
 
-  // 媒体查看器状态
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerAsset, setViewerAsset] = useState<AssetWithFullData | null>(
+  // 详情视图状态
+  const [selectedAsset, setSelectedAsset] = useState<AssetWithFullData | null>(
     null
   );
 
@@ -203,10 +202,30 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
       setEditingTextAsset(asset);
       setTextAssetDialogOpen(true);
     } else {
-      setViewerAsset(asset);
-      setViewerOpen(true);
+      setSelectedAsset(asset);
     }
   };
+
+  // 返回网格视图
+  const handleBackToGrid = () => {
+    setSelectedAsset(null);
+  };
+
+  // 素材更新后刷新
+  const handleAssetUpdated = () => {
+    loadAssets({ search: filterOptions.search });
+  };
+
+  // 当 allAssets 更新时，同步更新 selectedAsset
+  useEffect(() => {
+    if (selectedAsset) {
+      const updated = allAssets.find((a) => a.id === selectedAsset.id);
+      if (updated && updated !== selectedAsset) {
+        setSelectedAsset(updated);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allAssets]);
 
   // 处理删除
   const handleDelete = (asset: AssetWithFullData) => {
@@ -303,6 +322,20 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
   };
 
   if (!project) return null;
+
+  // 如果有选中的素材，显示详情视图
+  if (selectedAsset) {
+    return (
+      <div className="h-full flex flex-col bg-background">
+        <AssetDetailView
+          asset={selectedAsset}
+          onBack={handleBackToGrid}
+          onRetry={handleRetry}
+          onAssetUpdated={handleAssetUpdated}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -447,16 +480,6 @@ export function AssetGalleryPanel({ userId }: AssetGalleryPanelProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* 媒体查看器 */}
-      {viewerAsset && (
-        <MediaViewer
-          open={viewerOpen}
-          onOpenChange={setViewerOpen}
-          asset={viewerAsset}
-          onRetry={handleRetry}
-        />
-      )}
 
       {/* 悬浮操作栏 */}
       {selectedAssetIds.size > 0 && (

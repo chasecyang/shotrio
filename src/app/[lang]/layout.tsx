@@ -12,6 +12,9 @@ import { ClarityScript } from '@/components/integrations/clarity-script';
 import { getCurrentUser } from '@/lib/auth/auth-utils';
 import { generatePageMetadata, homepageMetadata } from '@/lib/seo/metadata';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { Suspense } from 'react';
+import { LoginDialogProvider } from '@/components/auth/login-dialog-context';
+import { LoginDialog } from '@/components/auth/login-dialog';
 
 // 英文字体
 const syne = Syne({
@@ -86,7 +89,12 @@ export default async function RootLayout({
       >
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            {children}
+            <Suspense fallback={null}>
+              <LoginDialogProvider>
+                {children}
+                <LoginDialog />
+              </LoginDialogProvider>
+            </Suspense>
             <Toaster />
             <ChatwootProvider user={user} />
           </NextIntlClientProvider>

@@ -130,7 +130,7 @@ export default async function CreditsPage() {
   // Check user login status
   const balanceResult = await getCreditBalance();
   if (!balanceResult.success && balanceResult.error === "未登录") {
-    redirect("/login");
+    redirect("/?login=true&redirect=/credits");
   }
 
   return (

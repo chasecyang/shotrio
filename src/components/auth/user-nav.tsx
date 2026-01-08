@@ -52,7 +52,7 @@ function UserNavSidebar({ user }: { user: UserNavProps['user'] }) {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.push('/login');
+    router.push('/');
     router.refresh();
   };
 
@@ -183,7 +183,7 @@ function UserNavDefault({ user }: { user: UserNavProps['user'] }) {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.push('/login');
+    router.push('/');
     router.refresh();
   };
 

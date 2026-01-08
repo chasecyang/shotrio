@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "@/i18n/routing";
 import { authClient } from "@/lib/auth/auth-client";
 import { Button } from "@/components/ui/button";
 import { UserNav } from "@/components/auth/user-nav";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useLoginDialog } from "@/components/auth/login-dialog-context";
 
 interface AuthButtonProps {
   initialUser?: {
@@ -20,7 +20,7 @@ interface AuthButtonProps {
 }
 
 export function AuthButton({ initialUser }: AuthButtonProps) {
-  const router = useRouter();
+  const { openLoginDialog } = useLoginDialog();
   const { data: session } = authClient.useSession();
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('nav');
@@ -62,16 +62,16 @@ export function AuthButton({ initialUser }: AuthButtonProps) {
 
   return (
     <div className="flex items-center gap-2 sm:gap-3">
-      <Button 
-        onClick={() => router.push('/login')} 
+      <Button
+        onClick={() => openLoginDialog()}
         variant="ghost"
         size="sm"
         className="hidden sm:inline-flex"
       >
         {t('login')}
       </Button>
-      <Button 
-        onClick={() => router.push('/login')}
+      <Button
+        onClick={() => openLoginDialog()}
         size="sm"
       >
         {t('startCreating')}

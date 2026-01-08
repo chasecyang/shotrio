@@ -11,7 +11,7 @@ export default async function ProjectIdLayout({ children }: ProjectIdLayoutProps
   // 验证用户登录
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/?login=true&redirect=/projects");
   }
 
   // 父级 layout 已经提供了 sidebar，这里只需要渲染子内容

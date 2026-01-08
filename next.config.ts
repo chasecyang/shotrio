@@ -40,7 +40,21 @@ const nextConfig: NextConfig = {
     serverActions:{
       bodySizeLimit: '10mb',
     }
-  }
+  },
+  async redirects() {
+    return [
+      {
+        source: '/:lang/register',
+        destination: '/:lang?login=true',
+        permanent: true,
+      },
+      {
+        source: '/:lang/login',
+        destination: '/:lang?login=true',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

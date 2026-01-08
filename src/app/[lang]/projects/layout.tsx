@@ -11,7 +11,7 @@ export default async function ProjectsLayout({ children }: ProjectsLayoutProps) 
   // 验证用户登录
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/?login=true&redirect=/projects");
   }
 
   return <>{children}</>;

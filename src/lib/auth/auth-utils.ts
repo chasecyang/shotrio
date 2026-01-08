@@ -20,15 +20,15 @@ export async function getCurrentUser() {
  */
 export async function requireAdmin() {
   const user = await getCurrentUser();
-  
+
   if (!user) {
-    redirect("/login");
+    redirect("/?login=true&redirect=/admin");
   }
-  
+
   if (user.role !== Role.ADMIN) {
     redirect("/");
   }
-  
+
   return user;
 }
 
@@ -37,11 +37,11 @@ export async function requireAdmin() {
  */
 export async function requireAuth() {
   const user = await getCurrentUser();
-  
+
   if (!user) {
-    redirect("/login");
+    redirect("/?login=true&redirect=/projects");
   }
-  
+
   return user;
 }
 

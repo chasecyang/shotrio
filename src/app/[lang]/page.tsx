@@ -6,9 +6,9 @@ import { BetaBanner } from "@/components/ui/beta-banner";
 import { Link } from "@/i18n/routing";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
 import { HeroQuickStart } from "@/components/home/hero-quick-start";
+import { HomeLoginButton } from "@/components/home/login-button";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
 import {
-  ArrowRight,
   Sparkles,
   FileText,
   Layout,
@@ -134,12 +134,7 @@ export default async function Home() {
                   <HeroQuickStart />
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <Link href="/login">
-                      <Button size="lg" className="h-14 px-8 text-lg rounded-full">
-                        {t("getStarted")}
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </Button>
-                    </Link>
+                    <HomeLoginButton variant="hero" />
                     <Link href="/pricing">
                       <Button variant="outline" size="lg" className="h-14 px-8 text-lg rounded-full border-primary/20 hover:bg-primary/5">
                         {t("pricing.viewPricing")}
@@ -255,12 +250,7 @@ export default async function Home() {
                 </p>
               </FadeIn>
               <FadeIn delay={0.2}>
-                <Link href="/login">
-                  <Button size="lg" className="h-16 px-12 text-lg rounded-full font-bold">
-                    {t("cta.button")}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+                <HomeLoginButton variant="cta" />
               </FadeIn>
             </div>
           </div>

@@ -11,12 +11,11 @@ interface EditorPageProps {
 }
 
 export default async function EditorPage({ params, searchParams }: EditorPageProps) {
+  const { id: projectId } = await params;
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect(`/?login=true&redirect=/projects/${projectId}/editor`);
   }
-
-  const { id: projectId } = await params;
   const { view } = await searchParams;
 
   return (
@@ -44,7 +43,7 @@ async function EditorWrapper({
   }
 
   if (!user) {
-    redirect("/login");
+    redirect(`/?login=true&redirect=/projects/${projectId}/editor`);
   }
 
   return (
