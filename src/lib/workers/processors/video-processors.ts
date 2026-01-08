@@ -96,13 +96,15 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       const imageAsset = await db.query.asset.findFirst({
         where: eq(asset.id, assetIdOrUrl),
         with: {
-          imageData: true,
+          imageDataList: true,
         },
       });
-      if (!imageAsset?.imageData?.imageUrl) {
+      // 找到激活的 imageData 版本
+      const activeImageData = imageAsset?.imageDataList?.find((img: { isActive: boolean }) => img.isActive);
+      if (!activeImageData?.imageUrl) {
         throw new Error(`无法找到图片资产或图片 URL: ${assetIdOrUrl}`);
       }
-      return imageAsset.imageData.imageUrl;
+      return activeImageData.imageUrl;
     };
 
     // 解析起始帧和结束帧的真实 URL
@@ -399,7 +401,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
         eq(asset.assetType, "video")
       ),
       with: {
-        videoData: true,
+        videoDataList: true,
       },
     });
 
@@ -407,9 +409,13 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       throw new Error("没有找到任何视频");
     }
 
+    // 辅助函数：获取激活的 videoData
+    const getActiveVideoData = (v: typeof videos[0]) =>
+      v.videoDataList?.find((vd: { isActive: boolean }) => vd.isActive);
+
     // 过滤出已完成的视频（有 videoUrl 的视频）
     // 注意：videoUrl 现在在 videoData 表中
-    const completedVideos = videos.filter((v) => v.videoData?.videoUrl);
+    const completedVideos = videos.filter((v) => getActiveVideoData(v)?.videoUrl);
 
     if (completedVideos.length === 0) {
       throw new Error("没有已完成的视频");
@@ -430,7 +436,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       .filter((v): v is NonNullable<typeof v> => v !== undefined);
 
     // 计算总时长（duration 现在在 videoData 表中，是毫秒，需要转换为秒）
-    const totalDuration = sortedVideos.reduce((sum, v) => sum + ((v.videoData?.duration || 0) / 1000), 0);
+    const totalDuration = sortedVideos.reduce((sum, v) => sum + ((getActiveVideoData(v)?.duration || 0) / 1000), 0);
 
     await updateJobProgress(
       {
@@ -442,12 +448,15 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     );
 
     // 基础实现：返回视频列表供前端处理（从 videoData 读取）
-    const videoList = sortedVideos.map((v, index) => ({
-      videoId: v.id,
-      order: index + 1,
-      videoUrl: v.videoData!.videoUrl!,
-      duration: (v.videoData?.duration || 0) / 1000, // 转换为秒
-    }));
+    const videoList = sortedVideos.map((v, index) => {
+      const activeVD = getActiveVideoData(v);
+      return {
+        videoId: v.id,
+        order: index + 1,
+        videoUrl: activeVD!.videoUrl!,
+        duration: (activeVD?.duration || 0) / 1000, // 转换为秒
+      };
+    });
 
     await updateJobProgress(
       {

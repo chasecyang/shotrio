@@ -633,17 +633,21 @@ export async function getAssetsByIds(assetIds: string[]): Promise<{
     const assetsData = await db.query.asset.findMany({
       where: and(inArray(asset.id, assetIds), eq(asset.userId, session.user.id)),
       with: {
-        imageData: true,
+        imageDataList: true,
       },
     });
 
     // 转换为返回格式，计算 displayUrl
-    const assets = assetsData.map((a) => ({
-      id: a.id,
-      name: a.name,
-      assetType: a.assetType as AssetTypeEnum,
-      displayUrl: a.imageData?.thumbnailUrl ?? a.imageData?.imageUrl ?? null,
-    }));
+    const assets = assetsData.map((a) => {
+      // 找到激活的 imageData 版本
+      const activeImageData = a.imageDataList?.find((img: { isActive: boolean }) => img.isActive);
+      return {
+        id: a.id,
+        name: a.name,
+        assetType: a.assetType as AssetTypeEnum,
+        displayUrl: activeImageData?.thumbnailUrl ?? activeImageData?.imageUrl ?? null,
+      };
+    });
 
     return {
       success: true,

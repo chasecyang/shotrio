@@ -2,7 +2,7 @@
 // - ElevenLabs Sound Effect V2: 音效生成
 // - Suno Music Generation: 背景音乐生成
 
-import { KIE_API_BASE_URL, getKieApiKey } from "./config";
+import { KIE_API_BASE_URL, getKieApiKey, getKieCallbackUrl } from "./config";
 import { createTask, waitForTaskCompletion } from "./task";
 
 // ============= 类型定义 =============
@@ -222,7 +222,9 @@ export async function generateMusic(
     requestBody.weirdnessConstraint = input.weirdnessConstraint;
   if (input.audioWeight !== undefined) requestBody.audioWeight = input.audioWeight;
   if (input.personaId) requestBody.personaId = input.personaId;
-  if (input.callBackUrl) requestBody.callBackUrl = input.callBackUrl;
+
+  // 回调 URL（API 必填，但我们使用轮询方式获取结果）
+  requestBody.callBackUrl = input.callBackUrl || getKieCallbackUrl();
 
   console.log("[Kie Audio] 发起音乐生成请求:", requestBody);
 
@@ -264,7 +266,7 @@ export async function getMusicTaskDetails(
   const apiKey = getKieApiKey();
 
   const response = await fetch(
-    `${KIE_API_BASE_URL}/record-info?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_API_BASE_URL}/generate/record-info?taskId=${encodeURIComponent(taskId)}`,
     {
       method: "GET",
       headers: {
