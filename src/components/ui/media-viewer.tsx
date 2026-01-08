@@ -362,24 +362,12 @@ export function MediaViewer({
     }
 
     if (!asset.latestJobId) {
-      console.error("无法找到任务信息:", {
-        assetId: asset.id,
-        assetName: asset.name,
-        latestJobId: asset.latestJobId,
-      });
-      toast.error("无法找到相关任务信息，请查看控制台了解详情");
+      toast.error("无法找到相关任务信息");
       return;
     }
 
-    try {
-      console.log("正在重试任务:", asset.latestJobId);
-      await onRetry(asset.latestJobId);
-      toast.success("已重新提交任务");
-      onOpenChange(false);
-    } catch (error) {
-      console.error("重试失败:", error);
-      toast.error("重试失败");
-    }
+    await onRetry(asset.latestJobId);
+    onOpenChange(false);
   };
 
   return (

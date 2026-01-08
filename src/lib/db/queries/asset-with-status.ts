@@ -137,7 +137,7 @@ export async function queryAssetsWithFullData(
       .where(inArray(job.imageDataId, imageDataIds));
 
     for (const row of imageJobs) {
-      if (row.rn === 1 && row.imageDataId) {
+      if (Number(row.rn) === 1 && row.imageDataId) {
         // 找到对应的 assetId
         const assetData = assetsData.find((a: any) =>
           a.imageDataList?.some((v: any) => v.id === row.imageDataId)
@@ -160,7 +160,7 @@ export async function queryAssetsWithFullData(
       .where(inArray(job.videoDataId, videoDataIds));
 
     for (const row of videoJobs) {
-      if (row.rn === 1 && row.videoDataId) {
+      if (Number(row.rn) === 1 && row.videoDataId) {
         const assetData = assetsData.find((a: any) =>
           a.videoDataList?.some((v: any) => v.id === row.videoDataId)
         );
@@ -189,7 +189,7 @@ export async function queryAssetsWithFullData(
       );
 
     for (const row of fallbackJobs) {
-      if (row.rn === 1 && row.assetId && !jobsMap.has(row.assetId)) {
+      if (Number(row.rn) === 1 && row.assetId && !jobsMap.has(row.assetId)) {
         jobsMap.set(row.assetId, row.job as Job);
       }
     }

@@ -171,7 +171,9 @@ export async function retryJob(jobId: string): Promise<{
       projectId: originalJob.projectId,
       type: originalJob.type,
       status: "pending",
-      assetId: originalJob.assetId, // 复制 assetId，支持重试
+      assetId: originalJob.assetId,
+      imageDataId: originalJob.imageDataId,
+      videoDataId: originalJob.videoDataId,
       progress: 0,
       currentStep: 0,
       totalSteps: originalJob.totalSteps,

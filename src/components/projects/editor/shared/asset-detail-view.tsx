@@ -402,13 +402,7 @@ export function AssetDetailView({
       return;
     }
 
-    try {
-      await onRetry(asset.latestJobId);
-      toast.success("已重新提交任务");
-    } catch (error) {
-      console.error("重试失败:", error);
-      toast.error("重试失败");
-    }
+    await onRetry(asset.latestJobId);
   };
 
   return (
@@ -631,8 +625,8 @@ export function AssetDetailView({
         </div>
 
         {/* 右侧：信息面板 */}
-        <div className="w-[360px] h-full border-l flex flex-col bg-background">
-          <ScrollArea className="flex-1">
+        <div className="w-[360px] border-l flex flex-col bg-background min-h-0">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-4 space-y-4">
               {/* 名称和日期 */}
               <div className="space-y-2">
@@ -836,11 +830,7 @@ export function AssetDetailView({
               {isFailed && onRetry && (
                 <>
                   <Separator />
-                  <Button
-                    onClick={handleRetry}
-                    className="w-full gap-2"
-                    variant="destructive"
-                  >
+                  <Button onClick={handleRetry} className="w-full gap-2">
                     <RefreshCw className="h-4 w-4" />
                     重试生成
                   </Button>

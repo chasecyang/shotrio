@@ -4,15 +4,14 @@ import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
-import { 
-  AlertCircle, 
-  Coins, 
-  Plus, 
-  Check, 
-  X, 
-  Image as ImageIcon, 
-  Loader2, 
-  Maximize2 
+import {
+  AlertCircle,
+  Coins,
+  Check,
+  X,
+  Image as ImageIcon,
+  Loader2,
+  Pencil
 } from "lucide-react";
 import {
   Tooltip,
@@ -556,7 +555,7 @@ export const PendingActionMessage = memo(function PendingActionMessage({
                     className="h-7 w-7"
                     disabled={isLoading}
                   >
-                    <Maximize2 className="h-3.5 w-3.5" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">

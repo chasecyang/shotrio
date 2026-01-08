@@ -20,7 +20,7 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
   const [mode, setMode] = useState<ChatMode>("collapsed");
   const [expandedPosition, setExpandedPosition] = useState<ExpandedPosition>("left");
   const [isInitialized, setIsInitialized] = useState(false);
-  // 拖拽预览状态
+  // 拖拽预览状态（仅展开时使用）
   const [targetPosition, setTargetPosition] = useState<ExpandedPosition | null>(null);
 
   // 从 localStorage 恢复状态
@@ -81,7 +81,16 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
     return null;
   }
 
-  // 预览区域组件
+  // 收起状态：悬浮球固定在右下角
+  if (mode === "collapsed") {
+    return (
+      <div className="fixed bottom-6 right-6 z-50">
+        <FloatingChatInput onExpand={handleExpand} />
+      </div>
+    );
+  }
+
+  // 展开状态的预览区域组件
   const PreviewOverlay = targetPosition && (
     <div className="fixed inset-0 pointer-events-none z-30">
       <div className={cn(
@@ -94,7 +103,7 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
     </div>
   );
 
-  // 底部模式：使用 absolute 定位浮动，底部模式不提供收起状态
+  // 底部模式：使用 absolute 定位浮动
   if (expandedPosition === "bottom") {
     return (
       <>
@@ -124,22 +133,13 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
           expandedPosition === "right" ? "order-last" : "order-first"
         )}
       >
-        {mode === "collapsed" ? (
-          <FloatingChatInput
-            position={expandedPosition}
-            onExpand={handleExpand}
-            onPositionChange={handlePositionChange}
-            onTargetPositionChange={handleTargetPositionChange}
-          />
-        ) : (
-          <FloatingAgentCard
-            projectId={projectId}
-            position={expandedPosition}
-            onPositionChange={handlePositionChange}
-            onCollapse={handleCollapse}
-            onTargetPositionChange={handleTargetPositionChange}
-          />
-        )}
+        <FloatingAgentCard
+          projectId={projectId}
+          position={expandedPosition}
+          onPositionChange={handlePositionChange}
+          onCollapse={handleCollapse}
+          onTargetPositionChange={handleTargetPositionChange}
+        />
       </div>
     </>
   );
