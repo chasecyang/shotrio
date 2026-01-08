@@ -246,3 +246,87 @@ export async function editAssetImage(
   }
 }
 
+/**
+ * 重新生成素材图片（创建新版本）
+ * 使用现有资产的生成参数创建新版本
+ */
+export async function regenerateAssetImage(
+  assetId: string
+): Promise<GenerateAssetImageJobResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    // 获取现有素材
+    const { getAssetWithFullData } = await import("./crud");
+    const assetResult = await getAssetWithFullData(assetId);
+
+    if (!assetResult.success || !assetResult.asset) {
+      return { success: false, error: assetResult.error || "素材不存在" };
+    }
+
+    const existingAsset = assetResult.asset;
+
+    // 验证是否可以重新生成
+    if (existingAsset.sourceType !== "generated") {
+      return { success: false, error: "只能重新生成 AI 生成的素材" };
+    }
+
+    if (existingAsset.assetType !== "image") {
+      return { success: false, error: "此方法仅支持图片素材" };
+    }
+
+    if (!existingAsset.prompt) {
+      return { success: false, error: "缺少生成参数（prompt）" };
+    }
+
+    // 创建新版本
+    const { createAssetVersion } = await import("./crud");
+    const versionResult = await createAssetVersion(assetId, {
+      prompt: existingAsset.prompt,
+      modelUsed: existingAsset.modelUsed || "nano-banana-pro",
+      generationConfig: existingAsset.generationConfig || JSON.stringify({
+        aspectRatio: "16:9",
+        resolution: "2K",
+        numImages: 1,
+      }),
+      sourceAssetIds: existingAsset.sourceAssetIds || undefined,
+    });
+
+    if (!versionResult.success || !versionResult.versionId) {
+      return { success: false, error: versionResult.error || "创建版本失败" };
+    }
+
+    // 创建图片生成任务（关联到新版本）
+    const jobResult = await createJob({
+      userId: session.user.id,
+      projectId: existingAsset.projectId,
+      type: "asset_image_generation",
+      assetId: assetId,
+      imageDataId: versionResult.versionId,
+      inputData: {},
+    });
+
+    if (!jobResult.success || !jobResult.jobId) {
+      return { success: false, error: jobResult.error || "创建任务失败" };
+    }
+
+    return {
+      success: true,
+      assetId,
+      jobId: jobResult.jobId,
+    };
+  } catch (error) {
+    console.error("重新生成素材失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "重新生成失败",
+    };
+  }
+}
+

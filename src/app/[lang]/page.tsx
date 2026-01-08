@@ -7,7 +7,9 @@ import { Link } from "@/i18n/routing";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
 import { HeroQuickStart } from "@/components/home/hero-quick-start";
 import { HomeLoginButton } from "@/components/home/login-button";
+import { TemplateGallery } from "@/components/home/template-gallery";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
+import { getPublicTemplates } from "@/lib/actions/project/template";
 import {
   Sparkles,
   FileText,
@@ -22,6 +24,7 @@ import { getTranslations } from "next-intl/server";
 export default async function Home() {
   const t = await getTranslations("home");
   const user = await getCurrentUser();
+  const templates = await getPublicTemplates({ limit: 6 });
 
   const features = [
     {
@@ -146,6 +149,9 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {/* Template Gallery - 示例项目展示 */}
+        {templates.length > 0 && <TemplateGallery templates={templates} />}
 
         {/* Features Grid */}
         <section className="py-24 md:py-32 relative">

@@ -35,6 +35,7 @@ import {
   User,
   MapPin,
   Package,
+  Pencil,
 } from "lucide-react";
 import { generateAssetImage, editAssetImage } from "@/lib/actions/asset/generate-asset";
 import type { ImageResolution } from "@/types/asset";
@@ -68,12 +69,14 @@ const ASPECT_RATIO_OPTIONS: Array<{ label: string; value: AspectRatio }> = [
 ];
 
 export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps) {
-  const { 
+  const {
     state,
     setSelectedSourceAssets,
+    clearEditingAsset,
   } = useEditor();
 
   const { assetGeneration } = state;
+  const { editingAsset, prefillParams } = assetGeneration;
   const t = useTranslations("credits");
   const tToast = useTranslations("toasts");
 
@@ -92,6 +95,24 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9");
   const [resolution, setResolution] = useState<ImageResolution>("2K");
   const [numImages, setNumImages] = useState(1);
+
+  // 是否正在编辑素材
+  const isEditing = editingAsset !== null;
+
+  // 预填充表单参数（当从素材编辑进入时）
+  useEffect(() => {
+    if (prefillParams) {
+      if (prefillParams.prompt) {
+        setPrompt(prefillParams.prompt);
+      }
+      if (prefillParams.aspectRatio) {
+        setAspectRatio(prefillParams.aspectRatio);
+      }
+      if (prefillParams.resolution) {
+        setResolution(prefillParams.resolution);
+      }
+    }
+  }, [prefillParams]);
 
   // 任务状态
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
@@ -121,9 +142,14 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
         const result: AssetImageGenerationResult = (currentJob.resultData || {}) as AssetImageGenerationResult;
         setGeneratedAssets(result.assets || []);
         toast.success(`成功生成 ${result.assets?.length || 0} 张图片`);
-        
+
         // 注意：素材列表刷新由 editor-context.tsx 中的 useTaskRefresh 统一处理
-        
+
+        // 如果是编辑模式，清除编辑状态
+        if (isEditing) {
+          clearEditingAsset();
+        }
+
         // 清空当前任务ID
         setTimeout(() => {
           setCurrentJobId(null);
@@ -137,7 +163,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       toast.error(currentJob.errorMessage || tToast("error.generationFailed"));
       setCurrentJobId(null);
     }
-  }, [currentJob, tToast]);
+  }, [currentJob, tToast, isEditing, clearEditingAsset]);
 
   // 加载选中的素材详情
   useEffect(() => {
@@ -274,6 +300,33 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
           </div>
           <Badge variant="outline" className="text-xs">Nano Banana</Badge>
         </div>
+
+        {/* 编辑模式提示 */}
+        {isEditing && editingAsset && (
+          <div className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary/20">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Pencil className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-sm truncate">
+                正在编辑: <span className="font-medium">{editingAsset.name}</span>
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs shrink-0"
+              onClick={() => {
+                clearEditingAsset();
+                setPrompt("");
+                setAspectRatio("16:9");
+                setResolution("2K");
+                setNumImages(1);
+                setSelectedSourceAssets([]);
+              }}
+            >
+              取消编辑
+            </Button>
+          </div>
+        )}
 
         {/* 引导区域 */}
         <div className="rounded-lg border bg-gradient-to-br from-primary/5 via-primary/3 to-transparent p-4">

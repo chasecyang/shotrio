@@ -15,6 +15,9 @@ interface AssetGroupProps {
   onAssetClick: (asset: AssetWithFullData) => void;
   onAssetDelete: (asset: AssetWithFullData) => void;
   onSelectChange: (assetId: string, selected: boolean) => void;
+  onRegenerate?: (asset: AssetWithFullData) => void;
+  onEdit?: (asset: AssetWithFullData) => void;
+  onSetActiveVersion?: (assetId: string, versionId: string) => void;
 }
 
 export function AssetGroup({
@@ -26,6 +29,9 @@ export function AssetGroup({
   onAssetClick,
   onAssetDelete,
   onSelectChange,
+  onRegenerate,
+  onEdit,
+  onSetActiveVersion,
 }: AssetGroupProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -70,6 +76,9 @@ export function AssetGroup({
               onDelete={onAssetDelete}
               onClick={onAssetClick}
               onSelectChange={onSelectChange}
+              onRegenerate={onRegenerate}
+              onEdit={onEdit}
+              onSetActiveVersion={onSetActiveVersion}
             />
           ))}
         </div>

@@ -1,11 +1,12 @@
 "use client";
 
 import { Link, usePathname } from "@/i18n/routing";
-import { 
-  Palette, 
+import {
+  Palette,
   LayoutDashboard,
   Home,
   Ticket,
+  FileVideo,
   // Users,
   // Settings,
   // FileText,
@@ -43,6 +44,11 @@ const navItems: NavItem[] = [
     titleKey: "artStyles.sidebarTitle",
     href: "/admin/art-styles",
     icon: Palette,
+  },
+  {
+    titleKey: "templates.sidebarTitle",
+    href: "/admin/templates",
+    icon: FileVideo,
   },
   {
     titleKey: "redeemCodes.title",

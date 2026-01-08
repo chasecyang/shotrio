@@ -147,6 +147,13 @@
       "selectForPreview": "Please select styles to generate preview",
       "selectForDelete": "Please select styles to delete",
       "sidebarTitle": "Art Styles"
+    },
+    "templates": {
+      "title": "Template Management",
+      "subtitle": "Manage example project templates displayed on homepage",
+      "sidebarTitle": "Templates",
+      "description": "Mark existing projects as example templates to display on homepage",
+      "detail": "Manage example project templates, set showcase videos and categories to attract users"
     }
   },
   "auth": {

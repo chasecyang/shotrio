@@ -762,6 +762,13 @@
       "selectForPreview": "请先选择要生成预览图的风格",
       "selectForDelete": "请先选择要删除的风格",
       "sidebarTitle": "美术风格"
+    },
+    "templates": {
+      "title": "示例模板管理",
+      "subtitle": "管理首页展示的示例项目模板",
+      "sidebarTitle": "示例模板",
+      "description": "将现有项目标记为示例模板，展示在首页",
+      "detail": "管理示例项目模板，设置展示视频和分类，吸引用户体验产品"
     }
   },
   "agent": {

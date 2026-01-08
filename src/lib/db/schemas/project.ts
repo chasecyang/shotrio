@@ -310,6 +310,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     fields: [project.styleId],
     references: [artStyle.id],
   }),
+  template: one(projectTemplate), // 模板信息（如果是模板项目）
   assets: many(asset), // 包含图片和视频
   jobs: many(job),
   conversations: many(conversation),
@@ -550,4 +551,28 @@ export const timelineClipRelations = relations(timelineClip, ({ one }) => ({
   }),
 }));
 
+// 9. 项目模板表 (Project Template) - 与 project 一对一关系
+// 只有被标记为模板的项目才会有记录，避免 project 表字段膨胀
+export const projectTemplate = pgTable("project_template", {
+  projectId: text("project_id")
+    .primaryKey()
+    .references(() => project.id, { onDelete: "cascade" }),
 
+  videoUrl: text("video_url"), // 模板展示视频 URL
+  thumbnail: text("thumbnail"), // 模板缩略图
+  category: text("category"), // 分类：romance/suspense/comedy/action/fantasy 等
+  order: integer("order").default(0).notNull(), // 排序权重（越大越靠前）
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const projectTemplateRelations = relations(projectTemplate, ({ one }) => ({
+  project: one(project, {
+    fields: [projectTemplate.projectId],
+    references: [project.id],
+  }),
+}));

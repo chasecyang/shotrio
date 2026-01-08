@@ -4,10 +4,10 @@
 []积分不足不应该提交任务，现在会积分不足会进入worker然后失败
 []首页支持对话框创建项目
 [x]agent function用户没有积分的时候，应该弹付费提示
-[]agent function的扩大icon改成编辑icon
+[x]agent function的扩大icon改成编辑icon
 [x]使用nano banana pro模型
 []header余额没有随着agent扣款而刷新
-[]提供重新生成图片的能力
+[x]提供重新生成图片的能力
 []用户未登录的时候也要让他可以看到输入框
 
 

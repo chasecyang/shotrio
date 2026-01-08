@@ -6,7 +6,8 @@ import { useTaskPolling } from "@/hooks/use-task-polling";
 import { useTaskRefresh } from "@/hooks/use-task-refresh";
 import type { Job } from "@/types/job";
 import { refreshProject } from "@/lib/actions/project/refresh";
-import type { GenerationHistoryItem, AssetWithFullData } from "@/types/asset";
+import type { GenerationHistoryItem, AssetWithFullData, ImageResolution } from "@/types/asset";
+import type { AspectRatio } from "@/lib/services/image.service";
 import type { TimelineDetail } from "@/types/timeline";
 import { queryAssets } from "@/lib/actions/asset";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
@@ -14,11 +15,21 @@ import type { CreditCost } from "@/lib/utils/credit-calculator";
 // 编辑器模式
 export type EditorMode = "asset-management" | "editing";
 
+// 编辑参数预填充
+export interface PrefillParams {
+  prompt?: string;
+  aspectRatio?: AspectRatio;
+  resolution?: ImageResolution;
+}
+
 // 素材生成状态
 export interface AssetGenerationState {
   mode: "text-to-image" | "image-to-image";
   selectedSourceAssets: string[]; // 素材ID数组
   generationHistory: GenerationHistoryItem[];
+  // 编辑素材相关
+  editingAsset: AssetWithFullData | null;
+  prefillParams: PrefillParams | null;
 }
 
 // 播放状态
@@ -96,7 +107,9 @@ type EditorAction =
   | { type: "UPDATE_PLAYBACK"; payload: Partial<PlaybackState> }
   | { type: "SET_SHOW_SETTINGS"; payload: boolean }
   | { type: "SET_ACTION_EDITOR"; payload: ActionEditorData }
-  | { type: "CLEAR_ACTION_EDITOR" };
+  | { type: "CLEAR_ACTION_EDITOR" }
+  | { type: "SET_EDITING_ASSET"; payload: { asset: AssetWithFullData | null; prefillParams?: PrefillParams } }
+  | { type: "CLEAR_EDITING_ASSET" };
 
 // 初始状态
 const initialState: EditorState = {
@@ -111,6 +124,8 @@ const initialState: EditorState = {
     mode: "text-to-image",
     selectedSourceAssets: [],
     generationHistory: [],
+    editingAsset: null,
+    prefillParams: null,
   },
   playback: {
     isPlaying: false,
@@ -277,7 +292,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         actionEditor: undefined,
         previousView: undefined,
       };
-      
+
       if (state.previousView === "editing") {
         updates.mode = "editing";
       } else if (state.previousView === "settings") {
@@ -287,12 +302,38 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         updates.mode = "asset-management";
         updates.showSettings = false;
       }
-      
+
       return {
         ...state,
         ...updates,
       };
     }
+
+    case "SET_EDITING_ASSET":
+      return {
+        ...state,
+        assetGeneration: {
+          ...state.assetGeneration,
+          editingAsset: action.payload.asset,
+          prefillParams: action.payload.prefillParams || null,
+          // 如果有 sourceAssetIds，设置为选中
+          selectedSourceAssets: action.payload.asset?.sourceAssetIds || [],
+          // 根据是否有 sourceAssetIds 自动切换模式
+          mode: (action.payload.asset?.sourceAssetIds?.length ?? 0) > 0
+            ? "image-to-image"
+            : "text-to-image",
+        },
+      };
+
+    case "CLEAR_EDITING_ASSET":
+      return {
+        ...state,
+        assetGeneration: {
+          ...state.assetGeneration,
+          editingAsset: null,
+          prefillParams: null,
+        },
+      };
 
     default:
       return state;
@@ -330,6 +371,9 @@ interface EditorContextType {
   // 参数编辑面板相关方法
   setActionEditor: (data: ActionEditorData) => void;
   clearActionEditor: () => void;
+  // 素材编辑相关方法
+  setEditingAsset: (asset: AssetWithFullData | null, prefillParams?: PrefillParams) => void;
+  clearEditingAsset: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -466,6 +510,14 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "CLEAR_ACTION_EDITOR" });
   }, []);
 
+  const setEditingAsset = useCallback((asset: AssetWithFullData | null, prefillParams?: PrefillParams) => {
+    dispatch({ type: "SET_EDITING_ASSET", payload: { asset, prefillParams } });
+  }, []);
+
+  const clearEditingAsset = useCallback(() => {
+    dispatch({ type: "CLEAR_EDITING_ASSET" });
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -482,6 +534,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setShowSettings,
       setActionEditor,
       clearActionEditor,
+      setEditingAsset,
+      clearEditingAsset,
       jobs,
       refreshJobs,
     }),
@@ -499,6 +553,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setShowSettings,
       setActionEditor,
       clearActionEditor,
+      setEditingAsset,
+      clearEditingAsset,
       jobs,
       refreshJobs,
     ]
