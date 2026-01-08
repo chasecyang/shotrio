@@ -66,10 +66,10 @@ export const DisplayStepCard = memo(function DisplayStepCard({
       <div
         className={cn(
           "flex items-center gap-2 text-xs px-2 py-1.5 rounded-md border",
-          toolCall.status === "completed" && "bg-green-50 border-green-200 text-green-700 dark:bg-green-950/30 dark:border-green-900 dark:text-green-400",
-          toolCall.status === "failed" && "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400",
-          toolCall.status === "executing" && "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/30 dark:border-blue-900 dark:text-blue-400",
-          toolCall.status === "awaiting_confirmation" && "bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950/30 dark:border-orange-900 dark:text-orange-400"
+          toolCall.status === "completed" && "bg-green-50 border-green-200 text-green-700 dark:bg-green-950/40 dark:border-green-800/80 dark:text-green-400",
+          toolCall.status === "failed" && "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/40 dark:border-red-800/80 dark:text-red-400",
+          toolCall.status === "executing" && "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800/80 dark:text-blue-400",
+          toolCall.status === "awaiting_confirmation" && "bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950/40 dark:border-orange-800/80 dark:text-orange-400"
         )}
       >
         {getStatusIcon()}

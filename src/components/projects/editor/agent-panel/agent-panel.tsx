@@ -541,8 +541,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
         </div>
 
         {/* Input */}
-        <div className="border-t border-border p-4 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="relative flex items-end w-full p-2 bg-muted/50 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring focus-within:border-ring transition-all">
+        <div className="border-t border-border/80 p-4 shrink-0 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/70">
+          <div className="relative flex items-end w-full p-2 bg-muted/40 rounded-xl border border-input/80 focus-within:ring-1 focus-within:ring-ring focus-within:border-ring dark:focus-within:shadow-[0_0_8px_oklch(0.60_0.16_40/0.2)] transition-all">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}

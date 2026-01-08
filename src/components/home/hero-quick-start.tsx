@@ -111,7 +111,7 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
           onKeyDown={handleKeyDown}
           placeholder={t("hero.inputPlaceholder") || "告诉我你想创作什么..."}
           disabled={isLoading}
-          className="h-14 pl-5 pr-14 text-base rounded-full border-primary/20 bg-background/80 backdrop-blur-sm shadow-lg focus-visible:ring-primary/30"
+          className="h-14 pl-5 pr-14 text-base rounded-full border-border/60 bg-background/80 backdrop-blur-sm shadow-lg dark:border-border/80 dark:shadow-2xl focus-visible:ring-primary/30 dark:focus-visible:ring-primary/50"
         />
         <Button
           size="icon"
