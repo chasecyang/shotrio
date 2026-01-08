@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
@@ -9,17 +9,40 @@ import { createProject } from "@/lib/actions/project";
 import { createConversation } from "@/lib/actions/conversation/crud";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useLoginDialog } from "@/components/auth/login-dialog-context";
 
-export function HeroQuickStart() {
+interface HeroQuickStartProps {
+  isAuthenticated?: boolean;
+}
+
+export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps) {
   const router = useRouter();
   const t = useTranslations("home");
+  const { openLoginDialog } = useLoginDialog();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // 组件挂载时恢复保存的输入
+  useEffect(() => {
+    const savedMessage = sessionStorage.getItem("pendingQuickStartMessage");
+    if (savedMessage) {
+      setInput(savedMessage);
+      sessionStorage.removeItem("pendingQuickStartMessage");
+    }
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
+
+    // 未登录时保存输入并打开登录对话框
+    if (!isAuthenticated) {
+      sessionStorage.setItem("pendingQuickStartMessage", userMessage);
+      openLoginDialog("/");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -67,7 +90,7 @@ export function HeroQuickStart() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, router]);
+  }, [input, isLoading, router, isAuthenticated, openLoginDialog]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

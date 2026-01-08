@@ -53,7 +53,7 @@ export async function generateImage(
   const provider = getImageServiceProvider();
   
   if (provider === "kie") {
-    const { generateImage: kieGenerateImage } = await import("@/lib/services/kie.service");
+    const { generateImage: kieGenerateImage } = await import("@/lib/services/kie");
     return kieGenerateImage(input);
   } else {
     const { generateImage: falGenerateImage } = await import("@/lib/services/fal.service");
@@ -70,7 +70,7 @@ export async function editImage(
   const provider = getImageServiceProvider();
   
   if (provider === "kie") {
-    const { editImage: kieEditImage } = await import("@/lib/services/kie.service");
+    const { editImage: kieEditImage } = await import("@/lib/services/kie");
     return kieEditImage(input);
   } else {
     const { editImage: falEditImage } = await import("@/lib/services/fal.service");

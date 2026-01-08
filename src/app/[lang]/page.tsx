@@ -1,9 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BetaBanner } from "@/components/ui/beta-banner";
-import { Link } from "@/i18n/routing";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
 import { HeroQuickStart } from "@/components/home/hero-quick-start";
 import { HomeLoginButton } from "@/components/home/login-button";
@@ -133,18 +131,7 @@ export default async function Home() {
               </FadeIn>
               
               <FadeIn delay={0.3}>
-                {user ? (
-                  <HeroQuickStart />
-                ) : (
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <HomeLoginButton variant="hero" />
-                    <Link href="/pricing">
-                      <Button variant="outline" size="lg" className="h-14 px-8 text-lg rounded-full border-primary/20 hover:bg-primary/5">
-                        {t("pricing.viewPricing")}
-                      </Button>
-                    </Link>
-                  </div>
-                )}
+                <HeroQuickStart isAuthenticated={!!user} />
               </FadeIn>
             </div>
           </div>

@@ -77,7 +77,7 @@ async function generateVideoWithVeo(
   const {
     generateVeo3Video,
     waitForVeo3Video,
-  } = await import("@/lib/services/kie.service");
+  } = await import("@/lib/services/kie");
 
   console.log(`[VideoService] 使用 Veo 3.1 首尾帧生成视频`);
 
