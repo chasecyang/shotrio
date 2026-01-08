@@ -31,8 +31,8 @@ export function EditorHeader({
     <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 gap-4 shrink-0">
       {/* 左侧：Logo + 项目切换 + 项目设置 */}
       <div className="flex items-center gap-3 min-w-0">
-        <Link 
-          href="/projects" 
+        <Link
+          href="/"
           className="flex items-center gap-2 hover:opacity-70 transition-opacity shrink-0"
         >
           <span className="text-xl font-bold">
