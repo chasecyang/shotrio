@@ -208,7 +208,7 @@ export function FloatingAgentCard({
           // 创建新对话
           const result = await createConversation({
             projectId,
-            title: t("editor.agent.panel.newConversation"),
+            title: t("editor.agent.panel.newChat"),
             context: agent.currentContext,
           });
 
@@ -305,7 +305,7 @@ export function FloatingAgentCard({
       if (agent.state.isNewConversation || !conversationId) {
         const result = await createConversation({
           projectId,
-          title: t('editor.agent.panel.newConversation'),
+          title: t('editor.agent.panel.newChat'),
           context: agent.currentContext
         });
 
@@ -531,7 +531,7 @@ export function FloatingAgentCard({
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <h3 className="text-sm font-semibold truncate">
                         {agent.state.isNewConversation
-                          ? t('editor.agent.panel.newConversation')
+                          ? t('editor.agent.panel.newChat')
                           : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
                       </h3>
                       <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -601,7 +601,7 @@ export function FloatingAgentCard({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{t('editor.agent.panel.newConversation')}</p>
+                <p>{t('editor.agent.panel.newChat')}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -761,7 +761,7 @@ export function FloatingAgentCard({
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <h3 className="text-sm font-semibold truncate">
                     {agent.state.isNewConversation
-                      ? t('editor.agent.panel.newConversation')
+                      ? t('editor.agent.panel.newChat')
                       : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
                   </h3>
                   <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -832,7 +832,7 @@ export function FloatingAgentCard({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{t('editor.agent.panel.newConversation')}</p>
+              <p>{t('editor.agent.panel.newChat')}</p>
             </TooltipContent>
           </Tooltip>
 

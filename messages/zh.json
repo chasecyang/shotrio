@@ -95,7 +95,7 @@
       "inputPlaceholder": "告诉我你想创作什么...",
       "inputHint": "按 Enter 开始创作",
       "createProjectFailed": "创建项目失败",
-      "createConversationFailed": "创建对话失败",
+      "createChatFailed": "创建对话失败",
       "startFailed": "启动失败，请重试"
     },
     "features": {
@@ -959,7 +959,7 @@
       "taskCancelled": "任务已取消",
       "taskResubmitted": "任务已重新提交",
       "videoGenerated": "视频生成完成",
-      "conversationDeleted": "已删除对话",
+      "chatDeleted": "已删除对话",
       "codeGenerated": "兑换码生成成功",
       "codeCopied": "已复制到剪贴板",
       "previewGenerated": "预览图生成成功",
@@ -989,9 +989,9 @@
       "removeTagFailed": "删除标签失败",
       "generationFailed": "生成失败",
       "startBatchGenerationFailed": "启动批量生成失败",
-      "loadConversationsFailed": "加载对话列表失败",
-      "loadConversationFailed": "加载对话失败",
-      "deleteConversationFailed": "删除对话失败",
+      "loadChatsFailed": "加载对话列表失败",
+      "loadChatFailed": "加载对话失败",
+      "deleteChatFailed": "删除对话失败",
       "confirmActionFailed": "确认操作失败",
       "rejectActionFailed": "拒绝操作失败",
       "enterValidCredits": "请输入有效的积分数量",
@@ -1119,15 +1119,15 @@
       }
     },
     "agent": {
-      "conversationStatus": {
+      "chatStatus": {
         "awaitingApproval": "待批准",
         "active": "运行中",
         "completed": "已完成"
       },
-      "conversationList": {
+      "chatList": {
         "title": "对话历史",
         "empty": "还没有对话",
-        "newConversation": "新建对话",
+        "newChat": "新建对话",
         "deleteConfirm": "删除对话",
         "deleteDescription": "确定要删除这个对话吗？此操作无法撤销。",
         "justNow": "刚刚",
@@ -1164,10 +1164,10 @@
         ]
       },
       "panel": {
-        "newConversation": "新对话",
+        "newChat": "新对话",
         "aiAssistant": "AI 助手",
-        "startNewConversation": "开始新对话",
-        "startConversation": "开始对话",
+        "startNewChat": "开始新对话",
+        "startChat": "开始对话",
         "welcomeMessage": "告诉我你想做什么，我可以帮你生成分镜、创建素材、管理项目等",
         "emptyState": "创作你的故事",
         "scrollToBottom": "回到底部",

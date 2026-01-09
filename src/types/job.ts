@@ -22,7 +22,6 @@ export interface Job {
   assetId: string | null; // 关联的资产ID（保留用于向后兼容）
   imageDataId: string | null; // 关联的图片版本ID
   videoDataId: string | null; // 关联的视频版本ID
-  parentJobId?: string | null; // 父任务ID
   progress: number; // 0-100
   totalSteps: number | null;
   currentStep: number;
@@ -107,7 +106,6 @@ export interface CreateJobParams {
   videoDataId?: string; // 关联的视频版本ID
   inputData: unknown;
   totalSteps?: number;
-  parentJobId?: string; // 父任务ID
 }
 
 // 更新任务进度的参数

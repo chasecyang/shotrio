@@ -42,7 +42,7 @@ interface ConversationListProps {
 const getStatusConfig = (t: (key: string) => string) => ({
   awaiting_approval: {
     icon: AlertCircle,
-    label: t('editor.agent.conversationStatus.awaitingApproval'),
+    label: t('editor.agent.chatStatus.awaitingApproval'),
     className: "text-amber-600 dark:text-amber-400",
     badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium",
     animationClassName: "",
@@ -50,7 +50,7 @@ const getStatusConfig = (t: (key: string) => string) => ({
   },
   active: {
     icon: Clock,
-    label: t('editor.agent.conversationStatus.active'),
+    label: t('editor.agent.chatStatus.active'),
     className: "text-blue-500",
     badgeClassName: "bg-blue-500/10 text-blue-500",
     animationClassName: "animate-pulse",
@@ -58,7 +58,7 @@ const getStatusConfig = (t: (key: string) => string) => ({
   },
   completed: {
     icon: CheckCircle,
-    label: t('editor.agent.conversationStatus.completed'),
+    label: t('editor.agent.chatStatus.completed'),
     className: "text-muted-foreground",
     badgeClassName: "bg-muted/50 text-muted-foreground",
     animationClassName: "",
@@ -103,10 +103,10 @@ export const ConversationList = memo(function ConversationList({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return t('editor.agent.conversationList.justNow');
-    if (minutes < 60) return t('editor.agent.conversationList.minutesAgo', { minutes });
-    if (hours < 24) return t('editor.agent.conversationList.hoursAgo', { hours });
-    if (days < 7) return t('editor.agent.conversationList.daysAgo', { days });
+    if (minutes < 1) return t('editor.agent.chatList.justNow');
+    if (minutes < 60) return t('editor.agent.chatList.minutesAgo', { minutes });
+    if (hours < 24) return t('editor.agent.chatList.hoursAgo', { hours });
+    if (days < 7) return t('editor.agent.chatList.daysAgo', { days });
     return new Date(date).toLocaleDateString();
   };
 
@@ -121,7 +121,7 @@ export const ConversationList = memo(function ConversationList({
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {t('editor.agent.conversationList.newConversation')}
+            {t('editor.agent.chatList.newChat')}
           </Button>
         </div>
       )}
@@ -168,7 +168,7 @@ export const ConversationList = memo(function ConversationList({
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
               <MessageSquare className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                {t('editor.agent.conversationList.empty')}
+                {t('editor.agent.chatList.empty')}
               </p>
             </div>
           ) : (
@@ -238,9 +238,9 @@ export const ConversationList = memo(function ConversationList({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('editor.agent.conversationList.deleteConfirm')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('editor.agent.chatList.deleteConfirm')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('editor.agent.conversationList.deleteDescription')}
+              {t('editor.agent.chatList.deleteDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

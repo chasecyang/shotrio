@@ -263,9 +263,6 @@ export const job: any = pgTable("job", {
   imageDataId: text("image_data_id").references(() => imageData.id, { onDelete: "cascade" }),
   videoDataId: text("video_data_id").references(() => videoData.id, { onDelete: "cascade" }),
 
-  // 任务依赖关系
-  parentJobId: text("parent_job_id").references(() => job.id, { onDelete: "cascade" }),
-
   // 进度信息
   progress: integer("progress").default(0).notNull(), // 0-100
   totalSteps: integer("total_steps"), // 总步骤数
@@ -391,14 +388,6 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   videoData: one(videoData, {
     fields: [job.videoDataId],
     references: [videoData.id],
-  }),
-  parentJob: one(job, {
-    fields: [job.parentJobId],
-    references: [job.id],
-    relationName: "jobHierarchy",
-  }),
-  childJobs: many(job, {
-    relationName: "jobHierarchy",
   }),
 }));
 

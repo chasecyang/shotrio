@@ -98,7 +98,6 @@ export async function createJob(params: CreateJobParams): Promise<{
       progress: 0,
       currentStep: 0,
       totalSteps: params.totalSteps || null,
-      parentJobId: params.parentJobId || null,
       inputData: params.inputData, // JSONB type, no need to stringify
       progressMessage: null,
       resultData: null,
@@ -119,114 +118,6 @@ export async function createJob(params: CreateJobParams): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : "创建任务失败",
-    };
-  }
-}
-
-/**
- * 检查任务嵌套深度
- * 防止无限嵌套的子任务
- */
-async function checkTaskDepth(parentJobId: string | undefined): Promise<{
-  valid: boolean;
-  depth: number;
-  error?: string;
-}> {
-  const MAX_DEPTH = 5; // 最大嵌套深度
-  
-  if (!parentJobId) {
-    return { valid: true, depth: 0 };
-  }
-
-  let depth = 0;
-  let currentParentId: string | null = parentJobId;
-
-  while (currentParentId && depth < MAX_DEPTH + 1) {
-    const parentJob: { parentJobId: string | null } | undefined = await db.query.job.findFirst({
-      where: eq(job.id, currentParentId),
-      columns: {
-        parentJobId: true,
-      },
-    });
-
-    if (!parentJob) {
-      // 父任务不存在
-      return {
-        valid: false,
-        depth,
-        error: "父任务不存在",
-      };
-    }
-
-    depth++;
-    currentParentId = parentJob.parentJobId;
-  }
-
-  if (depth > MAX_DEPTH) {
-    return {
-      valid: false,
-      depth,
-      error: `任务嵌套深度超过限制（最大${MAX_DEPTH}层）`,
-    };
-  }
-
-  return { valid: true, depth };
-}
-
-/**
- * 创建子任务（跳过速率限制检查，但检查嵌套深度）
- * 用于由其他任务自动创建的子任务
- */
-export async function createChildJob(params: CreateJobParams): Promise<{
-  success: boolean;
-  jobId?: string;
-  error?: string;
-}> {
-  try {
-    // 检查任务嵌套深度，防止无限嵌套
-    const depthCheck = await checkTaskDepth(params.parentJobId);
-    if (!depthCheck.valid) {
-      return {
-        success: false,
-        error: depthCheck.error,
-      };
-    }
-
-    const jobId = randomUUID();
-
-    await db.insert(job).values({
-      id: jobId,
-      userId: params.userId,
-      projectId: params.projectId || null,
-      type: params.type,
-      status: "pending",
-      assetId: params.assetId || null, // 关联的资产ID（向后兼容）
-      imageDataId: params.imageDataId || null, // 关联的图片版本ID
-      videoDataId: params.videoDataId || null, // 关联的视频版本ID
-      progress: 0,
-      currentStep: 0,
-      totalSteps: params.totalSteps || null,
-      parentJobId: params.parentJobId || null,
-      inputData: params.inputData, // JSONB type, no need to stringify
-      progressMessage: null,
-      resultData: null,
-      errorMessage: null,
-      isImported: false,
-      createdAt: new Date(),
-      startedAt: null,
-      completedAt: null,
-      updatedAt: new Date(),
-    });
-
-    return {
-      success: true,
-      jobId,
-    };
-  } catch (error) {
-    console.error("创建子任务失败:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "创建子任务失败",
     };
   }
 }

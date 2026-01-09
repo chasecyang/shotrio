@@ -290,7 +290,7 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
       if (agent.state.isNewConversation || !conversationId) {
         const result = await createConversation({ 
           projectId,
-          title: t('editor.agent.panel.newConversation'), // 临时标题，立即会被生成的标题替换
+          title: t('editor.agent.panel.newChat'), // 临时标题，立即会被生成的标题替换
           context: agent.currentContext // 保存当前上下文（选中的剧集、资源等）
         });
         
@@ -413,8 +413,8 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
                 <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex-1 justify-start min-w-0">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <h3 className="text-sm font-semibold truncate">
-                      {agent.state.isNewConversation 
-                        ? t('editor.agent.panel.newConversation')
+                      {agent.state.isNewConversation
+                        ? t('editor.agent.panel.newChat')
                         : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
                     </h3>
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -486,13 +486,13 @@ export function AgentPanel({ projectId }: AgentPanelProps) {
                 size="sm"
                 onClick={handleCreateNewConversation}
                 className="shrink-0"
-                aria-label={t('editor.agent.panel.newConversation')}
+                aria-label={t('editor.agent.panel.newChat')}
               >
                 <MessageSquarePlus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{t('editor.agent.panel.newConversation')}</p>
+              <p>{t('editor.agent.panel.newChat')}</p>
             </TooltipContent>
           </Tooltip>
         </div>

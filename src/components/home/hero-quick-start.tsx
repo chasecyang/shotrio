@@ -68,7 +68,7 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
       });
 
       if (!convResult.success || !convResult.conversationId) {
-        toast.error(convResult.error || t("hero.createConversationFailed"));
+        toast.error(convResult.error || t("hero.createChatFailed"));
         return;
       }
 
