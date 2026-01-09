@@ -184,7 +184,10 @@
       "titleHighlight": "Micro-Dramas",
       "subtitle": "Powerful Control × AI Assistance — Master Every Detail of Your Creation",
       "inputPlaceholder": "Tell me what you want to create...",
-      "inputHint": "Press Enter to start creating"
+      "inputHint": "Press Enter to start creating",
+      "createProjectFailed": "Failed to create project",
+      "createConversationFailed": "Failed to create conversation",
+      "startFailed": "Start failed, please try again"
     },
     "features": {
       "title": "Complete Creation Toolchain",
@@ -280,8 +283,8 @@
     "discover": "Dashboard"
   },
   "projects": {
-    "defaultProjectTitle": "My First Project",
-    "defaultProjectDescription": "Start my micro-drama creation journey",
+    "defaultProjectTitle": "Unnamed Project",
+    "defaultProjectDescription": "Unnamed Description",
     "nav": {
       "characters": "Characters",
       "scenes": "Scenes",

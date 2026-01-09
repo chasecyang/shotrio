@@ -18,6 +18,7 @@ interface HeroQuickStartProps {
 export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps) {
   const router = useRouter();
   const t = useTranslations("home");
+  const tProjects = useTranslations("projects");
   const { openLoginDialog } = useLoginDialog();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -48,12 +49,12 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
     try {
       // 1. 创建项目
       const projectResult = await createProject({
-        title: "未命名项目",
-        description: "未命名描述",
+        title: tProjects("defaultProjectTitle"),
+        description: tProjects("defaultProjectDescription"),
       });
 
       if (!projectResult.success || !projectResult.data) {
-        toast.error(projectResult.error || "创建项目失败");
+        toast.error(projectResult.error || t("hero.createProjectFailed"));
         return;
       }
 
@@ -67,7 +68,7 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
       });
 
       if (!convResult.success || !convResult.conversationId) {
-        toast.error(convResult.error || "创建对话失败");
+        toast.error(convResult.error || t("hero.createConversationFailed"));
         return;
       }
 
@@ -86,11 +87,11 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
       router.push(`/projects/${projectId}/editor`);
     } catch (error) {
       console.error("Quick start failed:", error);
-      toast.error("启动失败，请重试");
+      toast.error(t("hero.startFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, router, isAuthenticated, openLoginDialog]);
+  }, [input, isLoading, router, isAuthenticated, openLoginDialog, t, tProjects]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

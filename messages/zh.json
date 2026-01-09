@@ -93,7 +93,10 @@
       "titleHighlight": "好漫剧",
       "subtitle": "强大的可控性 × AI智能辅助，掌控创作的每个细节",
       "inputPlaceholder": "告诉我你想创作什么...",
-      "inputHint": "按 Enter 开始创作"
+      "inputHint": "按 Enter 开始创作",
+      "createProjectFailed": "创建项目失败",
+      "createConversationFailed": "创建对话失败",
+      "startFailed": "启动失败，请重试"
     },
     "features": {
       "title": "完整的创作工具链",
@@ -189,8 +192,8 @@
     "discover": "控制台"
   },
   "projects": {
-    "defaultProjectTitle": "我的第一个项目",
-    "defaultProjectDescription": "开始我的微短剧创作之旅",
+    "defaultProjectTitle": "未命名项目",
+    "defaultProjectDescription": "未命名描述",
     "nav": {
       "characters": "角色",
       "scenes": "场景",

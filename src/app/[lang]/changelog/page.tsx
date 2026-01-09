@@ -109,13 +109,6 @@ export default async function ChangelogPage() {
         t("entries.1229.item1"),
       ],
     },
-    {
-      date: "2025-12-28",
-      items: [
-        t("entries.1228.item1"),
-        t("entries.1228.item2"),
-      ],
-    },
   ];
 
   return (
