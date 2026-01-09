@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
-import { createProject } from "@/lib/actions/project";
+import { createProject, getUserProjects } from "@/lib/actions/project";
 import { createConversation } from "@/lib/actions/conversation/crud";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -33,13 +33,15 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if (isLoading) return;
 
     const userMessage = input.trim();
 
     // 未登录时保存输入并打开登录对话框
     if (!isAuthenticated) {
-      sessionStorage.setItem("pendingQuickStartMessage", userMessage);
+      if (userMessage) {
+        sessionStorage.setItem("pendingQuickStartMessage", userMessage);
+      }
       openLoginDialog("/");
       return;
     }
@@ -47,44 +49,68 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
     setIsLoading(true);
 
     try {
-      // 1. 创建项目
-      const projectResult = await createProject({
-        title: tProjects("defaultProjectTitle"),
-        description: tProjects("defaultProjectDescription"),
-      });
+      // 有输入内容时：创建项目 + 对话 + 跳转
+      if (userMessage) {
+        // 1. 创建项目
+        const projectResult = await createProject({
+          title: tProjects("defaultProjectTitle"),
+          description: tProjects("defaultProjectDescription"),
+        });
 
-      if (!projectResult.success || !projectResult.data) {
-        toast.error(projectResult.error || t("hero.createProjectFailed"));
-        return;
+        if (!projectResult.success || !projectResult.data) {
+          toast.error(projectResult.error || t("hero.createProjectFailed"));
+          return;
+        }
+
+        const projectId = projectResult.data.id;
+
+        // 2. 创建对话
+        const convResult = await createConversation({
+          projectId,
+          title: userMessage.slice(0, 50),
+          context: { projectId, recentJobs: [] },
+        });
+
+        if (!convResult.success || !convResult.conversationId) {
+          toast.error(convResult.error || t("hero.createChatFailed"));
+          return;
+        }
+
+        const conversationId = convResult.conversationId;
+
+        // 3. 存储 pending 信息到 sessionStorage
+        sessionStorage.setItem(
+          "pendingAgentMessage",
+          JSON.stringify({
+            conversationId,
+            message: userMessage,
+          })
+        );
+
+        // 4. 跳转到编辑器
+        router.push(`/projects/${projectId}/editor`);
+      } else {
+        // 无输入内容时：检查是否有项目，有则进入最近项目，无则创建默认项目
+        const projects = await getUserProjects();
+
+        if (projects && projects.length > 0) {
+          // 有项目：跳转到最近的项目（已按 updatedAt 降序排列）
+          router.push(`/projects/${projects[0].id}/editor`);
+        } else {
+          // 无项目：创建默认项目
+          const projectResult = await createProject({
+            title: tProjects("defaultProjectTitle"),
+            description: tProjects("defaultProjectDescription"),
+          });
+
+          if (!projectResult.success || !projectResult.data) {
+            toast.error(projectResult.error || t("hero.createProjectFailed"));
+            return;
+          }
+
+          router.push(`/projects/${projectResult.data.id}/editor`);
+        }
       }
-
-      const projectId = projectResult.data.id;
-
-      // 2. 创建对话
-      const convResult = await createConversation({
-        projectId,
-        title: userMessage.slice(0, 50),
-        context: { projectId, recentJobs: [] },
-      });
-
-      if (!convResult.success || !convResult.conversationId) {
-        toast.error(convResult.error || t("hero.createChatFailed"));
-        return;
-      }
-
-      const conversationId = convResult.conversationId;
-
-      // 3. 存储 pending 信息到 sessionStorage
-      sessionStorage.setItem(
-        "pendingAgentMessage",
-        JSON.stringify({
-          conversationId,
-          message: userMessage,
-        })
-      );
-
-      // 4. 跳转到编辑器
-      router.push(`/projects/${projectId}/editor`);
     } catch (error) {
       console.error("Quick start failed:", error);
       toast.error(t("hero.startFailed"));
@@ -117,7 +143,7 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
         <Button
           size="icon"
           onClick={handleSubmit}
-          disabled={!input.trim() || isLoading}
+          disabled={isLoading}
           className="absolute right-2 h-10 w-10 rounded-full"
         >
           {isLoading ? (

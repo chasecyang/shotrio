@@ -189,7 +189,7 @@ export async function uploadImageToR2(
       fileName = input.name;
       fileSize = input.size;
 
-      metadata.originalName = input.name;
+      metadata.originalName = encodeURIComponent(input.name);
     }
 
     // 验证内容类型
@@ -309,7 +309,7 @@ export async function uploadVideoToR2(
       fileName = input.name;
       fileSize = input.size;
 
-      metadata.originalName = input.name;
+      metadata.originalName = encodeURIComponent(input.name);
     }
 
     // 验证内容类型
@@ -436,7 +436,7 @@ export async function uploadAudioToR2(
       fileName = input.name;
       fileSize = input.size;
 
-      metadata.originalName = input.name;
+      metadata.originalName = encodeURIComponent(input.name);
     }
 
     // 验证文件大小
