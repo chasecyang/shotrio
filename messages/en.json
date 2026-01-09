@@ -641,6 +641,13 @@
         "feature1": "6 credits/sec",
         "feature2": "~8 seconds per video",
         "feature3": "Audio included"
+      },
+      "audioGeneration": {
+        "title": "AI Audio Generation",
+        "description": "Sound effects and background music powered by ElevenLabs & Suno",
+        "feature1": "1 credit per sound effect",
+        "feature2": "10 credits per music track",
+        "feature3": "High-quality audio output"
       }
     },
     "faq": {
@@ -751,6 +758,40 @@
         "refund": "Refund",
         "bonus": "Bonus",
         "redeem": "Redeem"
+      },
+      "descriptions": {
+        "generation": {
+          "images": "Generated {count} image(s)",
+          "video": "Generated {duration}s video ({type})",
+          "audio": "Generated {audioType}"
+        },
+        "refund": {
+          "image_generation_failed": "Image generation failed, credits refunded",
+          "image_upload_failed": "Image upload failed, credits refunded",
+          "video_generation_failed": "Video generation failed ({type}), credits refunded",
+          "video_upload_failed": "Video upload failed, credits refunded",
+          "audio_generation_failed": "{audioType} generation failed, credits refunded",
+          "audio_upload_failed": "{audioType} upload failed, credits refunded"
+        },
+        "purchase": {
+          "credit_package": "Purchased credit package - {packageType}"
+        },
+        "bonus": {
+          "purchase_bonus": "Purchase bonus"
+        },
+        "redeem": {
+          "code": "Redeem code: {code}"
+        }
+      },
+      "audioTypes": {
+        "sound_effect": "Sound Effect",
+        "bgm": "Background Music",
+        "voiceover": "Voiceover"
+      },
+      "videoTypes": {
+        "t2v": "Text to Video",
+        "i2v": "Image to Video",
+        "flf": "First/Last Frame"
       }
     },
     "orders": {
@@ -766,7 +807,9 @@
     },
     "costs": {
       "imageGeneration": "Image generation: {credits} credits/image",
-      "videoGeneration": "Video (Veo 3.1): {credits} credits/sec"
+      "videoGeneration": "Video (Veo 3.1): {credits} credits/sec",
+      "soundEffect": "Sound effect: {credits} credit/fx",
+      "musicGeneration": "Music: {credits} credits/song"
     },
     "errors": {
       "insufficientCredits": "Insufficient credits",

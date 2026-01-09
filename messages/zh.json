@@ -574,6 +574,13 @@
         "feature1": "6 积分/秒",
         "feature2": "约 8 秒视频",
         "feature3": "自带音频"
+      },
+      "audioGeneration": {
+        "title": "AI 音频生成",
+        "description": "基于 ElevenLabs 和 Suno — 专业的音效和音乐生成",
+        "feature1": "1 积分/音效",
+        "feature2": "10 积分/音乐",
+        "feature3": "高质量音频输出"
       }
     },
     "faq": {
@@ -684,6 +691,40 @@
         "refund": "退款",
         "bonus": "奖励",
         "redeem": "兑换"
+      },
+      "descriptions": {
+        "generation": {
+          "images": "生成 {count} 张图片",
+          "video": "生成 {duration}秒 视频（{type}）",
+          "audio": "生成{audioType}"
+        },
+        "refund": {
+          "image_generation_failed": "图片生成失败，退还积分",
+          "image_upload_failed": "图片上传失败，退还积分",
+          "video_generation_failed": "视频生成失败（{type}），退还积分",
+          "video_upload_failed": "视频上传失败，退还积分",
+          "audio_generation_failed": "{audioType}生成失败，退还积分",
+          "audio_upload_failed": "{audioType}上传失败，退还积分"
+        },
+        "purchase": {
+          "credit_package": "购买积分包 - {packageType}"
+        },
+        "bonus": {
+          "purchase_bonus": "购买赠送"
+        },
+        "redeem": {
+          "code": "兑换码：{code}"
+        }
+      },
+      "audioTypes": {
+        "sound_effect": "音效",
+        "bgm": "背景音乐",
+        "voiceover": "台词配音"
+      },
+      "videoTypes": {
+        "t2v": "文生视频",
+        "i2v": "图生视频",
+        "flf": "首尾帧"
       }
     },
     "orders": {
@@ -699,7 +740,9 @@
     },
     "costs": {
       "imageGeneration": "图片生成：{credits} 积分/张",
-      "videoGeneration": "视频生成 (Veo 3.1)：{credits} 积分/秒"
+      "videoGeneration": "视频生成 (Veo 3.1)：{credits} 积分/秒",
+      "soundEffect": "音效生成：{credits} 积分/个",
+      "musicGeneration": "音乐生成：{credits} 积分/首"
     },
     "errors": {
       "insufficientCredits": "积分不足",

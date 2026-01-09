@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Image as ImageIcon, Video, Check } from "lucide-react";
+import { Sparkles, Image as ImageIcon, Video, Check, Music } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { PricingClientWrapper } from "./pricing-client";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
@@ -103,6 +103,14 @@ export default async function PricingPage() {
                     <Video className="w-4 h-4" />
                     {t("credits.costs.videoGeneration", { credits: CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND })}
                   </Badge>
+                  <Badge variant="outline" className="px-4 py-2 text-sm font-normal gap-2">
+                    <Music className="w-4 h-4" />
+                    {t("credits.costs.soundEffect", { credits: CREDIT_COSTS.SOUND_EFFECT_GENERATION })}
+                  </Badge>
+                  <Badge variant="outline" className="px-4 py-2 text-sm font-normal gap-2">
+                    <Music className="w-4 h-4" />
+                    {t("credits.costs.musicGeneration", { credits: CREDIT_COSTS.MUSIC_GENERATION })}
+                  </Badge>
                 </div>
               </FadeIn>
             </div>
@@ -126,9 +134,9 @@ export default async function PricingPage() {
                 </h2>
               </FadeIn>
 
-              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <StaggerItem>
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                         <ImageIcon className="w-6 h-6 text-primary" aria-hidden="true" />
@@ -156,7 +164,7 @@ export default async function PricingPage() {
                 </StaggerItem>
 
                 <StaggerItem>
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader>
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                         <Video className="w-6 h-6 text-primary" />
@@ -178,6 +186,34 @@ export default async function PricingPage() {
                       <div className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-primary" />
                         <span>{t("pricing.features.videoGeneration.feature3")}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+
+                <StaggerItem>
+                  <Card className="h-full">
+                    <CardHeader>
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                        <Music className="w-6 h-6 text-primary" />
+                      </div>
+                      <CardTitle>{t("pricing.features.audioGeneration.title")}</CardTitle>
+                      <CardDescription>
+                        {t("pricing.features.audioGeneration.description")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span>{t("pricing.features.audioGeneration.feature1")}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span>{t("pricing.features.audioGeneration.feature2")}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span>{t("pricing.features.audioGeneration.feature3")}</span>
                       </div>
                     </CardContent>
                   </Card>

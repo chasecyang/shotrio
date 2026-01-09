@@ -144,11 +144,12 @@ async function processAudioGenerationInternal(
   const spendResult = await spendCredits({
     userId: jobData.userId,
     amount: creditCost,
-    description: `生成${audioTypeLabel}`,
+    description: `descriptions.generation.audio`,
     metadata: {
       jobId: jobData.id,
       projectId,
       audioType: purpose,
+      translationParams: { audioType: purpose },
     },
   });
 
@@ -268,11 +269,12 @@ async function processAudioGenerationInternal(
       await refundCredits({
         userId: jobData.userId,
         amount: creditCost,
-        description: `${audioTypeLabel}生成失败，退还积分`,
+        description: `descriptions.refund.audio_generation_failed`,
         metadata: {
           jobId: jobData.id,
           originalTransactionId: transactionId,
           reason: "generation_failed",
+          translationParams: { audioType: purpose },
         },
       });
     }
@@ -302,11 +304,12 @@ async function processAudioGenerationInternal(
         await refundCredits({
           userId: jobData.userId,
           amount: creditCost,
-          description: `${audioTypeLabel}上传失败，退还积分`,
+          description: `descriptions.refund.audio_upload_failed`,
           metadata: {
             jobId: jobData.id,
             originalTransactionId: transactionId,
             reason: "upload_failed",
+            translationParams: { audioType: purpose },
           },
         });
       }

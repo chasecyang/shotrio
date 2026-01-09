@@ -120,11 +120,12 @@ async function handlePaymentSuccess(data: {
       userId: order.userId,
       amount: order.credits,
       type: TransactionType.PURCHASE,
-      description: `购买积分包 - ${order.packageType}`,
+      description: `descriptions.purchase.credit_package`,
       orderId: order.id,
       metadata: {
         packageType: order.packageType,
         amount: order.amount,
+        translationParams: { packageType: order.packageType },
       },
     });
 
@@ -138,7 +139,7 @@ async function handlePaymentSuccess(data: {
         userId: order.userId,
         amount: order.bonusCredits,
         type: TransactionType.BONUS,
-        description: "购买赠送",
+        description: "descriptions.bonus.purchase_bonus",
         orderId: order.id,
         metadata: {
           bonusPercent,

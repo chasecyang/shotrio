@@ -21,6 +21,41 @@ interface TransactionListProps {
   transactions: CreditTransaction[];
 }
 
+/**
+ * Translate description based on translation key or return raw description for legacy data
+ */
+function translateDescription(
+  description: string,
+  metadata: string | null | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string
+): string {
+  // Check if description is a translation key (starts with "descriptions.")
+  if (description.startsWith("descriptions.")) {
+    try {
+      const parsedMetadata = metadata ? JSON.parse(metadata) : {};
+      const params = { ...(parsedMetadata.translationParams || {}) };
+
+      // Translate nested audioType
+      if (params.audioType) {
+        params.audioType = t(`audioTypes.${params.audioType}`);
+      }
+
+      // Translate nested video type
+      if (params.type && description.includes("video")) {
+        params.type = t(`videoTypes.${params.type}`);
+      }
+
+      return t(description, params);
+    } catch {
+      // If translation fails, return the key as fallback
+      return description;
+    }
+  }
+
+  // Legacy Chinese data: return as-is
+  return description;
+}
+
 const transactionConfig = {
   [TransactionType.PURCHASE]: {
     labelKey: "types.purchase",
@@ -105,7 +140,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
-                      {transaction.description}
+                      {translateDescription(transaction.description, transaction.metadata, t)}
                     </TableCell>
                     <TableCell className={`text-right font-semibold ${config.color}`}>
                       {transaction.amount > 0 ? "+" : ""}

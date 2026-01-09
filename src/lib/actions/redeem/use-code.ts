@@ -81,10 +81,11 @@ export async function useRedeemCode(code: string): Promise<{
         userId,
         amount: redeemCode.credits,
         type: TransactionType.REDEEM,
-        description: `兑换码：${trimmedCode}`,
+        description: `descriptions.redeem.code`,
         metadata: {
           codeId: redeemCode.id,
           code: trimmedCode,
+          translationParams: { code: trimmedCode },
         },
       });
 

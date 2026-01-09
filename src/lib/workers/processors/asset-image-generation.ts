@@ -167,12 +167,13 @@ async function processAssetImageGenerationInternal(
   const spendResult = await spendCredits({
     userId: jobData.userId,
     amount: totalCreditsNeeded,
-    description: `生成 ${numImages} 张图片`,
+    description: `descriptions.generation.images`,
     metadata: {
       jobId: jobData.id,
       projectId,
       numImages,
       costPerImage: CREDIT_COSTS.IMAGE_GENERATION,
+      translationParams: { count: numImages },
     },
   });
 
@@ -258,7 +259,7 @@ async function processAssetImageGenerationInternal(
       await refundCredits({
         userId: jobData.userId,
         amount: totalCreditsNeeded,
-        description: `图片生成失败，退还积分`,
+        description: `descriptions.refund.image_generation_failed`,
         metadata: {
           jobId: jobData.id,
           originalTransactionId: transactionId,
@@ -309,7 +310,7 @@ async function processAssetImageGenerationInternal(
         await refundCredits({
           userId: jobData.userId,
           amount: totalCreditsNeeded,
-          description: `图片上传失败，退还积分`,
+          description: `descriptions.refund.image_upload_failed`,
           metadata: {
             jobId: jobData.id,
             originalTransactionId: transactionId,

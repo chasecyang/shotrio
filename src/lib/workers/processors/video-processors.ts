@@ -137,7 +137,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
     const spendResult = await spendCredits({
       userId: jobData.userId,
       amount: creditsNeeded,
-      description: `生成 ${videoDuration}秒 视频（${type}）`,
+      description: `descriptions.generation.video`,
       metadata: {
         jobId: jobData.id,
         assetId,
@@ -145,6 +145,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         duration: videoDuration,
         type,
         costPerSecond: CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND,
+        translationParams: { duration: videoDuration, type },
       },
     });
 
@@ -186,7 +187,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         await refundCredits({
           userId: jobData.userId,
           amount: creditsNeeded,
-          description: `视频生成失败（${type}），退还积分`,
+          description: `descriptions.refund.video_generation_failed`,
           metadata: {
             jobId: jobData.id,
             assetId,
@@ -194,6 +195,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
             reason: "generation_failed",
             type,
             provider,
+            translationParams: { type },
           },
         });
       }
@@ -232,7 +234,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         await refundCredits({
           userId: jobData.userId,
           amount: creditsNeeded,
-          description: `视频上传失败，退还积分`,
+          description: `descriptions.refund.video_upload_failed`,
           metadata: {
             jobId: jobData.id,
             assetId,

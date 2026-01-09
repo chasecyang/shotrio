@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FloatingChatInput } from "./floating-chat-input";
 import { FloatingAgentCard, ExpandedPosition } from "./floating-agent-card";
+import { AgentChatSkeleton } from "./agent-chat-skeleton";
 import { cn } from "@/lib/utils";
 
 // localStorage keys
@@ -76,9 +77,9 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
     setTargetPosition(target);
   }, []);
 
-  // 等待初始化完成
+  // 等待初始化完成，显示骨架屏
   if (!isInitialized) {
-    return null;
+    return <AgentChatSkeleton position="left" />;
   }
 
   // 收起状态：悬浮球固定在右下角
