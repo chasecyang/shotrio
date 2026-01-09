@@ -197,3 +197,19 @@ export const creditsMetadata = {
     keywords: ['积分', '购买', '余额', '交易记录', 'AI生成'],
   },
 };
+
+/**
+ * Changelog page metadata content
+ */
+export const changelogMetadata = {
+  en: {
+    title: 'Changelog | Shotrio',
+    description: 'Track the latest updates and improvements to Shotrio. See what\'s new in our AI-powered micro-drama creation platform.',
+    keywords: ['Changelog', 'Updates', 'Release Notes', 'What\'s New', 'Features'],
+  },
+  zh: {
+    title: '更新日志 | Shotrio',
+    description: '了解 Shotrio 的最新功能更新与改进。查看我们 AI 微短剧创作平台的最新动态。',
+    keywords: ['更新日志', '更新', '发布说明', '最新动态', '新功能'],
+  },
+};

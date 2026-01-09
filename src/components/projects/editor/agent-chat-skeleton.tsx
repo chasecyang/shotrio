@@ -56,7 +56,15 @@ export function AgentChatSkeleton({ position = "left" }: AgentChatSkeletonProps)
 
   // 左右模式
   return (
-    <div className="w-[380px] h-full flex flex-col bg-card border-r">
+    <div className="w-[380px] h-full">
+      <div
+        className={cn(
+          "h-full",
+          "bg-card/98 backdrop-blur-xl border border-border/70 rounded-2xl shadow-2xl",
+          "dark:border-border/90 dark:shadow-[0_8px_32px_oklch(0_0_0/0.5)]",
+          "flex flex-col overflow-hidden"
+        )}
+      >
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -90,6 +98,7 @@ export function AgentChatSkeleton({ position = "left" }: AgentChatSkeletonProps)
           <Skeleton className="h-10 flex-1 rounded-lg" />
           <Skeleton className="h-10 w-10 rounded-lg" />
         </div>
+      </div>
       </div>
     </div>
   );

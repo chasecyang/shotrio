@@ -53,6 +53,9 @@ export interface AgentState {
 
   // 是否启用自动执行模式（当前会话有效）
   isAutoAcceptEnabled: boolean;
+
+  // 初始加载是否完成（对话列表加载+恢复逻辑）
+  isInitialLoadComplete: boolean;
 }
 
 /**
@@ -70,7 +73,8 @@ type AgentAction =
   | { type: "SET_REFRESHING_CONVERSATIONS"; payload: boolean }
   | { type: "SET_NEW_CONVERSATION"; payload: boolean }
   | { type: "UPDATE_CONVERSATION_TITLE"; payload: { conversationId: string; title: string } }
-  | { type: "SET_AUTO_ACCEPT"; payload: boolean };
+  | { type: "SET_AUTO_ACCEPT"; payload: boolean }
+  | { type: "SET_INITIAL_LOAD_COMPLETE"; payload: boolean };
 
 /**
  * 初始状态
@@ -82,8 +86,9 @@ const initialState: AgentState = {
   conversations: [],
   isLoadingConversations: false,
   isRefreshingConversations: false,
-  isNewConversation: true, // 默认进入新对话模式，提升用户体验
+  isNewConversation: false, // 等待恢复逻辑确定后再设置
   isAutoAcceptEnabled: false, // 默认关闭自动执行模式
+  isInitialLoadComplete: false, // 初始加载未完成
 };
 
 /**
@@ -169,6 +174,12 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
         isAutoAcceptEnabled: action.payload,
       };
 
+    case "SET_INITIAL_LOAD_COMPLETE":
+      return {
+        ...state,
+        isInitialLoadComplete: action.payload,
+      };
+
     default:
       return state;
   }
@@ -213,70 +224,45 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   // 防抖：跟踪刷新状态，避免并发刷新
   const isRefreshingRef = useRef(false);
   const lastRefreshTimeRef = useRef(0);
-  const hasLoadedOnceRef = useRef(false);
 
-  // 加载对话列表（带防抖）
+  // 刷新对话列表（带防抖，仅用于手动刷新，初始加载使用 initializeAgent）
   const refreshConversations = useCallback(async (silent: boolean = false) => {
     // 防止并发刷新
-    if (isRefreshingRef.current) {
-      console.log("[Agent] 跳过并发刷新请求");
-      return;
-    }
+    if (isRefreshingRef.current) return;
 
     // 防抖：1秒内不重复刷新
     const now = Date.now();
-    if (now - lastRefreshTimeRef.current < 1000) {
-      console.log("[Agent] 防抖：跳过过于频繁的刷新");
-      return;
-    }
+    if (now - lastRefreshTimeRef.current < 1000) return;
 
     isRefreshingRef.current = true;
     lastRefreshTimeRef.current = now;
 
-    const isInitialLoad = !hasLoadedOnceRef.current;
-    
-    // 初始加载时显示全屏loading，刷新时只显示刷新指示器
-    if (isInitialLoad) {
-      dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: true });
-    } else if (!silent) {
+    if (!silent) {
       dispatch({ type: "SET_REFRESHING_CONVERSATIONS", payload: true });
     }
 
     try {
       const result = await listConversations(projectId);
       if (result.success && result.conversations) {
-        // 更新对话列表
-        const newConversations = result.conversations.map((conv) => ({
-          id: conv.id,
-          title: conv.title,
-          status: conv.status as "active" | "awaiting_approval" | "completed",
-          lastActivityAt: new Date(conv.lastActivityAt),
-        }));
-
         dispatch({
           type: "SET_CONVERSATIONS",
-          payload: newConversations,
+          payload: result.conversations.map((conv) => ({
+            id: conv.id,
+            title: conv.title,
+            status: conv.status as "active" | "awaiting_approval" | "completed",
+            lastActivityAt: new Date(conv.lastActivityAt),
+          })),
         });
       }
-      hasLoadedOnceRef.current = true;
     } catch (error) {
-      console.error("加载对话列表失败:", error);
-      toast.error("加载对话列表失败");
+      console.error("刷新对话列表失败:", error);
     } finally {
-      if (isInitialLoad) {
-        dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: false });
-      } else {
+      if (!silent) {
         dispatch({ type: "SET_REFRESHING_CONVERSATIONS", payload: false });
       }
       isRefreshingRef.current = false;
     }
   }, [projectId]);
-
-  // 初始加载对话列表（只依赖 projectId，避免循环）
-  useEffect(() => {
-    refreshConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]); // refreshConversations 故意省略，避免循环
 
   // 加载指定对话
   const loadConversation = useCallback(async (conversationId: string) => {
@@ -303,27 +289,78 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     }
   }, [projectId]);
 
-  // 对话列表加载完成后，恢复上次选中的对话
-  const conversationRestoredRef = useRef(false);
+  // 初始加载：并行请求对话列表和上次选中的对话
+  const initialLoadDoneRef = useRef(false);
   useEffect(() => {
-    // 等待对话列表首次加载完成
-    if (!hasLoadedOnceRef.current || state.isLoadingConversations || conversationRestoredRef.current) return;
-    if (state.conversations.length === 0) return;
+    if (initialLoadDoneRef.current) return;
+    initialLoadDoneRef.current = true;
 
-    conversationRestoredRef.current = true;
-    try {
-      const savedId = localStorage.getItem(getConversationStorageKey(projectId));
-      if (savedId) {
-        const exists = state.conversations.some(c => c.id === savedId);
-        if (exists) {
-          loadConversation(savedId);
+    const initializeAgent = async () => {
+      dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: true });
+
+      // 从 localStorage 获取保存的对话 ID
+      let savedConversationId: string | null = null;
+      try {
+        savedConversationId = localStorage.getItem(getConversationStorageKey(projectId));
+      } catch {}
+
+      // 并行请求：对话列表 + 上次对话（如果有）
+      const conversationsPromise = listConversations(projectId);
+      const savedConversationPromise = savedConversationId
+        ? getConversation(savedConversationId)
+        : Promise.resolve(null);
+
+      try {
+        const [conversationsResult, savedConversationResult] = await Promise.all([
+          conversationsPromise,
+          savedConversationPromise,
+        ]);
+
+        // 处理对话列表
+        if (conversationsResult.success && conversationsResult.conversations) {
+          const newConversations = conversationsResult.conversations.map((conv) => ({
+            id: conv.id,
+            title: conv.title,
+            status: conv.status as "active" | "awaiting_approval" | "completed",
+            lastActivityAt: new Date(conv.lastActivityAt),
+          }));
+          dispatch({ type: "SET_CONVERSATIONS", payload: newConversations });
+
+          // 处理上次选中的对话
+          if (savedConversationId && savedConversationResult?.success && savedConversationResult.messages) {
+            // 验证对话仍存在于列表中
+            const exists = newConversations.some(c => c.id === savedConversationId);
+            if (exists) {
+              dispatch({ type: "LOAD_HISTORY", payload: savedConversationResult.messages });
+              dispatch({ type: "SET_CURRENT_CONVERSATION", payload: savedConversationId });
+              dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
+            } else {
+              // 对话已删除
+              localStorage.removeItem(getConversationStorageKey(projectId));
+              dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
+            }
+          } else {
+            // 没有保存的对话或加载失败
+            if (savedConversationId) {
+              localStorage.removeItem(getConversationStorageKey(projectId));
+            }
+            dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
+          }
         } else {
-          // 对话已删除，清除无效存储
-          localStorage.removeItem(getConversationStorageKey(projectId));
+          // 对话列表加载失败
+          dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
         }
+      } catch (error) {
+        console.error("[Agent] 初始加载失败:", error);
+        dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
+      } finally {
+        dispatch({ type: "SET_LOADING_CONVERSATIONS", payload: false });
+        dispatch({ type: "SET_INITIAL_LOAD_COMPLETE", payload: true });
       }
-    } catch {}
-  }, [projectId, state.conversations, state.isLoadingConversations, loadConversation]);
+    };
+
+    initializeAgent();
+  }, [projectId]);
 
   // 创建新对话（懒创建模式：只设置UI状态，不调用API）
   const createNewConversation = useCallback(() => {

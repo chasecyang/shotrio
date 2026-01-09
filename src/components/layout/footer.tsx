@@ -22,22 +22,29 @@ export function Footer() {
 
             {/* Links */}
             <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground">
-              <Link 
-                href="/pricing" 
+              <Link
+                href="/pricing"
                 className="hover:text-foreground transition-colors"
               >
                 {t('footer.pricing')}
               </Link>
               <Separator orientation="vertical" className="h-4 bg-border" />
-              <Link 
-                href="/privacy" 
+              <Link
+                href="/changelog"
+                className="hover:text-foreground transition-colors"
+              >
+                {t('footer.changelog')}
+              </Link>
+              <Separator orientation="vertical" className="h-4 bg-border" />
+              <Link
+                href="/privacy"
                 className="hover:text-foreground transition-colors"
               >
                 {t('footer.privacy')}
               </Link>
               <Separator orientation="vertical" className="h-4 bg-border" />
-              <Link 
-                href="/terms" 
+              <Link
+                href="/terms"
                 className="hover:text-foreground transition-colors"
               >
                 {t('footer.terms')}

@@ -527,8 +527,67 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "pricing": "Pricing",
+    "changelog": "Changelog",
     "copyright": "All rights reserved",
     "tagline": "Frame by Frame"
+  },
+  "changelog": {
+    "badge": "Updates",
+    "title": "What's New",
+    "description": "Track the latest updates and improvements to Shotrio",
+    "entries": {
+      "0109": {
+        "item1": "Asset management UI fully upgraded"
+      },
+      "0108": {
+        "item1": "Audio generation launched (sound effects + background music)",
+        "item2": "Dark mode optimized",
+        "item3": "Video/Image generation capabilities enhanced",
+        "item4": "Template management feature",
+        "item5": "Google One Tap quick login"
+      },
+      "0107": {
+        "item1": "Agent auto-accept mode",
+        "item2": "Asset version management",
+        "item3": "Asset grouping and sorting"
+      },
+      "0106": {
+        "item1": "Veo 3.1 video generation engine integrated",
+        "item2": "Timeline editing feature",
+        "item3": "Video thumbnail preview"
+      },
+      "0105": {
+        "item1": "Auto-apply project style to generated content",
+        "item2": "Editor drag-and-drop interaction optimized",
+        "item3": "Real-time asset parameter editing panel"
+      },
+      "0104": {
+        "item1": "Agent editable parameters for fine-tuning",
+        "item2": "Auto-detect asset types with Markdown support",
+        "item3": "Credit cost tooltip for actions"
+      },
+      "0103": {
+        "item1": "New image generation engine",
+        "item2": "Text asset management",
+        "item3": "Theme toggle added to editor"
+      },
+      "0101": {
+        "item1": "Video editing timeline with zoom and trim",
+        "item2": "Video playback controls integrated",
+        "item3": "Asset gallery filtering and search"
+      },
+      "1231": {
+        "item1": "MediaViewer component for asset preview",
+        "item2": "Video generation retry on failure"
+      },
+      "1229": {
+        "item1": "Beta version launched"
+      },
+      "1228": {
+        "item1": "Storyboard preview in Agent panel",
+        "item2": "Shot size and camera movement mapping"
+      }
+    }
   },
   "legal": {
     "privacy": {
