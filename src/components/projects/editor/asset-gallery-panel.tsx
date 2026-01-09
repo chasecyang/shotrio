@@ -10,11 +10,12 @@ import { regenerateVideoAsset } from "@/lib/actions/asset/crud";
 import { AssetWithFullData, ImageResolution, AssetTypeEnum } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import { toast } from "sonner";
-import { Images, RefreshCw } from "lucide-react";
+import { Images, RefreshCw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
 import { TextAssetDialog } from "./shared/text-asset-dialog";
+import { MediaUploadDialog } from "./shared/media-upload-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
   AlertDialog,
@@ -142,6 +143,7 @@ export function AssetGalleryPanel() {
   const tCommon = useTranslations("common");
 
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithFullData | null>(
     null
@@ -432,22 +434,33 @@ export function AssetGalleryPanel() {
               setFilterOptions({ ...filterOptions, assetTypes: types })
             }
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            onClick={() =>
-              loadAssets({
-                search: filterOptions.search,
-                showLoading: true,
-              })
-            }
-            disabled={assetsLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`}
-            />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={() => setUploadDialogOpen(true)}
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span className="text-xs">{t("upload")}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={() =>
+                loadAssets({
+                  search: filterOptions.search,
+                  showLoading: true,
+                })
+              }
+              disabled={assetsLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${assetsLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+          </div>
         </div>
         {/* 第二行：搜索框 + 排序 + 素材计数 */}
         <div className="flex items-center gap-2">
@@ -557,6 +570,15 @@ export function AssetGalleryPanel() {
         }}
         projectId={project.id}
         asset={editingTextAsset || undefined}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {/* 多媒体上传对话框 */}
+      <MediaUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        projectId={project.id}
+        userId={project.userId}
         onSuccess={handleUploadSuccess}
       />
 

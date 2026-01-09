@@ -41,3 +41,13 @@ export {
   uploadAsset,
 } from "./upload-asset";
 
+// 多媒体上传操作
+export {
+  uploadMediaAsset,
+} from "./upload-media-asset";
+
+// 文本上传操作
+export {
+  uploadTextAsset,
+} from "./upload-text-asset";
+
