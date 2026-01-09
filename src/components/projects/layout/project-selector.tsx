@@ -33,6 +33,8 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorProps) {
+  const t = useTranslations("editor.projectSelector");
+  const tCommon = useTranslations("common");
   const tToast = useTranslations("toasts");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -87,14 +89,14 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="h-10 gap-2 px-3 hover:bg-accent"
           >
             <Box className="h-4 w-4 opacity-70 shrink-0" />
-            <span className="text-xs text-muted-foreground">项目</span>
+            <span className="text-xs text-muted-foreground">{t("project")}</span>
             <span className="font-medium truncate max-w-[200px]">
-              {currentProject ? currentProject.title : "选择项目"}
+              {currentProject ? currentProject.title : t("selectProject")}
             </span>
             <ChevronsUpDown className="h-4 w-4 opacity-50" />
           </Button>
@@ -120,7 +122,7 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
             className="cursor-pointer"
           >
             <Plus className="mr-2 h-4 w-4" />
-            新建项目
+            {t("newProject")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -128,14 +130,14 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>创建新项目</DialogTitle>
+            <DialogTitle>{t("createNewProject")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">项目名称 *</Label>
+              <Label htmlFor="title">{t("projectName")}</Label>
               <Input
                 id="title"
-                placeholder="例如：霸道总裁爱上我"
+                placeholder={t("projectNamePlaceholder")}
                 value={newProject.title}
                 onChange={(e) =>
                   setNewProject({ ...newProject, title: e.target.value })
@@ -144,10 +146,10 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">项目简介</Label>
+              <Label htmlFor="description">{t("projectDescription")}</Label>
               <Textarea
                 id="description"
-                placeholder="简单描述这个项目..."
+                placeholder={t("projectDescriptionPlaceholder")}
                 value={newProject.description}
                 onChange={(e) =>
                   setNewProject({ ...newProject, description: e.target.value })
@@ -163,11 +165,11 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
               onClick={() => setDialogOpen(false)}
               disabled={creating}
             >
-              取消
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleCreateProject} disabled={creating}>
               {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              创建
+              {t("create")}
             </Button>
           </div>
         </DialogContent>

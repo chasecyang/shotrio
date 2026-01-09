@@ -932,6 +932,47 @@
       "description": "The Editor requires a larger screen. Please visit on a desktop device for the best experience.",
       "backToProjects": "Back to Projects"
     },
+    "projectSelector": {
+      "project": "Project",
+      "selectProject": "Select Project",
+      "newProject": "New Project",
+      "createNewProject": "Create New Project",
+      "projectName": "Project Name *",
+      "projectNamePlaceholder": "e.g., My Amazing Story",
+      "projectDescription": "Project Description",
+      "projectDescriptionPlaceholder": "Briefly describe this project...",
+      "create": "Create"
+    },
+    "modeTab": {
+      "assets": "Assets",
+      "editing": "Editing"
+    },
+    "assetFilter": {
+      "all": "All",
+      "image": "Image",
+      "video": "Video",
+      "text": "Text",
+      "sortNewest": "Newest",
+      "sortName": "Name",
+      "sortUsage": "Usage",
+      "searchPlaceholder": "Search assets..."
+    },
+    "assetGallery": {
+      "assetsCount": "{count} assets",
+      "noAssets": "No assets",
+      "noMatchingAssets": "No matching assets",
+      "tryAdjustFilter": "Try adjusting your filters to see more assets",
+      "deleteSuccess": "Deleted {count} asset(s)",
+      "deleteFailed": "Delete failed",
+      "retrySubmitted": "Task resubmitted",
+      "retryFailed": "Retry failed",
+      "regenerating": "Regenerating...",
+      "regenerateFailed": "Regenerate failed",
+      "confirmDelete": "Confirm Delete",
+      "confirmDeleteSingle": "Are you sure you want to delete asset \"{name}\"? This action cannot be undone.",
+      "confirmDeleteBatch": "Are you sure you want to delete {count} asset(s)? This action cannot be undone.",
+      "deleting": "Deleting..."
+    },
     "projectSettings": "Project Settings",
     "expandAgent": "Expand Agent Conversation",
     "interrupted": "Interrupted",

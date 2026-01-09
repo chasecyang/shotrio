@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AssetTypeEnum } from "@/types/asset";
+import { useTranslations } from "next-intl";
 
 export type SortOption = "createdAt" | "name" | "usageCount";
 
@@ -29,21 +30,28 @@ export interface AssetFilterOptions {
   sort: SortOption;
 }
 
-const assetTypeOptions: {
+type AssetTypeOption = {
   value: AssetTypeEnum | "all";
-  label: string;
+  labelKey: "all" | "image" | "video" | "text";
   icon: typeof ImageIcon;
-}[] = [
-  { value: "all", label: "全部", icon: LayoutGrid },
-  { value: "image", label: "图片", icon: ImageIcon },
-  { value: "video", label: "视频", icon: Video },
-  { value: "text", label: "文本", icon: FileText },
+};
+
+const assetTypeOptions: AssetTypeOption[] = [
+  { value: "all", labelKey: "all", icon: LayoutGrid },
+  { value: "image", labelKey: "image", icon: ImageIcon },
+  { value: "video", labelKey: "video", icon: Video },
+  { value: "text", labelKey: "text", icon: FileText },
 ];
 
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "createdAt", label: "最新创建" },
-  { value: "name", label: "名称" },
-  { value: "usageCount", label: "使用次数" },
+type SortOptionItem = {
+  value: SortOption;
+  labelKey: "sortNewest" | "sortName" | "sortUsage";
+};
+
+const sortOptions: SortOptionItem[] = [
+  { value: "createdAt", labelKey: "sortNewest" },
+  { value: "name", labelKey: "sortName" },
+  { value: "usageCount", labelKey: "sortUsage" },
 ];
 
 // 类型 Tab 组件
@@ -53,6 +61,7 @@ interface AssetTypeTabsProps {
 }
 
 export function AssetTypeTabs({ value, onChange }: AssetTypeTabsProps) {
+  const t = useTranslations("editor.assetFilter");
   const currentType: AssetTypeEnum | "all" =
     value.length === 1 ? value[0] : "all";
 
@@ -81,7 +90,7 @@ export function AssetTypeTabs({ value, onChange }: AssetTypeTabsProps) {
             )}
           >
             <Icon className="h-3.5 w-3.5" />
-            <span>{option.label}</span>
+            <span>{t(option.labelKey)}</span>
           </button>
         );
       })}
@@ -103,6 +112,7 @@ export function AssetSearchSort({
   onSearchChange,
   onSortChange,
 }: AssetSearchSortProps) {
+  const t = useTranslations("editor.assetFilter");
   const [searchText, setSearchText] = useState(search || "");
 
   const applySearch = () => {
@@ -115,7 +125,7 @@ export function AssetSearchSort({
       <div className="relative flex-1 min-w-[120px] max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
-          placeholder="搜索素材..."
+          placeholder={t("searchPlaceholder")}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onKeyDown={(e) => {
@@ -147,7 +157,7 @@ export function AssetSearchSort({
         <SelectContent>
           {sortOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              {t(option.labelKey)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -155,4 +165,3 @@ export function AssetSearchSort({
     </div>
   );
 }
-

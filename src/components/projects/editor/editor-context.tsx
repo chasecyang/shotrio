@@ -15,6 +15,9 @@ import type { CreditCost } from "@/lib/utils/credit-calculator";
 // 编辑器模式
 export type EditorMode = "asset-management" | "editing";
 
+// localStorage key
+const getEditorModeStorageKey = (projectId: string) => `editor:project:${projectId}:mode`;
+
 // 编辑参数预填充
 export interface PrefillParams {
   prompt?: string;
@@ -434,6 +437,19 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     return () => window.removeEventListener("project-changed", handleProjectChanged);
   }, [state.project]);
 
+  // 从 localStorage 恢复编辑器模式
+  const modeRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!initialProject?.id || modeRestoredRef.current) return;
+    modeRestoredRef.current = true;
+    try {
+      const saved = localStorage.getItem(getEditorModeStorageKey(initialProject.id));
+      if (saved === "asset-management" || saved === "editing") {
+        dispatch({ type: "SET_MODE", payload: saved });
+      }
+    } catch {}
+  }, [initialProject?.id]);
+
   // 便捷方法
   const updateProject = useCallback((project: ProjectDetail) => {
     dispatch({ type: "UPDATE_PROJECT", payload: project });
@@ -441,7 +457,13 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
 
   const setMode = useCallback((mode: EditorMode) => {
     dispatch({ type: "SET_MODE", payload: mode });
-  }, []);
+    // 保存到 localStorage
+    if (state.project?.id) {
+      try {
+        localStorage.setItem(getEditorModeStorageKey(state.project.id), mode);
+      } catch {}
+    }
+  }, [state.project?.id]);
 
   const setTimeline = useCallback((timeline: TimelineDetail | null) => {
     dispatch({ type: "SET_TIMELINE", payload: timeline });

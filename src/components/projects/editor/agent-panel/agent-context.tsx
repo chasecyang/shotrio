@@ -13,6 +13,9 @@ import {
 } from "@/lib/actions/conversation/crud";
 import { toast } from "sonner";
 
+// localStorage key
+const getConversationStorageKey = (projectId: string) => `editor:project:${projectId}:conversationId`;
+
 /**
  * 对话信息
  */
@@ -285,6 +288,10 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
         dispatch({ type: "SET_CURRENT_CONVERSATION", payload: conversationId });
         dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
         dispatch({ type: "SET_AUTO_ACCEPT", payload: false }); // 切换对话时重置自动模式
+        // 保存到 localStorage
+        try {
+          localStorage.setItem(getConversationStorageKey(projectId), conversationId);
+        } catch {}
       } else {
         toast.error(result.error || "加载对话失败");
       }
@@ -294,7 +301,29 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
-  }, []);
+  }, [projectId]);
+
+  // 对话列表加载完成后，恢复上次选中的对话
+  const conversationRestoredRef = useRef(false);
+  useEffect(() => {
+    // 等待对话列表首次加载完成
+    if (!hasLoadedOnceRef.current || state.isLoadingConversations || conversationRestoredRef.current) return;
+    if (state.conversations.length === 0) return;
+
+    conversationRestoredRef.current = true;
+    try {
+      const savedId = localStorage.getItem(getConversationStorageKey(projectId));
+      if (savedId) {
+        const exists = state.conversations.some(c => c.id === savedId);
+        if (exists) {
+          loadConversation(savedId);
+        } else {
+          // 对话已删除，清除无效存储
+          localStorage.removeItem(getConversationStorageKey(projectId));
+        }
+      }
+    } catch {}
+  }, [projectId, state.conversations, state.isLoadingConversations, loadConversation]);
 
   // 创建新对话（懒创建模式：只设置UI状态，不调用API）
   const createNewConversation = useCallback(() => {
@@ -306,7 +335,11 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
     dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
     // 重置自动模式
     dispatch({ type: "SET_AUTO_ACCEPT", payload: false });
-  }, []);
+    // 清除 localStorage
+    try {
+      localStorage.removeItem(getConversationStorageKey(projectId));
+    } catch {}
+  }, [projectId]);
 
   // 删除对话
   const deleteConversationById = useCallback(async (conversationId: string) => {
@@ -318,6 +351,10 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
           dispatch({ type: "CLEAR_MESSAGES" });
           dispatch({ type: "SET_CURRENT_CONVERSATION", payload: null });
           dispatch({ type: "SET_NEW_CONVERSATION", payload: true });
+          // 清除 localStorage
+          try {
+            localStorage.removeItem(getConversationStorageKey(projectId));
+          } catch {}
         }
         // 静默刷新列表（用户已看到删除结果）
         await refreshConversations(true);
@@ -329,7 +366,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       console.error("删除对话失败:", error);
       toast.error("删除对话失败");
     }
-  }, [state.currentConversationId, refreshConversations]);
+  }, [projectId, state.currentConversationId, refreshConversations]);
 
   // 便捷方法
   const addMessage = useCallback((message: Omit<AgentMessage, "timestamp" | "id"> & { id?: string }) => {

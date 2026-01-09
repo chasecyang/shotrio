@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useEditor } from "./editor-context";
 import { AssetCard } from "./shared/asset-card";
 import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { regenerateAssetImage } from "@/lib/actions/asset/generate-asset";
 import { regenerateVideoAsset } from "@/lib/actions/asset/crud";
-import { AssetWithFullData, ImageResolution } from "@/types/asset";
+import { AssetWithFullData, ImageResolution, AssetTypeEnum } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import { toast } from "sonner";
 import { Images, RefreshCw } from "lucide-react";
@@ -34,6 +34,11 @@ import {
   AssetSearchSort,
 } from "./shared/asset-filter";
 import { UNCATEGORIZED_GROUP } from "@/lib/constants/asset-tags";
+import { useTranslations } from "next-intl";
+
+// localStorage key
+const getAssetTypeFilterKey = (projectId: string) => `editor:project:${projectId}:assetTypeFilter`;
+const VALID_ASSET_TYPES: AssetTypeEnum[] = ["image", "video", "text", "audio"];
 
 const DEFAULT_FILTER: AssetFilterOptions = {
   assetTypes: [],
@@ -133,6 +138,8 @@ export function AssetGalleryPanel() {
     setEditingAsset,
   } = useEditor();
   const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
+  const t = useTranslations("editor.assetGallery");
+  const tCommon = useTranslations("common");
 
   const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -145,6 +152,33 @@ export function AssetGalleryPanel() {
   );
   const [filterOptions, setFilterOptions] =
     useState<AssetFilterOptions>(DEFAULT_FILTER);
+
+  // 从 localStorage 恢复素材类型筛选
+  const filterRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!project?.id || filterRestoredRef.current) return;
+    filterRestoredRef.current = true;
+    try {
+      const saved = localStorage.getItem(getAssetTypeFilterKey(project.id));
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        const validTypes = parsed.filter((t): t is AssetTypeEnum =>
+          VALID_ASSET_TYPES.includes(t as AssetTypeEnum)
+        );
+        if (validTypes.length > 0) {
+          setFilterOptions(prev => ({ ...prev, assetTypes: validTypes }));
+        }
+      }
+    } catch {}
+  }, [project?.id]);
+
+  // 保存素材类型筛选到 localStorage
+  useEffect(() => {
+    if (!project?.id || !filterRestoredRef.current) return;
+    try {
+      localStorage.setItem(getAssetTypeFilterKey(project.id), JSON.stringify(filterOptions.assetTypes));
+    } catch {}
+  }, [project?.id, filterOptions.assetTypes]);
 
   // 详情视图状态
   const [selectedAsset, setSelectedAsset] = useState<AssetWithFullData | null>(
@@ -265,15 +299,15 @@ export function AssetGalleryPanel() {
 
       if (result.success) {
         const count = deletedIds.length;
-        toast.success(`已删除 ${count} 个素材`);
+        toast.success(t("deleteSuccess", { count }));
         setSelectedAssetIds(new Set());
         await loadAssets({ search: filterOptions.search });
       } else {
-        toast.error(result.error || "删除失败");
+        toast.error(result.error || t("deleteFailed"));
       }
     } catch (error) {
-      console.error("删除素材失败:", error);
-      toast.error("删除失败");
+      console.error("Delete asset failed:", error);
+      toast.error(t("deleteFailed"));
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -314,14 +348,14 @@ export function AssetGalleryPanel() {
     try {
       const result = await retryJob(jobId);
       if (result.success) {
-        toast.success("已重新提交任务");
+        toast.success(t("retrySubmitted"));
         await loadAssets({ search: filterOptions.search });
       } else {
-        toast.error(result.error || "重试失败");
+        toast.error(result.error || t("retryFailed"));
       }
     } catch (error) {
-      console.error("重试失败:", error);
-      toast.error("重试失败");
+      console.error("Retry failed:", error);
+      toast.error(t("retryFailed"));
     }
   };
 
@@ -336,14 +370,14 @@ export function AssetGalleryPanel() {
       }
 
       if (result.success) {
-        toast.success("正在重新生成...");
+        toast.success(t("regenerating"));
         await loadAssets({ search: filterOptions.search });
       } else {
-        toast.error(result.error || "重新生成失败");
+        toast.error(result.error || t("regenerateFailed"));
       }
     } catch (error) {
-      console.error("重新生成失败:", error);
-      toast.error("重新生成失败");
+      console.error("Regenerate failed:", error);
+      toast.error(t("regenerateFailed"));
     }
   };
 
@@ -428,10 +462,9 @@ export function AssetGalleryPanel() {
             }
           />
           <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-            {filteredAssets.length}
+            {t("assetsCount", { count: filteredAssets.length })}
             {allAssets.length !== filteredAssets.length &&
-              ` / ${allAssets.length}`}{" "}
-            个素材
+              ` / ${allAssets.length}`}
           </span>
         </div>
       </div>
@@ -462,12 +495,12 @@ export function AssetGalleryPanel() {
                 <Images className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-base font-semibold mb-2">
-                {allAssets.length === 0 ? "暂无素材" : "没有符合条件的素材"}
+                {allAssets.length === 0 ? t("noAssets") : t("noMatchingAssets")}
               </h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm">
                 {allAssets.length === 0
-                  ? "暂无素材"
-                  : "尝试调整筛选条件查看更多素材"}
+                  ? t("noAssets")
+                  : t("tryAdjustFilter")}
               </p>
             </div>
           ) : showGroupedView ? (
@@ -531,21 +564,21 @@ export function AssetGalleryPanel() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedAssetIds.size > 0
-                ? `确定要删除 ${selectedAssetIds.size} 个素材吗？此操作无法撤销。`
-                : `确定要删除素材 "${assetToDelete?.name}" 吗？此操作无法撤销。`}
+                ? t("confirmDeleteBatch", { count: selectedAssetIds.size })
+                : t("confirmDeleteSingle", { name: assetToDelete?.name ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "删除中..." : "删除"}
+              {isDeleting ? t("deleting") : tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
