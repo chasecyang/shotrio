@@ -46,7 +46,7 @@ export function LoginDialog() {
         <div className="p-6 pb-0">
           <DialogHeader className="space-y-2">
             <div className="mx-auto mb-2 flex items-center justify-center gap-2">
-              <span className="text-3xl font-bold">
+              <span className="text-3xl font-bold font-heading">
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
                 <span className="text-primary/40">Rio</span>
               </span>

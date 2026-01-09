@@ -18,7 +18,7 @@ export async function Header() {
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
         <div className="flex items-center gap-3 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <span className="text-xl sm:text-2xl md:text-3xl font-bold">
+            <span className="text-xl sm:text-2xl md:text-3xl font-bold font-heading">
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
               <span className="text-primary/40">Rio</span>
             </span>

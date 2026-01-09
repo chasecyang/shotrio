@@ -37,7 +37,7 @@ export function EditorHeader({
           href="/"
           className="flex items-center gap-2 hover:opacity-70 transition-opacity shrink-0"
         >
-          <span className="text-xl font-bold">
+          <span className="text-xl font-bold font-heading">
             <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
             <span className="text-primary/40">Rio</span>
           </span>

@@ -4,9 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* 英文优先的字体栈（默认） */
+  /* 英文优先的字体栈（默认），标题和正文统一使用 Manrope */
   --font-sans: var(--font-sans-en), var(--font-zh), system-ui, sans-serif;
-  --font-heading: var(--font-heading-en), var(--font-zh), system-ui, sans-serif;
+  --font-heading: var(--font-sans-en), var(--font-zh), system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   --color-background: var(--background);
@@ -166,13 +166,13 @@
   /* 中文页面字体优先级 */
   html[lang="zh"] {
     --font-sans: var(--font-zh), var(--font-sans-en), system-ui, sans-serif;
-    --font-heading: var(--font-zh), var(--font-heading-en), system-ui, sans-serif;
+    --font-heading: var(--font-zh), var(--font-sans-en), system-ui, sans-serif;
   }
-  
+
   /* 英文页面字体优先级 */
   html[lang="en"] {
     --font-sans: var(--font-sans-en), var(--font-zh), system-ui, sans-serif;
-    --font-heading: var(--font-heading-en), var(--font-zh), system-ui, sans-serif;
+    --font-heading: var(--font-sans-en), var(--font-zh), system-ui, sans-serif;
   }
   
   /* Typography Scale Overrides */

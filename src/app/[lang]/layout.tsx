@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Syne, Manrope, Noto_Sans_SC } from "next/font/google";
+import { Manrope, Noto_Sans_SC } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { NextIntlClientProvider } from 'next-intl';
@@ -16,13 +16,7 @@ import { Suspense } from 'react';
 import { LoginDialogProvider } from '@/components/auth/login-dialog-context';
 import { LoginDialog } from '@/components/auth/login-dialog';
 
-// 英文字体
-const syne = Syne({
-  variable: "--font-heading-en",
-  subsets: ["latin"],
-  display: "swap",
-});
-
+// 英文字体 (Manrope 统一用于标题和正文)
 const manrope = Manrope({
   variable: "--font-sans-en",
   subsets: ["latin"],
@@ -85,7 +79,7 @@ export default async function RootLayout({
         <ClarityScript />
       </head>
       <body
-        className={`${syne.variable} ${manrope.variable} ${notoSansSC.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}
+        className={`${manrope.variable} ${notoSansSC.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}
       >
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>

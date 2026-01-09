@@ -110,7 +110,7 @@ export function PurchaseDialog({
                       {/* Price and Credits - Simplified */}
                       <div className="space-y-2">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-bold">${pkg.price}</span>
+                          <span className="text-4xl font-bold font-heading">${pkg.price}</span>
                           <span className="text-sm text-muted-foreground">{t("currency")}</span>
                         </div>
                         

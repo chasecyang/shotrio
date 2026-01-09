@@ -54,7 +54,7 @@ export function PackageCard({
           {/* Price and Credits - Simplified */}
           <div className="space-y-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold">${pkg.price}</span>
+              <span className="text-5xl font-bold font-heading">${pkg.price}</span>
               <span className="text-muted-foreground text-sm">{t("currency")}</span>
             </div>
             

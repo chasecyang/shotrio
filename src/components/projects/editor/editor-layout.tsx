@@ -27,7 +27,7 @@ function MobileNotSupported() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="flex flex-col items-center text-center max-w-sm">
         {/* Logo */}
-        <span className="text-2xl font-bold mb-8">
+        <span className="text-2xl font-bold font-heading mb-8">
           <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Shot</span>
           <span className="text-primary/40">Rio</span>
         </span>

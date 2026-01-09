@@ -31,7 +31,7 @@ export function BalanceCard({ balance }: BalanceCardProps) {
           {/* Current balance */}
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">{t("current")}</p>
-            <p className="text-5xl font-bold tracking-tight">
+            <p className="text-5xl font-bold font-heading tracking-tight">
               {balance.balance.toLocaleString()}
             </p>
           </div>

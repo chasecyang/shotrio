@@ -13,7 +13,7 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             {/* Logo and Tagline */}
             <div className="text-center md:text-left">
-              <div className="text-3xl font-bold mb-2">
+              <div className="text-3xl font-bold font-heading mb-2">
                 <span className="text-foreground">Shot</span>
                 <span className="text-primary/60">Rio</span>
               </div>
