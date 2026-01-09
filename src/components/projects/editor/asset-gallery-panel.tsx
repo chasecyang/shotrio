@@ -149,6 +149,9 @@ export function AssetGalleryPanel() {
     null
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [assetToRegenerate, setAssetToRegenerate] = useState<AssetWithFullData | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(
     new Set()
   );
@@ -361,25 +364,40 @@ export function AssetGalleryPanel() {
     }
   };
 
-  // 处理重新生成
-  const handleRegenerate = async (asset: AssetWithFullData) => {
+  // 处理重新生成 - 打开确认对话框
+  const handleRegenerate = (asset: AssetWithFullData) => {
+    setAssetToRegenerate(asset);
+    setRegenerateDialogOpen(true);
+  };
+
+  // 确认重新生成
+  const handleConfirmRegenerate = async () => {
+    if (!assetToRegenerate) return;
+
+    setIsRegenerating(true);
+    const toastId = `regenerate-${assetToRegenerate.id}`;
+    toast.loading(t("regenerating"), { id: toastId });
     try {
       let result;
-      if (asset.assetType === "video") {
-        result = await regenerateVideoAsset(asset.id);
+      if (assetToRegenerate.assetType === "video") {
+        result = await regenerateVideoAsset(assetToRegenerate.id);
       } else {
-        result = await regenerateAssetImage(asset.id);
+        result = await regenerateAssetImage(assetToRegenerate.id);
       }
 
       if (result.success) {
-        toast.success(t("regenerating"));
+        toast.success(t("regenerating"), { id: toastId });
         await loadAssets({ search: filterOptions.search });
       } else {
-        toast.error(result.error || t("regenerateFailed"));
+        toast.error(result.error || t("regenerateFailed"), { id: toastId });
       }
     } catch (error) {
       console.error("Regenerate failed:", error);
-      toast.error(t("regenerateFailed"));
+      toast.error(t("regenerateFailed"), { id: toastId });
+    } finally {
+      setIsRegenerating(false);
+      setRegenerateDialogOpen(false);
+      setAssetToRegenerate(null);
     }
   };
 
@@ -601,6 +619,35 @@ export function AssetGalleryPanel() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? t("deleting") : tCommon("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 重新生成确认对话框 */}
+      <AlertDialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("confirmRegenerate")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {assetToRegenerate?.assetType === "video"
+                ? t("confirmRegenerateVideo", {
+                    name: assetToRegenerate?.name ?? "",
+                    credits: Math.ceil((assetToRegenerate?.duration || 5000) / 1000) * 6
+                  })
+                : t("confirmRegenerateImage", {
+                    name: assetToRegenerate?.name ?? "",
+                    credits: 6
+                  })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRegenerating}>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRegenerate}
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? t("regenerating") : tCommon("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,0 +1,49 @@
+# Dockerfile.dockerignore - Web 应用专用
+# 注意: 此文件用于 Web Dockerfile，保留 public 目录
+
+# 依赖目录 (在容器内重新安装)
+node_modules
+
+# Next.js 构建输出 (在容器内重新构建)
+.next
+out
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# 文档
+*.md
+docs/
+
+# 日志
+logs
+*.log
+pm2-logs
+
+# 环境文件 (通过 Dokploy/Docker 注入)
+.env
+.env.*
+.env*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 测试
+coverage
+.nyc_output
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# 其他
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo

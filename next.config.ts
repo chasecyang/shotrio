@@ -32,6 +32,7 @@ if (r2Hostname) {
 }
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns,
     unoptimized: process.env.NODE_ENV !== "production",
