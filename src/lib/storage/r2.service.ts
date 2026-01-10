@@ -9,7 +9,7 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
-import { r2Client, R2_CONFIG, getPublicUrl } from "./r2.config";
+import { getR2Client, getR2Config, getPublicUrl } from "./r2.config";
 
 // 允许的图片格式
 export const ALLOWED_IMAGE_TYPES = [
@@ -143,6 +143,9 @@ export async function uploadImageToR2(
   error?: string;
 }> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     if (!options.userId) {
       return { success: false, error: "缺少用户ID" };
     }
@@ -212,7 +215,7 @@ export async function uploadImageToR2(
     const key = generateStorageKey(fileName, options.userId, category);
 
     const command = new PutObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
@@ -263,6 +266,9 @@ export async function uploadVideoToR2(
   error?: string;
 }> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     if (!options.userId) {
       return { success: false, error: "缺少用户ID" };
     }
@@ -332,7 +338,7 @@ export async function uploadVideoToR2(
     const key = generateStorageKey(fileName, options.userId, category);
 
     const command = new PutObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
@@ -383,6 +389,9 @@ export async function uploadAudioToR2(
   error?: string;
 }> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     if (!options.userId) {
       return { success: false, error: "缺少用户ID" };
     }
@@ -451,7 +460,7 @@ export async function uploadAudioToR2(
     const key = generateStorageKey(fileName, options.userId, category);
 
     const command = new PutObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
@@ -500,9 +509,12 @@ export async function deleteImageFromR2(
   error?: string;
 }> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     // 验证文件所有权
     const headCommand = new HeadObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
     });
 
@@ -518,7 +530,7 @@ export async function deleteImageFromR2(
 
     // 删除文件
     const deleteCommand = new DeleteObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
     });
 
@@ -538,8 +550,11 @@ export async function deleteImageFromR2(
  */
 export async function checkImageExists(key: string): Promise<boolean> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     const command = new HeadObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
     });
     await r2Client.send(command);

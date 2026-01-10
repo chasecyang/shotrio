@@ -2,7 +2,7 @@
 
 import ffmpeg from "fluent-ffmpeg";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { r2Client, R2_CONFIG, getPublicUrl } from "@/lib/storage/r2.config";
+import { getR2Client, getR2Config, getPublicUrl } from "@/lib/storage/r2.config";
 import { AssetCategory } from "@/lib/storage/r2.service";
 import { randomUUID } from "crypto";
 
@@ -17,6 +17,9 @@ export async function extractVideoThumbnail(
   userId: string
 ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     console.log(`[Thumbnail] 开始从视频提取缩略图: ${videoUrl}`);
 
     // 创建一个 Promise 来处理 ffmpeg 操作
@@ -59,7 +62,7 @@ export async function extractVideoThumbnail(
 
     // 直接上传 Buffer 到 R2
     const command = new PutObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
       Body: thumbnailBuffer,
       ContentType: "image/png",
@@ -105,6 +108,9 @@ export async function extractVideoThumbnailFromFile(
   userId: string
 ): Promise<{ success: boolean; thumbnailUrl?: string; error?: string }> {
   try {
+    const r2Client = getR2Client();
+    const { bucketName } = getR2Config();
+
     console.log(`[Thumbnail] 开始从本地视频提取缩略图: ${videoPath}`);
 
     const thumbnailBuffer = await new Promise<Buffer>((resolve, reject) => {
@@ -146,7 +152,7 @@ export async function extractVideoThumbnailFromFile(
 
     // 直接上传 Buffer 到 R2
     const command = new PutObjectCommand({
-      Bucket: R2_CONFIG.bucketName,
+      Bucket: bucketName,
       Key: key,
       Body: thumbnailBuffer,
       ContentType: "image/png",
@@ -180,4 +186,3 @@ export async function extractVideoThumbnailFromFile(
     };
   }
 }
-

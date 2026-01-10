@@ -6,41 +6,52 @@
 
 import { S3Client } from "@aws-sdk/client-s3";
 
-// 验证必要的环境变量
-if (!process.env.R2_ACCOUNT_ID) {
-  throw new Error("R2_ACCOUNT_ID 环境变量未设置");
+export type R2Config = {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+};
+
+function requiredEnv(name: string, displayName = name): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${displayName} 环境变量未设置`);
+  }
+  return value;
 }
 
-if (!process.env.R2_ACCESS_KEY_ID) {
-  throw new Error("R2_ACCESS_KEY_ID 环境变量未设置");
+let cachedConfig: R2Config | null = null;
+let cachedClient: S3Client | null = null;
+
+export function getR2Config(): R2Config {
+  if (cachedConfig) return cachedConfig;
+
+  cachedConfig = {
+    accountId: requiredEnv("R2_ACCOUNT_ID"),
+    accessKeyId: requiredEnv("R2_ACCESS_KEY_ID"),
+    secretAccessKey: requiredEnv("R2_SECRET_ACCESS_KEY"),
+    bucketName: requiredEnv("R2_BUCKET_NAME"),
+  };
+
+  return cachedConfig;
 }
 
-if (!process.env.R2_SECRET_ACCESS_KEY) {
-  throw new Error("R2_SECRET_ACCESS_KEY 环境变量未设置");
+export function getR2Client(): S3Client {
+  if (cachedClient) return cachedClient;
+
+  const config = getR2Config();
+  cachedClient = new S3Client({
+    region: "auto", // R2 使用 'auto' 作为 region
+    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
+
+  return cachedClient;
 }
-
-if (!process.env.R2_BUCKET_NAME) {
-  throw new Error("R2_BUCKET_NAME 环境变量未设置");
-}
-
-// R2 配置
-export const R2_CONFIG = {
-  accountId: process.env.R2_ACCOUNT_ID!,
-  accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  bucketName: process.env.R2_BUCKET_NAME!,
-  publicDomain: process.env.R2_PUBLIC_DOMAIN, // 可选：自定义域名
-} as const;
-
-// 创建 S3 客户端实例
-export const r2Client = new S3Client({
-  region: "auto", // R2 使用 'auto' 作为 region
-  endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_CONFIG.accessKeyId,
-    secretAccessKey: R2_CONFIG.secretAccessKey,
-  },
-});
 
 /**
  * 获取文件的公开访问 URL (如果配置了公开访问)
@@ -50,18 +61,17 @@ export const r2Client = new S3Client({
  */
 export function getPublicUrl(key: string): string | null {
   // 1. 如果配置了自定义域名（推荐方式）
-  if (R2_CONFIG.publicDomain) {
+  if (process.env.R2_PUBLIC_DOMAIN) {
     // 移除域名末尾的斜杠（如果有）
-    const domain = R2_CONFIG.publicDomain.replace(/\/$/, '');
+    const domain = process.env.R2_PUBLIC_DOMAIN.replace(/\/$/, "");
     return `https://${domain}/${key}`;
   }
   
   // 2. 如果配置了 R2 公开桶 URL
   if (process.env.R2_PUBLIC_BUCKET_URL) {
-    const bucketUrl = process.env.R2_PUBLIC_BUCKET_URL.replace(/\/$/, '');
+    const bucketUrl = process.env.R2_PUBLIC_BUCKET_URL.replace(/\/$/, "");
     return `${bucketUrl}/${key}`;
   }
   
   return null;
 }
-
