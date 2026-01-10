@@ -4,13 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -29,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { AssetLibraryPickerDialog } from "./asset-library-picker-dialog";
 import { getAssetsByIds } from "@/lib/actions/asset";
+import { AspectRatioSelector } from "./aspect-ratio-selector";
+import { ResolutionSelector } from "./resolution-selector";
 
 interface AssetRegenerateModeProps {
   asset: AssetWithFullData;
@@ -36,25 +31,6 @@ interface AssetRegenerateModeProps {
   onBack: () => void;
   onSuccess: () => void;
 }
-
-// 宽高比选项
-const ASPECT_RATIO_OPTIONS: Array<{ labelKey: string; value: AspectRatio | "auto" }> = [
-  { labelKey: "auto", value: "auto" },
-  { labelKey: "21:9", value: "21:9" },
-  { labelKey: "16:9", value: "16:9" },
-  { labelKey: "3:2", value: "3:2" },
-  { labelKey: "4:3", value: "4:3" },
-  { labelKey: "1:1", value: "1:1" },
-  { labelKey: "3:4", value: "3:4" },
-  { labelKey: "2:3", value: "2:3" },
-  { labelKey: "9:16", value: "9:16" },
-];
-
-// 分辨率选项
-const RESOLUTION_OPTIONS: Array<{ label: string; value: ImageResolution }> = [
-  { label: "1K (1024px)", value: "1K" },
-  { label: "2K (2048px)", value: "2K" },
-];
 
 // 解析 generationConfig
 function parseGenerationConfig(config: string | null): {
@@ -191,20 +167,20 @@ export function AssetRegenerateMode({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-sm font-semibold">{t("title")}</h2>
-        <Badge variant="secondary" className="ml-auto">
+        <Badge variant="secondary" className="ml-auto text-xs">
           {asset.name}
         </Badge>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
-        <div className="space-y-6 max-w-xl">
+        <div className="max-w-xl mx-auto space-y-6">
           {/* 原图预览 */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">
               {tEdit("originalImage")}
             </Label>
-            <div className="relative aspect-video w-full max-w-sm rounded-lg overflow-hidden border bg-muted/30">
+            <div className="relative aspect-video w-full max-w-xs rounded-xl overflow-hidden border border-border/50 bg-muted/20 shadow-sm">
               {asset.displayUrl ? (
                 <Image
                   src={asset.displayUrl}
@@ -214,7 +190,7 @@ export function AssetRegenerateMode({
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
                 </div>
               )}
             </div>
@@ -222,32 +198,32 @@ export function AssetRegenerateMode({
 
           {/* Prompt 输入 */}
           <div className="space-y-2">
-            <Label htmlFor="regenerate-prompt">{tEdit("promptLabel")}</Label>
+            <Label htmlFor="regenerate-prompt" className="text-xs">{tEdit("promptLabel")}</Label>
             <Textarea
               id="regenerate-prompt"
               placeholder={tEdit("promptPlaceholder")}
               value={editPrompt}
               onChange={(e) => setEditPrompt(e.target.value)}
-              className="min-h-[100px] resize-none"
+              className="min-h-[100px] resize-none text-sm"
             />
           </div>
 
           {/* 参考图片 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>{tEdit("referenceImages")}</Label>
-              <span className="text-xs text-muted-foreground">
+              <Label className="text-xs">{tEdit("referenceImages")}</Label>
+              <span className="text-[10px] text-muted-foreground">
                 {tEdit("optional")}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
               {isLoadingReferences ? (
-                <div className="w-16 h-16 rounded-lg border bg-muted/30 animate-pulse" />
+                <div className="w-14 h-14 rounded-lg border border-border/50 bg-muted/20 animate-pulse" />
               ) : (
                 referenceAssets.map((refAsset) => (
                   <div
                     key={refAsset.id}
-                    className="relative group w-16 h-16 rounded-lg overflow-hidden border bg-muted/30"
+                    className="relative group w-14 h-14 rounded-lg overflow-hidden border border-border/50 bg-muted/20 shadow-sm transition-shadow hover:shadow-md"
                   >
                     {refAsset.displayUrl ? (
                       <Image
@@ -258,7 +234,7 @@ export function AssetRegenerateMode({
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
                       </div>
                     )}
                     <button
@@ -273,54 +249,32 @@ export function AssetRegenerateMode({
               <button
                 onClick={() => setPickerOpen(true)}
                 className={cn(
-                  "w-16 h-16 rounded-lg border-2 border-dashed",
+                  "w-14 h-14 rounded-lg border border-dashed border-border/60",
                   "flex items-center justify-center",
-                  "text-muted-foreground hover:text-foreground hover:border-foreground/30",
-                  "transition-colors"
+                  "text-muted-foreground/60 hover:text-muted-foreground hover:border-border hover:bg-muted/30",
+                  "transition-all"
                 )}
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4" />
               </button>
             </div>
           </div>
 
           {/* 生成参数 */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3.5 pt-1 mt-5 border-t border-border/50">
             <div className="space-y-2">
-              <Label>{tEdit("aspectRatio")}</Label>
-              <Select
+              <Label className="text-xs">{tEdit("aspectRatio")}</Label>
+              <AspectRatioSelector
                 value={aspectRatio}
-                onValueChange={(v) => setAspectRatio(v as AspectRatio | "auto")}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASPECT_RATIO_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.value === "auto" ? tEdit("autoAspectRatio") : option.labelKey}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={setAspectRatio}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>{tEdit("resolution")}</Label>
-              <Select
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">{tEdit("resolution")}</Label>
+              <ResolutionSelector
                 value={resolution}
-                onValueChange={(v) => setResolution(v as ImageResolution)}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RESOLUTION_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={setResolution}
+              />
             </div>
           </div>
         </div>
@@ -328,21 +282,22 @@ export function AssetRegenerateMode({
 
       {/* Footer */}
       <div className="shrink-0 px-4 py-3 border-t flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
+        <Button variant="ghost" size="sm" onClick={onBack} disabled={isSubmitting}>
           {tCommon("cancel")}
         </Button>
         <Button
+          size="sm"
           onClick={handleSubmit}
           disabled={!editPrompt.trim() || isSubmitting}
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
               {t("submitting")}
             </>
           ) : (
             <>
-              <Sparkles className="h-4 w-4 mr-2" />
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
               {t("submit")}
             </>
           )}

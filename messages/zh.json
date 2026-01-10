@@ -1291,7 +1291,11 @@
         "descriptionPlaceholderText": "描述文本用途，如：张三的角色小传",
         "descriptionHintText": "AI 将根据描述自动命名和标签",
         "textSuccess": "文本素材创建成功",
-        "textContentRequired": "请输入文本内容"
+        "textContentRequired": "请输入文本内容",
+        "addMoreFiles": "点击或拖放添加更多文件",
+        "uploadSuccess": "上传成功",
+        "batchSuccess": "成功上传 {count} 个文件",
+        "batchFailed": "{count} 个文件上传失败"
       },
       "detail": {
         "title": "创作素材详情",

@@ -1291,7 +1291,11 @@
         "descriptionPlaceholderText": "Describe the text, e.g.: Character backstory for John",
         "descriptionHintText": "AI will auto-generate name and tags from description",
         "textSuccess": "Text asset created successfully",
-        "textContentRequired": "Please enter text content"
+        "textContentRequired": "Please enter text content",
+        "addMoreFiles": "Click or drag to add more files",
+        "uploadSuccess": "Upload successful",
+        "batchSuccess": "Successfully uploaded {count} file(s)",
+        "batchFailed": "{count} file(s) failed to upload"
       },
       "detail": {
         "title": "Asset Details",

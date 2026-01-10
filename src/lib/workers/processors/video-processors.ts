@@ -287,6 +287,13 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     if (videoDataId) {
       // 新架构：通过 videoDataId 更新具体版本记录
+      // 先将所有版本设为非激活
+      await db
+        .update(videoData)
+        .set({ isActive: false })
+        .where(eq(videoData.assetId, assetId));
+
+      // 更新当前版本并激活
       await db
         .update(videoData)
         .set({
@@ -294,6 +301,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           thumbnailUrl: thumbnailUrl || null,
           duration: videoDuration * 1000, // 转换为毫秒
           modelUsed: "veo-2",
+          isActive: true,
         })
         .where(eq(videoData.id, videoDataId));
     } else {

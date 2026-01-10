@@ -42,6 +42,8 @@ interface AssetDetailViewProps {
   asset: AssetWithFullData;
   onBack: () => void;
   onRetry?: (jobId: string) => Promise<void>;
+  onEdit?: (asset: AssetWithFullData) => void;
+  onRegenerate?: (asset: AssetWithFullData) => void;
   onAssetUpdated: () => void;
 }
 
@@ -53,6 +55,8 @@ export function AssetDetailView({
   asset,
   onBack,
   onRetry,
+  onEdit,
+  onRegenerate,
   onAssetUpdated,
 }: AssetDetailViewProps) {
   const isVideo = asset.assetType === "video";
@@ -420,6 +424,30 @@ export function AssetDetailView({
           返回
         </Button>
         <div className="flex-1" />
+        {/* 编辑按钮 - 仅对图片显示 */}
+        {!isVideo && !isFailed && onEdit && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(asset)}
+            className="gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            编辑
+          </Button>
+        )}
+        {/* 重新生成按钮 - 仅对有 prompt 的 AI 生成素材显示 */}
+        {asset.prompt && !isFailed && onRegenerate && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRegenerate(asset)}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            重新生成
+          </Button>
+        )}
         {/* 下载按钮 */}
         {asset.mediaUrl && (
           <Button

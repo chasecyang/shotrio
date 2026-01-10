@@ -11,7 +11,7 @@ import { Images, RefreshCw, Upload, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
-import { TextAssetDialog } from "./shared/text-asset-dialog";
+import { TextAssetDetailView } from "./shared/text-asset-detail-view";
 import { MediaUploadDialog } from "./shared/media-upload-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
@@ -140,7 +140,6 @@ export function AssetGalleryPanel() {
   const t = useTranslations("editor.assetGallery");
   const tCommon = useTranslations("common");
 
-  const [textAssetDialogOpen, setTextAssetDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<AssetWithFullData | null>(
@@ -184,10 +183,6 @@ export function AssetGalleryPanel() {
   const [selectedAsset, setSelectedAsset] = useState<AssetWithFullData | null>(
     null
   );
-
-  // 文本资产编辑状态
-  const [editingTextAsset, setEditingTextAsset] =
-    useState<AssetWithFullData | null>(null);
 
   // AI 编辑模式状态
   const [editingAsset, setEditingAsset] = useState<AssetWithFullData | null>(null);
@@ -242,12 +237,7 @@ export function AssetGalleryPanel() {
 
   // 处理素材点击
   const handleAssetClick = (asset: AssetWithFullData) => {
-    if (asset.assetType === "text") {
-      setEditingTextAsset(asset);
-      setTextAssetDialogOpen(true);
-    } else {
-      setSelectedAsset(asset);
-    }
+    setSelectedAsset(asset);
   };
 
   // 返回网格视图
@@ -418,12 +408,27 @@ export function AssetGalleryPanel() {
 
   // 如果有选中的素材，显示详情视图
   if (selectedAsset) {
+    // 文本素材使用专门的详情视图
+    if (selectedAsset.assetType === "text") {
+      return (
+        <div className="h-full flex flex-col bg-background">
+          <TextAssetDetailView
+            asset={selectedAsset}
+            onBack={handleBackToGrid}
+            onAssetUpdated={handleAssetUpdated}
+          />
+        </div>
+      );
+    }
+    // 其他素材使用通用详情视图
     return (
       <div className="h-full flex flex-col bg-background">
         <AssetDetailView
           asset={selectedAsset}
           onBack={handleBackToGrid}
           onRetry={handleRetry}
+          onEdit={handleEdit}
+          onRegenerate={handleRegenerate}
           onAssetUpdated={handleAssetUpdated}
         />
       </div>
@@ -582,20 +587,6 @@ export function AssetGalleryPanel() {
           )}
         </div>
       </div>
-
-      {/* 文本资产编辑对话框 */}
-      <TextAssetDialog
-        open={textAssetDialogOpen}
-        onOpenChange={(open) => {
-          setTextAssetDialogOpen(open);
-          if (!open) {
-            setEditingTextAsset(null);
-          }
-        }}
-        projectId={project.id}
-        asset={editingTextAsset || undefined}
-        onSuccess={handleUploadSuccess}
-      />
 
       {/* 多媒体上传对话框 */}
       <MediaUploadDialog

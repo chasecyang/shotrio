@@ -1064,7 +1064,8 @@ export async function uploadAudioAsset(data: {
  */
 export async function createAssetVersion(
   assetId: string,
-  input: Omit<CreateImageDataInput, "assetId"> | Omit<CreateVideoDataInput, "assetId">
+  input: Omit<CreateImageDataInput, "assetId"> | Omit<CreateVideoDataInput, "assetId">,
+  options?: { activateImmediately?: boolean }  // 添加可选参数
 ): Promise<{
   success: boolean;
   versionId?: string;
@@ -1093,15 +1094,20 @@ export async function createAssetVersion(
 
     const versionId = randomUUID();
 
+    // 默认不立即激活新版本，等待生成完成后再激活
+    const shouldActivate = options?.activateImmediately ?? false;
+
     // 根据资产类型创建版本
     if (existingAsset.assetType === "image") {
       const imgInput = input as Omit<CreateImageDataInput, "assetId">;
 
-      // 先将所有版本设为非激活
-      await db
-        .update(imageData)
-        .set({ isActive: false })
-        .where(eq(imageData.assetId, assetId));
+      // 如果需要激活新版本，先将所有版本设为非激活
+      if (shouldActivate) {
+        await db
+          .update(imageData)
+          .set({ isActive: false })
+          .where(eq(imageData.assetId, assetId));
+      }
 
       // 创建新版本
       await db.insert(imageData).values({
@@ -1114,16 +1120,18 @@ export async function createAssetVersion(
         modelUsed: imgInput.modelUsed ?? null,
         generationConfig: imgInput.generationConfig ?? null,
         sourceAssetIds: imgInput.sourceAssetIds ?? null,
-        isActive: true,
+        isActive: shouldActivate,
       });
     } else if (existingAsset.assetType === "video") {
       const vidInput = input as Omit<CreateVideoDataInput, "assetId">;
 
-      // 先将所有版本设为非激活
-      await db
-        .update(videoData)
-        .set({ isActive: false })
-        .where(eq(videoData.assetId, assetId));
+      // 如果需要激活新版本，先将所有版本设为非激活
+      if (shouldActivate) {
+        await db
+          .update(videoData)
+          .set({ isActive: false })
+          .where(eq(videoData.assetId, assetId));
+      }
 
       // 创建新版本
       await db.insert(videoData).values({
@@ -1137,7 +1145,7 @@ export async function createAssetVersion(
         modelUsed: vidInput.modelUsed ?? null,
         generationConfig: vidInput.generationConfig ?? null,
         sourceAssetIds: vidInput.sourceAssetIds ?? null,
-        isActive: true,
+        isActive: shouldActivate,
       });
     } else {
       return { success: false, error: "该资产类型不支持版本化" };

@@ -327,12 +327,20 @@ async function processAssetImageGenerationInternal(
 
     // 更新 imageData 版本记录
     if (imageDataId) {
+      // 先将所有版本设为非激活
+      await db
+        .update(imageData)
+        .set({ isActive: false })
+        .where(eq(imageData.assetId, assetId));
+
+      // 更新当前版本并激活
       await db
         .update(imageData)
         .set({
           imageUrl: uploadResult.url,
           thumbnailUrl: uploadResult.url,
           modelUsed: "nano-banana-pro",
+          isActive: true,
         })
         .where(eq(imageData.id, imageDataId));
     } else {

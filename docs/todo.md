@@ -32,6 +32,7 @@
 [x]agent 支持 auto accept？
 []确认一下AI有没有删除剧本的能力
 
+[]增加引用素材的功能
 
 []深夜模式样式问题等等
 []media view要优化，白天模式
@@ -46,3 +47,5 @@
 []job中的parent job是不是可以废弃
 []参数页面accept操作后，不应该一直loading
 []对话框输入中，icon太大了
+
+[]是否需要让agent有版本的能力
