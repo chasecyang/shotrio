@@ -118,6 +118,17 @@ export function FloatingAgentCard({
   const dragStartXRef = useRef<number>(0);
   const autoStartHandledRef = useRef(false);
 
+  // 监听 pendingEditAsset，预填充输入框
+  useEffect(() => {
+    if (editorContext.state.pendingEditAsset) {
+      const asset = editorContext.state.pendingEditAsset;
+      const prefillText = `请帮我编辑图片「${asset.name}」`;
+      setInput(prefillText);
+      // 清除 pendingEditAsset 避免重复触发
+      editorContext.setPendingEditAsset(null);
+    }
+  }, [editorContext.state.pendingEditAsset, editorContext.setPendingEditAsset]);
+
   // 空状态判断
   const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
 

@@ -330,3 +330,102 @@ export async function regenerateAssetImage(
   }
 }
 
+/**
+ * 编辑素材图片并创建新版本（图生图）
+ * 与 editAssetImage 不同，这个函数会在原素材下创建新版本，而不是创建新素材
+ */
+export interface EditAssetImageAsVersionInput {
+  assetId: string;              // 原素材 ID
+  editPrompt: string;           // 编辑提示词
+  sourceAssetIds?: string[];    // 额外参考图（不包含原素材自身）
+  aspectRatio?: AspectRatio | "auto";    // 比例（默认继承原图）
+  resolution?: ImageResolution; // 分辨率（默认继承原图）
+}
+
+export async function editAssetImageAsVersion(
+  input: EditAssetImageAsVersionInput
+): Promise<GenerateAssetImageJobResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return { success: false, error: "未登录" };
+  }
+
+  try {
+    const {
+      assetId,
+      editPrompt,
+      sourceAssetIds = [],
+      aspectRatio = "auto",
+      resolution = "2K",
+    } = input;
+
+    // 验证参数
+    if (!editPrompt || !editPrompt.trim()) {
+      return { success: false, error: "请输入编辑提示词" };
+    }
+
+    // 获取原素材
+    const { getAssetWithFullData } = await import("./crud");
+    const assetResult = await getAssetWithFullData(assetId);
+
+    if (!assetResult.success || !assetResult.asset) {
+      return { success: false, error: assetResult.error || "素材不存在" };
+    }
+
+    const existingAsset = assetResult.asset;
+
+    if (existingAsset.assetType !== "image") {
+      return { success: false, error: "此方法仅支持图片素材" };
+    }
+
+    // 合并参考图：原素材 + 额外参考图
+    const allSourceAssetIds = [assetId, ...sourceAssetIds].slice(0, 8);
+
+    // 创建新版本记录
+    const { createAssetVersion } = await import("./crud");
+    const versionResult = await createAssetVersion(assetId, {
+      prompt: editPrompt.trim(),
+      modelUsed: "nano-banana-pro",
+      sourceAssetIds: allSourceAssetIds,
+      generationConfig: JSON.stringify({
+        aspectRatio: aspectRatio,
+        resolution: resolution,
+        numImages: 1,
+      }),
+    });
+
+    if (!versionResult.success || !versionResult.versionId) {
+      return { success: false, error: versionResult.error || "创建版本失败" };
+    }
+
+    // 创建图片生成任务（关联到新版本）
+    const jobResult = await createJob({
+      userId: session.user.id,
+      projectId: existingAsset.projectId,
+      type: "asset_image",
+      assetId: assetId,
+      imageDataId: versionResult.versionId,
+      inputData: {},
+    });
+
+    if (!jobResult.success || !jobResult.jobId) {
+      return { success: false, error: jobResult.error || "创建任务失败" };
+    }
+
+    return {
+      success: true,
+      assetId,
+      jobId: jobResult.jobId,
+    };
+  } catch (error) {
+    console.error("编辑素材版本失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "编辑失败",
+    };
+  }
+}
+

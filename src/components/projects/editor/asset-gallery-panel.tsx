@@ -5,8 +5,6 @@ import { useEditor } from "./editor-context";
 import { AssetCard } from "./shared/asset-card";
 import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
-import { regenerateAssetImage } from "@/lib/actions/asset/generate-asset";
-import { regenerateVideoAsset } from "@/lib/actions/asset/crud";
 import { AssetWithFullData, AssetTypeEnum } from "@/types/asset";
 import { toast } from "sonner";
 import { Images, RefreshCw, Upload, Bot } from "lucide-react";
@@ -27,6 +25,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AssetDetailView } from "./shared/asset-detail-view";
+import { AssetEditMode } from "./shared/asset-edit-mode";
+import { AssetRegenerateMode } from "./shared/asset-regenerate-mode";
 import {
   AssetFilterOptions,
   SortOption,
@@ -135,8 +135,6 @@ export function AssetGalleryPanel() {
   const {
     state,
     loadAssets,
-    setMode,
-    setPendingEditAsset,
   } = useEditor();
   const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
   const t = useTranslations("editor.assetGallery");
@@ -149,9 +147,6 @@ export function AssetGalleryPanel() {
     null
   );
   const [isDeleting, setIsDeleting] = useState(false);
-  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
-  const [assetToRegenerate, setAssetToRegenerate] = useState<AssetWithFullData | null>(null);
-  const [isRegenerating, setIsRegenerating] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(
     new Set()
   );
@@ -193,6 +188,12 @@ export function AssetGalleryPanel() {
   // 文本资产编辑状态
   const [editingTextAsset, setEditingTextAsset] =
     useState<AssetWithFullData | null>(null);
+
+  // AI 编辑模式状态
+  const [editingAsset, setEditingAsset] = useState<AssetWithFullData | null>(null);
+
+  // 重新生成模式状态
+  const [regeneratingAsset, setRegeneratingAsset] = useState<AssetWithFullData | null>(null);
 
   // 初始加载或静默刷新
   useEffect(() => {
@@ -364,54 +365,56 @@ export function AssetGalleryPanel() {
     }
   };
 
-  // 处理重新生成 - 打开确认对话框
+  // 处理重新生成 - 进入重新生成编辑模式
   const handleRegenerate = (asset: AssetWithFullData) => {
-    setAssetToRegenerate(asset);
-    setRegenerateDialogOpen(true);
-  };
-
-  // 确认重新生成
-  const handleConfirmRegenerate = async () => {
-    if (!assetToRegenerate) return;
-
-    setIsRegenerating(true);
-    const toastId = `regenerate-${assetToRegenerate.id}`;
-    toast.loading(t("regenerating"), { id: toastId });
-    try {
-      let result;
-      if (assetToRegenerate.assetType === "video") {
-        result = await regenerateVideoAsset(assetToRegenerate.id);
-      } else {
-        result = await regenerateAssetImage(assetToRegenerate.id);
-      }
-
-      if (result.success) {
-        toast.success(t("regenerating"), { id: toastId });
-        await loadAssets({ search: filterOptions.search });
-      } else {
-        toast.error(result.error || t("regenerateFailed"), { id: toastId });
-      }
-    } catch (error) {
-      console.error("Regenerate failed:", error);
-      toast.error(t("regenerateFailed"), { id: toastId });
-    } finally {
-      setIsRegenerating(false);
-      setRegenerateDialogOpen(false);
-      setAssetToRegenerate(null);
-    }
-  };
-
-  // 处理 AI 编辑 - 跳转到 Agent 面板并预填充素材
-  const handleEdit = (asset: AssetWithFullData) => {
-    // 设置待编辑素材（AgentChatContainer 会自动展开，AgentPanel 会自动预填充）
-    setPendingEditAsset(asset);
-    // 确保在素材管理模式（Agent 面板在此模式可用）
-    setMode("asset-management");
+    setRegeneratingAsset(asset);
     // 关闭详情视图（如果打开的话）
     setSelectedAsset(null);
   };
 
+  // 退出重新生成模式
+  const handleExitRegenerateMode = () => {
+    setRegeneratingAsset(null);
+  };
+
+  // 处理 AI 编辑 - 切换到编辑模式
+  const handleEdit = (asset: AssetWithFullData) => {
+    // 设置编辑素材，切换到编辑模式视图
+    setEditingAsset(asset);
+    // 关闭详情视图（如果打开的话）
+    setSelectedAsset(null);
+  };
+
+  // 退出编辑模式
+  const handleExitEditMode = () => {
+    setEditingAsset(null);
+  };
+
   if (!project) return null;
+
+  // 如果在编辑模式，显示编辑视图
+  if (editingAsset) {
+    return (
+      <AssetEditMode
+        asset={editingAsset}
+        projectId={project.id}
+        onBack={handleExitEditMode}
+        onSuccess={handleAssetUpdated}
+      />
+    );
+  }
+
+  // 如果在重新生成模式，显示重新生成视图
+  if (regeneratingAsset) {
+    return (
+      <AssetRegenerateMode
+        asset={regeneratingAsset}
+        projectId={project.id}
+        onBack={handleExitRegenerateMode}
+        onSuccess={handleAssetUpdated}
+      />
+    );
+  }
 
   // 如果有选中的素材，显示详情视图
   if (selectedAsset) {
@@ -622,35 +625,6 @@ export function AssetGalleryPanel() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? t("deleting") : tCommon("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* 重新生成确认对话框 */}
-      <AlertDialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("confirmRegenerate")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {assetToRegenerate?.assetType === "video"
-                ? t("confirmRegenerateVideo", {
-                    name: assetToRegenerate?.name ?? "",
-                    credits: Math.ceil((assetToRegenerate?.duration || 5000) / 1000) * 6
-                  })
-                : t("confirmRegenerateImage", {
-                    name: assetToRegenerate?.name ?? "",
-                    credits: 6
-                  })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRegenerating}>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmRegenerate}
-              disabled={isRegenerating}
-            >
-              {isRegenerating ? t("regenerating") : tCommon("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

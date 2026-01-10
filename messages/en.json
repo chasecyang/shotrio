@@ -1089,6 +1089,31 @@
       "regenerate": "Regenerate",
       "delete": "Delete"
     },
+    "assetEdit": {
+      "title": "Edit Asset",
+      "originalImage": "Original Image",
+      "promptLabel": "Edit Prompt",
+      "promptPlaceholder": "Describe the changes you want...",
+      "promptRequired": "Please enter an edit prompt",
+      "referenceImages": "Reference Images",
+      "optional": "Optional",
+      "selectReference": "Select Reference",
+      "selectReferenceDescription": "Select other images from the library as reference",
+      "aspectRatio": "Aspect Ratio",
+      "autoAspectRatio": "Auto",
+      "resolution": "Resolution",
+      "submit": "Generate New Version",
+      "submitting": "Generating...",
+      "submitSuccess": "Generation task submitted",
+      "submitFailed": "Submission failed"
+    },
+    "assetRegenerate": {
+      "title": "Regenerate",
+      "submit": "Regenerate",
+      "submitting": "Regenerating...",
+      "submitSuccess": "Regeneration task submitted",
+      "submitFailed": "Regeneration failed"
+    },
     "projectSettings": "Project Settings",
     "expandAgent": "Expand Agent Chat",
     "interrupted": "Interrupted",
