@@ -1,22 +1,15 @@
 "use client";
 
-import { memo, useState, useMemo, useEffect } from "react";
-import type { AgentMessage, FunctionCall } from "@/types/agent";
+import { memo } from "react";
+import type { AgentMessage } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
 import { DisplayStepCard } from "./display-step-card";
 import { useMessageDisplay } from "./use-message-display";
-import { PendingActionMessage } from "./pending-action-message";
 import { useAgent } from "./agent-context";
-import { useAgentStream } from "./use-agent-stream";
-import { toast } from "sonner";
-import { getFunctionDefinition } from "@/lib/actions/agent/functions";
-import { estimateActionCredits } from "@/lib/actions/credits/estimate";
-import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 interface ChatMessageProps {
   message: AgentMessage;
-  currentBalance?: number;
 }
 
 import { useTranslations } from "next-intl";
@@ -32,167 +25,9 @@ const InterruptedBadge = () => {
   );
 };
 
-export const ChatMessage = memo(function ChatMessage({ message, currentBalance }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
   const agent = useAgent();
-
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [isRejecting, setIsRejecting] = useState(false);
-  
-  // 从当前消息推导 approval 信息
-  const approvalInfo = useMemo(() => {
-    if (message.role !== "assistant" || !message.toolCalls) {
-      return null;
-    }
-    
-    // 检查是否有未执行的需要确认的 tool call
-    for (const tc of message.toolCalls) {
-      // 检查是否已有对应的 tool message
-      const hasToolMsg = agent.state.messages.some(
-        m => m.role === "tool" && m.toolCallId === tc.id
-      );
-      
-      if (hasToolMsg) continue; // 已执行
-      
-      // 检查是否需要确认
-      const funcDef = getFunctionDefinition(tc.function.name);
-      if (funcDef?.needsConfirmation) {
-        return {
-          toolCall: tc,
-          funcDef,
-        };
-      }
-    }
-    
-    return null;
-  }, [message, agent.state.messages]);
-  
-  // 异步获取积分估算
-  const [creditCost, setCreditCost] = useState<CreditCost | undefined>();
-  
-  useEffect(() => {
-    if (!approvalInfo) {
-      setCreditCost(undefined);
-      return;
-    }
-    
-    const estimate = async () => {
-      try {
-        const args = JSON.parse(approvalInfo.toolCall.function.arguments);
-        const functionCall: FunctionCall = {
-          id: approvalInfo.toolCall.id,
-          name: approvalInfo.toolCall.function.name,
-          displayName: approvalInfo.funcDef.displayName,
-          parameters: args,
-          category: approvalInfo.funcDef.category,
-          needsConfirmation: true,
-        };
-        
-        const result = await estimateActionCredits([functionCall]);
-        if (result.success && result.creditCost) {
-          setCreditCost(result.creditCost);
-        }
-      } catch (error) {
-        console.error("估算积分失败:", error);
-      }
-    };
-    
-    estimate();
-  }, [approvalInfo]);
-
-  // 自动执行模式：当启用时自动确认待批准操作
-  useEffect(() => {
-    if (
-      approvalInfo &&
-      agent.state.isAutoAcceptEnabled &&
-      !isConfirming &&
-      !isRejecting
-    ) {
-      // 检查积分余额
-      const totalCost = creditCost?.total || 0;
-      if (currentBalance !== undefined && totalCost > currentBalance) {
-        toast.warning("积分不足，无法自动执行");
-        return;
-      }
-
-      // 延迟 500ms 后自动确认（给 UI 渲染时间）
-      const timer = setTimeout(() => {
-        console.log("[AutoAccept] 自动确认操作:", approvalInfo.toolCall.id);
-        handleConfirmAction(approvalInfo.toolCall.id, undefined);
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [approvalInfo, agent.state.isAutoAcceptEnabled, isConfirming, isRejecting, creditCost, currentBalance]);
-
-  // 使用 Agent Stream Hook（仅用于恢复对话）
-  const { resumeConversation } = useAgentStream();
-
-  // Handle pending action confirmation
-  const handleConfirmAction = async (id: string, modifiedParams?: Record<string, unknown>) => {
-    if (!approvalInfo || !agent.state.currentConversationId || isConfirming) return;
-
-    setIsConfirming(true);
-
-    try {
-      console.log("[Agent] 准备确认，conversationId:", agent.state.currentConversationId, modifiedParams ? "使用修改后的参数" : "");
-
-      toast.success("操作已确认，Agent 正在继续...");
-
-      // 设置 loading 状态
-      agent.setLoading(true);
-
-      // 恢复对话，Engine 会自动执行已确认的操作
-      await resumeConversation(agent.state.currentConversationId, true, modifiedParams);
-    } catch (error) {
-      console.error("确认操作失败:", error);
-      toast.error("确认操作失败");
-      // 出错时清除 loading 状态
-      agent.setLoading(false);
-    } finally {
-      setIsConfirming(false);
-    }
-  };
-
-  const handleCancelAction = async () => {
-    if (!approvalInfo || !agent.state.currentConversationId || isRejecting) return;
-
-    setIsRejecting(true);
-    
-    try {
-      console.log("[Agent] 用户拒绝操作");
-
-      const toolCallId = approvalInfo.toolCall.id;
-
-      // 立即创建拒绝的 tool message（客户端预测，避免显示"执行中"状态）
-      agent.addMessage({
-        id: `tool-${toolCallId}-${Date.now()}`,
-        role: "tool",
-        content: JSON.stringify({
-          success: false,
-          error: "用户拒绝了此操作",
-          userRejected: true,
-        }),
-        toolCallId: toolCallId,
-      });
-
-      toast.info("操作已拒绝，Agent 正在回应...");
-
-      // 设置 loading 状态
-      agent.setLoading(true);
-
-      // 纯粹拒绝，不传 reason
-      await resumeConversation(agent.state.currentConversationId, false);
-    } catch (error) {
-      console.error("拒绝操作失败:", error);
-      toast.error("拒绝操作失败");
-      // 出错时清除 loading 状态
-      agent.setLoading(false);
-    } finally {
-      setIsRejecting(false);
-    }
-  };
-
 
   // 使用新的 useMessageDisplay hook 构建展示步骤
   const displays = useMessageDisplay(agent.state.messages);
@@ -237,26 +72,6 @@ export const ChatMessage = memo(function ChatMessage({ message, currentBalance }
             <div className="text-sm break-words">
               <MarkdownRenderer content={message.content} className="inline" />
             </div>
-          )}
-
-          {/* Pending Action (待确认操作) - 从 approvalInfo 推导 */}
-          {approvalInfo && (
-            <PendingActionMessage
-              functionCall={{
-                id: approvalInfo.toolCall.id,
-                name: approvalInfo.toolCall.function.name,
-                displayName: approvalInfo.funcDef.displayName,
-                arguments: JSON.parse(approvalInfo.toolCall.function.arguments),
-                category: approvalInfo.funcDef.category,
-              }}
-              message={message.content || ""}
-              creditCost={creditCost}
-              onConfirm={handleConfirmAction}
-              onCancel={handleCancelAction}
-              currentBalance={currentBalance}
-              isConfirming={isConfirming}
-              isRejecting={isRejecting}
-            />
           )}
 
           {/* Interrupted Badge */}

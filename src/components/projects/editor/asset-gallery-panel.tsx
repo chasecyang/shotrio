@@ -7,10 +7,9 @@ import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { regenerateAssetImage } from "@/lib/actions/asset/generate-asset";
 import { regenerateVideoAsset } from "@/lib/actions/asset/crud";
-import { AssetWithFullData, ImageResolution, AssetTypeEnum } from "@/types/asset";
-import type { AspectRatio } from "@/lib/services/image.service";
+import { AssetWithFullData, AssetTypeEnum } from "@/types/asset";
 import { toast } from "sonner";
-import { Images, RefreshCw, Upload } from "lucide-react";
+import { Images, RefreshCw, Upload, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
@@ -136,7 +135,8 @@ export function AssetGalleryPanel() {
   const {
     state,
     loadAssets,
-    setEditingAsset,
+    setMode,
+    setPendingEditAsset,
   } = useEditor();
   const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
   const t = useTranslations("editor.assetGallery");
@@ -401,25 +401,12 @@ export function AssetGalleryPanel() {
     }
   };
 
-  // 处理编辑 - 跳转到生成面板并预填充参数
+  // 处理 AI 编辑 - 跳转到 Agent 面板并预填充素材
   const handleEdit = (asset: AssetWithFullData) => {
-    // 解析 generationConfig
-    let config: { aspectRatio?: AspectRatio; resolution?: ImageResolution } = {};
-    if (asset.generationConfig) {
-      try {
-        config = JSON.parse(asset.generationConfig);
-      } catch {
-        // 使用默认值
-      }
-    }
-
-    // 设置编辑状态（这会自动设置 sourceAssetIds 和切换模式）
-    setEditingAsset(asset, {
-      prompt: asset.prompt || "",
-      aspectRatio: config.aspectRatio || "16:9",
-      resolution: config.resolution || "2K",
-    });
-
+    // 设置待编辑素材（AgentChatContainer 会自动展开，AgentPanel 会自动预填充）
+    setPendingEditAsset(asset);
+    // 确保在素材管理模式（Agent 面板在此模式可用）
+    setMode("asset-management");
     // 关闭详情视图（如果打开的话）
     setSelectedAsset(null);
   };
@@ -522,17 +509,33 @@ export function AssetGalleryPanel() {
           ) : filteredAssets.length === 0 ? (
             // 空状态
             <div className="flex flex-col items-center justify-center py-12 px-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mb-4">
-                <Images className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-base font-semibold mb-2">
-                {allAssets.length === 0 ? t("noAssets") : t("noMatchingAssets")}
-              </h3>
-              <p className="text-sm text-muted-foreground text-center max-w-sm">
-                {allAssets.length === 0
-                  ? t("noAssets")
-                  : t("tryAdjustFilter")}
-              </p>
+              {allAssets.length === 0 ? (
+                // 完全没有素材 - 简约引导
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                    <Bot className="w-6 h-6 text-primary/70" />
+                  </div>
+                  <h3 className="text-sm font-medium text-foreground/80 mb-1">
+                    {t("emptyStateTitle")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {t("emptyStateDescription")}
+                  </p>
+                </div>
+              ) : (
+                // 筛选结果为空 - 简单提示
+                <>
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mb-4">
+                    <Images className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-base font-semibold mb-2">
+                    {t("noMatchingAssets")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground text-center max-w-sm">
+                    {t("tryAdjustFilter")}
+                  </p>
+                </>
+              )}
             </div>
           ) : showGroupedView ? (
             // 分组视图

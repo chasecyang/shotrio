@@ -14,16 +14,16 @@ export function ModeTabBar() {
     <div className="flex justify-center py-3 bg-background/80 backdrop-blur-sm shrink-0">
       <Tabs
         value={mode}
-        onValueChange={(value) => setMode(value as "asset-management" | "editing")}
+        onValueChange={(value) => setMode(value as "asset-management" | "clipping")}
       >
         <TabsList>
           <TabsTrigger value="asset-management">
             <Images className="h-4 w-4" />
             {t("assets")}
           </TabsTrigger>
-          <TabsTrigger value="editing">
+          <TabsTrigger value="clipping">
             <Film className="h-4 w-4" />
-            {t("editing")}
+            {t("clipping")}
           </TabsTrigger>
         </TabsList>
       </Tabs>

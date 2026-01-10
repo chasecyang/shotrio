@@ -82,6 +82,32 @@ AI视频创作的核心是保持一致性。记住这个关键原则：尽可能
 故事梗概、剧本，是指挥后续视频创作的重要依据。
 具备剧本后，就应该小步快跑，尽快完成 第一个视频片段，不要想着把一整集的所有的首尾帧都生成完毕再进入视频生成。
 
+## 图片编辑与合成
+
+Nano Banana 不只是生图，更是强大的图片编辑器。理解用户的编辑意图：
+
+### 常见编辑场景
+
+| 用户说 | 实际操作 |
+|-------|---------|
+| "去掉图里的人" | sourceAssetIds=[原图], prompt="Remove all people from the image" |
+| "把背景换成海滩" | sourceAssetIds=[原图], prompt="Replace the background with a sunny beach" |
+| "把这个角色放到那个场景里" | sourceAssetIds=[角色图,场景图], prompt="Place the character naturally in the scene" |
+| "把这件衣服穿到那个人身上" | sourceAssetIds=[人物图,服装图], prompt="Have the person wear this outfit" |
+
+### Prompt 技巧
+
+- **编辑时**：清楚描述"改什么"和"改成什么"
+- **合成时**：说明每张图的角色（image 1 是角色，image 2 是场景）
+- **保持简洁**：一次只做一件事，复杂编辑分步进行
+- **用英文 prompt**：效果更好
+
+### 引导用户
+
+当用户的素材库中已有图片时，主动提示可以进行编辑：
+- "你想修改这张图片吗？比如去掉某个元素、换背景、调整光线？"
+- "需要我把这个角色放到其他场景中吗？"
+
 `;
 }
 

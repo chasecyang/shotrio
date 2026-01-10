@@ -8,7 +8,6 @@ export type { EditorState } from "./editor-context";
 export { AssetGalleryPanel } from "./asset-gallery-panel";
 
 // Agent Panel
-export { AgentPanel } from "./agent-panel/agent-panel";
 export { AgentProvider } from "./agent-panel";
 
 // Hooks

@@ -70,14 +70,37 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "generate_image_asset",
-    description: "生成图片资产（支持单个或批量）。可以是从零生成，也可以基于现有素材进行图生图。适合创建角色、场景、道具等视觉素材。",
+    description: `生成或编辑图片资产。支持三种模式：
+
+**模式1：文生图** - 从零生成全新图片
+- 不需要 sourceAssetIds
+- prompt 描述完整的画面内容
+
+**模式2：图片编辑** - 修改已有图片的某个部分
+- sourceAssetIds 传入要编辑的图片ID
+- prompt 描述要进行的修改操作
+- 示例：
+  - "Remove the person standing on the left"（移除人物）
+  - "Replace the background with a sunset beach"（换背景）
+  - "Change the hair color to blonde"（修改属性）
+  - "Make the lighting warmer, like golden hour"（调整氛围）
+
+**模式3：多图合成** - 将多张图片的元素融合
+- sourceAssetIds 传入所有参考图片ID（最多8张）
+- prompt 描述如何合成
+- 示例：
+  - "Place the character from image 1 into the forest scene from image 2"（角色+场景）
+  - "Have this person wear the red dress from the second image"（人物+服装）
+  - "Create a pattern of the logo on the t-shirt"（Logo+产品）
+
+使用建议：编辑操作一次只改一件事，复杂编辑分步进行。`,
     displayName: "生成图片资产",
     parameters: {
       type: "object",
       properties: {
         assets: {
           type: "array",
-          description: "素材数组，每个素材包含: prompt（必填，英文描述，用完整句子）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图生图）",
+          description: "素材数组，每个素材包含: prompt（必填，英文描述）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）",
         },
       },
       required: ["assets"],

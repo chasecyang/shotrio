@@ -1050,7 +1050,7 @@
     },
     "modeTab": {
       "assets": "Assets",
-      "editing": "Editing"
+      "clipping": "Clipping"
     },
     "assetFilter": {
       "all": "All",
@@ -1080,7 +1080,14 @@
       "confirmDeleteSingle": "Are you sure you want to delete asset \"{name}\"? This action cannot be undone.",
       "confirmDeleteBatch": "Are you sure you want to delete {count} asset(s)? This action cannot be undone.",
       "deleting": "Deleting...",
-      "upload": "Upload"
+      "upload": "Upload",
+      "emptyStateTitle": "No assets yet",
+      "emptyStateDescription": "Chat with AI to generate images, videos and more"
+    },
+    "assetCard": {
+      "aiEdit": "AI Edit Image",
+      "regenerate": "Regenerate",
+      "delete": "Delete"
     },
     "projectSettings": "Project Settings",
     "expandAgent": "Expand Agent Chat",
@@ -1144,6 +1151,11 @@
         "executionPlan": "Execution Plan",
         "confirm": "Confirm",
         "reject": "Reject",
+        "edit": "Edit",
+        "feedback": "Feedback",
+        "feedbackPlaceholder": "Enter your thoughts...",
+        "submitFeedback": "Submit Feedback",
+        "cancelFeedback": "Cancel",
         "viewDetails": "View Details",
         "confirmGenerate": "Confirm Generation",
         "confirmDelete": "Confirm Delete",

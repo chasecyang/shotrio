@@ -5,6 +5,7 @@ import { FloatingChatInput } from "./floating-chat-input";
 import { FloatingAgentCard, ExpandedPosition } from "./floating-agent-card";
 import { AgentChatSkeleton } from "./agent-chat-skeleton";
 import { useAgent } from "./agent-panel/agent-context";
+import { useEditor } from "./editor-context";
 import { cn } from "@/lib/utils";
 
 // localStorage keys
@@ -19,12 +20,25 @@ interface AgentChatContainerProps {
 
 export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
   const agent = useAgent();
+  const { state: editorState } = useEditor();
   // 状态：默认展开模式
   const [mode, setMode] = useState<ChatMode>("expanded");
   const [expandedPosition, setExpandedPosition] = useState<ExpandedPosition>("left");
   const [isInitialized, setIsInitialized] = useState(false);
   // 拖拽预览状态（仅展开时使用）
   const [targetPosition, setTargetPosition] = useState<ExpandedPosition | null>(null);
+
+  // 监听 pendingEditAsset，有值时自动展开面板
+  useEffect(() => {
+    if (editorState.pendingEditAsset && mode === "collapsed") {
+      setMode("expanded");
+      try {
+        localStorage.setItem(CHAT_MODE_KEY, "expanded");
+      } catch (error) {
+        console.error("保存聊天模式失败:", error);
+      }
+    }
+  }, [editorState.pendingEditAsset, mode]);
 
   // 从 localStorage 恢复状态
   useEffect(() => {

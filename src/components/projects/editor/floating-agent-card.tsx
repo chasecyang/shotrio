@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-panel/agent-context";
@@ -8,6 +8,7 @@ import { useAgentStream } from "./agent-panel/use-agent-stream";
 import { useEditor } from "./editor-context";
 import { ChatMessage } from "./agent-panel/chat-message";
 import { TypingIndicator } from "./agent-panel/typing-indicator";
+import { AutoModeToggle } from "./agent-panel/auto-mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,7 +29,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createConversation, saveInterruptMessage, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
-import { isAwaitingApproval } from "@/lib/services/agent-engine/approval-utils";
+import { isAwaitingApproval, findPendingApproval } from "@/lib/services/agent-engine/approval-utils";
 import { useCreditsInfo } from "@/hooks/use-credits-info";
 import {
   DropdownMenu,
@@ -52,7 +53,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AutoModeToggle } from "./agent-panel/auto-mode-toggle";
+import { ApprovalActionBar } from "./agent-panel/approval-action-bar";
+import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 
 export type ExpandedPosition = "left" | "right" | "bottom";
 
@@ -118,6 +120,27 @@ export function FloatingAgentCard({
 
   // 空状态判断
   const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
+
+  // 检测待审批操作
+  const pendingApproval = useMemo(() => {
+    const messages = agent.state.messages.map(msg => ({
+      role: msg.role,
+      content: msg.content || "",
+      tool_calls: msg.toolCalls,
+      tool_call_id: msg.toolCallId,
+    }));
+
+    const approval = findPendingApproval(messages as any[]);
+    if (!approval) return null;
+
+    const funcDef = getFunctionDefinition(approval.toolCall.function.name);
+    if (!funcDef) return null;
+
+    return {
+      toolCall: approval.toolCall,
+      funcDef,
+    };
+  }, [agent.state.messages]);
 
   // 检测用户是否在底部
   const handleScroll = useCallback(() => {
@@ -474,9 +497,29 @@ export function FloatingAgentCard({
     }
   };
 
+  // 删除确认对话框 - 统一定义，避免重复
+  const deleteDialog = (
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定要删除这个对话吗？此操作无法撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmDelete}>
+            删除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   // 底部模式的布局
   if (position === "bottom") {
-    return (
+    const bottomContent = (
       <motion.div
         ref={cardRef}
         animate={{
@@ -625,7 +668,6 @@ export function FloatingAgentCard({
                         <ChatMessage
                           key={message.id}
                           message={message}
-                          currentBalance={creditBalance}
                         />
                       ))}
                     {agent.state.isLoading && <TypingIndicator />}
@@ -648,65 +690,62 @@ export function FloatingAgentCard({
             )}
           </div>
 
-          {/* Input */}
-          <div className="border-t p-3 shrink-0 bg-background/80">
-            <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
-                className="min-h-[20px] max-h-[80px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
-                style={{ height: 'auto', minHeight: '40px' }}
-              />
-              <div className="absolute bottom-2 right-2">
-                {agent.state.isLoading && !input.trim() ? (
-                  <Button
-                    onClick={handleStop}
-                    size="icon"
-                    variant="destructive"
-                    className="h-8 w-8 rounded-lg"
-                  >
-                    <Square className="h-4 w-4 fill-current" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleSend()}
-                    disabled={!input.trim()}
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                )}
+          {/* Input or Approval Action Bar */}
+          {pendingApproval ? (
+            <ApprovalActionBar
+              approvalInfo={pendingApproval}
+              currentBalance={creditBalance}
+            />
+          ) : (
+            <div className="border-t p-3 shrink-0 bg-background/80">
+              <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
+                  className="min-h-[20px] max-h-[80px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
+                  style={{ height: 'auto', minHeight: '40px' }}
+                />
+                <div className="absolute bottom-2 right-2">
+                  {agent.state.isLoading && !input.trim() ? (
+                    <Button
+                      onClick={handleStop}
+                      size="icon"
+                      variant="destructive"
+                      className="h-8 w-8 rounded-lg"
+                    >
+                      <Square className="h-4 w-4 fill-current" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleSend()}
+                      disabled={!input.trim()}
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Delete Confirmation Dialog */}
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>确认删除</AlertDialogTitle>
-                <AlertDialogDescription>
-                  确定要删除这个对话吗？此操作无法撤销。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmDelete}>
-                  删除
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </motion.div>
+    );
+
+    return (
+      <>
+        {bottomContent}
+        {deleteDialog}
+      </>
     );
   }
 
   // 左右侧边栏模式
-  return (
+  const sidebarContent = (
     <motion.div
       ref={cardRef}
       animate={{
@@ -873,7 +912,6 @@ export function FloatingAgentCard({
                     <ChatMessage
                       key={message.id}
                       message={message}
-                      currentBalance={creditBalance}
                     />
                   ))}
                 {agent.state.isLoading && <TypingIndicator />}
@@ -896,64 +934,61 @@ export function FloatingAgentCard({
         )}
       </div>
 
-      {/* Input */}
-      <div className="border-t p-3 shrink-0 bg-background/80">
-        <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
-            className="min-h-[20px] max-h-[150px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
-            style={{ height: 'auto', minHeight: '40px' }}
-          />
-          <div className="absolute bottom-2 right-2">
-            {agent.state.isLoading && !input.trim() ? (
-              <Button
-                onClick={handleStop}
-                size="icon"
-                variant="destructive"
-                className="h-8 w-8 rounded-lg"
-              >
-                <Square className="h-4 w-4 fill-current" />
-              </Button>
-            ) : (
-              <Button
-                onClick={() => handleSend()}
-                disabled={!input.trim()}
-                size="icon"
-                className="h-8 w-8 rounded-lg"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            )}
+      {/* Input or Approval Action Bar */}
+      {pendingApproval ? (
+        <ApprovalActionBar
+          approvalInfo={pendingApproval}
+          currentBalance={creditBalance}
+        />
+      ) : (
+        <div className="border-t p-3 shrink-0 bg-background/80">
+          <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
+              className="min-h-[20px] max-h-[150px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
+              style={{ height: 'auto', minHeight: '40px' }}
+            />
+            <div className="absolute bottom-2 right-2">
+              {agent.state.isLoading && !input.trim() ? (
+                <Button
+                  onClick={handleStop}
+                  size="icon"
+                  variant="destructive"
+                  className="h-8 w-8 rounded-lg"
+                >
+                  <Square className="h-4 w-4 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleSend()}
+                  disabled={!input.trim()}
+                  size="icon"
+                  className="h-8 w-8 rounded-lg"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
+          <p className="mt-2 text-xs text-center text-muted-foreground/60">
+            {agent.state.isLoading
+              ? (input.trim() ? "发送消息将中断当前输出" : t('editor.agent.chatInput.stopToInterrupt'))
+              : t('editor.agent.chatInput.enterToSend')}
+          </p>
         </div>
-        <p className="mt-2 text-xs text-center text-muted-foreground/60">
-          {agent.state.isLoading
-            ? (input.trim() ? "发送消息将中断当前输出" : t('editor.agent.chatInput.stopToInterrupt'))
-            : t('editor.agent.chatInput.enterToSend')}
-        </p>
-      </div>
+      )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除这个对话吗？此操作无法撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete}>
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       </div>
     </motion.div>
+  );
+
+  return (
+    <>
+      {sidebarContent}
+      {deleteDialog}
+    </>
   );
 }

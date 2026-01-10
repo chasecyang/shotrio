@@ -1050,7 +1050,7 @@
     },
     "modeTab": {
       "assets": "素材",
-      "editing": "剪辑"
+      "clipping": "剪辑"
     },
     "assetFilter": {
       "all": "全部",
@@ -1080,7 +1080,14 @@
       "confirmDeleteSingle": "确定要删除素材「{name}」吗？此操作无法撤销。",
       "confirmDeleteBatch": "确定要删除 {count} 个素材吗？此操作无法撤销。",
       "deleting": "删除中...",
-      "upload": "上传"
+      "upload": "上传",
+      "emptyStateTitle": "还没有素材",
+      "emptyStateDescription": "和 AI 对话，让它帮你生成图片、视频等素材"
+    },
+    "assetCard": {
+      "aiEdit": "AI 编辑图片",
+      "regenerate": "重新生成",
+      "delete": "删除"
     },
     "projectSettings": "项目设置",
     "expandAgent": "展开 Agent 对话",
@@ -1144,6 +1151,11 @@
         "executionPlan": "执行计划",
         "confirm": "确认",
         "reject": "拒绝",
+        "edit": "修改",
+        "feedback": "反馈",
+        "feedbackPlaceholder": "请输入您的想法...",
+        "submitFeedback": "发送反馈",
+        "cancelFeedback": "取消",
         "viewDetails": "查看详细参数",
         "confirmGenerate": "确认生成",
         "confirmDelete": "确认删除",

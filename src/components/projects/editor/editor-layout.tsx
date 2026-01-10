@@ -7,7 +7,7 @@ import { EditorHeader } from "./editor-header";
 import { ModeTabBar } from "./mode-tab-bar";
 import { AgentChatContainer } from "./agent-chat-container";
 import { AssetGalleryPanel } from "./asset-gallery-panel";
-import { EditingModeLayout } from "./editing-mode/editing-mode-layout";
+import { ClippingModeLayout } from "./clipping-mode/clipping-mode-layout";
 import { ProjectSettingsPanel } from "./project-settings-panel";
 import { ActionEditorPanel } from "./action-editor-panel";
 import { useEditorKeyboard } from "./use-editor-keyboard";
@@ -98,8 +98,8 @@ function EditorLayoutInner({
             <ActionEditorPanel />
           ) : state.showSettings ? (
             <ProjectSettingsPanel />
-          ) : state.mode === "editing" ? (
-            <EditingModeLayout />
+          ) : state.mode === "clipping" ? (
+            <ClippingModeLayout />
           ) : (
             <AssetGalleryPanel />
           )}

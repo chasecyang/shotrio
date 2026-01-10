@@ -13,7 +13,7 @@ import { queryAssets } from "@/lib/actions/asset";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 // 编辑器模式
-export type EditorMode = "asset-management" | "editing";
+export type EditorMode = "asset-management" | "clipping";
 
 // localStorage key
 const getEditorModeStorageKey = (projectId: string) => `editor:project:${projectId}:mode`;
@@ -87,7 +87,10 @@ export interface EditorState {
 
   // 参数编辑面板状态
   actionEditor?: ActionEditorData;
-  previousView?: "gallery" | "editing" | "settings"; // 保存切换前的视图
+  previousView?: "gallery" | "clipping" | "settings"; // 保存切换前的视图
+
+  // AI 编辑待处理素材（从素材卡片跳转到 Agent 时使用）
+  pendingEditAsset: AssetWithFullData | null;
 }
 
 // 编辑器动作类型
@@ -112,7 +115,8 @@ type EditorAction =
   | { type: "SET_ACTION_EDITOR"; payload: ActionEditorData }
   | { type: "CLEAR_ACTION_EDITOR" }
   | { type: "SET_EDITING_ASSET"; payload: { asset: AssetWithFullData | null; prefillParams?: PrefillParams } }
-  | { type: "CLEAR_EDITING_ASSET" };
+  | { type: "CLEAR_EDITING_ASSET" }
+  | { type: "SET_PENDING_EDIT_ASSET"; payload: AssetWithFullData | null };
 
 // 初始状态
 const initialState: EditorState = {
@@ -136,6 +140,7 @@ const initialState: EditorState = {
     currentClipIndex: 0,
   },
   showSettings: false,
+  pendingEditAsset: null,
 };
 
 // Reducer
@@ -275,9 +280,9 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case "SET_ACTION_EDITOR": {
       // 保存当前视图状态
-      let previousView: "gallery" | "editing" | "settings" = "gallery";
-      if (state.mode === "editing") {
-        previousView = "editing";
+      let previousView: "gallery" | "clipping" | "settings" = "gallery";
+      if (state.mode === "clipping") {
+        previousView = "clipping";
       } else if (state.showSettings) {
         previousView = "settings";
       }
@@ -296,8 +301,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         previousView: undefined,
       };
 
-      if (state.previousView === "editing") {
-        updates.mode = "editing";
+      if (state.previousView === "clipping") {
+        updates.mode = "clipping";
       } else if (state.previousView === "settings") {
         updates.showSettings = true;
       } else {
@@ -336,6 +341,12 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           editingAsset: null,
           prefillParams: null,
         },
+      };
+
+    case "SET_PENDING_EDIT_ASSET":
+      return {
+        ...state,
+        pendingEditAsset: action.payload,
       };
 
     default:
@@ -377,6 +388,8 @@ interface EditorContextType {
   // 素材编辑相关方法
   setEditingAsset: (asset: AssetWithFullData | null, prefillParams?: PrefillParams) => void;
   clearEditingAsset: () => void;
+  // AI 编辑相关方法
+  setPendingEditAsset: (asset: AssetWithFullData | null) => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -444,7 +457,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     modeRestoredRef.current = true;
     try {
       const saved = localStorage.getItem(getEditorModeStorageKey(initialProject.id));
-      if (saved === "asset-management" || saved === "editing") {
+      if (saved === "asset-management" || saved === "clipping") {
         dispatch({ type: "SET_MODE", payload: saved });
       }
     } catch {}
@@ -540,6 +553,10 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "CLEAR_EDITING_ASSET" });
   }, []);
 
+  const setPendingEditAsset = useCallback((asset: AssetWithFullData | null) => {
+    dispatch({ type: "SET_PENDING_EDIT_ASSET", payload: asset });
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -558,6 +575,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       clearActionEditor,
       setEditingAsset,
       clearEditingAsset,
+      setPendingEditAsset,
       jobs,
       refreshJobs,
     }),
@@ -577,6 +595,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       clearActionEditor,
       setEditingAsset,
       clearEditingAsset,
+      setPendingEditAsset,
       jobs,
       refreshJobs,
     ]

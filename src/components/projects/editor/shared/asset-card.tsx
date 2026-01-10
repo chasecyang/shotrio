@@ -19,6 +19,7 @@ import remarkGfm from "remark-gfm";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssetProgressOverlay } from "./asset-progress-overlay";
 import type { Job } from "@/types/job";
+import { useTranslations } from "next-intl";
 
 interface AssetCardProps {
   asset: AssetWithFullData;
@@ -41,8 +42,10 @@ export function AssetCard({
   onEdit,
   job,
 }: AssetCardProps) {
+  const t = useTranslations("editor.assetCard");
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
   // 检查资产类型
   const isVideo = asset.assetType === "video";
@@ -60,8 +63,11 @@ export function AssetCard({
   // 获取 job
   const currentJob = job;
 
-  // 是否可以重新生成
+  // 是否可以重新生成（仅 AI 生成的素材）
   const canRegenerate = isGenerated && !isText && !!asset.prompt;
+
+  // 是否可以 AI 编辑（所有图片素材都可以）
+  const canEdit = !isVideo && !isText;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -151,12 +157,21 @@ export function AssetCard({
           </>
         ) : asset.displayUrl ? (
           <>
+            {/* 加载骨架屏 */}
+            {isImageLoading && (
+              <div className="absolute inset-0 bg-muted animate-pulse" />
+            )}
             <Image
               src={asset.displayUrl}
               alt={asset.name}
               fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
+              className={cn(
+                "object-cover transition-opacity duration-300",
+                isImageLoading ? "opacity-0" : "opacity-100"
+              )}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
+              loading="lazy"
+              onLoad={() => setIsImageLoading(false)}
             />
             {/* 视频播放图标 */}
             {isVideo && (
@@ -201,8 +216,8 @@ export function AssetCard({
           <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 via-black/40 to-transparent pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-200">
             <TooltipProvider delayDuration={300}>
               <div className="flex items-center gap-1 pointer-events-auto">
-                {/* 编辑按钮 */}
-                {canRegenerate && onEdit && (
+                {/* AI 编辑按钮 */}
+                {canEdit && onEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -218,7 +233,7 @@ export function AssetCard({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      编辑生成参数
+                      {t("aiEdit")}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -239,7 +254,7 @@ export function AssetCard({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      重新生成
+                      {t("regenerate")}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -260,7 +275,7 @@ export function AssetCard({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      删除
+                      {t("delete")}
                     </TooltipContent>
                   </Tooltip>
                 </div>

@@ -16,7 +16,7 @@ import { useVideoPlayback } from "@/hooks/use-video-playback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 
-export function EditingModeLayout() {
+export function ClippingModeLayout() {
   const { state, setTimeline } = useEditor();
   const { project, timeline } = state;
   const t = useTranslations("editor");
