@@ -65,9 +65,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 # 复制静态文件
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# 复制迁移文件（用于代码内迁移）
-COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-
 # 切换到非 root 用户
 USER nextjs
 

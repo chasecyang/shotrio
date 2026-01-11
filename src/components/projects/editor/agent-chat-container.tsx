@@ -27,6 +27,27 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   // 拖拽预览状态（仅展开时使用）
   const [targetPosition, setTargetPosition] = useState<ExpandedPosition | null>(null);
+  // 来自首页的待处理消息
+  const [pendingMessage, setPendingMessage] = useState<{
+    conversationId: string;
+    message: string;
+  } | null>(null);
+
+  // 读取首页传来的 pending 消息
+  useEffect(() => {
+    try {
+      const pendingData = sessionStorage.getItem("pendingAgentMessage");
+      if (pendingData) {
+        const parsed = JSON.parse(pendingData);
+        if (parsed.conversationId && parsed.message) {
+          setPendingMessage(parsed);
+        }
+        sessionStorage.removeItem("pendingAgentMessage");
+      }
+    } catch (error) {
+      console.error("读取 pendingAgentMessage 失败:", error);
+    }
+  }, []);
 
   // 监听 pendingEditAsset，有值时自动展开面板
   useEffect(() => {
@@ -133,6 +154,8 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
               onPositionChange={handlePositionChange}
               onCollapse={handleCollapse}
               onTargetPositionChange={handleTargetPositionChange}
+              pendingMessage={pendingMessage}
+              onPendingMessageHandled={() => setPendingMessage(null)}
             />
           </div>
         </div>
@@ -156,6 +179,8 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
           onPositionChange={handlePositionChange}
           onCollapse={handleCollapse}
           onTargetPositionChange={handleTargetPositionChange}
+          pendingMessage={pendingMessage}
+          onPendingMessageHandled={() => setPendingMessage(null)}
         />
       </div>
     </>

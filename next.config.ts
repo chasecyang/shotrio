@@ -43,7 +43,11 @@ const nextConfig: NextConfig = {
   experimental:{
     serverActions:{
       bodySizeLimit: '10mb',
-    }
+    },
+  },
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./drizzle/**/*'],
+    '/': ['./drizzle/**/*'],
   },
   async redirects() {
     return [

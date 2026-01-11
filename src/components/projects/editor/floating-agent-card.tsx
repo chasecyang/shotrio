@@ -63,9 +63,12 @@ interface FloatingAgentCardProps {
   position: ExpandedPosition;
   onPositionChange: (position: ExpandedPosition) => void;
   onCollapse: () => void;
-  autoStartMessage?: string | null;
-  onAutoStartComplete?: () => void;
   onTargetPositionChange?: (target: ExpandedPosition | null) => void;
+  pendingMessage?: {
+    conversationId: string;
+    message: string;
+  } | null;
+  onPendingMessageHandled?: () => void;
 }
 
 // 判断是否为素材相关操作
@@ -94,9 +97,9 @@ export function FloatingAgentCard({
   position,
   onPositionChange,
   onCollapse,
-  autoStartMessage,
-  onAutoStartComplete,
   onTargetPositionChange,
+  pendingMessage,
+  onPendingMessageHandled,
 }: FloatingAgentCardProps) {
   const agent = useAgent();
   const editorContext = useEditor();
@@ -116,7 +119,7 @@ export function FloatingAgentCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const titleGeneratedRef = useRef<Set<string>>(new Set());
   const dragStartXRef = useRef<number>(0);
-  const autoStartHandledRef = useRef(false);
+  const pendingMessageHandledRef = useRef(false);
 
   // 监听 pendingEditAsset，预填充输入框
   useEffect(() => {
@@ -231,57 +234,55 @@ export function FloatingAgentCard({
     },
   });
 
-  // 自动发送来自首页的初始消息
+  // 处理来自首页的 pending 消息（复用已创建的 conversationId）
   useEffect(() => {
-    if (autoStartMessage && !autoStartHandledRef.current) {
-      autoStartHandledRef.current = true;
+    // 必须等待 AgentProvider 初始化完成
+    if (!agent.state.isInitialLoadComplete) return;
+    if (!pendingMessage || pendingMessageHandledRef.current) return;
 
-      // 延迟一点确保组件完全挂载
-      const timer = setTimeout(async () => {
+    pendingMessageHandledRef.current = true;
+
+    const timer = setTimeout(async () => {
+      try {
+        const { conversationId, message } = pendingMessage;
+
+        // 设置当前对话ID（复用首页已创建的对话）
+        agent.dispatch({
+          type: "SET_CURRENT_CONVERSATION",
+          payload: conversationId,
+        });
+        agent.dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
+
+        // 保存到 localStorage
         try {
-          // 创建新对话
-          const result = await createConversation({
-            projectId,
-            title: t("editor.agent.panel.newChat"),
-            context: agent.currentContext,
-          });
+          localStorage.setItem(
+            `editor:project:${projectId}:conversationId`,
+            conversationId
+          );
+        } catch {}
 
-          if (result.success && result.conversationId) {
-            agent.dispatch({
-              type: "SET_CURRENT_CONVERSATION",
-              payload: result.conversationId,
-            });
-            agent.dispatch({ type: "SET_NEW_CONVERSATION", payload: false });
+        // 添加用户消息到 UI
+        agent.addMessage({
+          role: "user",
+          content: message,
+        });
 
-            // 更新对话标题
-            const generatedTitle = await generateConversationTitle(autoStartMessage);
-            await updateConversationTitle(result.conversationId, generatedTitle);
-            agent.dispatch({
-              type: "UPDATE_CONVERSATION_TITLE",
-              payload: { conversationId: result.conversationId, title: generatedTitle },
-            });
+        // 发送消息给 Agent
+        agent.setLoading(true);
+        await sendMessage(message, agent.currentContext, conversationId);
 
-            // 添加用户消息到 UI
-            agent.addMessage({
-              role: "user",
-              content: autoStartMessage,
-            });
+        // 刷新对话列表
+        agent.refreshConversations(true);
+      } catch (error) {
+        console.error("处理首页消息失败:", error);
+        toast.error("启动对话失败");
+      } finally {
+        onPendingMessageHandled?.();
+      }
+    }, 500);
 
-            // 发送消息给 Agent
-            agent.setLoading(true);
-            await sendMessage(autoStartMessage, agent.currentContext, result.conversationId);
-          }
-        } catch (error) {
-          console.error("自动发送消息失败:", error);
-          toast.error("启动对话失败");
-        } finally {
-          onAutoStartComplete?.();
-        }
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [autoStartMessage, projectId, agent, t, sendMessage, onAutoStartComplete]);
+    return () => clearTimeout(timer);
+  }, [pendingMessage, agent.state.isInitialLoadComplete, projectId, agent, sendMessage, onPendingMessageHandled]);
 
   // 自动滚动到底部
   useEffect(() => {
