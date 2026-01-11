@@ -214,6 +214,19 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   // 使用 Agent Stream Hook
   const { resumeConversation } = useAgentStream();
 
+  const addRejectionToolMessage = (toolCallId: string) => {
+    agent.addMessage({
+      id: `tool-${toolCallId}-${Date.now()}`,
+      role: "tool",
+      content: JSON.stringify({
+        success: false,
+        error: "用户拒绝了此操作",
+        userRejected: true,
+      }),
+      toolCallId,
+    });
+  };
+
   // 自动执行模式
   useEffect(() => {
     if (
@@ -254,6 +267,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       agent.setLoading(true);
       editor.clearActionEditor();
       await resumeConversation(agent.state.currentConversationId, true);
+      setFeedbackText("");
     } catch (error) {
       console.error("确认操作失败:", error);
       toast.error("确认操作失败");
@@ -272,27 +286,17 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     try {
       const toolCallId = approvalInfo.toolCall.id;
 
-      // 立即创建拒绝的 tool message
-      agent.addMessage({
-        id: `tool-${toolCallId}-${Date.now()}`,
-        role: "tool",
-        content: JSON.stringify({
-          success: false,
-          error: "用户拒绝了此操作",
-          userRejected: true,
-        }),
-        toolCallId: toolCallId,
-      });
+      // 立即创建拒绝的 tool message（用于 UI 及时展示）
+      addRejectionToolMessage(toolCallId);
 
-      toast.info("操作已拒绝，Agent 正在回应...");
-      agent.setLoading(true);
+      toast.info("操作已拒绝");
       editor.clearActionEditor();
       await resumeConversation(agent.state.currentConversationId, false);
     } catch (error) {
       console.error("拒绝操作失败:", error);
       toast.error("拒绝操作失败");
-      agent.setLoading(false);
     } finally {
+      setFeedbackText("");
       setIsRejecting(false);
     }
   };
@@ -305,18 +309,16 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
     try {
       const toolCallId = approvalInfo.toolCall.id;
+      const trimmedFeedback = feedbackText.trim();
 
-      // 创建拒绝的 tool message，包含用户反馈
+      // 创建拒绝的 tool message（反馈会作为普通 user message 单独追加）
+      addRejectionToolMessage(toolCallId);
+
+      // 将用户反馈作为一条普通 user message 展示在对话中
       agent.addMessage({
-        id: `tool-${toolCallId}-${Date.now()}`,
-        role: "tool",
-        content: JSON.stringify({
-          success: false,
-          error: "用户拒绝了此操作",
-          userRejected: true,
-          userFeedback: feedbackText.trim(),
-        }),
-        toolCallId: toolCallId,
+        id: `msg-feedback-${Date.now()}`,
+        role: "user",
+        content: trimmedFeedback,
       });
 
       toast.info("已发送反馈，Agent 正在回应...");
@@ -326,7 +328,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
         agent.state.currentConversationId,
         false,
         undefined,
-        feedbackText.trim()
+        trimmedFeedback
       );
 
       // 清空反馈
@@ -360,6 +362,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
           toast.success("操作已确认，Agent 正在继续...");
           agent.setLoading(true);
           await resumeConversation(agent.state.currentConversationId, true, modifiedParams);
+          setFeedbackText("");
         } catch (error) {
           console.error("确认操作失败:", error);
           toast.error("确认操作失败");

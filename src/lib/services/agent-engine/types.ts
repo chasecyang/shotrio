@@ -14,7 +14,7 @@ export type AgentStreamEvent =
   | { type: "tool_call_start"; data: { id: string; name: string; displayName?: string; arguments: string } }
   | { type: "tool_call_end"; data: { id: string; name: string; success: boolean; result?: string; error?: string } }
   | { type: "interrupt"; data: { action: "approval_required" } }
-  | { type: "complete"; data: "done" | "pending_confirmation" }
+  | { type: "complete"; data: "done" | "pending_confirmation" | "rejected" }
   | { type: "error"; data: string };
 
 /**

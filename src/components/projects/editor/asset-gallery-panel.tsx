@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useEditor } from "./editor-context";
-import { AssetCard } from "./shared/asset-card";
 import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithFullData, AssetTypeEnum } from "@/types/asset";
@@ -231,9 +230,6 @@ export function AssetGalleryPanel() {
     const groups = groupAssetsByTag(filteredAssets, tagCounts);
     return sortGroups(groups);
   }, [filteredAssets]);
-
-  // 是否显示分组视图
-  const showGroupedView = filteredAssets.length > 0;
 
   // 处理素材点击
   const handleAssetClick = (asset: AssetWithFullData) => {
@@ -545,8 +541,8 @@ export function AssetGalleryPanel() {
                 </>
               )}
             </div>
-          ) : showGroupedView ? (
-            // 分组视图
+          ) : (
+            // 分组视图（当前逻辑下始终启用）
             <div className="space-y-2">
               {groupedAssets.map(([groupName, assets]) => (
                 <AssetGroup
@@ -557,27 +553,6 @@ export function AssetGalleryPanel() {
                   selectedAssetIds={selectedAssetIds}
                   onAssetClick={handleAssetClick}
                   onAssetDelete={handleDelete}
-                  onSelectChange={handleSelectChange}
-                  onRegenerate={handleRegenerate}
-                  onEdit={handleEdit}
-                />
-              ))}
-            </div>
-          ) : (
-            // 普通网格视图
-            <div
-              className="grid gap-3"
-              style={{
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              }}
-            >
-              {filteredAssets.map((asset) => (
-                <AssetCard
-                  key={asset.id}
-                  asset={asset}
-                  isBatchSelected={selectedAssetIds.has(asset.id)}
-                  onDelete={handleDelete}
-                  onClick={handleAssetClick}
                   onSelectChange={handleSelectChange}
                   onRegenerate={handleRegenerate}
                   onEdit={handleEdit}

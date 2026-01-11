@@ -136,9 +136,11 @@ export class AgentEngine {
   async *resumeConversation(
     conversationId: string,
     approved: boolean,
-    modifiedParams?: Record<string, unknown>
+    modifiedParams?: Record<string, unknown>,
+    feedback?: string
   ): AsyncGenerator<AgentStreamEvent> {
     console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`, modifiedParams ? "使用修改后的参数" : "");
+    const trimmedFeedback = feedback?.trim();
 
     // 1. 加载对话状态
     const state = await loadConversationState(conversationId);
@@ -254,6 +256,16 @@ export class AgentEngine {
           error: "用户拒绝了此操作",
         },
       };
+
+      // 无反馈拒绝：只记录拒绝，不继续对话
+      if (!trimmedFeedback) {
+        yield { type: "complete", data: "rejected" };
+        return;
+      }
+
+      // 有反馈拒绝：将反馈作为 user message 注入，供后续对话参考
+      state.messages.push({ role: "user", content: trimmedFeedback });
+      await saveUserMessage(state.conversationId, trimmedFeedback);
     }
 
     // 7. 创建新 assistant 消息，继续对话
@@ -583,10 +595,13 @@ export class AgentEngine {
   ): AsyncGenerator<AgentStreamEvent> {
     console.log(`[AgentEngine] 执行工具: ${toolCall.function.name}`);
 
+    const toolCallId =
+      toolCall.id && toolCall.id.length > 0 ? toolCall.id : `fc-${Date.now()}`;
+
     // 构建 FunctionCall
     const toolCallArgs = JSON.parse(toolCall.function.arguments);
     const functionCall: FunctionCall = {
-      id: toolCall.id || `fc-${Date.now()}`,
+      id: toolCallId,
       name: toolCall.function.name,
       displayName: funcDef.displayName,
       parameters: toolCallArgs as Record<string, unknown>,
@@ -612,10 +627,20 @@ export class AgentEngine {
           error: result.error,
           jobId: result.jobId,
         }),
-        tool_call_id: toolCall.id || `fc-${Date.now()}`,
+        tool_call_id: toolCallId,
       };
 
-      state.messages.push(toolMessage);
+      // 确保 tool message 紧跟包含 tool_calls 的 assistant message（OpenAI 要求）
+      const lastAssistantIndex = state.messages.findLastIndex(
+        (m) =>
+          m.role === "assistant" &&
+          m.tool_calls?.some((tc: ToolCall) => tc.id === toolCallId) === true
+      );
+      if (lastAssistantIndex !== -1) {
+        state.messages.splice(lastAssistantIndex + 1, 0, toolMessage);
+      } else {
+        state.messages.push(toolMessage);
+      }
 
       // 保存 tool 消息到数据库
       await saveToolMessage(
@@ -628,7 +653,7 @@ export class AgentEngine {
       yield {
         type: "tool_call_end",
         data: {
-          id: toolCall.id || `fc-${Date.now()}`,
+          id: toolCallId,
           name: toolCall.function.name,
           success: result.success,
           result: formattedResult,
@@ -646,7 +671,7 @@ export class AgentEngine {
       yield {
         type: "tool_call_end",
         data: {
-          id: toolCall.id || `fc-${Date.now()}`,
+          id: toolCallId,
           name: toolCall.function.name,
           success: false,
           error: error instanceof Error ? error.message : "执行失败",
@@ -660,10 +685,19 @@ export class AgentEngine {
           success: false,
           error: error instanceof Error ? error.message : "执行失败",
         }),
-        tool_call_id: toolCall.id || `fc-${Date.now()}`,
+        tool_call_id: toolCallId,
       };
 
-      state.messages.push(errorToolMessage);
+      const lastAssistantIndex = state.messages.findLastIndex(
+        (m) =>
+          m.role === "assistant" &&
+          m.tool_calls?.some((tc: ToolCall) => tc.id === toolCallId) === true
+      );
+      if (lastAssistantIndex !== -1) {
+        state.messages.splice(lastAssistantIndex + 1, 0, errorToolMessage);
+      } else {
+        state.messages.push(errorToolMessage);
+      }
       await saveToolMessage(
         state.conversationId,
         errorToolMessage.tool_call_id!,
@@ -672,4 +706,3 @@ export class AgentEngine {
     }
   }
 }
-

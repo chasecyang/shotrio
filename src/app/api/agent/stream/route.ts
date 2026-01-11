@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       resumeValue?: {
         approved: boolean;
         modifiedParams?: Record<string, unknown>; // 🆕 用户修改的参数
+        feedback?: string; // 🆕 拒绝时的反馈（只有有反馈的拒绝才会继续对话）
       };
     } = await request.json();
 
@@ -82,7 +83,8 @@ export async function POST(request: NextRequest) {
             for await (const event of engine.resumeConversation(
               input.resumeConversationId,
               input.resumeValue.approved,
-              input.resumeValue.modifiedParams // 🆕 传递修改的参数
+              input.resumeValue.modifiedParams, // 🆕 传递修改的参数
+              input.resumeValue.feedback // 🆕 传递拒绝反馈
             )) {
               controller.enqueue(
                 encoder.encode(JSON.stringify(event) + "\n")
@@ -130,4 +132,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
