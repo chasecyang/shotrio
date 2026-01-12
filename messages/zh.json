@@ -1083,7 +1083,10 @@
       "deleting": "删除中...",
       "upload": "上传",
       "emptyStateTitle": "还没有素材",
-      "emptyStateDescription": "和 AI 对话，让它帮你生成图片、视频等素材"
+      "emptyStateDescription": "和 AI 对话，让它帮你生成图片、视频等素材",
+      "downloadSuccess": "已下载 {count} 个素材",
+      "downloadPartialSuccess": "成功下载 {success} 个，失败 {failed} 个",
+      "downloadFailed": "下载失败，请重试"
     },
     "assetCard": {
       "aiEdit": "AI 编辑图片",

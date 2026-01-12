@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -35,6 +35,8 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
   } | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const timelineRulerRef = useRef<HTMLDivElement>(null);
+  const lastSeekTimeRef = useRef<number>(0);
+  const THROTTLE_MS = 16; // 约 60fps
 
   // 从 playback prop 获取播放控制
   const {
@@ -66,14 +68,19 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     setIsDraggingPlayhead(true);
   }, [pause, pixelsPerMs, timeline, seekTo]);
 
-  // 鼠标移动处理（拖拽播放头）
+  // 鼠标移动处理（拖拽播放头）- 添加节流
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingPlayhead || !timelineRulerRef.current || !timeline) return;
+
+    // 节流：限制更新频率
+    const now = performance.now();
+    if (now - lastSeekTimeRef.current < THROTTLE_MS) return;
+    lastSeekTimeRef.current = now;
 
     const rect = timelineRulerRef.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const newTime = Math.max(0, Math.min(offsetX / pixelsPerMs, timeline.duration));
-    
+
     seekTo(newTime);
   }, [isDraggingPlayhead, pixelsPerMs, timeline, seekTo]);
 
@@ -391,34 +398,26 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     return 500;                     // 0.5s
   };
 
-  // 生成时间标尺
-  const generateTimeRuler = () => {
+  // 使用 useMemo 缓存时间标尺计算
+  const { totalWidth, marks } = useMemo(() => {
     const totalWidth = (timeline.duration || 10000) * pixelsPerMs;
-    const stepMs = getTimeStepByZoom(zoom); // 根据缩放级别动态计算刻度间隔
+    const stepMs = getTimeStepByZoom(zoom);
     const marks: { time: number; label: string }[] = [];
 
     for (let time = 0; time <= timeline.duration; time += stepMs) {
       let label: string;
-      
-      // 根据缩放级别决定标签格式
+
       if (zoom >= 2) {
-        // 高缩放级别：显示毫秒
         label = formatTimeDisplay(time);
       } else {
-        // 低缩放级别：仅显示秒
         label = `${Math.floor(time / 1000)}s`;
       }
-      
-      marks.push({
-        time,
-        label,
-      });
+
+      marks.push({ time, label });
     }
 
     return { totalWidth, marks };
-  };
-
-  const { totalWidth, marks } = generateTimeRuler();
+  }, [timeline.duration, pixelsPerMs, zoom]);
 
   return (
     <div className="h-full flex flex-col bg-background">

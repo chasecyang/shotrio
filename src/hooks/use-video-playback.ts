@@ -8,12 +8,12 @@ interface UseVideoPlaybackOptions {
 }
 
 export interface UseVideoPlaybackReturn {
-  videoRef: React.RefObject<HTMLVideoElement | null>;
-  nextVideoRef: React.RefObject<HTMLVideoElement | null>;
+  videoARef: React.RefObject<HTMLVideoElement | null>;
+  videoBRef: React.RefObject<HTMLVideoElement | null>;
+  activeVideo: "A" | "B";
   isPlaying: boolean;
   currentTime: number;
   currentClip: TimelineClipWithAsset | null;
-  videoTime: number;
   play: () => void;
   pause: () => void;
   togglePlayPause: () => void;
@@ -23,106 +23,203 @@ export interface UseVideoPlaybackReturn {
 
 /**
  * 视频播放控制 Hook
- * 处理时间轴播放、片段切换、视频同步等逻辑
+ * 使用双缓冲策略实现无缝切换，视频驱动时间轴
  */
 export function useVideoPlayback({
   timeline,
   onTimeUpdate,
 }: UseVideoPlaybackOptions): UseVideoPlaybackReturn {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const nextVideoRef = useRef<HTMLVideoElement>(null);
-  const animationFrameRef = useRef<number | undefined>(undefined);
-  const lastTimeRef = useRef<number>(0);
+  // 双缓冲 video 引用
+  const videoARef = useRef<HTMLVideoElement>(null);
+  const videoBRef = useRef<HTMLVideoElement>(null);
 
+  // 当前活跃的 video（A 或 B）
+  const [activeVideo, setActiveVideo] = useState<"A" | "B">("A");
+
+  // 播放状态
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  // refs 用于避免闭包陷阱
+  const currentTimeRef = useRef<number>(0);
+  const isPlayingRef = useRef<boolean>(false);
+  const pendingClipRef = useRef<TimelineClipWithAsset | null>(null);
+  const currentClipRef = useRef<TimelineClipWithAsset | null>(null);
 
   // 计算当前片段
   const clipInfo = timeline
     ? findClipAtTime(timeline, currentTime)
     : { clip: null, clipStartTime: 0, videoTime: 0 };
 
-  const { clip: currentClip, videoTime } = clipInfo;
+  const { clip: currentClip } = clipInfo;
 
-  // 更新视频播放位置
-  const updateVideoTime = useCallback(() => {
-    if (!videoRef.current || !currentClip) return;
+  // 更新 currentClipRef
+  useEffect(() => {
+    currentClipRef.current = currentClip;
+  }, [currentClip]);
 
-    const targetTime = videoTime;
-    const currentVideoTime = videoRef.current.currentTime;
+  // 获取当前活跃的 video 元素
+  const getActiveVideo = useCallback(() => {
+    return activeVideo === "A" ? videoARef.current : videoBRef.current;
+  }, [activeVideo]);
 
-    // 如果时间差异较大（超过0.1秒），需要跳转
-    if (Math.abs(currentVideoTime - targetTime) > 0.1) {
-      videoRef.current.currentTime = targetTime;
+  // 获取备用的 video 元素
+  const getInactiveVideo = useCallback(() => {
+    return activeVideo === "A" ? videoBRef.current : videoARef.current;
+  }, [activeVideo]);
+
+  // 暂停播放
+  const pause = useCallback(() => {
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    const video = getActiveVideo();
+    if (video) {
+      video.pause();
     }
-  }, [currentClip, videoTime]);
+  }, [getActiveVideo]);
 
-  // 播放循环
-  const playbackLoop = useCallback((timestamp: number) => {
-    if (!timeline || !isPlaying) return;
-
-    // 首次调用时初始化时间戳
-    if (lastTimeRef.current === 0) {
-      lastTimeRef.current = timestamp;
-      animationFrameRef.current = requestAnimationFrame(playbackLoop);
+  // 切换到下一个片段
+  const switchToNextClip = useCallback(() => {
+    const nextClip = pendingClipRef.current;
+    if (!nextClip) {
+      // 没有下一片段，停止播放
+      pause();
       return;
     }
 
-    // 计算实际经过的时间（毫秒）
-    const deltaTime = timestamp - lastTimeRef.current;
-    lastTimeRef.current = timestamp;
+    const currentVideo = getActiveVideo();
+    const nextVideo = getInactiveVideo();
 
-    // 更新时间轴时间
-    const newTime = currentTime + deltaTime;
-    
-    if (newTime >= timeline.duration) {
-      // 播放结束 - 保持在最后一个有效帧，而不是 duration
-      setIsPlaying(false);
-      // 设置为 duration - 1ms，确保仍在最后一个片段范围内
-      const endTime = Math.max(0, timeline.duration - 1);
-      setCurrentTime(endTime);
-      onTimeUpdate?.(endTime);
-      lastTimeRef.current = 0;
+    if (!currentVideo || !nextVideo) return;
+
+    // 更新当前片段引用
+    currentClipRef.current = nextClip;
+
+    // 开始播放预加载的视频
+    nextVideo
+      .play()
+      .then(() => {
+        // 切换活跃视频
+        setActiveVideo((prev) => (prev === "A" ? "B" : "A"));
+        // 停止旧视频
+        currentVideo.pause();
+        // 清除 pending
+        pendingClipRef.current = null;
+      })
+      .catch((err) => {
+        console.error("切换视频失败:", err);
+      });
+  }, [getActiveVideo, getInactiveVideo, pause]);
+
+  // 预加载下一片段
+  const prepareNextClip = useCallback(() => {
+    if (!timeline || !currentClipRef.current) return;
+
+    const nextClip = getNextClip(timeline, currentClipRef.current);
+    if (!nextClip) {
+      pendingClipRef.current = null;
       return;
     }
 
-    setCurrentTime(newTime);
-    onTimeUpdate?.(newTime);
+    const inactiveVideo = getInactiveVideo();
+    if (!inactiveVideo || !nextClip.asset.mediaUrl) return;
 
-    // 继续下一帧
-    animationFrameRef.current = requestAnimationFrame(playbackLoop);
-  }, [timeline, isPlaying, currentTime, onTimeUpdate]);
+    // 检查是否已经预加载了这个片段
+    if (pendingClipRef.current?.id === nextClip.id) return;
 
-  // 播放控制
+    // 设置预加载视频
+    inactiveVideo.src = nextClip.asset.mediaUrl;
+    inactiveVideo.currentTime = nextClip.trimStart / 1000;
+    inactiveVideo.load();
+    pendingClipRef.current = nextClip;
+  }, [timeline, getInactiveVideo]);
+
+  // 视频 timeupdate 事件处理 - 驱动时间轴
+  useEffect(() => {
+    const video = getActiveVideo();
+    if (!video || !timeline) return;
+
+    const handleTimeUpdate = () => {
+      if (!isPlayingRef.current || !currentClipRef.current) return;
+
+      const clip = currentClipRef.current;
+      // 从视频当前时间反算时间轴时间
+      const videoCurrentTimeMs = video.currentTime * 1000;
+      const timelineTime = clip.startTime + (videoCurrentTimeMs - clip.trimStart);
+
+      // 检测是否到达片段结尾
+      const clipEndVideoTime = (clip.trimStart + clip.duration) / 1000;
+      if (video.currentTime >= clipEndVideoTime - 0.05) {
+        // 切换到下一片段
+        switchToNextClip();
+      } else {
+        currentTimeRef.current = timelineTime;
+        setCurrentTime(timelineTime);
+        onTimeUpdate?.(timelineTime);
+      }
+    };
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    return () => video.removeEventListener("timeupdate", handleTimeUpdate);
+  }, [activeVideo, timeline, onTimeUpdate, getActiveVideo, switchToNextClip]);
+
+  // 当片段变化或视频切换时，预加载下一个
+  useEffect(() => {
+    if (currentClipRef.current && isPlayingRef.current) {
+      prepareNextClip();
+    }
+  }, [currentClip, activeVideo, prepareNextClip]);
+
+  // 开始播放
   const play = useCallback(() => {
     if (!timeline || timeline.clips.length === 0) return;
-    
-    // 如果已经播放到结尾（接近 duration 的 100ms 内），重新从头开始
-    if (currentTime >= timeline.duration - 100) {
-      setCurrentTime(0);
-      onTimeUpdate?.(0);
+
+    const video = getActiveVideo();
+    if (!video) return;
+
+    // 如果已经播放到结尾，重新从头开始
+    if (currentTimeRef.current >= timeline.duration - 100) {
+      const firstClip = timeline.clips[0];
+      if (firstClip?.asset.mediaUrl) {
+        video.src = firstClip.asset.mediaUrl;
+        video.currentTime = firstClip.trimStart / 1000;
+        currentTimeRef.current = 0;
+        setCurrentTime(0);
+        onTimeUpdate?.(0);
+        currentClipRef.current = firstClip;
+      }
+    } else if (!currentClip) {
+      // 如果没有当前片段，初始化第一个
+      const firstClip = timeline.clips[0];
+      if (firstClip?.asset.mediaUrl) {
+        video.src = firstClip.asset.mediaUrl;
+        video.currentTime = firstClip.trimStart / 1000;
+        currentClipRef.current = firstClip;
+      }
+    } else if (!video.src || video.src !== currentClip.asset.mediaUrl) {
+      // 确保当前视频源正确
+      if (currentClip.asset.mediaUrl) {
+        video.src = currentClip.asset.mediaUrl;
+        const { videoTime } = findClipAtTime(timeline, currentTimeRef.current);
+        video.currentTime = videoTime;
+      }
     }
-    
-    // 重置时间戳以避免时间跳跃
-    lastTimeRef.current = 0;
+
+    isPlayingRef.current = true;
     setIsPlaying(true);
-    if (videoRef.current) {
-      videoRef.current.play().catch((err) => {
-        console.error("视频播放失败:", err);
-        setIsPlaying(false);
-      });
-    }
-  }, [timeline, currentTime, onTimeUpdate]);
 
-  const pause = useCallback(() => {
-    setIsPlaying(false);
-    lastTimeRef.current = 0;
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-  }, []);
+    video.play().then(() => {
+      // 播放成功后立即预加载下一个片段
+      prepareNextClip();
+    }).catch((err) => {
+      console.error("视频播放失败:", err);
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+    });
+  }, [timeline, currentClip, getActiveVideo, onTimeUpdate, prepareNextClip]);
 
+  // 切换播放/暂停
   const togglePlayPause = useCallback(() => {
     if (isPlaying) {
       pause();
@@ -131,76 +228,86 @@ export function useVideoPlayback({
     }
   }, [isPlaying, play, pause]);
 
-  const seekTo = useCallback((time: number) => {
-    if (!timeline) return;
-    const clampedTime = Math.max(0, Math.min(time, timeline.duration));
-    setCurrentTime(clampedTime);
-    onTimeUpdate?.(clampedTime);
-  }, [timeline, onTimeUpdate]);
+  // 跳转到指定时间
+  const seekTo = useCallback(
+    (time: number) => {
+      if (!timeline) return;
 
-  // 当播放状态改变时，启动或停止播放循环
-  useEffect(() => {
-    if (isPlaying) {
-      animationFrameRef.current = requestAnimationFrame(playbackLoop);
-    } else {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      const clampedTime = Math.max(0, Math.min(time, timeline.duration));
+      const { clip, videoTime } = findClipAtTime(timeline, clampedTime);
+
+      if (!clip) return;
+
+      const video = getActiveVideo();
+      if (!video) return;
+
+      // 如果跳转到不同片段，需要切换视频源
+      if (clip.id !== currentClipRef.current?.id) {
+        setIsLoading(true);
+        video.src = clip.asset.mediaUrl || "";
+        video.onloadeddata = () => {
+          video.currentTime = videoTime;
+          video.onloadeddata = null;
+          setIsLoading(false);
+          // 预加载下一个片段
+          currentClipRef.current = clip;
+          prepareNextClip();
+        };
+        video.load();
+      } else {
+        // 同一片段内跳转
+        video.currentTime = videoTime;
       }
-    }
 
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isPlaying, playbackLoop]);
+      currentTimeRef.current = clampedTime;
+      setCurrentTime(clampedTime);
+      onTimeUpdate?.(clampedTime);
+    },
+    [timeline, getActiveVideo, onTimeUpdate, prepareNextClip]
+  );
 
-  // 当当前片段改变时，更新视频源和播放位置
+  // 监听视频加载状态
   useEffect(() => {
-    updateVideoTime();
-  }, [updateVideoTime]);
-
-  // 预加载下一个视频
-  useEffect(() => {
-    if (!timeline || !currentClip || !nextVideoRef.current) return;
-
-    const nextClip = getNextClip(timeline, currentClip);
-    if (nextClip?.asset.videoUrl) {
-      nextVideoRef.current.src = nextClip.asset.videoUrl;
-      nextVideoRef.current.load();
-    }
-  }, [timeline, currentClip]);
-
-  // 视频加载状态
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const videoA = videoARef.current;
+    const videoB = videoBRef.current;
 
     const handleLoadStart = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);
-    const handleError = () => {
+    const handleError = (e: Event) => {
       setIsLoading(false);
-      console.error("视频加载失败");
+      console.error("视频加载失败:", e);
     };
 
-    video.addEventListener("loadstart", handleLoadStart);
-    video.addEventListener("canplay", handleCanPlay);
-    video.addEventListener("error", handleError);
+    const setupListeners = (video: HTMLVideoElement | null) => {
+      if (!video) return;
+      video.addEventListener("loadstart", handleLoadStart);
+      video.addEventListener("canplay", handleCanPlay);
+      video.addEventListener("error", handleError);
+    };
 
-    return () => {
+    const cleanupListeners = (video: HTMLVideoElement | null) => {
+      if (!video) return;
       video.removeEventListener("loadstart", handleLoadStart);
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("error", handleError);
     };
+
+    setupListeners(videoA);
+    setupListeners(videoB);
+
+    return () => {
+      cleanupListeners(videoA);
+      cleanupListeners(videoB);
+    };
   }, []);
 
   return {
-    videoRef,
-    nextVideoRef,
+    videoARef,
+    videoBRef,
+    activeVideo,
     isPlaying,
     currentTime,
     currentClip,
-    videoTime,
     play,
     pause,
     togglePlayPause,
@@ -208,4 +315,3 @@ export function useVideoPlayback({
     isLoading,
   };
 }
-

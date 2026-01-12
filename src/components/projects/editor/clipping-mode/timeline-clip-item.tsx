@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { TimelineClipWithAsset } from "@/types/timeline";
 import { Trash2, GripVertical, Scissors } from "lucide-react";
 import Image from "next/image";
@@ -33,7 +33,7 @@ interface TimelineClipItemProps {
  * 时间轴片段组件
  * 支持拖拽移动和裁剪功能
  */
-export function TimelineClipItem({
+export const TimelineClipItem = React.memo(function TimelineClipItem({
   clip,
   allClips,
   pixelsPerMs,
@@ -337,5 +337,17 @@ export function TimelineClipItem({
       </ContextMenuContent>
     </ContextMenu>
   );
-}
+}, (prevProps, nextProps) => {
+  // 自定义比较函数：只在关键 props 改变时重新渲染
+  return (
+    prevProps.clip.id === nextProps.clip.id &&
+    prevProps.clip.startTime === nextProps.clip.startTime &&
+    prevProps.clip.duration === nextProps.clip.duration &&
+    prevProps.clip.trimStart === nextProps.clip.trimStart &&
+    prevProps.pixelsPerMs === nextProps.pixelsPerMs &&
+    prevProps.isDragging === nextProps.isDragging &&
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.temporaryStartTime === nextProps.temporaryStartTime
+  );
+});
 

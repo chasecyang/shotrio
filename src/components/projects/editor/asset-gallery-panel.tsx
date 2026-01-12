@@ -14,6 +14,10 @@ import { TextAssetDetailView } from "./shared/text-asset-detail-view";
 import { MediaUploadDialog } from "./shared/media-upload-dialog";
 import { FloatingActionBar } from "./floating-action-bar";
 import {
+  batchDownloadAssets,
+  DownloadProgress,
+} from "@/lib/utils/batch-download";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -148,6 +152,10 @@ export function AssetGalleryPanel() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(
     new Set()
   );
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<
+    DownloadProgress | undefined
+  >(undefined);
   const [filterOptions, setFilterOptions] =
     useState<AssetFilterOptions>(DEFAULT_FILTER);
 
@@ -328,6 +336,50 @@ export function AssetGalleryPanel() {
   // 取消全选
   const handleDeselectAll = () => {
     setSelectedAssetIds(new Set());
+  };
+
+  // 批量下载
+  const handleBatchDownload = async () => {
+    if (selectedAssetIds.size === 0) return;
+
+    const selectedAssets = filteredAssets.filter((asset) =>
+      selectedAssetIds.has(asset.id)
+    );
+
+    if (selectedAssets.length === 0) return;
+
+    setIsDownloading(true);
+    setDownloadProgress(undefined);
+
+    try {
+      const result = await batchDownloadAssets(
+        selectedAssets,
+        (progress: DownloadProgress) => {
+          setDownloadProgress(progress);
+        }
+      );
+
+      if (result.success) {
+        if (result.failedCount > 0) {
+          toast.warning(
+            t("downloadPartialSuccess", {
+              success: result.downloadedCount,
+              failed: result.failedCount,
+            })
+          );
+        } else {
+          toast.success(t("downloadSuccess", { count: result.downloadedCount }));
+        }
+      } else {
+        toast.error(t("downloadFailed"));
+      }
+    } catch (error) {
+      console.error("Batch download failed:", error);
+      toast.error(t("downloadFailed"));
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(undefined);
+    }
   };
 
   // 处理上传成功
@@ -604,6 +656,9 @@ export function AssetGalleryPanel() {
           onSelectAll={handleSelectAll}
           onDeselectAll={handleDeselectAll}
           onDelete={handleBatchDelete}
+          onDownload={handleBatchDownload}
+          isDownloading={isDownloading}
+          downloadProgress={downloadProgress}
         />
       )}
     </div>

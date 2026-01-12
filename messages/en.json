@@ -1083,7 +1083,10 @@
       "deleting": "Deleting...",
       "upload": "Upload",
       "emptyStateTitle": "No assets yet",
-      "emptyStateDescription": "Chat with AI to generate images, videos and more"
+      "emptyStateDescription": "Chat with AI to generate images, videos and more",
+      "downloadSuccess": "Downloaded {count} asset(s)",
+      "downloadPartialSuccess": "Downloaded {success} asset(s), {failed} failed",
+      "downloadFailed": "Download failed, please try again"
     },
     "assetCard": {
       "aiEdit": "AI Edit Image",

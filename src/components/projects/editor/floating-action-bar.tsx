@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Square, Trash2 } from "lucide-react";
+import { CheckSquare, Square, Trash2, Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { DownloadProgress } from "@/lib/utils/batch-download";
 
 interface FloatingActionBarProps {
   selectedCount: number;
@@ -10,6 +11,9 @@ interface FloatingActionBarProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   onDelete: () => void;
+  onDownload: () => void;
+  isDownloading?: boolean;
+  downloadProgress?: DownloadProgress;
 }
 
 /**
@@ -22,12 +26,31 @@ export function FloatingActionBar({
   onSelectAll,
   onDeselectAll,
   onDelete,
+  onDownload,
+  isDownloading = false,
+  downloadProgress,
 }: FloatingActionBarProps) {
   if (selectedCount === 0) {
     return null;
   }
 
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
+
+  const getDownloadButtonText = () => {
+    if (!isDownloading) return "下载";
+    if (!downloadProgress) return "准备中...";
+
+    switch (downloadProgress.phase) {
+      case "fetching":
+        return `${downloadProgress.current}/${downloadProgress.total}`;
+      case "zipping":
+        return "打包中...";
+      case "downloading":
+        return "下载中...";
+      default:
+        return "下载";
+    }
+  };
 
   return (
     <div
@@ -60,6 +83,7 @@ export function FloatingActionBar({
               variant="ghost"
               size="sm"
               onClick={onDeselectAll}
+              disabled={isDownloading}
               className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
             >
               <Square className="h-3.5 w-3.5" />
@@ -70,6 +94,7 @@ export function FloatingActionBar({
               variant="ghost"
               size="sm"
               onClick={onSelectAll}
+              disabled={isDownloading}
               className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
             >
               <CheckSquare className="h-3.5 w-3.5" />
@@ -80,11 +105,31 @@ export function FloatingActionBar({
           {/* 分隔线 */}
           <div className="w-px h-4 bg-border" />
 
+          {/* 下载按钮 */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDownload}
+            disabled={isDownloading}
+            className="h-8 gap-1.5 min-w-[80px]"
+          >
+            {isDownloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span className="text-xs font-medium">{getDownloadButtonText()}</span>
+          </Button>
+
+          {/* 分隔线 */}
+          <div className="w-px h-4 bg-border" />
+
           {/* 删除按钮 */}
           <Button
             variant="destructive"
             size="sm"
             onClick={onDelete}
+            disabled={isDownloading}
             className="h-8 gap-1.5 shadow-sm hover:shadow-md transition-shadow"
           >
             <Trash2 className="h-3.5 w-3.5" />
