@@ -19,8 +19,8 @@
     "worker:dev": "tsx --env-file=.env --watch src/workers/standalone-worker.ts",
     "worker:prod": "tsx src/workers/standalone-worker.ts",
     "generate:token": "node scripts/generate-worker-token.js",
-    "auto-todo": "tsx scripts/auto-todo.ts",
-    "auto-todo:dry": "tsx scripts/auto-todo.ts --dry-run"
+    "auto-todo": "./scripts/auto-todo.sh",
+    "auto-todo:dry": "./scripts/auto-todo.sh --dry-run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.926.0",

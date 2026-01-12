@@ -13,7 +13,7 @@ export interface DisplayStep {
     id: string;
     name: string;
     displayName?: string;
-    status: "executing" | "completed" | "failed" | "awaiting_confirmation";
+    status: "executing" | "completed" | "failed" | "rejected" | "awaiting_confirmation";
     result?: string;
     error?: string;
   };
@@ -56,22 +56,26 @@ export function useMessageDisplay(messages: AgentMessage[]) {
             m => m.role === "tool" && m.toolCallId === toolCall.id
           );
           
-          let status: "executing" | "completed" | "failed" | "awaiting_confirmation" = "executing";
+          let status: "executing" | "completed" | "failed" | "rejected" | "awaiting_confirmation" = "executing";
           let result: string | undefined;
           let error: string | undefined;
-          
+
           if (toolResponse) {
             try {
               const parsedResult = JSON.parse(toolResponse.content);
-              status = parsedResult.success ? "completed" : "failed";
-              
+
               if (parsedResult.success) {
+                status = "completed";
                 result = formatFunctionResult(
                   toolCall.function.name,
                   JSON.parse(toolCall.function.arguments),
                   parsedResult.data
                 );
+              } else if (parsedResult.userRejected) {
+                status = "rejected";
+                error = parsedResult.error;
               } else {
+                status = "failed";
                 error = parsedResult.error;
               }
             } catch (e) {

@@ -190,6 +190,9 @@ interface ImageGenerationFormProps {
 }
 
 export function ImageGenerationForm({ params, onChange }: ImageGenerationFormProps) {
+  const { state } = useEditor();
+  const projectId = state.project?.id || "";
+
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
     try {
@@ -210,10 +213,10 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
       return assetsArray.map((asset: Record<string, unknown>) => {
         const prompt = asset.prompt || "-";
         const name = asset.name || "未命名";
-        const tags = Array.isArray(asset.tags) 
-          ? asset.tags.join(", ") 
+        const tags = Array.isArray(asset.tags)
+          ? asset.tags.join(", ")
           : (typeof asset.tags === "string" ? asset.tags : "-");
-        
+
         // 提取sourceAssetIds（用于图生图）
         let sourceIds: string[] = [];
         if (Array.isArray(asset.sourceAssetIds)) {
@@ -292,12 +295,17 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                 placeholder="用逗号分隔，如: 角色, 主角"
               />
             </div>
-            {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (
-              <div className="space-y-2">
-                <Label>参考图 ({asset.sourceAssetIds.length}张)</Label>
-                <AssetPreview assetIds={asset.sourceAssetIds} />
-              </div>
-            )}
+            <MultiAssetSelector
+              projectId={projectId}
+              selectedAssetIds={asset.sourceAssetIds}
+              onSelect={(assetIds) => {
+                const newAssets = [...generationAssets];
+                newAssets[index] = { ...newAssets[index], sourceAssetIds: assetIds };
+                onChange({ ...params, assets: newAssets });
+              }}
+              label="参考图"
+              assetType="image"
+            />
           </div>
         </div>
       ))}
@@ -462,6 +470,190 @@ function SingleAssetSelector({
             <X className="h-4 w-4" />
           </Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+// 多选素材选择器组件
+interface MultiAssetSelectorProps {
+  projectId: string;
+  selectedAssetIds: string[];
+  onSelect: (assetIds: string[]) => void;
+  label: string;
+  assetType?: "image" | "video";
+}
+
+function MultiAssetSelector({
+  projectId,
+  selectedAssetIds,
+  onSelect,
+  label,
+  assetType = "image",
+}: MultiAssetSelectorProps) {
+  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedAssets, setSelectedAssets] = useState<Array<{
+    id: string;
+    name: string;
+    displayUrl: string | null;
+  }>>([]);
+
+  // 加载选中的素材信息
+  useEffect(() => {
+    if (selectedAssetIds.length === 0) {
+      setSelectedAssets([]);
+      return;
+    }
+
+    getAssetsByIds(selectedAssetIds).then((result) => {
+      if (result.success && result.assets) {
+        setSelectedAssets(result.assets);
+      }
+    });
+  }, [selectedAssetIds]);
+
+  // 打开选择器时加载素材列表
+  useEffect(() => {
+    if (!isOpen || assets.length > 0) return;
+
+    async function loadAssets() {
+      setIsLoading(true);
+      try {
+        const result = await queryAssets({
+          projectId,
+          assetType,
+          limit: 50,
+        });
+        setAssets(result.assets);
+      } catch (error) {
+        console.error("加载素材失败:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadAssets();
+  }, [isOpen, projectId, assetType, assets.length]);
+
+  const handleToggleAsset = (assetId: string) => {
+    if (selectedAssetIds.includes(assetId)) {
+      onSelect(selectedAssetIds.filter(id => id !== assetId));
+    } else {
+      onSelect([...selectedAssetIds, assetId]);
+    }
+  };
+
+  const handleRemoveAsset = (assetId: string) => {
+    onSelect(selectedAssetIds.filter(id => id !== assetId));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap gap-2">
+        {selectedAssets.map((asset) => (
+          <div
+            key={asset.id}
+            className="relative group rounded-md overflow-hidden border border-border/50 bg-background/50"
+          >
+            <div className="relative w-16 h-16">
+              {asset.displayUrl ? (
+                <Image
+                  src={asset.displayUrl}
+                  alt={asset.name}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleRemoveAsset(asset.id)}
+              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="h-3 w-3 text-destructive-foreground" />
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+              <p className="text-[10px] text-white truncate">{asset.name}</p>
+            </div>
+          </div>
+        ))}
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "relative w-16 h-16 rounded-md border-2 border-dashed",
+                "flex items-center justify-center",
+                "hover:border-primary/50 transition-colors",
+                "border-muted-foreground/30"
+              )}
+            >
+              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3" align="start">
+            <ScrollArea className="h-[280px]">
+              {isLoading ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
+                  ))}
+                </div>
+              ) : assets.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  暂无可用素材
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {assets.filter(isAssetReady).map((asset) => {
+                    const isSelected = selectedAssetIds.includes(asset.id);
+                    return (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        onClick={() => handleToggleAsset(asset.id)}
+                        className={cn(
+                          "relative aspect-square rounded-lg overflow-hidden",
+                          "border-2 transition-all",
+                          isSelected
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-transparent hover:border-muted-foreground/30"
+                        )}
+                      >
+                        {asset.displayUrl ? (
+                          <Image
+                            src={asset.displayUrl}
+                            alt={asset.name}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-muted" />
+                        )}
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                            <span className="text-primary-foreground text-xs">✓</span>
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                          <p className="text-[10px] text-white truncate">{asset.name}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

@@ -727,7 +727,7 @@ export function FloatingAgentCard({
                       variant="destructive"
                       className="h-8 w-8 rounded-lg"
                     >
-                      <Square className="h-4 w-4 fill-current" />
+                      <Square className="h-3.5 w-3.5 fill-current" />
                     </Button>
                   ) : (
                     <Button
@@ -736,7 +736,7 @@ export function FloatingAgentCard({
                       size="icon"
                       className="h-8 w-8 rounded-lg"
                     >
-                      <Send className="h-4 w-4" />
+                      <Send className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
@@ -971,7 +971,7 @@ export function FloatingAgentCard({
                   variant="destructive"
                   className="h-8 w-8 rounded-lg"
                 >
-                  <Square className="h-4 w-4 fill-current" />
+                  <Square className="h-3.5 w-3.5 fill-current" />
                 </Button>
               ) : (
                 <Button
@@ -980,7 +980,7 @@ export function FloatingAgentCard({
                   size="icon"
                   className="h-8 w-8 rounded-lg"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>

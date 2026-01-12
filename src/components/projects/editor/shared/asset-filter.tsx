@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   Video,
   FileText,
+  Music,
   ArrowUpDown,
   LayoutGrid,
 } from "lucide-react";
@@ -32,7 +33,7 @@ export interface AssetFilterOptions {
 
 type AssetTypeOption = {
   value: AssetTypeEnum | "all";
-  labelKey: "all" | "image" | "video" | "text";
+  labelKey: "all" | "image" | "video" | "text" | "audio";
   icon: typeof ImageIcon;
 };
 
@@ -41,6 +42,7 @@ const assetTypeOptions: AssetTypeOption[] = [
   { value: "image", labelKey: "image", icon: ImageIcon },
   { value: "video", labelKey: "video", icon: Video },
   { value: "text", labelKey: "text", icon: FileText },
+  { value: "audio", labelKey: "audio", icon: Music },
 ];
 
 type SortOptionItem = {

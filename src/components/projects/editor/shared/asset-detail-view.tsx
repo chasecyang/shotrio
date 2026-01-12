@@ -24,6 +24,8 @@ import {
   Sparkles,
   Calendar,
   Pencil,
+  Loader2,
+  Music,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,7 +62,9 @@ export function AssetDetailView({
   onAssetUpdated,
 }: AssetDetailViewProps) {
   const isVideo = asset.assetType === "video";
+  const isAudio = asset.assetType === "audio";
   const isFailed = asset.runtimeStatus === "failed";
+  const isGenerating = asset.runtimeStatus === "pending" || asset.runtimeStatus === "processing";
   const errorMessage = asset.errorMessage || "生成失败，请重试";
 
   // 名称编辑状态
@@ -80,6 +84,8 @@ export function AssetDetailView({
 
   // 视频相关状态
   const videoRef = useRef<HTMLVideoElement>(null);
+  // 音频相关状态
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(
@@ -375,15 +381,17 @@ export function AssetDetailView({
   }, [isPlaying]);
 
   const handleDownload = async () => {
-    if (!asset.mediaUrl) return;
+    const downloadUrl = isAudio ? (asset.audioUrl || asset.mediaUrl) : asset.mediaUrl;
+    if (!downloadUrl) return;
 
     try {
-      const response = await fetch(asset.mediaUrl);
+      const response = await fetch(downloadUrl);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${asset.name}${isVideo ? ".mp4" : ".png"}`;
+      const extension = isVideo ? ".mp4" : isAudio ? ".mp3" : ".png";
+      a.download = `${asset.name}${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -392,7 +400,9 @@ export function AssetDetailView({
     } catch (error) {
       console.error("下载失败:", error);
       toast.error("下载失败");
-      window.open(asset.mediaUrl, "_blank");
+      if (downloadUrl) {
+        window.open(downloadUrl, "_blank");
+      }
     }
   };
 
@@ -425,7 +435,7 @@ export function AssetDetailView({
         </Button>
         <div className="flex-1" />
         {/* 编辑按钮 - 仅对图片显示 */}
-        {!isVideo && !isFailed && onEdit && (
+        {!isVideo && !isAudio && !isFailed && onEdit && (
           <Button
             variant="ghost"
             size="sm"
@@ -449,7 +459,7 @@ export function AssetDetailView({
           </Button>
         )}
         {/* 下载按钮 */}
-        {asset.mediaUrl && (
+        {(asset.mediaUrl || asset.audioUrl) && (
           <Button
             variant="ghost"
             size="sm"
@@ -475,7 +485,23 @@ export function AssetDetailView({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          {isFailed ? (
+          {isGenerating ? (
+            /* 生成中状态 */
+            <div className="flex flex-col items-center justify-center gap-6 p-8">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                <div className="relative w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/30">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-3 max-w-md text-center">
+                <h3 className="text-2xl font-bold">正在生成</h3>
+                <p className="text-base text-muted-foreground leading-relaxed">
+                  素材正在生成中，请稍候...
+                </p>
+              </div>
+            </div>
+          ) : isFailed ? (
             /* 失败状态 */
             <div className="flex flex-col items-center justify-center gap-6 p-8">
               <div className="relative">
@@ -589,6 +615,129 @@ export function AssetDetailView({
                 </div>
               </div>
             </>
+          ) : isAudio ? (
+            /* 音频播放器 */
+            <div className="flex flex-col items-center justify-center gap-6 p-8">
+              {/* 音频图标 */}
+              <div className="relative">
+                <div className={cn(
+                  "w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20",
+                  isPlaying && "animate-pulse"
+                )}>
+                  <Music className="w-16 h-16 text-primary/70" />
+                </div>
+              </div>
+
+              {/* 隐藏的音频元素 */}
+              <audio
+                ref={audioRef}
+                src={asset.audioUrl || asset.mediaUrl || undefined}
+                onTimeUpdate={() => {
+                  if (audioRef.current) {
+                    setCurrentTime(audioRef.current.currentTime);
+                  }
+                }}
+                onLoadedMetadata={() => {
+                  if (audioRef.current) {
+                    setVideoDuration(audioRef.current.duration);
+                  }
+                }}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
+              />
+
+              {/* 音频控制栏 */}
+              <div className="w-full max-w-md space-y-4">
+                {/* 进度条 */}
+                <div>
+                  <Slider
+                    value={[currentTime]}
+                    max={videoDuration || 100}
+                    step={0.1}
+                    onValueChange={(value) => {
+                      if (audioRef.current) {
+                        audioRef.current.currentTime = value[0];
+                        setCurrentTime(value[0]);
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(videoDuration)}</span>
+                  </div>
+                </div>
+
+                {/* 控制按钮 */}
+                <div className="flex items-center justify-center gap-4">
+                  {/* 播放/暂停按钮 */}
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 w-12 rounded-full p-0"
+                    onClick={() => {
+                      if (audioRef.current) {
+                        if (isPlaying) {
+                          audioRef.current.pause();
+                        } else {
+                          audioRef.current.play();
+                        }
+                        setIsPlaying(!isPlaying);
+                      }
+                    }}
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-5 w-5" />
+                    ) : (
+                      <Play className="h-5 w-5" />
+                    )}
+                  </Button>
+
+                  {/* 音量控制 */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 w-9 p-0"
+                      onClick={() => {
+                        if (audioRef.current) {
+                          const newMuted = !isMuted;
+                          audioRef.current.muted = newMuted;
+                          setIsMuted(newMuted);
+                          if (!newMuted && volume === 0) {
+                            setVolume(0.5);
+                            audioRef.current.volume = 0.5;
+                          }
+                        }
+                      }}
+                    >
+                      {isMuted || volume === 0 ? (
+                        <VolumeX className="h-4 w-4" />
+                      ) : (
+                        <Volume2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <div className="w-24">
+                      <Slider
+                        value={[isMuted ? 0 : volume]}
+                        max={1}
+                        step={0.01}
+                        onValueChange={(value) => {
+                          const newVolume = value[0];
+                          if (audioRef.current) {
+                            audioRef.current.volume = newVolume;
+                            setVolume(newVolume);
+                            setIsMuted(newVolume === 0);
+                          }
+                        }}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             /* 图片查看器 */
             <>

@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Video, Play, FileText, RefreshCw, Pencil } from "lucide-react";
+import { Trash2, Video, Play, FileText, Music, RefreshCw, Pencil } from "lucide-react";
 import { useState } from "react";
 import { VersionCountBadge } from "./asset-version-panel";
 import Image from "next/image";
@@ -50,6 +50,7 @@ export function AssetCard({
   // 检查资产类型
   const isVideo = asset.assetType === "video";
   const isText = asset.assetType === "text";
+  const isAudio = asset.assetType === "audio";
 
   // 检查是否可以重新生成/编辑（仅 AI 生成的素材且有 prompt）
   const isGenerated = asset.sourceType === "generated";
@@ -66,8 +67,8 @@ export function AssetCard({
   // 是否可以重新生成（仅 AI 生成的素材）
   const canRegenerate = isGenerated && !isText && !!asset.prompt;
 
-  // 是否可以 AI 编辑（所有图片素材都可以）
-  const canEdit = !isVideo && !isText;
+  // 是否可以 AI 编辑（仅图片素材可以）
+  const canEdit = !isVideo && !isText && !isAudio;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -133,6 +134,21 @@ export function AssetCard({
               {/* 底部渐变遮罩 */}
               <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background/10 to-transparent pointer-events-none" />
             </div>
+          </div>
+        ) : isAudio ? (
+          // 音频资产 - 显示音频图标和时长
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <Music className="h-8 w-8 text-primary/70" />
+            </div>
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+              Audio
+            </span>
+            {asset.duration && (
+              <span className="text-xs text-muted-foreground mt-1">
+                {Math.round(asset.duration / 1000)}秒
+              </span>
+            )}
           </div>
         ) : isGenerating ? (
           // 生成中状态 - 显示渐变背景和进度覆盖层

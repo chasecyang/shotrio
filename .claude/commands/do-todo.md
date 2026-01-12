@@ -34,16 +34,18 @@ description: 执行单个 Todo 任务，完成后自动 build、commit 并生成
 
 ### Phase 4A: 成功流程
 如果 build 通过：
-1. 运行 `git add -A`
-2. 运行 `git commit` 使用规范的 commit message
-3. 更新 `docs/todo.md`，将对应任务标记为完成 `[x]`
-4. 输出 **完成报告**
+1. 更新 `docs/todo.md`，将对应任务标记为完成 `[x]`
+2. 将 **完成报告** 写入 `docs/reports/task-[编号]-[时间戳].md`（时间戳格式：YYYYMMDD-HHMMSS）
+3. 运行 `git add -A`（包含功能代码、todo.md 和报告文件）
+4. 运行 `git commit` 使用规范的 commit message
+5. 输出简短摘要：任务完成，报告已保存
 
 ### Phase 4B: 失败流程
 如果无法完成任务：
-1. 运行 `git checkout .` 撤销所有修改
-2. 运行 `git clean -fd` 清理新增文件
-3. 输出 **失败报告**，说明失败原因
+1. 将 **失败报告** 写入 `docs/reports/task-[编号]-failed-[时间戳].md`
+2. 运行 `git checkout .` 撤销所有修改
+3. 运行 `git clean -fd` 清理新增文件（但保留 docs/reports 目录）
+4. 输出简短摘要：任务失败，报告已保存
 
 ## 输出报告格式
 

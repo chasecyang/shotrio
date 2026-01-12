@@ -1057,6 +1057,7 @@
       "image": "Image",
       "video": "Video",
       "text": "Text",
+      "audio": "Audio",
       "sortNewest": "Newest",
       "sortName": "Name",
       "sortUsage": "Usage",
