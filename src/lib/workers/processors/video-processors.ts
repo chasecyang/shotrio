@@ -86,8 +86,11 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       aspectRatio: config.aspect_ratio,
     });
 
-    // 3. 将 Asset ID 转换为真实的图片 URL
-    const resolveImageUrl = async (assetIdOrUrl: string): Promise<string> => {
+    // 3. 将 Asset ID 转换为真实的图片 URL（支持版本快照）
+    const resolveImageUrl = async (
+      assetIdOrUrl: string,
+      versionId?: string // 可选：版本快照中的 imageData.id
+    ): Promise<string> => {
       // 如果已经是 HTTP URL，直接返回
       if (assetIdOrUrl.startsWith("http")) {
         return assetIdOrUrl;
@@ -99,21 +102,48 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           imageDataList: true,
         },
       });
-      // 找到激活的 imageData 版本
-      const activeImageData = imageAsset?.imageDataList?.find((img: { isActive: boolean }) => img.isActive);
+
+      // 优先使用版本快照中指定的版本
+      if (versionId) {
+        const targetVersion = imageAsset?.imageDataList?.find(
+          (img: { id: string; imageUrl: string | null }) => img.id === versionId
+        );
+        if (targetVersion?.imageUrl) {
+          console.log(`[Worker] 使用版本快照: ${versionId}`);
+          return targetVersion.imageUrl;
+        }
+        // 版本不存在或已删除，记录警告并回退到激活版本
+        console.warn(
+          `[Worker] 版本 ${versionId} 不存在或已删除，回退到激活版本`
+        );
+      }
+
+      // 回退：使用激活版本（向后兼容）
+      const activeImageData = imageAsset?.imageDataList?.find(
+        (img: { isActive: boolean }) => img.isActive
+      );
       if (!activeImageData?.imageUrl) {
         throw new Error(`无法找到图片资产或图片 URL: ${assetIdOrUrl}`);
       }
       return activeImageData.imageUrl;
     };
 
-    // 解析起始帧和结束帧的真实 URL
+    // 获取版本快照
+    const versionSnapshot = config._versionSnapshot;
+
+    // 解析起始帧和结束帧的真实 URL（传入版本快照）
     if (config.start_image_url) {
-      config.start_image_url = await resolveImageUrl(config.start_image_url);
+      config.start_image_url = await resolveImageUrl(
+        config.start_image_url,
+        versionSnapshot?.start_image_version_id
+      );
       console.log(`[Worker] 起始帧 URL: ${config.start_image_url}`);
     }
     if (config.end_image_url) {
-      config.end_image_url = await resolveImageUrl(config.end_image_url);
+      config.end_image_url = await resolveImageUrl(
+        config.end_image_url,
+        versionSnapshot?.end_image_version_id
+      );
       console.log(`[Worker] 结束帧 URL: ${config.end_image_url}`);
     }
 

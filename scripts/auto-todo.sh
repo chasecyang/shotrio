@@ -142,7 +142,7 @@ for todo in "${TODOS[@]}"; do
   PROMPT="/do-todo #$id $desc"
 
   # 执行 claude，捕获输出
-  OUTPUT=$(claude -p "$PROMPT" --max-turns 50 2>&1)
+  OUTPUT=$(claude -p "$PROMPT" --max-turns 100 2>&1)
   EXIT_CODE=$?
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))

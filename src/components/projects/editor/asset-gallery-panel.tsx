@@ -32,9 +32,8 @@ import { AssetEditMode } from "./shared/asset-edit-mode";
 import { AssetRegenerateMode } from "./shared/asset-regenerate-mode";
 import {
   AssetFilterOptions,
-  SortOption,
   AssetTypeTabs,
-  AssetSearchSort,
+  AssetSearch,
 } from "./shared/asset-filter";
 import { UNCATEGORIZED_GROUP } from "@/lib/constants/asset-tags";
 import { useTranslations } from "next-intl";
@@ -45,7 +44,6 @@ const VALID_ASSET_TYPES: AssetTypeEnum[] = ["image", "video", "text", "audio"];
 
 const DEFAULT_FILTER: AssetFilterOptions = {
   assetTypes: [],
-  sort: "createdAt",
 };
 
 // 统计所有标签出现次数
@@ -107,31 +105,6 @@ function sortGroups(
       return assetsB.length - assetsA.length;
     }
   );
-}
-
-// 排序素材
-function sortAssets(
-  assets: AssetWithFullData[],
-  sortOption: SortOption
-): AssetWithFullData[] {
-  const sorted = [...assets];
-
-  switch (sortOption) {
-    case "createdAt":
-      sorted.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      break;
-    case "name":
-      sorted.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
-      break;
-    case "usageCount":
-      sorted.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
-      break;
-  }
-
-  return sorted;
 }
 
 export function AssetGalleryPanel() {
@@ -215,22 +188,15 @@ export function AssetGalleryPanel() {
     };
   }, [loadAssets, filterOptions.search]);
 
-  // 客户端筛选和排序逻辑
+  // 客户端筛选逻辑
   const filteredAssets = useMemo(() => {
-    let result = [...allAssets];
-
-    // 素材类型筛选
-    if (filterOptions.assetTypes.length > 0) {
-      result = result.filter((asset) =>
-        filterOptions.assetTypes.includes(asset.assetType)
-      );
+    if (filterOptions.assetTypes.length === 0) {
+      return allAssets;
     }
-
-    // 排序
-    result = sortAssets(result, filterOptions.sort);
-
-    return result;
-  }, [allAssets, filterOptions.assetTypes, filterOptions.sort]);
+    return allAssets.filter((asset) =>
+      filterOptions.assetTypes.includes(asset.assetType)
+    );
+  }, [allAssets, filterOptions.assetTypes]);
 
   // 分组后的素材
   const groupedAssets = useMemo(() => {
@@ -265,11 +231,8 @@ export function AssetGalleryPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allAssets]);
 
-  // 处理删除
+  // 处理删除 - 点击素材卡片上的删除按钮，始终只删除那一张素材
   const handleDelete = (asset: AssetWithFullData) => {
-    if (selectedAssetIds.size > 0) {
-      return;
-    }
     setAssetToDelete(asset);
     setDeleteDialogOpen(true);
   };
@@ -287,12 +250,14 @@ export function AssetGalleryPanel() {
       let result;
       let deletedIds: string[] = [];
 
-      if (selectedAssetIds.size > 0) {
-        deletedIds = Array.from(selectedAssetIds);
-        result = await deleteAssets(deletedIds);
-      } else if (assetToDelete) {
+      // assetToDelete 优先级更高（用户点击了未选中素材的删除按钮）
+      if (assetToDelete) {
         deletedIds = [assetToDelete.id];
         result = await deleteAsset(assetToDelete.id);
+      } else if (selectedAssetIds.size > 0) {
+        // 批量删除（用户点击了选中素材的删除按钮或浮动栏的批量删除按钮）
+        deletedIds = Array.from(selectedAssetIds);
+        result = await deleteAssets(deletedIds);
       } else {
         return;
       }
@@ -523,16 +488,12 @@ export function AssetGalleryPanel() {
             </Button>
           </div>
         </div>
-        {/* 第二行：搜索框 + 排序 + 素材计数 */}
+        {/* 第二行：搜索框 + 素材计数 */}
         <div className="flex items-center gap-2">
-          <AssetSearchSort
+          <AssetSearch
             search={filterOptions.search}
-            sort={filterOptions.sort}
             onSearchChange={(search) =>
               setFilterOptions({ ...filterOptions, search })
-            }
-            onSortChange={(sort) =>
-              setFilterOptions({ ...filterOptions, sort })
             }
           />
           <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
@@ -630,9 +591,9 @@ export function AssetGalleryPanel() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedAssetIds.size > 0
-                ? t("confirmDeleteBatch", { count: selectedAssetIds.size })
-                : t("confirmDeleteSingle", { name: assetToDelete?.name ?? "" })}
+              {assetToDelete
+                ? t("confirmDeleteSingle", { name: assetToDelete.name })
+                : t("confirmDeleteBatch", { count: selectedAssetIds.size })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -55,6 +55,8 @@ interface Project {
   description: string | null;
   isTemplate: boolean;
   assetCount: number;
+  ownerName: string | null;
+  ownerEmail: string | null;
 }
 
 interface TemplateManagerProps {
@@ -292,7 +294,12 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
                   ) : (
                     availableProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
-                        {project.title} ({project.assetCount} 个素材)
+                        <div className="flex flex-col">
+                          <span>{project.title} ({project.assetCount} 个素材)</span>
+                          <span className="text-xs text-muted-foreground">
+                            {project.ownerName || project.ownerEmail || "未知用户"}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))
                   )}

@@ -121,6 +121,7 @@ async function processAssetImageGenerationInternal(
   // 从 meta 或 generationConfig 中读取生成参数
   let aspectRatio = "16:9";
   let numImages = 1;
+  let versionSnapshot: { source_image_version_ids?: string[] } | undefined;
 
   // 优先从 generationConfig 读取（新架构）
   if (generationConfig) {
@@ -128,6 +129,8 @@ async function processAssetImageGenerationInternal(
       const config = JSON.parse(generationConfig);
       aspectRatio = config.aspectRatio || aspectRatio;
       numImages = config.numImages || numImages;
+      // 提取版本快照
+      versionSnapshot = config._versionSnapshot;
     } catch {
       // ignore
     }
@@ -210,13 +213,50 @@ async function processAssetImageGenerationInternal(
         throw new Error("未找到源素材");
       }
 
-      // 获取激活版本的图片 URL
-      const imageUrls = sourceAssets
-        .map((a) => {
-          const activeImageData = (a.imageDataList as Array<{ isActive: boolean; imageUrl: string | null }>)?.find((v) => v.isActive);
-          return activeImageData?.imageUrl;
-        })
-        .filter((url): url is string => url !== null && url !== undefined);
+      // 获取源图片 URL（优先使用版本快照，回退到激活版本）
+      const imageUrls: string[] = [];
+      const snapshotVersionIds = versionSnapshot?.source_image_version_ids || [];
+
+      for (let i = 0; i < sourceAssetIds.length; i++) {
+        const sourceId = sourceAssetIds[i];
+        const sourceAsset = sourceAssets.find((a) => a.id === sourceId);
+        if (!sourceAsset) continue;
+
+        const imageDataList = sourceAsset.imageDataList as Array<{
+          id: string;
+          isActive: boolean;
+          imageUrl: string | null;
+        }>;
+
+        // 优先使用版本快照中指定的版本
+        const snapshotVersionId = snapshotVersionIds[i];
+        let targetImageData;
+
+        if (snapshotVersionId) {
+          targetImageData = imageDataList?.find((v) => v.id === snapshotVersionId);
+          if (targetImageData?.imageUrl) {
+            console.log(`[Worker] 使用版本快照: ${snapshotVersionId}`);
+          } else if (targetImageData) {
+            console.warn(
+              `[Worker] 版本 ${snapshotVersionId} 无图片，回退到激活版本`
+            );
+            targetImageData = undefined;
+          } else {
+            console.warn(
+              `[Worker] 版本 ${snapshotVersionId} 不存在，回退到激活版本`
+            );
+          }
+        }
+
+        // 回退到激活版本
+        if (!targetImageData) {
+          targetImageData = imageDataList?.find((v) => v.isActive);
+        }
+
+        if (targetImageData?.imageUrl) {
+          imageUrls.push(targetImageData.imageUrl);
+        }
+      }
 
       if (imageUrls.length === 0) {
         throw new Error("源素材没有图片");

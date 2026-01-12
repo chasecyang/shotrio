@@ -206,7 +206,7 @@ export async function getAllTemplateProjects(): Promise<{
 }
 
 /**
- * 获取可以标记为模板的项目列表（管理员自己的项目）
+ * 获取可以标记为模板的项目列表（所有项目）
  */
 export async function getAdminProjects(): Promise<{
   success: boolean;
@@ -216,34 +216,41 @@ export async function getAdminProjects(): Promise<{
     description: string | null;
     isTemplate: boolean;
     assetCount: number;
+    ownerName: string | null;
+    ownerEmail: string | null;
   }>;
   error?: string;
 }> {
   try {
     // 验证管理员权限
-    const admin = await requireAdmin();
+    await requireAdmin();
 
     const projects = await db.query.project.findMany({
-      where: eq(project.userId, admin.id),
       orderBy: [desc(project.updatedAt)],
       with: {
         assets: true,
         template: true,
+        user: true,
       },
     });
 
     return {
       success: true,
-      projects: projects.map((p) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        isTemplate: !!p.template,
-        assetCount: p.assets?.length ?? 0,
-      })),
+      projects: projects.map((p) => {
+        const owner = p.user as { name: string | null; email: string } | null;
+        return {
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          isTemplate: !!p.template,
+          assetCount: p.assets?.length ?? 0,
+          ownerName: owner?.name ?? null,
+          ownerEmail: owner?.email ?? null,
+        };
+      }),
     };
   } catch (error) {
-    console.error("获取管理员项目列表失败:", error);
+    console.error("获取项目列表失败:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "获取失败",

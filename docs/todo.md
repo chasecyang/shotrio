@@ -34,6 +34,7 @@
 
 []agent function 的刷新问题，接受任务后，没有自动刷新
   - context: accept 操作后 agent panel 的任务列表没有自动刷新显示最新状态
+
 []参数页面accept操作后，不应该一直loading
 []首页支持对话框创建项目
 []导出能力

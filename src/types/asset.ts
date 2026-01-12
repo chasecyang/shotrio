@@ -144,6 +144,21 @@ export interface GenerationParams {
 }
 
 /**
+ * 图片生成配置（存储在 imageData.generationConfig）
+ * 用于图生图模式，记录生成参数和版本快照
+ */
+export interface ImageGenerationConfig {
+  aspectRatio?: AspectRatio;
+  resolution?: "1K" | "2K" | "4K";
+  numImages?: number;
+
+  // 版本快照（内部使用，Job 创建时记录源资产的版本 ID，Worker 执行时优先使用）
+  _versionSnapshot?: {
+    source_image_version_ids?: string[];  // 源图片 imageData.id 数组，与 sourceAssetIds 一一对应
+  };
+}
+
+/**
  * 视频配置（用于生成）
  *
  * 统一的首尾帧生成方式：
@@ -158,6 +173,12 @@ export interface VideoGenerationConfig {
   aspect_ratio?: "16:9" | "9:16";  // 宽高比（Veo3 不支持 1:1）
   negative_prompt?: string;      // 负面提示词
   type: string;                  // 生成类型（image-to-video | reference-to-video）
+
+  // 版本快照（内部使用，Job 创建时记录源资产的版本 ID，Worker 执行时优先使用）
+  _versionSnapshot?: {
+    start_image_version_id?: string;  // 起始帧 imageData.id
+    end_image_version_id?: string;    // 结束帧 imageData.id
+  };
 }
 
 /**

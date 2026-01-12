@@ -64,6 +64,30 @@ interface UpdateAssetFullInput {
   audioData?: UpdateAudioDataInput;
 }
 
+// ===== 辅助函数 =====
+
+/**
+ * 查询资产的激活版本 ID
+ * 用于在创建任务时记录源资产的版本快照，确保 Worker 执行时使用提交时的版本
+ *
+ * @param assetId 资产 ID
+ * @returns 激活版本的 imageData.id，如果不存在返回 null
+ */
+async function resolveAssetVersionId(assetId: string): Promise<string | null> {
+  const imageAsset = await db.query.asset.findFirst({
+    where: eq(asset.id, assetId),
+    with: {
+      imageDataList: true,
+    },
+  });
+
+  const activeImageData = imageAsset?.imageDataList?.find(
+    (img: { id: string; isActive: boolean }) => img.isActive
+  );
+
+  return activeImageData?.id ?? null;
+}
+
 /**
  * 内部函数：创建新资产（不需要session，由worker调用）
  *
@@ -720,7 +744,45 @@ export async function createVideoAsset(data: {
       usageCount: 0,
     });
 
-    // 2. 创建 videoData 记录（版本化结构，包含生成信息）
+    // 2. 查询源资产的激活版本，记录版本快照
+    const configWithSnapshot = { ...data.generationConfig };
+    const versionSnapshot: {
+      start_image_version_id?: string;
+      end_image_version_id?: string;
+    } = {};
+
+    // 起始帧版本快照
+    if (
+      configWithSnapshot.start_image_url &&
+      !configWithSnapshot.start_image_url.startsWith("http")
+    ) {
+      const versionId = await resolveAssetVersionId(
+        configWithSnapshot.start_image_url
+      );
+      if (versionId) {
+        versionSnapshot.start_image_version_id = versionId;
+      }
+    }
+
+    // 结束帧版本快照
+    if (
+      configWithSnapshot.end_image_url &&
+      !configWithSnapshot.end_image_url.startsWith("http")
+    ) {
+      const versionId = await resolveAssetVersionId(
+        configWithSnapshot.end_image_url
+      );
+      if (versionId) {
+        versionSnapshot.end_image_version_id = versionId;
+      }
+    }
+
+    // 将版本快照注入 config
+    if (Object.keys(versionSnapshot).length > 0) {
+      configWithSnapshot._versionSnapshot = versionSnapshot;
+    }
+
+    // 3. 创建 videoData 记录（版本化结构，包含生成信息和版本快照）
     await db.insert(videoData).values({
       id: videoDataId,
       assetId,
@@ -728,7 +790,7 @@ export async function createVideoAsset(data: {
       thumbnailUrl: null,
       duration: null,
       prompt: data.prompt,
-      generationConfig: JSON.stringify(data.generationConfig),
+      generationConfig: JSON.stringify(configWithSnapshot),
       sourceAssetIds: data.referenceAssetIds ?? null,
       isActive: true,
     });

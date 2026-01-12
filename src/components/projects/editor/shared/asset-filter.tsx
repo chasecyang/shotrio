@@ -1,13 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
   X,
@@ -16,19 +9,15 @@ import {
   Video,
   FileText,
   Music,
-  ArrowUpDown,
   LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AssetTypeEnum } from "@/types/asset";
 import { useTranslations } from "next-intl";
 
-export type SortOption = "createdAt" | "name" | "usageCount";
-
 export interface AssetFilterOptions {
   search?: string;
   assetTypes: AssetTypeEnum[];
-  sort: SortOption;
 }
 
 type AssetTypeOption = {
@@ -43,17 +32,6 @@ const assetTypeOptions: AssetTypeOption[] = [
   { value: "video", labelKey: "video", icon: Video },
   { value: "text", labelKey: "text", icon: FileText },
   { value: "audio", labelKey: "audio", icon: Music },
-];
-
-type SortOptionItem = {
-  value: SortOption;
-  labelKey: "sortNewest" | "sortName" | "sortUsage";
-};
-
-const sortOptions: SortOptionItem[] = [
-  { value: "createdAt", labelKey: "sortNewest" },
-  { value: "name", labelKey: "sortName" },
-  { value: "usageCount", labelKey: "sortUsage" },
 ];
 
 // 类型 Tab 组件
@@ -100,20 +78,16 @@ export function AssetTypeTabs({ value, onChange }: AssetTypeTabsProps) {
   );
 }
 
-// 搜索和排序组件
-interface AssetSearchSortProps {
+// 搜索组件
+interface AssetSearchProps {
   search?: string;
-  sort: SortOption;
   onSearchChange: (search: string | undefined) => void;
-  onSortChange: (sort: SortOption) => void;
 }
 
-export function AssetSearchSort({
+export function AssetSearch({
   search,
-  sort,
   onSearchChange,
-  onSortChange,
-}: AssetSearchSortProps) {
+}: AssetSearchProps) {
   const t = useTranslations("editor.assetFilter");
   const [searchText, setSearchText] = useState(search || "");
 
@@ -122,48 +96,30 @@ export function AssetSearchSort({
   };
 
   return (
-    <div className="flex items-center gap-2 flex-1 min-w-0">
-      {/* 搜索框 */}
-      <div className="relative flex-1 min-w-[120px] max-w-xs">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          placeholder={t("searchPlaceholder")}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              applySearch();
-            }
+    <div className="relative flex-1 min-w-[120px] max-w-xs">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+      <Input
+        placeholder={t("searchPlaceholder")}
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            applySearch();
+          }
+        }}
+        className="pl-9 pr-8 h-7 text-sm"
+      />
+      {searchText && (
+        <button
+          onClick={() => {
+            setSearchText("");
+            onSearchChange(undefined);
           }}
-          className="pl-9 pr-8 h-7 text-sm"
-        />
-        {searchText && (
-          <button
-            onClick={() => {
-              setSearchText("");
-              onSearchChange(undefined);
-            }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-sm transition-colors"
-          >
-            <X className="h-3 w-3 text-muted-foreground" />
-          </button>
-        )}
-      </div>
-
-      {/* 排序下拉 */}
-      <Select value={sort} onValueChange={(val) => onSortChange(val as SortOption)}>
-        <SelectTrigger className="w-[130px] h-7 shrink-0">
-          <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {sortOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {t(option.labelKey)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-sm transition-colors"
+        >
+          <X className="h-3 w-3 text-muted-foreground" />
+        </button>
+      )}
     </div>
   );
 }

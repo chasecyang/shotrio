@@ -4,8 +4,30 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createJob } from "@/lib/actions/job";
 import { createAssetInternal } from "@/lib/actions/asset/crud";
-import type { ImageResolution } from "@/types/asset";
+import type { ImageResolution, ImageGenerationConfig } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
+import db from "@/lib/db";
+import { asset } from "@/lib/db/schemas/project";
+import { eq } from "drizzle-orm";
+
+/**
+ * 查询资产的激活版本 ID
+ * 用于在创建任务时记录源资产的版本快照
+ */
+async function resolveAssetVersionId(assetId: string): Promise<string | null> {
+  const imageAsset = await db.query.asset.findFirst({
+    where: eq(asset.id, assetId),
+    with: {
+      imageDataList: true,
+    },
+  });
+
+  const activeImageData = imageAsset?.imageDataList?.find(
+    (img: { id: string; isActive: boolean }) => img.isActive
+  );
+
+  return activeImageData?.id ?? null;
+}
 
 /**
  * 生成素材图片的输入参数（文生图）
@@ -176,6 +198,29 @@ export async function editAssetImage(
       return { success: false, error: "请输入编辑提示词" };
     }
 
+    // 查询源资产的激活版本，记录版本快照
+    const sourceVersionIds: string[] = [];
+    for (const sourceId of sourceAssetIds) {
+      const versionId = await resolveAssetVersionId(sourceId);
+      if (versionId) {
+        sourceVersionIds.push(versionId);
+      }
+    }
+
+    // 构建包含版本快照的 generationConfig
+    const generationConfig: ImageGenerationConfig = {
+      aspectRatio: aspectRatio === "auto" ? undefined : aspectRatio,
+      resolution: resolution,
+      numImages: numImages,
+    };
+
+    // 如果有版本快照，添加到 config 中
+    if (sourceVersionIds.length > 0) {
+      generationConfig._versionSnapshot = {
+        source_image_version_ids: sourceVersionIds,
+      };
+    }
+
     // 第一步：创建素材记录（包含所有生成信息，但无图片）
     // 使用临时名称，由 AI worker 分析后可能会更新
     const assetName = `图生图-${Date.now()}`;
@@ -190,11 +235,7 @@ export async function editAssetImage(
         prompt: editPrompt.trim(),
         modelUsed: "nano-banana-pro",
         sourceAssetIds: sourceAssetIds,
-        generationConfig: JSON.stringify({
-          aspectRatio: aspectRatio,
-          resolution: resolution,
-          numImages: numImages,
-        }),
+        generationConfig: JSON.stringify(generationConfig),
       },
       meta: {
         generationParams: {
@@ -384,17 +425,35 @@ export async function editAssetImageAsVersion(
     // 合并参考图：原素材 + 额外参考图
     const allSourceAssetIds = [assetId, ...sourceAssetIds].slice(0, 8);
 
+    // 查询源资产的激活版本，记录版本快照
+    const sourceVersionIds: string[] = [];
+    for (const sourceId of allSourceAssetIds) {
+      const versionId = await resolveAssetVersionId(sourceId);
+      if (versionId) {
+        sourceVersionIds.push(versionId);
+      }
+    }
+
+    // 构建包含版本快照的 generationConfig
+    const generationConfig: ImageGenerationConfig = {
+      aspectRatio: aspectRatio === "auto" ? undefined : aspectRatio,
+      resolution: resolution,
+      numImages: 1,
+    };
+
+    if (sourceVersionIds.length > 0) {
+      generationConfig._versionSnapshot = {
+        source_image_version_ids: sourceVersionIds,
+      };
+    }
+
     // 创建新版本记录
     const { createAssetVersion } = await import("./crud");
     const versionResult = await createAssetVersion(assetId, {
       prompt: editPrompt.trim(),
       modelUsed: "nano-banana-pro",
       sourceAssetIds: allSourceAssetIds,
-      generationConfig: JSON.stringify({
-        aspectRatio: aspectRatio,
-        resolution: resolution,
-        numImages: 1,
-      }),
+      generationConfig: JSON.stringify(generationConfig),
     });
 
     if (!versionResult.success || !versionResult.versionId) {

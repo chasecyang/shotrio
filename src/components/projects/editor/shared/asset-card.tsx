@@ -136,20 +136,51 @@ export function AssetCard({
             </div>
           </div>
         ) : isAudio ? (
-          // 音频资产 - 显示音频图标和时长
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Music className="h-8 w-8 text-primary/70" />
-            </div>
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-              Audio
-            </span>
-            {asset.duration && (
-              <span className="text-xs text-muted-foreground mt-1">
-                {Math.round(asset.duration / 1000)}秒
+          // 音频资产 - 需要区分生成中、失败和成功状态
+          isGenerating ? (
+            // 生成中状态
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background/50">
+                {/* 动画网格背景 */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+                </div>
+                {/* 脉动光晕 */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-32 h-32 rounded-full bg-primary/20 blur-3xl animate-pulse" />
+                </div>
+              </div>
+              <AssetProgressOverlay job={currentJob} asset={asset} />
+            </>
+          ) : isFailed ? (
+            // 失败状态 - 显示失败覆盖层
+            <>
+              <div className="absolute inset-0 bg-destructive/5 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
+                  <Music className="h-8 w-8 text-destructive/50" />
+                </div>
+                <span className="text-[10px] font-medium text-destructive/70 uppercase tracking-wider">
+                  Audio
+                </span>
+              </div>
+              <AssetProgressOverlay asset={asset} job={currentJob} />
+            </>
+          ) : (
+            // 成功状态 - 显示音频图标和时长
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                <Music className="h-8 w-8 text-primary/70" />
+              </div>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                Audio
               </span>
-            )}
-          </div>
+              {asset.duration && (
+                <span className="text-xs text-muted-foreground mt-1">
+                  {Math.round(asset.duration / 1000)}秒
+                </span>
+              )}
+            </div>
+          )
         ) : isGenerating ? (
           // 生成中状态 - 显示渐变背景和进度覆盖层
           <>
