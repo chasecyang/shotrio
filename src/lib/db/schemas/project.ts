@@ -228,6 +228,9 @@ export const audioData = pgTable("audio_data", {
   modelUsed: text("model_used"),
   generationConfig: text("generation_config"), // JSON
   sourceAssetIds: text("source_asset_ids").array(),
+
+  // 波形数据（用于时间轴显示）
+  waveformData: text("waveform_data"), // JSON: 波形采样点数组 number[]
 });
 
 // 2.6 资产标签表 (Asset Tag) - 多对多标签系统

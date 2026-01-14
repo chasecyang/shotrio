@@ -4,26 +4,66 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useEditor } from "../editor-context";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { ZoomIn, ZoomOut, Plus, Play, Pause, SkipBack, SkipForward } from "lucide-react";
+import {
+  ZoomIn,
+  ZoomOut,
+  Plus,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Video,
+  AudioLines,
+  Volume2,
+  VolumeX,
+  Trash2,
+} from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
-import { addClipToTimeline, removeClip, reorderClips, updateClip } from "@/lib/actions/timeline";
+import { AudioClipItem } from "./audio-clip-item";
+import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { AddAssetDialog } from "./add-asset-dialog";
 import { AssetWithFullData } from "@/types/asset";
-import { recalculateClipPositions, formatTimeDisplay } from "@/lib/utils/timeline-utils";
+import {
+  recalculateClipPositions,
+  formatTimeDisplay,
+  groupClipsByTrack,
+  getVideoClips,
+  recalculateTrackClipPositions,
+} from "@/lib/utils/timeline-utils";
 import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
+import {
+  DEFAULT_TRACKS,
+  TrackConfig,
+  TrackStates,
+  isVideoTrack,
+  TimelineClipWithAsset,
+  getTimelineTracks,
+  getVideoTracks,
+  getAudioTracks,
+  addTrackToConfig,
+  removeTrackFromConfig,
+} from "@/types/timeline";
 
 interface TimelinePanelProps {
   playback: UseVideoPlaybackReturn;
+  trackStates: TrackStates;
+  onToggleTrackMute: (trackIndex: number) => void;
+  onSetTrackVolume: (trackIndex: number, volume: number) => void;
 }
 
 /**
  * 时间轴面板组件
  */
-export function TimelinePanel({ playback }: TimelinePanelProps) {
+export function TimelinePanel({
+  playback,
+  trackStates,
+  onToggleTrackMute,
+  onSetTrackVolume,
+}: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
-  
+
   const [zoom, setZoom] = useState(1); // 缩放级别
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -33,6 +73,7 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     clipId: string;
     newDuration: number;
   } | null>(null);
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState<number>(0); // 当前选中的轨道，用于添加素材
   const trackRef = useRef<HTMLDivElement>(null);
   const timelineRulerRef = useRef<HTMLDivElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
@@ -49,6 +90,21 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
   } = playback;
 
   const pixelsPerMs = 0.1 * zoom; // 每毫秒对应的像素数
+
+  // 从 timeline metadata 获取轨道配置
+  const tracks = useMemo(() => {
+    return getTimelineTracks(timeline?.metadata);
+  }, [timeline?.metadata]);
+
+  // 分离视频和音频轨道
+  const videoTracks = useMemo(() => getVideoTracks(tracks), [tracks]);
+  const audioTracks = useMemo(() => getAudioTracks(tracks), [tracks]);
+
+  // 按轨道分组片段
+  const clipsByTrack = useMemo(() => {
+    if (!timeline) return new Map<number, TimelineClipWithAsset[]>();
+    return groupClipsByTrack(timeline.clips);
+  }, [timeline]);
 
   // 时间标尺鼠标按下 - 开始拖拽或跳转
   const handleTimelineMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -361,21 +417,36 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
     setZoom(value[0] / 100);
   };
 
-  // 处理添加素材
-  const handleAddAsset = async (asset: AssetWithFullData) => {
+  // 处理添加素材到指定轨道
+  const handleAddAsset = async (asset: AssetWithFullData, trackIndex: number) => {
     if (!timeline) return;
 
-    // 计算新片段的开始时间（添加到时间轴末尾）
+    // 验证素材类型与轨道类型匹配
+    const isVideo = asset.assetType === "video";
+    const isAudio = asset.assetType === "audio";
+    const targetIsVideoTrack = isVideoTrack(trackIndex);
+
+    if (targetIsVideoTrack && !isVideo) {
+      toast.error("视频轨道只能添加视频素材");
+      return;
+    }
+    if (!targetIsVideoTrack && !isAudio) {
+      toast.error("音频轨道只能添加音频素材");
+      return;
+    }
+
+    // 计算该轨道上的下一个开始时间
+    const trackClips = clipsByTrack.get(trackIndex) || [];
     let startTime = 0;
-    if (timeline.clips.length > 0) {
-      const lastClip = timeline.clips[timeline.clips.length - 1];
+    if (trackClips.length > 0) {
+      const lastClip = trackClips[trackClips.length - 1];
       startTime = lastClip.startTime + lastClip.duration;
     }
 
     // 添加片段到时间轴
     const result = await addClipToTimeline(timeline.id, {
       assetId: asset.id,
-      trackIndex: 0,
+      trackIndex,
       startTime,
       duration: asset.duration || 0,
       trimStart: 0,
@@ -386,6 +457,53 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
       toast.success("已添加到时间轴");
     } else {
       toast.error(result.error || "添加失败");
+    }
+  };
+
+  // 添加新轨道
+  const handleAddTrack = async (type: "video" | "audio") => {
+    if (!timeline) return;
+
+    const newTracks = addTrackToConfig(tracks, type);
+    const result = await updateTimelineTracks(timeline.id, newTracks);
+
+    if (result.success && result.timeline) {
+      updateTimeline(result.timeline);
+      toast.success(`已添加${type === "video" ? "视频" : "音频"}轨道`);
+    } else {
+      toast.error(result.error || "添加轨道失败");
+    }
+  };
+
+  // 删除轨道
+  const handleDeleteTrack = async (trackIndex: number) => {
+    if (!timeline) return;
+
+    // 检查轨道是否有片段
+    const trackClips = clipsByTrack.get(trackIndex) || [];
+    if (trackClips.length > 0) {
+      toast.error("无法删除非空轨道，请先移除轨道上的片段");
+      return;
+    }
+
+    // 检查是否是最后一个同类型轨道
+    const track = tracks.find((t) => t.index === trackIndex);
+    if (!track) return;
+
+    const sameTypeTracks = tracks.filter((t) => t.type === track.type);
+    if (sameTypeTracks.length <= 1) {
+      toast.error(`至少需要保留一个${track.type === "video" ? "视频" : "音频"}轨道`);
+      return;
+    }
+
+    const newTracks = removeTrackFromConfig(tracks, trackIndex);
+    const result = await updateTimelineTracks(timeline.id, newTracks);
+
+    if (result.success && result.timeline) {
+      updateTimeline(result.timeline);
+      toast.success("已删除轨道");
+    } else {
+      toast.error(result.error || "删除轨道失败");
     }
   };
 
@@ -516,120 +634,333 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
       </div>
 
       {/* 时间轴主体 */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="pl-2">
-          {/* 时间标尺 */}
-          <div 
-            ref={timelineRulerRef}
-            className={`relative h-8 border-b mb-1.5 mr-4 transition-colors ${
-              isDraggingPlayhead 
-                ? 'cursor-grabbing' 
-                : 'cursor-grab hover:bg-muted/20'
-            }`}
-            style={{ width: totalWidth }}
-            onMouseDown={handleTimelineMouseDown}
-          >
-            {marks.map((mark) => (
-              <div
-                key={mark.time}
-                className="absolute top-0 h-full"
-                style={{ left: mark.time * pixelsPerMs }}
+      <div className="flex-1 overflow-auto">
+        <div className="flex">
+          {/* 左侧：轨道头部 */}
+          <div className="w-28 shrink-0 border-r bg-muted/30">
+            {/* 时间尺占位 */}
+            <div className="h-8 border-b" />
+
+            {/* 视频轨道区 */}
+            {videoTracks.map((track) => {
+              const trackState = trackStates[track.index] || { volume: 1, isMuted: false };
+              const trackClips = clipsByTrack.get(track.index) || [];
+              const canDelete = videoTracks.length > 1 && trackClips.length === 0;
+
+              return (
+                <div
+                  key={track.index}
+                  className="border-b flex items-center justify-between px-2 group"
+                  style={{ height: track.height }}
+                >
+                  {/* 轨道名称和图标 */}
+                  <div className="flex items-center gap-1.5">
+                    <Video className="h-3 w-3" style={{ color: track.color }} />
+                    <span className="text-xs font-medium truncate">{track.name}</span>
+                  </div>
+                  {/* 删除按钮 */}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeleteTrack(track.index)}
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 添加视频轨道按钮 */}
+            <div className="h-7 border-b flex items-center justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 text-xs gap-1 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => handleAddTrack("video")}
               >
-                <div className="w-px h-2 bg-border" />
-                <span className={`absolute top-2 text-xs text-muted-foreground ${
-                  mark.time === 0 ? 'left-0' : 'left-0 -translate-x-1/2'
-                }`}>
-                  {mark.label}
-                </span>
-              </div>
-            ))}
-            
-            {/* 播放头指示器 */}
-            <div
-              className="absolute z-10 pointer-events-none"
-              style={{ 
-                left: currentTime * pixelsPerMs,
-                top: 0,
-                transform: 'translateX(-50%)',
-              }}
-            >
-              {/* 顶部三角形 */}
-              <svg
-                className="absolute left-1/2 -translate-x-1/2 top-0"
-                width="10"
-                height="7"
-                viewBox="0 0 10 7"
-                style={{
-                  filter: 'drop-shadow(0 0.5px 1.5px rgba(0,0,0,0.15))',
-                }}
+                <Plus className="h-3 w-3" />
+                视频轨
+              </Button>
+            </div>
+
+            {/* 视频/音频分隔线 */}
+            <div className="h-px bg-border" />
+
+            {/* 音频轨道区 */}
+            {audioTracks.map((track) => {
+              const trackState = trackStates[track.index] || { volume: 1, isMuted: false };
+              const trackClips = clipsByTrack.get(track.index) || [];
+              const canDelete = audioTracks.length > 1 && trackClips.length === 0;
+
+              return (
+                <div
+                  key={track.index}
+                  className="border-b flex items-center justify-between px-2 group"
+                  style={{ height: track.height }}
+                >
+                  {/* 轨道名称和控制 */}
+                  <div className="flex items-center gap-1.5">
+                    <AudioLines className="h-3 w-3" style={{ color: track.color }} />
+                    <span className="text-xs font-medium truncate">{track.name}</span>
+                    {/* 静音按钮 */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => onToggleTrackMute(track.index)}
+                    >
+                      {trackState.isMuted ? (
+                        <VolumeX className="h-3 w-3 text-destructive" />
+                      ) : (
+                        <Volume2 className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  {/* 删除按钮 */}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeleteTrack(track.index)}
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 添加音频轨道按钮 */}
+            <div className="h-7 border-b flex items-center justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 text-xs gap-1 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => handleAddTrack("audio")}
               >
-                <path
-                  d="M5 7 L0 0 L10 0 Z"
-                  className="fill-primary/95"
-                />
-              </svg>
-              
-              {/* 指示线 */}
-              <div 
-                className="w-px absolute left-1/2 -translate-x-1/2 bg-primary/40"
-                style={{ 
-                  height: 'calc(100vh - 120px)',
-                  top: '7px',
-                }}
-              />
+                <Plus className="h-3 w-3" />
+                音频轨
+              </Button>
             </div>
           </div>
 
-          {/* 轨道 */}
-          <div
-            ref={trackRef}
-            className="relative h-24 mr-4"
-            style={{ width: Math.max(totalWidth, 800) }}
-          >
-            {timeline.clips.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-                点击左上角&ldquo;添加素材&rdquo;按钮添加视频片段
-              </div>
-            ) : (
-              timeline.clips.map((clip, index) => {
-                // 计算裁剪预览时的临时位置
-                let temporaryStartTime = clip.startTime;
-                
-                if (trimmingClipInfo) {
-                  // 找到正在裁剪的片段的索引
-                  const trimmingIndex = timeline.clips.findIndex(
-                    c => c.id === trimmingClipInfo.clipId
-                  );
-                  
-                  // 如果当前片段在正在裁剪的片段之后
-                  if (trimmingIndex !== -1 && index > trimmingIndex) {
-                    const trimmingClip = timeline.clips[trimmingIndex];
-                    const durationDiff = trimmingClipInfo.newDuration - trimmingClip.duration;
-                    
-                    // 根据时长差调整后续片段的位置
-                    temporaryStartTime = clip.startTime + durationDiff;
-                  }
-                }
-                
-                return (
-                  <TimelineClipItem
-                    key={clip.id}
-                    clip={clip}
-                    allClips={timeline.clips}
-                    pixelsPerMs={pixelsPerMs}
-                    trackRef={trackRef}
-                    temporaryStartTime={temporaryStartTime}
-                    onDelete={() => handleDeleteClip(clip.id)}
-                    onDragStart={() => handleClipDragStart(clip.id)}
-                    onDragEnd={handleClipDragEnd}
-                    onTrimming={handleClipTrimming}
-                    onTrim={handleClipTrim}
-                    isDragging={draggedClipId === clip.id}
-                    disabled={isReordering}
+          {/* 右侧：轨道内容区域 */}
+          <div className="flex-1 overflow-x-auto">
+            <div className="pl-2">
+              {/* 时间标尺 */}
+              <div
+                ref={timelineRulerRef}
+                className={`relative h-8 border-b mr-4 transition-colors ${
+                  isDraggingPlayhead
+                    ? 'cursor-grabbing'
+                    : 'cursor-grab hover:bg-muted/20'
+                }`}
+                style={{ width: totalWidth }}
+                onMouseDown={handleTimelineMouseDown}
+              >
+                {marks.map((mark) => (
+                  <div
+                    key={mark.time}
+                    className="absolute top-0 h-full"
+                    style={{ left: mark.time * pixelsPerMs }}
+                  >
+                    <div className="w-px h-2 bg-border" />
+                    <span className={`absolute top-2 text-xs text-muted-foreground ${
+                      mark.time === 0 ? 'left-0' : 'left-0 -translate-x-1/2'
+                    }`}>
+                      {mark.label}
+                    </span>
+                  </div>
+                ))}
+
+                {/* 播放头指示器 */}
+                <div
+                  className="absolute z-10 pointer-events-none"
+                  style={{
+                    left: currentTime * pixelsPerMs,
+                    top: 0,
+                    transform: 'translateX(-50%)',
+                  }}
+                >
+                  {/* 顶部三角形 */}
+                  <svg
+                    className="absolute left-1/2 -translate-x-1/2 top-0"
+                    width="10"
+                    height="7"
+                    viewBox="0 0 10 7"
+                    style={{
+                      filter: 'drop-shadow(0 0.5px 1.5px rgba(0,0,0,0.15))',
+                    }}
+                  >
+                    <path
+                      d="M5 7 L0 0 L10 0 Z"
+                      className="fill-primary/95"
+                    />
+                  </svg>
+
+                  {/* 指示线 - 高度覆盖所有轨道 */}
+                  <div
+                    className="w-px absolute left-1/2 -translate-x-1/2 bg-primary/40"
+                    style={{
+                      height: tracks.reduce((sum, t) => sum + t.height, 0) + 16 + 28, // 加上添加轨道按钮的高度
+                      top: '7px',
+                    }}
                   />
-                );
-              })
-            )}
+                </div>
+              </div>
+
+              {/* 多轨道 */}
+              <div ref={trackRef}>
+                {/* 视频轨道区 */}
+                {videoTracks.map((track) => {
+                  const trackClips = clipsByTrack.get(track.index) || [];
+
+                  return (
+                    <div
+                      key={track.index}
+                      className="relative border-b mr-4"
+                      style={{
+                        height: track.height,
+                        width: Math.max(totalWidth, 800),
+                      }}
+                    >
+                      {/* 轨道背景色条 */}
+                      <div
+                        className="absolute inset-0 opacity-5"
+                        style={{ backgroundColor: track.color }}
+                      />
+
+                      {/* 空轨道提示 */}
+                      {trackClips.length === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground/50">
+                            拖拽或点击添加视频
+                          </span>
+                        </div>
+                      )}
+
+                      {/* 渲染该轨道的片段 */}
+                      {trackClips.map((clip, index) => {
+                        let temporaryStartTime = clip.startTime;
+
+                        if (trimmingClipInfo && clip.trackIndex === timeline.clips.find(c => c.id === trimmingClipInfo.clipId)?.trackIndex) {
+                          const sameTrackClips = trackClips;
+                          const trimmingIndex = sameTrackClips.findIndex(
+                            c => c.id === trimmingClipInfo.clipId
+                          );
+
+                          if (trimmingIndex !== -1 && index > trimmingIndex) {
+                            const trimmingClip = sameTrackClips[trimmingIndex];
+                            const durationDiff = trimmingClipInfo.newDuration - trimmingClip.duration;
+                            temporaryStartTime = clip.startTime + durationDiff;
+                          }
+                        }
+
+                        return (
+                          <TimelineClipItem
+                            key={clip.id}
+                            clip={clip}
+                            allClips={trackClips}
+                            pixelsPerMs={pixelsPerMs}
+                            trackRef={trackRef}
+                            temporaryStartTime={temporaryStartTime}
+                            trackColor={track.color}
+                            onDelete={() => handleDeleteClip(clip.id)}
+                            onDragStart={() => handleClipDragStart(clip.id)}
+                            onDragEnd={handleClipDragEnd}
+                            onTrimming={handleClipTrimming}
+                            onTrim={handleClipTrim}
+                            isDragging={draggedClipId === clip.id}
+                            disabled={isReordering}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+
+                {/* 添加视频轨道按钮占位 */}
+                <div className="h-7 border-b mr-4" style={{ width: Math.max(totalWidth, 800) }} />
+
+                {/* 视频/音频分隔线 */}
+                <div className="h-px bg-border mr-4" />
+
+                {/* 音频轨道区 */}
+                {audioTracks.map((track) => {
+                  const trackClips = clipsByTrack.get(track.index) || [];
+
+                  return (
+                    <div
+                      key={track.index}
+                      className="relative border-b mr-4"
+                      style={{
+                        height: track.height,
+                        width: Math.max(totalWidth, 800),
+                      }}
+                    >
+                      {/* 轨道背景色条 */}
+                      <div
+                        className="absolute inset-0 opacity-5"
+                        style={{ backgroundColor: track.color }}
+                      />
+
+                      {/* 空轨道提示 */}
+                      {trackClips.length === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground/50">
+                            拖拽或点击添加音频
+                          </span>
+                        </div>
+                      )}
+
+                      {/* 渲染该轨道的片段 */}
+                      {trackClips.map((clip, index) => {
+                        let temporaryStartTime = clip.startTime;
+
+                        if (trimmingClipInfo && clip.trackIndex === timeline.clips.find(c => c.id === trimmingClipInfo.clipId)?.trackIndex) {
+                          const sameTrackClips = trackClips;
+                          const trimmingIndex = sameTrackClips.findIndex(
+                            c => c.id === trimmingClipInfo.clipId
+                          );
+
+                          if (trimmingIndex !== -1 && index > trimmingIndex) {
+                            const trimmingClip = sameTrackClips[trimmingIndex];
+                            const durationDiff = trimmingClipInfo.newDuration - trimmingClip.duration;
+                            temporaryStartTime = clip.startTime + durationDiff;
+                          }
+                        }
+
+                        return (
+                          <AudioClipItem
+                            key={clip.id}
+                            clip={clip}
+                            allClips={trackClips}
+                            pixelsPerMs={pixelsPerMs}
+                            trackRef={trackRef}
+                            temporaryStartTime={temporaryStartTime}
+                            trackColor={track.color}
+                            onDelete={() => handleDeleteClip(clip.id)}
+                            onDragStart={() => handleClipDragStart(clip.id)}
+                            onDragEnd={handleClipDragEnd}
+                            onTrimming={handleClipTrimming}
+                            onTrim={handleClipTrim}
+                            isDragging={draggedClipId === clip.id}
+                            disabled={isReordering}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+
+                {/* 添加音频轨道按钮占位 */}
+                <div className="h-7 border-b mr-4" style={{ width: Math.max(totalWidth, 800) }} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -638,7 +969,10 @@ export function TimelinePanel({ playback }: TimelinePanelProps) {
       <AddAssetDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        onSelect={handleAddAsset}
+        onSelect={(asset) => handleAddAsset(asset, selectedTrackIndex)}
+        selectedTrackIndex={selectedTrackIndex}
+        onTrackIndexChange={setSelectedTrackIndex}
+        tracks={tracks}
       />
     </div>
   );

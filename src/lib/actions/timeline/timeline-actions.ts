@@ -11,6 +11,12 @@ import type {
   TimelineClipWithAsset,
   CreateTimelineInput,
   UpdateTimelineInput,
+  TrackConfig,
+} from "@/types/timeline";
+import {
+  DEFAULT_TRACKS,
+  stringifyTimelineMetadata,
+  getTimelineTracks,
 } from "@/types/timeline";
 import { getProjectAssets } from "../asset";
 
@@ -100,6 +106,11 @@ export async function createTimeline(
     const timelineId = nanoid();
     const now = new Date();
 
+    // 初始化默认轨道配置
+    const initialMetadata = stringifyTimelineMetadata({
+      tracks: DEFAULT_TRACKS,
+    });
+
     await db.insert(timeline).values({
       id: timelineId,
       projectId: input.projectId,
@@ -109,6 +120,7 @@ export async function createTimeline(
       duration: 0,
       fps: input.fps || 30,
       resolution: input.resolution || "1080x1920",
+      metadata: initialMetadata,
       createdAt: now,
       updatedAt: now,
     });
@@ -245,3 +257,58 @@ export async function getOrCreateProjectTimeline(
   }
 }
 
+/**
+ * 更新时间轴的轨道配置
+ */
+export async function updateTimelineTracks(
+  timelineId: string,
+  tracks: TrackConfig[]
+): Promise<{ success: boolean; timeline?: TimelineDetail; error?: string }> {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user) {
+      return { success: false, error: "未登录" };
+    }
+
+    // 验证时间轴所有权
+    const existingTimeline = await db
+      .select()
+      .from(timeline)
+      .where(
+        and(eq(timeline.id, timelineId), eq(timeline.userId, session.user.id))
+      )
+      .limit(1);
+
+    if (existingTimeline.length === 0) {
+      return { success: false, error: "时间轴不存在或无权限" };
+    }
+
+    // 更新轨道配置
+    const newMetadata = stringifyTimelineMetadata({ tracks });
+
+    await db
+      .update(timeline)
+      .set({
+        metadata: newMetadata,
+        updatedAt: new Date(),
+      })
+      .where(eq(timeline.id, timelineId));
+
+    // 返回完整的时间轴数据
+    const timelineData = await getProjectTimeline(
+      existingTimeline[0].projectId
+    );
+
+    if (!timelineData) {
+      return { success: false, error: "更新后无法获取时间轴" };
+    }
+
+    return { success: true, timeline: timelineData };
+  } catch (error) {
+    console.error("更新轨道配置失败:", error);
+    return { success: false, error: "更新轨道配置失败" };
+  }
+}

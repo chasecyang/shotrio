@@ -1,0 +1,1 @@
+ALTER TABLE "audio_data" ADD COLUMN "waveform_data" text;

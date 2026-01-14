@@ -1,4 +1,9 @@
-import { TimelineClipWithAsset, TimelineDetail } from "@/types/timeline";
+import {
+  TimelineClipWithAsset,
+  TimelineDetail,
+  isAudioTrack,
+  isVideoTrack,
+} from "@/types/timeline";
 
 /**
  * 根据时间轴时间计算当前应该显示的片段
@@ -173,5 +178,127 @@ export function validateTrimValues(
   }
 
   return { valid: true };
+}
+
+// ============================================
+// 多轨道工具函数
+// ============================================
+
+/**
+ * 按轨道索引对片段进行分组
+ */
+export function groupClipsByTrack(
+  clips: TimelineClipWithAsset[]
+): Map<number, TimelineClipWithAsset[]> {
+  const grouped = new Map<number, TimelineClipWithAsset[]>();
+
+  clips.forEach((clip) => {
+    const trackIndex = clip.trackIndex;
+    if (!grouped.has(trackIndex)) {
+      grouped.set(trackIndex, []);
+    }
+    grouped.get(trackIndex)!.push(clip);
+  });
+
+  // 对每个轨道内的片段按 order 排序
+  grouped.forEach((trackClips) => {
+    trackClips.sort((a, b) => a.order - b.order);
+  });
+
+  return grouped;
+}
+
+/**
+ * 获取视频轨道的片段
+ */
+export function getVideoClips(
+  clips: TimelineClipWithAsset[]
+): TimelineClipWithAsset[] {
+  return clips
+    .filter((clip) => isVideoTrack(clip.trackIndex))
+    .sort((a, b) => a.order - b.order);
+}
+
+/**
+ * 获取所有音频轨道的片段
+ */
+export function getAudioClips(
+  clips: TimelineClipWithAsset[]
+): TimelineClipWithAsset[] {
+  return clips
+    .filter((clip) => isAudioTrack(clip.trackIndex))
+    .sort((a, b) => a.trackIndex - b.trackIndex || a.order - b.order);
+}
+
+/**
+ * 在指定时间点找到所有正在播放的音频片段
+ */
+export function findAudioClipsAtTime(
+  timeline: TimelineDetail,
+  currentTime: number
+): TimelineClipWithAsset[] {
+  return timeline.clips.filter((clip) => {
+    if (!isAudioTrack(clip.trackIndex)) return false;
+    const clipEnd = clip.startTime + clip.duration;
+    return currentTime >= clip.startTime && currentTime < clipEnd;
+  });
+}
+
+/**
+ * 在指定时间点找到视频轨道上正在播放的片段
+ */
+export function findVideoClipAtTime(
+  timeline: TimelineDetail,
+  currentTime: number
+): TimelineClipWithAsset | null {
+  return (
+    timeline.clips.find((clip) => {
+      if (!isVideoTrack(clip.trackIndex)) return false;
+      const clipEnd = clip.startTime + clip.duration;
+      return currentTime >= clip.startTime && currentTime < clipEnd;
+    }) ?? null
+  );
+}
+
+/**
+ * 计算指定轨道内片段的下一个开始位置（添加到轨道末尾）
+ */
+export function getNextStartTimeForTrack(
+  clips: TimelineClipWithAsset[],
+  trackIndex: number
+): number {
+  const trackClips = clips
+    .filter((c) => c.trackIndex === trackIndex)
+    .sort((a, b) => a.order - b.order);
+
+  if (trackClips.length === 0) {
+    return 0;
+  }
+
+  const lastClip = trackClips[trackClips.length - 1];
+  return lastClip.startTime + lastClip.duration;
+}
+
+/**
+ * 重新计算指定轨道内片段的顺序和开始时间（连续排列）
+ */
+export function recalculateTrackClipPositions(
+  clips: TimelineClipWithAsset[],
+  trackIndex: number
+): Array<{ clipId: string; order: number; startTime: number }> {
+  const trackClips = clips
+    .filter((c) => c.trackIndex === trackIndex)
+    .sort((a, b) => a.order - b.order);
+
+  let currentTime = 0;
+  return trackClips.map((clip, index) => {
+    const result = {
+      clipId: clip.id,
+      order: index,
+      startTime: currentTime,
+    };
+    currentTime += clip.duration;
+    return result;
+  });
 }
 

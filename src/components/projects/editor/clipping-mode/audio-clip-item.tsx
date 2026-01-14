@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { TimelineClipWithAsset } from "@/types/timeline";
-import { Trash2, GripVertical, Scissors } from "lucide-react";
-import Image from "next/image";
+import { Trash2, GripVertical, Scissors, AudioLines } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -12,12 +11,13 @@ import {
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { validateTrimValues, formatTimeDisplay } from "@/lib/utils/timeline-utils";
+import { deserializeWaveform } from "@/lib/utils/waveform-utils";
 
-interface TimelineClipItemProps {
+interface AudioClipItemProps {
   clip: TimelineClipWithAsset;
-  allClips: TimelineClipWithAsset[];  // 保留用于未来可能的碰撞检测
+  allClips: TimelineClipWithAsset[];  // 保留用于与 TimelineClipItem 保持接口一致
   pixelsPerMs: number;
-  trackRef: React.RefObject<HTMLDivElement | null>;  // 保留用于未来可能的边界计算
+  trackRef: React.RefObject<HTMLDivElement | null>;  // 保留用于与 TimelineClipItem 保持接口一致
   temporaryStartTime?: number;
   trackColor?: string;
   onDelete: () => void;
@@ -30,16 +30,87 @@ interface TimelineClipItemProps {
 }
 
 /**
- * 时间轴片段组件
- * 支持拖拽移动和裁剪功能
+ * 波形渲染组件
  */
-export const TimelineClipItem = React.memo(function TimelineClipItem({
+function WaveformCanvas({
+  waveformData,
+  width,
+  height,
+  color,
+  trimStart,
+  duration,
+  assetDuration,
+}: {
+  waveformData: number[];
+  width: number;
+  height: number;
+  color: string;
+  trimStart: number;
+  duration: number;
+  assetDuration: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || waveformData.length === 0 || width <= 0) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 设置 canvas 尺寸
+    canvas.width = width;
+    canvas.height = height;
+
+    // 清除画布
+    ctx.clearRect(0, 0, width, height);
+
+    // 计算需要绘制的波形数据范围
+    const totalSamples = waveformData.length;
+    const startRatio = trimStart / assetDuration;
+    const endRatio = (trimStart + duration) / assetDuration;
+    const startIndex = Math.floor(startRatio * totalSamples);
+    const endIndex = Math.ceil(endRatio * totalSamples);
+    const visibleSamples = waveformData.slice(startIndex, endIndex);
+
+    if (visibleSamples.length === 0) return;
+
+    // 绘制波形
+    const barWidth = width / visibleSamples.length;
+    const centerY = height / 2;
+
+    ctx.fillStyle = color;
+
+    visibleSamples.forEach((value, index) => {
+      const barHeight = value * (height * 0.8);
+      const x = index * barWidth;
+      const y = centerY - barHeight / 2;
+
+      // 绘制波形条
+      ctx.fillRect(x, y, Math.max(1, barWidth - 1), barHeight);
+    });
+  }, [waveformData, width, height, color, trimStart, duration, assetDuration]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-none"
+      style={{ opacity: 0.6 }}
+    />
+  );
+}
+
+/**
+ * 音频时间轴片段组件
+ * 支持拖拽移动、裁剪和波形显示
+ */
+export const AudioClipItem = React.memo(function AudioClipItem({
   clip,
   allClips: _allClips,
   pixelsPerMs,
   trackRef: _trackRef,
   temporaryStartTime,
-  trackColor = "#3b82f6",
+  trackColor = "#10b981",
   onDelete,
   onDragStart,
   onDragEnd,
@@ -47,7 +118,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
   onTrim,
   isDragging,
   disabled = false,
-}: TimelineClipItemProps) {
+}: AudioClipItemProps) {
   void _allClips; void _trackRef; // 保留接口一致性
 
   const clipRef = useRef<HTMLDivElement>(null);
@@ -65,10 +136,17 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
   const [tempTrimStart, setTempTrimStart] = useState(clip.trimStart);
   const [tempDuration, setTempDuration] = useState(clip.duration);
 
+  // 解析波形数据
+  const waveformData = useMemo(() => {
+    const audioData = clip.asset.audioData;
+    if (!audioData?.waveformData) return [];
+    return deserializeWaveform(audioData.waveformData);
+  }, [clip.asset.audioData]);
+
   // 拖拽片段移动
   const handleMouseDownOnClip = (e: React.MouseEvent) => {
     if (disabled || isTrimmingLeft || isTrimmingRight) return;
-    
+
     e.stopPropagation();
     setIsDraggingClip(true);
     setDragStartX(e.clientX);
@@ -87,13 +165,13 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
 
     const handleMouseUp = () => {
       setIsDraggingClip(false);
-      
+
       // 计算新的开始时间
       const deltaMs = dragOffset / pixelsPerMs;
       const newStartTime = Math.max(0, originalStartTime.current + deltaMs);
-      
+
       setDragOffset(0);
-      
+
       // 如果位置真的改变了，触发回调
       if (Math.abs(newStartTime - clip.startTime) > 10) {
         onDragEnd(clip.id, newStartTime);
@@ -137,7 +215,6 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
       if (validation.valid) {
         setTempTrimStart(newTrimStart);
         setTempDuration(newDuration);
-        // 左边缘裁剪不影响后续片段位置，但需要通知以便更新预览
         onTrimming?.(clip.id, newDuration);
       }
     };
@@ -145,14 +222,12 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     const handleMouseUp = () => {
       setIsTrimmingLeft(false);
 
-      // 如果真的改变了，保存
       if (
         Math.abs(tempTrimStart - clip.trimStart) > 10 ||
         Math.abs(tempDuration - clip.duration) > 10
       ) {
         onTrim(clip.id, tempTrimStart, tempDuration);
       } else {
-        // 没有改变，清除预览状态
         onTrimming?.(clip.id, clip.duration);
       }
     };
@@ -182,16 +257,13 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
       const deltaX = e.clientX - trimStartX;
       const deltaMs = deltaX / pixelsPerMs;
 
-      // 新的 duration
       const newDuration = Math.max(500, clip.duration + deltaMs);
 
-      // 验证是否超出素材时长
       const assetDuration = clip.asset.duration || 0;
       const validation = validateTrimValues(clip.trimStart, newDuration, assetDuration);
 
       if (validation.valid) {
         setTempDuration(newDuration);
-        // 实时通知父组件，用于推移后续片段
         onTrimming?.(clip.id, newDuration);
       }
     };
@@ -199,11 +271,9 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     const handleMouseUp = () => {
       setIsTrimmingRight(false);
 
-      // 如果真的改变了，保存
       if (Math.abs(tempDuration - clip.duration) > 10) {
         onTrim(clip.id, clip.trimStart, tempDuration);
       } else {
-        // 没有改变，清除预览状态
         onTrimming?.(clip.id, clip.duration);
       }
     };
@@ -217,7 +287,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     };
   }, [isTrimmingRight, trimStartX, pixelsPerMs, clip, tempDuration, onTrim, onTrimming]);
 
-  // 计算显示位置和宽度（考虑临时裁剪状态和临时位置）
+  // 计算显示位置和宽度
   const effectiveStartTime = temporaryStartTime !== undefined ? temporaryStartTime : clip.startTime;
   const displayLeft = isTrimmingLeft
     ? (effectiveStartTime + (tempTrimStart - clip.trimStart)) * pixelsPerMs
@@ -239,41 +309,49 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
           style={{
             left: `${displayLeft}px`,
             width: `${displayWidth}px`,
-            backgroundColor: `${trackColor}20`,
-            borderColor: `${trackColor}60`,
+            backgroundColor: `${trackColor}15`,
+            borderColor: `${trackColor}50`,
           }}
         >
-          {/* 背景缩略图 */}
-          {clip.asset.displayUrl ? (
-            <div className="absolute inset-0 opacity-30 pointer-events-none">
-              <Image
-                src={clip.asset.displayUrl}
-                alt={clip.asset.name}
-                fill
-                className="object-cover"
-              />
+          {/* 波形背景 */}
+          {waveformData.length > 0 ? (
+            <WaveformCanvas
+              waveformData={waveformData}
+              width={displayWidth}
+              height={54}
+              color={trackColor}
+              trimStart={isTrimmingLeft ? tempTrimStart : clip.trimStart}
+              duration={isTrimmingLeft || isTrimmingRight ? tempDuration : clip.duration}
+              assetDuration={clip.asset.duration || 1}
+            />
+          ) : (
+            // 无波形数据时显示占位图案
+            <div className="absolute inset-0 flex items-center justify-center opacity-30">
+              <AudioLines className="h-6 w-6" style={{ color: trackColor }} />
             </div>
-          ) : null}
+          )}
 
           {/* 前景内容 */}
-          <div className="relative h-full p-2 flex flex-col justify-between pointer-events-none">
-            {/* 顶部：拖动手柄 */}
+          <div className="relative h-full p-1.5 flex flex-col justify-between pointer-events-none z-10">
+            {/* 顶部：拖动手柄和名称 */}
             <div className="flex items-start gap-1">
-              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium truncate flex-1">
+              <GripVertical className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <span
+                className="text-xs font-medium truncate flex-1 drop-shadow-sm"
+                style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
+              >
                 {clip.asset.name}
               </span>
             </div>
 
-            {/* 底部：时长 */}
+            {/* 底部：时长和裁剪指示 */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground drop-shadow-sm">
                 {Math.floor((isTrimmingLeft || isTrimmingRight ? tempDuration : clip.duration) / 1000)}s
               </span>
               {clip.trimStart > 0 || clip.trimEnd ? (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   <Scissors className="h-3 w-3 text-primary" />
-                  <span className="text-xs text-primary">已裁剪</span>
                 </div>
               ) : null}
             </div>
@@ -282,7 +360,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
           {/* 左边缘：调整入点手柄 */}
           <div
             className={cn(
-              "absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize group/left-handle z-10",
+              "absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize group/left-handle z-20",
               "before:absolute before:inset-y-0 before:-left-2 before:-right-2 before:content-['']"
             )}
             onMouseDown={handleMouseDownLeft}
@@ -295,8 +373,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
                   : "bg-transparent group-hover/left-handle:bg-primary/50"
               )}
             />
-            
-            {/* 裁剪时显示时间提示 */}
+
             {isTrimmingLeft && (
               <div className="absolute -top-8 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
                 入点: {formatTimeDisplay(tempTrimStart)} | 时长: {formatTimeDisplay(tempDuration)}
@@ -307,7 +384,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
           {/* 右边缘：调整出点手柄 */}
           <div
             className={cn(
-              "absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize group/right-handle z-10",
+              "absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize group/right-handle z-20",
               "before:absolute before:inset-y-0 before:-left-2 before:-right-2 before:content-['']"
             )}
             onMouseDown={handleMouseDownRight}
@@ -320,8 +397,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
                   : "bg-transparent group-hover/right-handle:bg-primary/50"
               )}
             />
-            
-            {/* 裁剪时显示时间提示 */}
+
             {isTrimmingRight && (
               <div className="absolute -top-8 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
                 出点: {formatTimeDisplay(clip.trimStart + tempDuration)} | 时长: {formatTimeDisplay(tempDuration)}
@@ -340,7 +416,6 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     </ContextMenu>
   );
 }, (prevProps, nextProps) => {
-  // 自定义比较函数：只在关键 props 改变时重新渲染
   return (
     prevProps.clip.id === nextProps.clip.id &&
     prevProps.clip.startTime === nextProps.clip.startTime &&
@@ -353,4 +428,3 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     prevProps.trackColor === nextProps.trackColor
   );
 });
-

@@ -289,6 +289,8 @@ export interface AudioData {
   sampleRate: number | null;  // Hz
   bitrate: number | null;   // kbps
   channels: number | null;  // 1(mono) / 2(stereo)
+  // 波形数据（用于时间轴显示）
+  waveformData: string | null;  // JSON: 波形采样点数组 number[]
   // 生成信息
   prompt: string | null;
   seed: number | null;

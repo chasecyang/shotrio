@@ -4,18 +4,21 @@ import { useEditor } from "../editor-context";
 import { Spinner } from "@/components/ui/spinner";
 import { Film, AlertCircle } from "lucide-react";
 import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
+import { useAudioPlayback } from "@/hooks/use-audio-playback";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { TrackStates, DEFAULT_TRACK_STATES } from "@/types/timeline";
 
 interface VideoPreviewProps {
   playback: UseVideoPlaybackReturn;
+  trackStates: TrackStates;
 }
 
 /**
  * 视频预览组件
- * 使用双缓冲策略实现无缝切换
+ * 使用双缓冲策略实现无缝切换，并同步播放音频轨道
  */
-export function VideoPreview({ playback }: VideoPreviewProps) {
+export function VideoPreview({ playback, trackStates }: VideoPreviewProps) {
   const { state } = useEditor();
   const { timeline } = state;
 
@@ -25,9 +28,19 @@ export function VideoPreview({ playback }: VideoPreviewProps) {
     activeVideo,
     currentClip,
     isLoading,
+    isPlaying,
+    currentTime,
   } = playback;
 
   const [videoError, setVideoError] = useState(false);
+
+  // 音频播放 - 与视频同步
+  useAudioPlayback({
+    timeline,
+    currentTime,
+    isPlaying,
+    trackStates,
+  });
 
   // 监听视频错误
   useEffect(() => {

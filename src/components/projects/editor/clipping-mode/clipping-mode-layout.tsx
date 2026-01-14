@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useEditor } from "../editor-context";
 import {
   ResizablePanelGroup,
@@ -15,12 +15,46 @@ import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
 import { useVideoPlayback } from "@/hooks/use-video-playback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
+import { DEFAULT_TRACK_STATES, TrackStates, getTimelineTracks, generateTrackStates } from "@/types/timeline";
 
 export function ClippingModeLayout() {
   const { state, setTimeline } = useEditor();
   const { project, timeline } = state;
   const t = useTranslations("editor");
   const tToast = useTranslations("toasts");
+
+  // 轨道状态（音量、静音）- 根据 timeline 的轨道配置动态生成
+  const [trackStates, setTrackStates] = useState<TrackStates>(DEFAULT_TRACK_STATES);
+
+  // 当 timeline 加载后，根据其轨道配置更新 trackStates
+  useEffect(() => {
+    if (timeline) {
+      const tracks = getTimelineTracks(timeline.metadata);
+      setTrackStates(generateTrackStates(tracks));
+    }
+  }, [timeline?.id, timeline?.metadata]);
+
+  // 切换轨道静音
+  const toggleTrackMute = useCallback((trackIndex: number) => {
+    setTrackStates((prev) => ({
+      ...prev,
+      [trackIndex]: {
+        ...prev[trackIndex],
+        isMuted: !prev[trackIndex]?.isMuted,
+      },
+    }));
+  }, []);
+
+  // 设置轨道音量
+  const setTrackVolume = useCallback((trackIndex: number, volume: number) => {
+    setTrackStates((prev) => ({
+      ...prev,
+      [trackIndex]: {
+        ...prev[trackIndex],
+        volume,
+      },
+    }));
+  }, []);
 
   // 自动保存
   useTimelineAutosave(timeline);
@@ -78,7 +112,10 @@ export function ClippingModeLayout() {
           {/* 上部：预览窗口 */}
           <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
             <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
-              <VideoPreview playback={videoPlayback} />
+              <VideoPreview
+                playback={videoPlayback}
+                trackStates={trackStates}
+              />
             </div>
           </ResizablePanel>
 
@@ -86,7 +123,12 @@ export function ClippingModeLayout() {
 
           {/* 下部：时间轴 */}
           <ResizablePanel defaultSize={40} minSize={30} className="overflow-hidden">
-            <TimelinePanel playback={videoPlayback} />
+            <TimelinePanel
+              playback={videoPlayback}
+              trackStates={trackStates}
+              onToggleTrackMute={toggleTrackMute}
+              onSetTrackVolume={setTrackVolume}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
