@@ -1179,6 +1179,8 @@
         "title": "待确认操作",
         "executionPlan": "执行计划",
         "confirm": "确认",
+        "confirmAll": "全部确认",
+        "confirmAllDescription": "确认此操作，后续操作将自动执行",
         "reject": "拒绝",
         "edit": "修改",
         "feedback": "反馈",

@@ -4,6 +4,11 @@ import { memo, useState, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import {
   Check,
@@ -277,6 +282,12 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     }
   };
 
+  // 确认并开启自动模式
+  const handleConfirmAndAutoAccept = async () => {
+    agent.setAutoAccept(true);
+    await handleConfirm();
+  };
+
   // 拒绝操作
   const handleReject = async () => {
     if (!agent.state.currentConversationId || isRejecting) return;
@@ -423,28 +434,46 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
         "rounded-xl border border-primary/20 bg-accent/30 overflow-hidden transition-all",
         isLoading && "opacity-70 pointer-events-none"
       )}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-              <AlertCircle className="h-3.5 w-3.5 text-primary" />
+        {/* 可编辑区域容器 - 使用 group 实现联动 hover */}
+        <div
+          className={cn(canEdit && "group cursor-pointer")}
+          onClick={canEdit ? handleEdit : undefined}
+        >
+          {/* Header */}
+          <div
+            className={cn(
+              "flex items-center justify-between px-4 py-3 border-b border-border/50 transition-colors",
+              canEdit && "group-hover:bg-accent/50"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                <AlertCircle className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <span className="text-sm font-medium">{getDisplayName()}</span>
+              {canEdit && (
+                <Pencil className="h-3 w-3 text-muted-foreground" />
+              )}
             </div>
-            <span className="text-sm font-medium">{getDisplayName()}</span>
+            {totalCost > 0 && (
+              <div className={cn(
+                "flex items-center gap-1 text-sm",
+                insufficientBalance ? "text-red-500" : "text-muted-foreground"
+              )}>
+                <Coins className="h-3.5 w-3.5" />
+                <span>{totalCost}</span>
+              </div>
+            )}
           </div>
-          {totalCost > 0 && (
-            <div className={cn(
-              "flex items-center gap-1 text-sm",
-              insufficientBalance ? "text-red-500" : "text-muted-foreground"
-            )}>
-              <Coins className="h-3.5 w-3.5" />
-              <span>{totalCost}</span>
-            </div>
-          )}
-        </div>
 
-        {/* Parameters Preview */}
-        {hasParamsToShow && (
-          <div className="px-4 py-3 border-b border-border/50 max-h-[200px] overflow-y-auto">
+          {/* Parameters Preview */}
+          {hasParamsToShow && (
+            <div
+              className={cn(
+                "relative px-4 py-3 border-b border-border/50 max-h-[200px] overflow-y-auto transition-colors",
+                canEdit && "group-hover:bg-accent/50"
+              )}
+            >
             {isGenerateAssets && generationAssets && generationAssets.length > 0 ? (
               /* 生成图片：横向滚动预览 */
               <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
@@ -598,6 +627,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
             ) : null}
           </div>
         )}
+        </div>
 
         {/* Actions */}
         <div className="p-3 space-y-2">
@@ -622,6 +652,24 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
               )}
             </Button>
 
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleConfirmAndAutoAccept}
+                  disabled={isLoading}
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  {t("editor.agent.pendingAction.confirmAll")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("editor.agent.pendingAction.confirmAllDescription")}</p>
+              </TooltipContent>
+            </Tooltip>
+
             <Button
               onClick={handleReject}
               variant="outline"
@@ -641,19 +689,6 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                 </>
               )}
             </Button>
-
-            {canEdit && (
-              <Button
-                onClick={handleEdit}
-                variant="outline"
-                size="sm"
-                disabled={isLoading}
-                className="flex-1"
-              >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                {t("editor.agent.pendingAction.edit")}
-              </Button>
-            )}
           </div>
 
           {/* 第二行：反馈输入框 + 发送按钮 */}
