@@ -20,23 +20,23 @@ import {
 } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
 import { AudioClipItem } from "./audio-clip-item";
+import { AssetStripPanel } from "./asset-strip-panel";
+import { TimelineDragProvider, useTimelineDrag } from "./timeline-drag-context";
+import { cn } from "@/lib/utils";
 import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { AddAssetDialog } from "./add-asset-dialog";
 import { AssetWithFullData } from "@/types/asset";
 import {
-  recalculateClipPositions,
+  recalculateTrackClipPositions,
   formatTimeDisplay,
   groupClipsByTrack,
-  getVideoClips,
-  recalculateTrackClipPositions,
 } from "@/lib/utils/timeline-utils";
 import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
 import {
-  DEFAULT_TRACKS,
-  TrackConfig,
   TrackStates,
   isVideoTrack,
+  isAudioTrack,
   TimelineClipWithAsset,
   getTimelineTracks,
   getVideoTracks,
@@ -55,7 +55,18 @@ interface TimelinePanelProps {
 /**
  * 时间轴面板组件
  */
-export function TimelinePanel({
+export function TimelinePanel(props: TimelinePanelProps) {
+  return (
+    <TimelineDragProvider>
+      <TimelinePanelContent {...props} />
+    </TimelineDragProvider>
+  );
+}
+
+/**
+ * 时间轴面板内部组件
+ */
+function TimelinePanelContent({
   playback,
   trackStates,
   onToggleTrackMute,
@@ -63,6 +74,16 @@ export function TimelinePanel({
 }: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
+
+  // 拖拽状态
+  const {
+    isDragging,
+    draggedAsset,
+    dropTargetTrack,
+    dropPosition,
+    setDropTarget,
+    resetDrag,
+  } = useTimelineDrag();
 
   const [zoom, setZoom] = useState(1); // 缩放级别
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
@@ -76,6 +97,7 @@ export function TimelinePanel({
   const [selectedTrackIndex, setSelectedTrackIndex] = useState<number>(0); // 当前选中的轨道，用于添加素材
   const trackRef = useRef<HTMLDivElement>(null);
   const timelineRulerRef = useRef<HTMLDivElement>(null);
+  const timelineBodyRef = useRef<HTMLDivElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
   const THROTTLE_MS = 16; // 约 60fps
 
@@ -150,13 +172,148 @@ export function TimelinePanel({
     if (isDraggingPlayhead) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-      
+
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
   }, [isDraggingPlayhead, handleMouseMove, handleMouseUp]);
+
+  // 素材拖拽时的鼠标移动监听 - 计算目标轨道
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleAssetDragMove = (e: MouseEvent) => {
+      if (!trackRef.current) return;
+
+      // 获取轨道区域的位置
+      const trackContainer = trackRef.current;
+      const rect = trackContainer.getBoundingClientRect();
+
+      // 检查鼠标是否在轨道区域内
+      if (e.clientY < rect.top || e.clientY > rect.bottom || e.clientX < rect.left) {
+        setDropTarget(null, null);
+        return;
+      }
+
+      // 计算鼠标相对于轨道区域的 Y 位置
+      const relativeY = e.clientY - rect.top;
+
+      // 遍历轨道，找到鼠标所在的轨道
+      let currentY = 0;
+      let targetTrack: number | null = null;
+
+      // 视频轨道
+      for (const track of videoTracks) {
+        if (relativeY >= currentY && relativeY < currentY + track.height) {
+          targetTrack = track.index;
+          break;
+        }
+        currentY += track.height;
+      }
+
+      // 添加视频轨道按钮占位 (28px)
+      currentY += 28;
+
+      // 分隔线 (1px)
+      currentY += 1;
+
+      // 音频轨道
+      if (targetTrack === null) {
+        for (const track of audioTracks) {
+          if (relativeY >= currentY && relativeY < currentY + track.height) {
+            targetTrack = track.index;
+            break;
+          }
+          currentY += track.height;
+        }
+      }
+
+      // 计算时间位置
+      let timePosition: number | null = null;
+      if (targetTrack !== null && timelineBodyRef.current) {
+        const scrollLeft = timelineBodyRef.current.scrollLeft;
+        const containerRect = timelineBodyRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - containerRect.left;
+        const totalX = scrollLeft + mouseX - 8; // 减去 padding
+        timePosition = Math.max(0, totalX / pixelsPerMs);
+      }
+
+      setDropTarget(targetTrack, timePosition);
+    };
+
+    window.addEventListener("mousemove", handleAssetDragMove);
+    return () => window.removeEventListener("mousemove", handleAssetDragMove);
+  }, [isDragging, videoTracks, audioTracks, pixelsPerMs, setDropTarget]);
+
+  // 素材拖拽释放监听
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleAssetDragEnd = async (e: MouseEvent) => {
+      if (dropTargetTrack !== null && draggedAsset && dropPosition !== null) {
+        await handleAssetDropFromDrag(draggedAsset, dropTargetTrack, dropPosition);
+      }
+      resetDrag();
+    };
+
+    window.addEventListener("mouseup", handleAssetDragEnd);
+    return () => window.removeEventListener("mouseup", handleAssetDragEnd);
+  }, [isDragging, dropTargetTrack, draggedAsset, dropPosition, resetDrag]);
+
+  // ESC 键取消拖拽
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        resetDrag();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDragging, resetDrag]);
+
+  // 处理从素材条拖拽添加到时间轴
+  const handleAssetDropFromDrag = async (
+    asset: AssetWithFullData,
+    trackIndex: number,
+    startTime: number
+  ) => {
+    if (!timeline) return;
+
+    // 验证素材类型与轨道类型匹配
+    const isVideo = asset.assetType === "video";
+    const isAudio = asset.assetType === "audio";
+    const targetIsVideoTrack = isVideoTrack(trackIndex);
+
+    if (targetIsVideoTrack && !isVideo) {
+      toast.error("视频轨道只能添加视频素材");
+      return;
+    }
+    if (!targetIsVideoTrack && !isAudio) {
+      toast.error("音频轨道只能添加音频素材");
+      return;
+    }
+
+    // 添加片段到时间轴
+    const result = await addClipToTimeline(timeline.id, {
+      assetId: asset.id,
+      trackIndex,
+      startTime: Math.round(startTime),
+      duration: asset.duration || 0,
+      trimStart: 0,
+    });
+
+    if (result.success && result.timeline) {
+      updateTimeline(result.timeline);
+      toast.success("已添加到时间轴");
+    } else {
+      toast.error(result.error || "添加失败");
+    }
+  };
 
   if (!timeline) return null;
 
@@ -185,41 +342,56 @@ export function TimelinePanel({
   // 删除片段
   const handleDeleteClip = async (clipId: string) => {
     if (!timeline) return;
-    
+
     // 保存原始timeline用于回滚
     const originalTimeline = timeline;
-    
+
+    // 获取被删除片段的轨道信息
+    const deletedClip = timeline.clips.find(clip => clip.id === clipId);
+    if (!deletedClip) return;
+
+    const deletedTrackIndex = deletedClip.trackIndex;
+
     try {
       // 乐观更新：立即从本地状态中移除片段
       const remainingClips = timeline.clips.filter(clip => clip.id !== clipId);
-      
-      // 重新计算位置（波纹效果）
-      const reorderData = recalculateClipPositions(remainingClips);
-      const optimisticClips = remainingClips.map((clip) => {
-        const reorderItem = reorderData.find(r => r.clipId === clip.id);
-        return {
-          ...clip,
-          startTime: reorderItem?.startTime ?? clip.startTime,
-          order: reorderItem?.order ?? clip.order,
-        };
-      });
-      
-      // 计算新的总时长
+
+      let optimisticClips: TimelineClipWithAsset[];
+
+      if (isAudioTrack(deletedTrackIndex)) {
+        // 音频轨道：自由定位模式，不进行波纹重排
+        optimisticClips = remainingClips;
+      } else {
+        // 视频轨道：只对该轨道的片段进行波纹重排
+        const reorderData = recalculateTrackClipPositions(remainingClips, deletedTrackIndex);
+        optimisticClips = remainingClips.map((clip) => {
+          if (clip.trackIndex !== deletedTrackIndex) {
+            return clip; // 其他轨道的片段保持不变
+          }
+          const reorderItem = reorderData.find(r => r.clipId === clip.id);
+          return {
+            ...clip,
+            startTime: reorderItem?.startTime ?? clip.startTime,
+            order: reorderItem?.order ?? clip.order,
+          };
+        });
+      }
+
+      // 计算新的总时长（基于所有片段的最大结束时间）
       const newDuration = optimisticClips.length > 0
-        ? optimisticClips[optimisticClips.length - 1].startTime + 
-          optimisticClips[optimisticClips.length - 1].duration
+        ? Math.max(...optimisticClips.map(c => c.startTime + c.duration))
         : 0;
-      
+
       // 立即更新UI（乐观更新）
       updateTimeline({
         ...timeline,
         clips: optimisticClips,
         duration: newDuration,
       });
-      
+
       // 调用API删除
       const result = await removeClip(clipId);
-      
+
       if (result.success && result.timeline) {
         // API成功，使用服务器返回的数据
         updateTimeline(result.timeline);
@@ -244,54 +416,77 @@ export function TimelinePanel({
   // 片段拖拽结束 - 重新排序
   const handleClipDragEnd = async (clipId: string, newStartTime: number) => {
     setDraggedClipId(null);
-    
+
     if (!timeline) return;
-    
+
+    // 获取被拖拽片段的轨道信息
+    const draggedClip = timeline.clips.find(clip => clip.id === clipId);
+    if (!draggedClip) return;
+
+    const draggedTrackIndex = draggedClip.trackIndex;
+
     setIsReordering(true);
-    
+
     // 保存原始timeline用于回滚
     const originalTimeline = timeline;
-    
+
     try {
       // 创建新的片段数组副本并更新拖拽片段的位置
-      const updatedClips = timeline.clips.map((clip) => 
-        clip.id === clipId 
-          ? { ...clip, startTime: newStartTime } 
+      const updatedClips = timeline.clips.map((clip) =>
+        clip.id === clipId
+          ? { ...clip, startTime: newStartTime }
           : clip
       );
-      
-      // 按照新的 startTime 排序
-      updatedClips.sort((a, b) => a.startTime - b.startTime);
-      
-      // 重新计算所有片段的 order 和 startTime（连续排列）
-      const reorderData = recalculateClipPositions(updatedClips);
-      
-      // 乐观更新：立即更新本地状态
-      const optimisticClips = updatedClips.map((clip, index) => {
-        const reorderItem = reorderData.find(r => r.clipId === clip.id);
-        return {
-          ...clip,
-          startTime: reorderItem?.startTime ?? clip.startTime,
-          order: reorderItem?.order ?? index,
-        };
-      });
-      
-      // 计算新的总时长
+
+      let optimisticClips: TimelineClipWithAsset[];
+      let reorderData: Array<{ clipId: string; order: number; startTime: number }>;
+
+      if (isAudioTrack(draggedTrackIndex)) {
+        // 音频轨道：自由定位模式，只更新该片段的 startTime，不影响其他片段
+        optimisticClips = updatedClips;
+        reorderData = [{ clipId, order: draggedClip.order, startTime: Math.round(newStartTime) }];
+      } else {
+        // 视频轨道：对该轨道进行波纹重排
+        // 先按照新的 startTime 排序该轨道的片段
+        const trackClips = updatedClips
+          .filter(c => c.trackIndex === draggedTrackIndex)
+          .sort((a, b) => a.startTime - b.startTime);
+
+        // 重新计算该轨道片段的 order 和 startTime（连续排列）
+        reorderData = recalculateTrackClipPositions(
+          trackClips.map((clip, idx) => ({ ...clip, order: idx })),
+          draggedTrackIndex
+        );
+
+        // 应用重排结果到乐观更新
+        optimisticClips = updatedClips.map((clip) => {
+          if (clip.trackIndex !== draggedTrackIndex) {
+            return clip; // 其他轨道的片段保持不变
+          }
+          const reorderItem = reorderData.find(r => r.clipId === clip.id);
+          return {
+            ...clip,
+            startTime: reorderItem?.startTime ?? clip.startTime,
+            order: reorderItem?.order ?? clip.order,
+          };
+        });
+      }
+
+      // 计算新的总时长（基于所有片段的最大结束时间）
       const newDuration = optimisticClips.length > 0
-        ? optimisticClips[optimisticClips.length - 1].startTime + 
-          optimisticClips[optimisticClips.length - 1].duration
+        ? Math.max(...optimisticClips.map(c => c.startTime + c.duration))
         : 0;
-      
+
       // 立即更新UI（乐观更新）
       updateTimeline({
         ...timeline,
         clips: optimisticClips,
         duration: newDuration,
       });
-      
+
       // 调用 API 更新
       const result = await reorderClips(timeline.id, reorderData);
-      
+
       if (result.success && result.timeline) {
         // API成功，使用服务器返回的数据确保一致性
         updateTimeline(result.timeline);
@@ -332,45 +527,60 @@ export function TimelinePanel({
     duration: number
   ) => {
     if (!timeline) return;
-    
+
     // 清除裁剪预览状态
     setTrimmingClipInfo(null);
-    
+
+    // 获取被裁剪片段的轨道信息
+    const trimmedClip = timeline.clips.find(clip => clip.id === clipId);
+    if (!trimmedClip) return;
+
+    const trimmedTrackIndex = trimmedClip.trackIndex;
+
     // 保存原始timeline用于回滚
     const originalTimeline = timeline;
-    
+
     try {
       // 乐观更新：立即更新本地状态
-      const optimisticClips = timeline.clips.map((clip) =>
+      const updatedClips = timeline.clips.map((clip) =>
         clip.id === clipId
           ? { ...clip, trimStart, duration }
           : clip
       );
-      
-      // 重新计算波纹效果后的位置
-      const reorderData = recalculateClipPositions(optimisticClips);
-      const finalClips = optimisticClips.map((clip) => {
-        const reorderItem = reorderData.find(r => r.clipId === clip.id);
-        return {
-          ...clip,
-          startTime: reorderItem?.startTime ?? clip.startTime,
-          order: reorderItem?.order ?? clip.order,
-        };
-      });
-      
-      // 计算新的总时长
+
+      let finalClips: TimelineClipWithAsset[];
+
+      if (isAudioTrack(trimmedTrackIndex)) {
+        // 音频轨道：自由定位模式，不进行波纹重排
+        finalClips = updatedClips;
+      } else {
+        // 视频轨道：只对该轨道进行波纹重排
+        const reorderData = recalculateTrackClipPositions(updatedClips, trimmedTrackIndex);
+        finalClips = updatedClips.map((clip) => {
+          if (clip.trackIndex !== trimmedTrackIndex) {
+            return clip; // 其他轨道的片段保持不变
+          }
+          const reorderItem = reorderData.find(r => r.clipId === clip.id);
+          return {
+            ...clip,
+            startTime: reorderItem?.startTime ?? clip.startTime,
+            order: reorderItem?.order ?? clip.order,
+          };
+        });
+      }
+
+      // 计算新的总时长（基于所有片段的最大结束时间）
       const newDuration = finalClips.length > 0
-        ? finalClips[finalClips.length - 1].startTime + 
-          finalClips[finalClips.length - 1].duration
+        ? Math.max(...finalClips.map(c => c.startTime + c.duration))
         : 0;
-      
+
       // 立即更新UI（乐观更新）
       updateTimeline({
         ...timeline,
         clips: finalClips,
         duration: newDuration,
       });
-      
+
       // 1. 更新片段的裁剪参数
       const result = await updateClip(clipId, {
         trimStart,
@@ -378,17 +588,22 @@ export function TimelinePanel({
       });
 
       if (result.success && result.timeline) {
-        // 2. 应用波纹效果 - 重新整理所有片段
-        const reorderData = recalculateClipPositions(result.timeline.clips);
-        const rippleResult = await reorderClips(result.timeline.id, reorderData);
-        
-        if (rippleResult.success && rippleResult.timeline) {
-          // API成功，使用服务器返回的数据
-          updateTimeline(rippleResult.timeline);
-        } else {
-          // 重排失败，但裁剪成功
+        if (isAudioTrack(trimmedTrackIndex)) {
+          // 音频轨道：不需要波纹重排，直接使用返回结果
           updateTimeline(result.timeline);
-          toast.warning("片段已裁剪，但自动整理失败");
+        } else {
+          // 视频轨道：应用波纹效果 - 只重排该轨道的片段
+          const reorderData = recalculateTrackClipPositions(result.timeline.clips, trimmedTrackIndex);
+          const rippleResult = await reorderClips(result.timeline.id, reorderData);
+
+          if (rippleResult.success && rippleResult.timeline) {
+            // API成功，使用服务器返回的数据
+            updateTimeline(rippleResult.timeline);
+          } else {
+            // 重排失败，但裁剪成功
+            updateTimeline(result.timeline);
+            toast.warning("片段已裁剪，但自动整理失败");
+          }
         }
       } else {
         // 裁剪失败，回滚
@@ -537,6 +752,15 @@ export function TimelinePanel({
     return { totalWidth, marks };
   }, [timeline.duration, pixelsPerMs, zoom]);
 
+  // 验证拖拽目标是否有效（类型匹配）
+  const isValidDropTarget = (trackIndex: number): boolean => {
+    if (!draggedAsset) return false;
+    const isVideo = draggedAsset.assetType === "video";
+    const isAudio = draggedAsset.assetType === "audio";
+    const targetIsVideo = isVideoTrack(trackIndex);
+    return (targetIsVideo && isVideo) || (!targetIsVideo && isAudio);
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* 工具栏 */}
@@ -633,8 +857,18 @@ export function TimelinePanel({
         </div>
       </div>
 
+      {/* 素材条 */}
+      <AssetStripPanel
+        projectId={timeline.projectId}
+        onAssetDrop={async (assetId, trackIndex, startTime) => {
+          // TODO: 实现拖拽添加逻辑
+          console.log("Asset drop:", { assetId, trackIndex, startTime });
+        }}
+        tracks={tracks}
+      />
+
       {/* 时间轴主体 */}
-      <div className="flex-1 overflow-auto">
+      <div ref={timelineBodyRef} className="flex-1 overflow-auto">
         <div className="flex">
           {/* 左侧：轨道头部 */}
           <div className="w-28 shrink-0 border-r bg-muted/30">
@@ -818,11 +1052,17 @@ export function TimelinePanel({
                 {/* 视频轨道区 */}
                 {videoTracks.map((track) => {
                   const trackClips = clipsByTrack.get(track.index) || [];
+                  const isDropTarget = dropTargetTrack === track.index;
+                  const validDrop = isDropTarget && isValidDropTarget(track.index);
 
                   return (
                     <div
                       key={track.index}
-                      className="relative border-b mr-4"
+                      className={cn(
+                        "relative border-b mr-4 transition-colors",
+                        isDropTarget && validDrop && "bg-primary/10 border-primary",
+                        isDropTarget && !validDrop && "bg-destructive/10 border-destructive"
+                      )}
                       style={{
                         height: track.height,
                         width: Math.max(totalWidth, 800),
@@ -830,9 +1070,20 @@ export function TimelinePanel({
                     >
                       {/* 轨道背景色条 */}
                       <div
-                        className="absolute inset-0 opacity-5"
+                        className={cn(
+                          "absolute inset-0 opacity-5",
+                          isDropTarget && "opacity-0"
+                        )}
                         style={{ backgroundColor: track.color }}
                       />
+
+                      {/* 插入位置指示器 */}
+                      {isDropTarget && validDrop && dropPosition !== null && (
+                        <div
+                          className="absolute top-0 bottom-0 w-0.5 bg-primary z-20"
+                          style={{ left: dropPosition * pixelsPerMs }}
+                        />
+                      )}
 
                       {/* 空轨道提示 */}
                       {trackClips.length === 0 && (
@@ -892,11 +1143,17 @@ export function TimelinePanel({
                 {/* 音频轨道区 */}
                 {audioTracks.map((track) => {
                   const trackClips = clipsByTrack.get(track.index) || [];
+                  const isDropTarget = dropTargetTrack === track.index;
+                  const validDrop = isDropTarget && isValidDropTarget(track.index);
 
                   return (
                     <div
                       key={track.index}
-                      className="relative border-b mr-4"
+                      className={cn(
+                        "relative border-b mr-4 transition-colors",
+                        isDropTarget && validDrop && "bg-primary/10 border-primary",
+                        isDropTarget && !validDrop && "bg-destructive/10 border-destructive"
+                      )}
                       style={{
                         height: track.height,
                         width: Math.max(totalWidth, 800),
@@ -904,9 +1161,20 @@ export function TimelinePanel({
                     >
                       {/* 轨道背景色条 */}
                       <div
-                        className="absolute inset-0 opacity-5"
+                        className={cn(
+                          "absolute inset-0 opacity-5",
+                          isDropTarget && "opacity-0"
+                        )}
                         style={{ backgroundColor: track.color }}
                       />
+
+                      {/* 插入位置指示器 */}
+                      {isDropTarget && validDrop && dropPosition !== null && (
+                        <div
+                          className="absolute top-0 bottom-0 w-0.5 bg-primary z-20"
+                          style={{ left: dropPosition * pixelsPerMs }}
+                        />
+                      )}
 
                       {/* 空轨道提示 */}
                       {trackClips.length === 0 && (

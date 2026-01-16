@@ -82,27 +82,6 @@ export function formatTimeDisplay(ms: number, showMilliseconds: boolean = true):
 }
 
 /**
- * 重新计算片段的顺序和开始时间（连续排列）
- * 用于拖拽重排后自动调整所有片段位置
- */
-export function recalculateClipPositions(
-  clips: TimelineClipWithAsset[]
-): Array<{ clipId: string; order: number; startTime: number }> {
-  let currentTime = 0;
-  return clips
-    .sort((a, b) => a.order - b.order)
-    .map((clip, index) => {
-      const result = {
-        clipId: clip.id,
-        order: index,
-        startTime: currentTime,
-      };
-      currentTime += clip.duration;
-      return result;
-    });
-}
-
-/**
  * 计算拖拽位置对应的时间轴时间
  */
 export function calculateTimeFromPosition(
@@ -209,28 +188,6 @@ export function groupClipsByTrack(
 }
 
 /**
- * 获取视频轨道的片段
- */
-export function getVideoClips(
-  clips: TimelineClipWithAsset[]
-): TimelineClipWithAsset[] {
-  return clips
-    .filter((clip) => isVideoTrack(clip.trackIndex))
-    .sort((a, b) => a.order - b.order);
-}
-
-/**
- * 获取所有音频轨道的片段
- */
-export function getAudioClips(
-  clips: TimelineClipWithAsset[]
-): TimelineClipWithAsset[] {
-  return clips
-    .filter((clip) => isAudioTrack(clip.trackIndex))
-    .sort((a, b) => a.trackIndex - b.trackIndex || a.order - b.order);
-}
-
-/**
  * 在指定时间点找到所有正在播放的音频片段
  */
 export function findAudioClipsAtTime(
@@ -258,25 +215,6 @@ export function findVideoClipAtTime(
       return currentTime >= clip.startTime && currentTime < clipEnd;
     }) ?? null
   );
-}
-
-/**
- * 计算指定轨道内片段的下一个开始位置（添加到轨道末尾）
- */
-export function getNextStartTimeForTrack(
-  clips: TimelineClipWithAsset[],
-  trackIndex: number
-): number {
-  const trackClips = clips
-    .filter((c) => c.trackIndex === trackIndex)
-    .sort((a, b) => a.order - b.order);
-
-  if (trackClips.length === 0) {
-    return 0;
-  }
-
-  const lastClip = trackClips[trackClips.length - 1];
-  return lastClip.startTime + lastClip.duration;
 }
 
 /**

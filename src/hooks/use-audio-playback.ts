@@ -130,8 +130,8 @@ export function useAudioPlayback({
           const relativeTime = time - clipForTrack.startTime;
           const audioTime = (clipForTrack.trimStart + relativeTime) / 1000;
 
-          // 如果偏差超过 100ms，同步时间
-          if (Math.abs(audio.currentTime - audioTime) > 0.1) {
+          // 50ms 阈值（约1.5帧@30fps）平衡精度与性能
+          if (Math.abs(audio.currentTime - audioTime) > 0.05) {
             audio.currentTime = audioTime;
           }
 
@@ -178,12 +178,11 @@ export function useAudioPlayback({
             audio.pause();
           }
         });
-      } else {
-        // 开始播放时同步
-        syncToTime(currentTime);
       }
+      // 移除 else 分支的 syncToTime，因为 currentTime 变化时的 useEffect 已经处理
+      // 这样可以确保暂停期间拖拽播放头后，音频位置在 currentTime 变化时就已同步
     }
-  }, [isPlaying, currentTime, syncToTime]);
+  }, [isPlaying]);
 
   return {
     audioRefs,

@@ -12,6 +12,7 @@ import type {
   UpdateClipInput,
   ReorderClipInput,
 } from "@/types/timeline";
+import { isAudioTrack } from "@/types/timeline";
 import { getProjectTimeline } from "./timeline-actions";
 
 /**
@@ -43,17 +44,47 @@ export async function addClipToTimeline(
       return { success: false, error: "时间轴不存在或无权限" };
     }
 
-    // 获取当前最大的order值
+    const currentTimeline = existingTimeline[0];
+    const trackIndex = input.trackIndex ?? 0;
+
+    // 获取该轨道当前最大的 order 值
     const maxOrderResult = await db
       .select({ maxOrder: sql<number>`COALESCE(MAX(${timelineClip.order}), -1)` })
       .from(timelineClip)
-      .where(eq(timelineClip.timelineId, timelineId));
+      .where(
+        and(
+          eq(timelineClip.timelineId, timelineId),
+          eq(timelineClip.trackIndex, trackIndex)
+        )
+      );
 
     const nextOrder = (maxOrderResult[0]?.maxOrder ?? -1) + 1;
 
-    // 获取时间轴当前总时长
-    const currentTimeline = existingTimeline[0];
-    const startTime = input.startTime ?? currentTimeline.duration;
+    // 计算起始位置
+    let startTime: number;
+    if (input.startTime !== undefined) {
+      // 如果提供了 startTime，直接使用（来自拖拽定位）
+      startTime = input.startTime;
+    } else {
+      // 查询该轨道的最后一个片段，计算轨道末尾位置
+      const trackClips = await db
+        .select()
+        .from(timelineClip)
+        .where(
+          and(
+            eq(timelineClip.timelineId, timelineId),
+            eq(timelineClip.trackIndex, trackIndex)
+          )
+        )
+        .orderBy(timelineClip.order);
+
+      if (trackClips.length > 0) {
+        const lastClip = trackClips[trackClips.length - 1];
+        startTime = lastClip.startTime + lastClip.duration;
+      } else {
+        startTime = 0; // 轨道为空，从 0 开始
+      }
+    }
 
     // 创建片段
     const clipId = nanoid();
@@ -63,9 +94,9 @@ export async function addClipToTimeline(
       id: clipId,
       timelineId,
       assetId: input.assetId,
-      trackIndex: input.trackIndex ?? 0,
+      trackIndex,
       startTime,
-      duration: input.duration ?? 0, // 需要从素材获取实际时长
+      duration: input.duration ?? 0,
       trimStart: input.trimStart ?? 0,
       trimEnd: input.trimEnd,
       order: input.order ?? nextOrder,
@@ -196,37 +227,44 @@ export async function removeClip(
 
     const timelineId = existingClip[0].timeline.id;
     const projectId = existingClip[0].timeline.projectId;
+    const deletedTrackIndex = existingClip[0].clip.trackIndex;
 
     // 删除片段
     await db.delete(timelineClip).where(eq(timelineClip.id, clipId));
 
-    // 获取剩余片段并重新整理（波纹编辑效果）
-    const remainingClips = await db
-      .select()
-      .from(timelineClip)
-      .where(eq(timelineClip.timelineId, timelineId))
-      .orderBy(timelineClip.order);
+    // 音频轨道：自由定位模式，不进行波纹重排
+    // 视频轨道：波纹剪辑，只对该轨道的片段进行重排
+    if (!isAudioTrack(deletedTrackIndex)) {
+      // 获取该视频轨道的剩余片段
+      const remainingTrackClips = await db
+        .select()
+        .from(timelineClip)
+        .where(
+          and(
+            eq(timelineClip.timelineId, timelineId),
+            eq(timelineClip.trackIndex, deletedTrackIndex)
+          )
+        )
+        .orderBy(timelineClip.order);
 
-    // 重新计算位置（连续排列，无空隙）
-    let currentTime = 0;
-    for (let i = 0; i < remainingClips.length; i++) {
-      await db
-        .update(timelineClip)
-        .set({
-          startTime: currentTime,
-          order: i,
-          updatedAt: new Date(),
-        })
-        .where(eq(timelineClip.id, remainingClips[i].id));
-      
-      currentTime += remainingClips[i].duration;
+      // 重新计算该轨道片段的位置（连续排列，无空隙）
+      let currentTime = 0;
+      for (let i = 0; i < remainingTrackClips.length; i++) {
+        await db
+          .update(timelineClip)
+          .set({
+            startTime: currentTime,
+            order: i,
+            updatedAt: new Date(),
+          })
+          .where(eq(timelineClip.id, remainingTrackClips[i].id));
+
+        currentTime += remainingTrackClips[i].duration;
+      }
     }
 
-    // 更新时间轴总时长
-    await db
-      .update(timeline)
-      .set({ duration: currentTime, updatedAt: new Date() })
-      .where(eq(timeline.id, timelineId));
+    // 重新计算时间轴总时长（基于所有片段的最大结束时间）
+    await recalculateTimelineDuration(timelineId);
 
     // 返回完整的时间轴数据
     const timelineData = await getProjectTimeline(projectId);

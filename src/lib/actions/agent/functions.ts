@@ -360,7 +360,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "remove_clip",
-    description: "从时间轴移除片段。移除后自动波纹编辑：后续片段自动前移，保持连续。",
+    description: "从时间轴移除片段。视频轨道删除后自动波纹编辑（后续片段自动前移）；音频轨道删除后保持自由定位，不影响其他片段位置。",
     displayName: "移除片段",
     parameters: {
       type: "object",
