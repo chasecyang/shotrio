@@ -32,7 +32,7 @@ import {
   formatTimeDisplay,
   groupClipsByTrack,
 } from "@/lib/utils/timeline-utils";
-import { UsePlaybackReturn } from "@/hooks/use-playback";
+import { UseRemotionPlaybackReturn } from "@/hooks/use-remotion-playback";
 import {
   TrackStates,
   isVideoTrack,
@@ -46,7 +46,7 @@ import {
 } from "@/types/timeline";
 
 interface TimelinePanelProps {
-  playback: UsePlaybackReturn;
+  playback: UseRemotionPlaybackReturn;
   trackStates: TrackStates;
   onToggleTrackMute: (trackIndex: number) => void;
   onSetTrackVolume: (trackIndex: number, volume: number) => void;
@@ -902,7 +902,6 @@ function TimelinePanelContent({
 
             {/* 视频轨道区 */}
             {videoTracks.map((track) => {
-              const trackState = trackStates[track.index] || { volume: 1, isMuted: false };
               const trackClips = clipsByTrack.get(track.index) || [];
               const canDelete = videoTracks.length > 1 && trackClips.length === 0;
 

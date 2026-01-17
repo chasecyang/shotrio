@@ -7,12 +7,12 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { VideoPreview } from "./video-preview";
+import { RemotionPreview } from "./remotion-preview";
 import { TimelinePanel } from "./timeline-panel";
 import { getOrCreateProjectTimeline } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
-import { usePlayback } from "@/hooks/use-playback";
+import { useRemotionPlayback } from "@/hooks/use-remotion-playback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 import { DEFAULT_TRACK_STATES, TrackStates, getTimelineTracks, generateTrackStates } from "@/types/timeline";
@@ -59,8 +59,8 @@ export function ClippingModeLayout() {
   // 自动保存
   useTimelineAutosave(timeline);
 
-  // 集中管理播放控制（包含视频和音频）
-  const playback = usePlayback({ timeline, trackStates });
+  // 集中管理播放控制（使用 Remotion）
+  const playback = useRemotionPlayback({ timeline, trackStates });
 
   // 加载或创建时间轴
   useEffect(() => {
@@ -112,7 +112,7 @@ export function ClippingModeLayout() {
           {/* 上部：预览窗口 */}
           <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
             <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
-              <VideoPreview playback={playback} />
+              <RemotionPreview playback={playback} timeline={timeline} />
             </div>
           </ResizablePanel>
 
