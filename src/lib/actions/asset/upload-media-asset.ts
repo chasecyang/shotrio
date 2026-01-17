@@ -12,7 +12,7 @@ import {
   MAX_VIDEO_SIZE,
   MAX_AUDIO_SIZE,
 } from "@/lib/storage/r2.service";
-import { createAsset } from "@/lib/actions/asset/crud";
+import { createAsset } from "./base-crud";
 import { analyzeDescriptionForAsset } from "@/lib/services/ai-tagging.service";
 import type { AssetTypeEnum } from "@/types/asset";
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { createAssetInternal } from "@/lib/actions/asset/crud";
+import { createAssetInternal } from "./base-crud";
 import { analyzeDescriptionForText } from "@/lib/services/ai-tagging.service";
 import type { AssetTypeEnum } from "@/types/asset";
 

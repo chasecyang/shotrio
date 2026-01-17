@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import { TimelineClipWithAsset } from "@/types/timeline";
 import { Trash2, GripVertical, Scissors } from "lucide-react";
 import Image from "next/image";
@@ -11,13 +11,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import { validateTrimValues, formatTimeDisplay } from "@/lib/utils/timeline-utils";
+import { formatTimeDisplay } from "@/lib/utils/timeline-utils";
+import { useClipInteraction } from "@/hooks/use-clip-interaction";
 
 interface TimelineClipItemProps {
   clip: TimelineClipWithAsset;
-  allClips: TimelineClipWithAsset[];  // 保留用于未来可能的碰撞检测
   pixelsPerMs: number;
-  trackRef: React.RefObject<HTMLDivElement | null>;  // 保留用于未来可能的边界计算
   temporaryStartTime?: number;
   trackColor?: string;
   onDelete: () => void;
@@ -35,9 +34,7 @@ interface TimelineClipItemProps {
  */
 export const TimelineClipItem = React.memo(function TimelineClipItem({
   clip,
-  allClips: _allClips,
   pixelsPerMs,
-  trackRef: _trackRef,
   temporaryStartTime,
   trackColor = "#3b82f6",
   onDelete,
@@ -48,174 +45,33 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
   isDragging,
   disabled = false,
 }: TimelineClipItemProps) {
-  void _allClips; void _trackRef; // 保留接口一致性
-
   const clipRef = useRef<HTMLDivElement>(null);
 
-  // 拖拽状态
-  const [isDraggingClip, setIsDraggingClip] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragOffset, setDragOffset] = useState(0);
-  const originalStartTime = useRef(0);
-
-  // 裁剪状态
-  const [isTrimmingLeft, setIsTrimmingLeft] = useState(false);
-  const [isTrimmingRight, setIsTrimmingRight] = useState(false);
-  const [trimStartX, setTrimStartX] = useState(0);
-  const [tempTrimStart, setTempTrimStart] = useState(clip.trimStart);
-  const [tempDuration, setTempDuration] = useState(clip.duration);
-
-  // 拖拽片段移动
-  const handleMouseDownOnClip = (e: React.MouseEvent) => {
-    if (disabled || isTrimmingLeft || isTrimmingRight) return;
-    
-    e.stopPropagation();
-    setIsDraggingClip(true);
-    setDragStartX(e.clientX);
-    setDragOffset(0);
-    originalStartTime.current = clip.startTime;
-    onDragStart();
-  };
-
-  useEffect(() => {
-    if (!isDraggingClip) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - dragStartX;
-      setDragOffset(deltaX);
-    };
-
-    const handleMouseUp = () => {
-      setIsDraggingClip(false);
-      
-      // 计算新的开始时间
-      const deltaMs = dragOffset / pixelsPerMs;
-      const newStartTime = Math.max(0, originalStartTime.current + deltaMs);
-      
-      setDragOffset(0);
-      
-      // 如果位置真的改变了，触发回调
-      if (Math.abs(newStartTime - clip.startTime) > 10) {
-        onDragEnd(clip.id, newStartTime);
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDraggingClip, dragStartX, dragOffset, pixelsPerMs, clip, onDragEnd]);
-
-  // 左边缘裁剪（调整入点）
-  const handleMouseDownLeft = (e: React.MouseEvent) => {
-    if (disabled) return;
-    e.stopPropagation();
-    setIsTrimmingLeft(true);
-    setTrimStartX(e.clientX);
-    setTempTrimStart(clip.trimStart);
-    setTempDuration(clip.duration);
-  };
-
-  useEffect(() => {
-    if (!isTrimmingLeft) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - trimStartX;
-      const deltaMs = deltaX / pixelsPerMs;
-
-      // 新的 trimStart 和 duration
-      const newTrimStart = Math.max(0, clip.trimStart + deltaMs);
-      const newDuration = Math.max(500, clip.duration - deltaMs);
-
-      // 验证是否超出素材时长
-      const assetDuration = clip.asset.duration || 0;
-      const validation = validateTrimValues(newTrimStart, newDuration, assetDuration);
-
-      if (validation.valid) {
-        setTempTrimStart(newTrimStart);
-        setTempDuration(newDuration);
-        // 左边缘裁剪不影响后续片段位置，但需要通知以便更新预览
-        onTrimming?.(clip.id, newDuration);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsTrimmingLeft(false);
-
-      // 如果真的改变了，保存
-      if (
-        Math.abs(tempTrimStart - clip.trimStart) > 10 ||
-        Math.abs(tempDuration - clip.duration) > 10
-      ) {
-        onTrim(clip.id, tempTrimStart, tempDuration);
-      } else {
-        // 没有改变，清除预览状态
-        onTrimming?.(clip.id, clip.duration);
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isTrimmingLeft, trimStartX, pixelsPerMs, clip, tempTrimStart, tempDuration, onTrim, onTrimming]);
-
-  // 右边缘裁剪（调整出点）
-  const handleMouseDownRight = (e: React.MouseEvent) => {
-    if (disabled) return;
-    e.stopPropagation();
-    setIsTrimmingRight(true);
-    setTrimStartX(e.clientX);
-    setTempDuration(clip.duration);
-  };
-
-  useEffect(() => {
-    if (!isTrimmingRight) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - trimStartX;
-      const deltaMs = deltaX / pixelsPerMs;
-
-      // 新的 duration
-      const newDuration = Math.max(500, clip.duration + deltaMs);
-
-      // 验证是否超出素材时长
-      const assetDuration = clip.asset.duration || 0;
-      const validation = validateTrimValues(clip.trimStart, newDuration, assetDuration);
-
-      if (validation.valid) {
-        setTempDuration(newDuration);
-        // 实时通知父组件，用于推移后续片段
-        onTrimming?.(clip.id, newDuration);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsTrimmingRight(false);
-
-      // 如果真的改变了，保存
-      if (Math.abs(tempDuration - clip.duration) > 10) {
-        onTrim(clip.id, clip.trimStart, tempDuration);
-      } else {
-        // 没有改变，清除预览状态
-        onTrimming?.(clip.id, clip.duration);
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isTrimmingRight, trimStartX, pixelsPerMs, clip, tempDuration, onTrim, onTrimming]);
+  const {
+    isDraggingClip,
+    dragOffset,
+    isTrimmingLeft,
+    isTrimmingRight,
+    tempTrimStart,
+    tempDuration,
+    handleMouseDownOnClip,
+    handleMouseDownLeft,
+    handleMouseDownRight,
+  } = useClipInteraction({
+    clip: {
+      id: clip.id,
+      startTime: clip.startTime,
+      trimStart: clip.trimStart,
+      duration: clip.duration,
+      assetDuration: clip.asset.duration || 0,
+    },
+    pixelsPerMs,
+    disabled,
+    onDragStart,
+    onDragEnd,
+    onTrim,
+    onTrimming,
+  });
 
   // 计算显示位置和宽度（考虑临时裁剪状态和临时位置）
   const effectiveStartTime = temporaryStartTime !== undefined ? temporaryStartTime : clip.startTime;
@@ -295,7 +151,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
                   : "bg-transparent group-hover/left-handle:bg-primary/50"
               )}
             />
-            
+
             {/* 裁剪时显示时间提示 */}
             {isTrimmingLeft && (
               <div className="absolute -top-8 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
@@ -320,7 +176,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
                   : "bg-transparent group-hover/right-handle:bg-primary/50"
               )}
             />
-            
+
             {/* 裁剪时显示时间提示 */}
             {isTrimmingRight && (
               <div className="absolute -top-8 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
@@ -353,4 +209,3 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     prevProps.trackColor === nextProps.trackColor
   );
 });
-

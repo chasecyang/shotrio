@@ -32,7 +32,7 @@ import {
   formatTimeDisplay,
   groupClipsByTrack,
 } from "@/lib/utils/timeline-utils";
-import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
+import { UsePlaybackReturn } from "@/hooks/use-playback";
 import {
   TrackStates,
   isVideoTrack,
@@ -46,10 +46,31 @@ import {
 } from "@/types/timeline";
 
 interface TimelinePanelProps {
-  playback: UseVideoPlaybackReturn;
+  playback: UsePlaybackReturn;
   trackStates: TrackStates;
   onToggleTrackMute: (trackIndex: number) => void;
   onSetTrackVolume: (trackIndex: number, volume: number) => void;
+}
+
+/**
+ * 验证素材类型与轨道类型是否匹配
+ * @returns 如果验证失败返回错误消息，否则返回 null
+ */
+function validateAssetTrackCompatibility(
+  asset: AssetWithFullData,
+  trackIndex: number
+): string | null {
+  const isVideo = asset.assetType === "video";
+  const isAudio = asset.assetType === "audio";
+  const targetIsVideoTrack = isVideoTrack(trackIndex);
+
+  if (targetIsVideoTrack && !isVideo) {
+    return "视频轨道只能添加视频素材";
+  }
+  if (!targetIsVideoTrack && !isAudio) {
+    return "音频轨道只能添加音频素材";
+  }
+  return null;
 }
 
 /**
@@ -99,15 +120,18 @@ function TimelinePanelContent({
   const timelineRulerRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
-  const THROTTLE_MS = 16; // 约 60fps
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const THROTTLE_MS = 32; // 约 30fps，给视频加载更多时间
 
   // 从 playback prop 获取播放控制
   const {
     isPlaying,
     currentTime,
+    currentTimeRef,
     currentClip,
     togglePlayPause,
     seekTo,
+    seekToImmediate,
     pause,
   } = playback;
 
@@ -164,8 +188,12 @@ function TimelinePanelContent({
 
   // 鼠标释放处理
   const handleMouseUp = useCallback(() => {
+    if (isDraggingPlayhead && timeline) {
+      // 拖拽结束后，执行一次精确 seek
+      seekToImmediate(currentTime);
+    }
     setIsDraggingPlayhead(false);
-  }, []);
+  }, [isDraggingPlayhead, timeline, currentTime, seekToImmediate]);
 
   // 监听全局鼠标事件（用于拖拽）
   useEffect(() => {
@@ -179,6 +207,23 @@ function TimelinePanelContent({
       };
     }
   }, [isDraggingPlayhead, handleMouseMove, handleMouseUp]);
+
+  // 播放时直接更新播放头 DOM（绕过 React 渲染，提升性能）
+  useEffect(() => {
+    if (!isPlaying || !currentTimeRef) return;
+
+    let animationId: number;
+    const updatePlayhead = () => {
+      if (playheadRef.current) {
+        const left = currentTimeRef.current * pixelsPerMs;
+        playheadRef.current.style.left = `${left}px`;
+      }
+      animationId = requestAnimationFrame(updatePlayhead);
+    };
+
+    animationId = requestAnimationFrame(updatePlayhead);
+    return () => cancelAnimationFrame(animationId);
+  }, [isPlaying, pixelsPerMs, currentTimeRef]);
 
   // 素材拖拽时的鼠标移动监听 - 计算目标轨道
   useEffect(() => {
@@ -284,17 +329,9 @@ function TimelinePanelContent({
   ) => {
     if (!timeline) return;
 
-    // 验证素材类型与轨道类型匹配
-    const isVideo = asset.assetType === "video";
-    const isAudio = asset.assetType === "audio";
-    const targetIsVideoTrack = isVideoTrack(trackIndex);
-
-    if (targetIsVideoTrack && !isVideo) {
-      toast.error("视频轨道只能添加视频素材");
-      return;
-    }
-    if (!targetIsVideoTrack && !isAudio) {
-      toast.error("音频轨道只能添加音频素材");
+    const validationError = validateAssetTrackCompatibility(asset, trackIndex);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -636,17 +673,9 @@ function TimelinePanelContent({
   const handleAddAsset = async (asset: AssetWithFullData, trackIndex: number) => {
     if (!timeline) return;
 
-    // 验证素材类型与轨道类型匹配
-    const isVideo = asset.assetType === "video";
-    const isAudio = asset.assetType === "audio";
-    const targetIsVideoTrack = isVideoTrack(trackIndex);
-
-    if (targetIsVideoTrack && !isVideo) {
-      toast.error("视频轨道只能添加视频素材");
-      return;
-    }
-    if (!targetIsVideoTrack && !isAudio) {
-      toast.error("音频轨道只能添加音频素材");
+    const validationError = validateAssetTrackCompatibility(asset, trackIndex);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -860,10 +889,6 @@ function TimelinePanelContent({
       {/* 素材条 */}
       <AssetStripPanel
         projectId={timeline.projectId}
-        onAssetDrop={async (assetId, trackIndex, startTime) => {
-          // TODO: 实现拖拽添加逻辑
-          console.log("Asset drop:", { assetId, trackIndex, startTime });
-        }}
         tracks={tracks}
       />
 
@@ -1013,6 +1038,7 @@ function TimelinePanelContent({
 
                 {/* 播放头指示器 */}
                 <div
+                  ref={playheadRef}
                   className="absolute z-10 pointer-events-none"
                   style={{
                     left: currentTime * pixelsPerMs,
@@ -1115,9 +1141,7 @@ function TimelinePanelContent({
                           <TimelineClipItem
                             key={clip.id}
                             clip={clip}
-                            allClips={trackClips}
                             pixelsPerMs={pixelsPerMs}
-                            trackRef={trackRef}
                             temporaryStartTime={temporaryStartTime}
                             trackColor={track.color}
                             onDelete={() => handleDeleteClip(clip.id)}
@@ -1206,9 +1230,7 @@ function TimelinePanelContent({
                           <AudioClipItem
                             key={clip.id}
                             clip={clip}
-                            allClips={trackClips}
                             pixelsPerMs={pixelsPerMs}
-                            trackRef={trackRef}
                             temporaryStartTime={temporaryStartTime}
                             trackColor={track.color}
                             onDelete={() => handleDeleteClip(clip.id)}

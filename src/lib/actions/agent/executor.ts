@@ -28,18 +28,20 @@ async function getProjectStylePrompt(projectId: string): Promise<string | null> 
 }
 
 // 导入所有需要的 actions
-import { updateAsset, deleteAsset } from "../asset/crud";
-import { queryAssets } from "../asset/queries";
-import { replaceAssetTags } from "../asset/tags";
+import {
+  updateAsset,
+  deleteAsset,
+  getVideoAssets,
+  createVideoAsset,
+  createAudioAsset,
+  getAssetWithFullData,
+  queryAssets,
+  replaceAssetTags,
+} from "../asset";
 import { createJob } from "../job";
 import { getSystemArtStyles } from "../art-style/queries";
 import { updateProject } from "../project/base";
 import { analyzeAssetsByType } from "../asset/stats";
-import {
-  getVideoAssets,
-  createVideoAsset,
-  createAudioAsset,
-} from "../asset/crud";
 import {
   createTextAsset,
   getTextAssetContent,
@@ -54,7 +56,6 @@ import {
   updateClip as updateClipAction,
   reorderClips,
 } from "../timeline/clip-actions";
-import { getAssetWithFullData } from "../asset/crud";
 
 /**
  * 执行单个 function call
@@ -270,7 +271,7 @@ export async function executeFunction(
         const stylePrompt = await getProjectStylePrompt(projectId);
 
         // 为每个素材创建记录和独立的生成任务
-        const { createAssetInternal } = await import("../asset/crud");
+        const { createAssetInternal } = await import("../asset/base-crud");
 
         for (const assetData of assets) {
           try {

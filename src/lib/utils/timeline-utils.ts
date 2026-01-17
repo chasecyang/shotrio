@@ -50,6 +50,7 @@ export function findClipAtTime(
 
 /**
  * 计算下一个片段的信息（用于预加载）
+ * @deprecated 使用 getNextVideoClip 代替，此函数不区分轨道类型
  */
 export function getNextClip(
   timeline: TimelineDetail,
@@ -60,6 +61,26 @@ export function getNextClip(
     return null;
   }
   return timeline.clips[currentIndex + 1];
+}
+
+/**
+ * 获取视频轨道上的下一个片段（按时间顺序）
+ * 用于 VideoController 的片段预加载和切换
+ */
+export function getNextVideoClip(
+  timeline: TimelineDetail,
+  currentClip: TimelineClipWithAsset
+): TimelineClipWithAsset | null {
+  // 只获取视频轨道的片段
+  const videoClips = timeline.clips
+    .filter((c) => isVideoTrack(c.trackIndex))
+    .sort((a, b) => a.startTime - b.startTime);
+
+  const currentIndex = videoClips.findIndex((c) => c.id === currentClip.id);
+  if (currentIndex === -1 || currentIndex === videoClips.length - 1) {
+    return null;
+  }
+  return videoClips[currentIndex + 1];
 }
 
 /**

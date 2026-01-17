@@ -3,31 +3,10 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createJob } from "@/lib/actions/job";
-import { createAssetInternal } from "@/lib/actions/asset/crud";
+import { createAssetInternal } from "./base-crud";
+import { resolveAssetVersionId } from "./utils";
 import type { ImageResolution, ImageGenerationConfig } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
-import db from "@/lib/db";
-import { asset } from "@/lib/db/schemas/project";
-import { eq } from "drizzle-orm";
-
-/**
- * 查询资产的激活版本 ID
- * 用于在创建任务时记录源资产的版本快照
- */
-async function resolveAssetVersionId(assetId: string): Promise<string | null> {
-  const imageAsset = await db.query.asset.findFirst({
-    where: eq(asset.id, assetId),
-    with: {
-      imageDataList: true,
-    },
-  });
-
-  const activeImageData = imageAsset?.imageDataList?.find(
-    (img: { id: string; isActive: boolean }) => img.isActive
-  );
-
-  return activeImageData?.id ?? null;
-}
 
 /**
  * 生成素材图片的输入参数（文生图）
@@ -304,7 +283,7 @@ export async function regenerateAssetImage(
 
   try {
     // 获取现有素材
-    const { getAssetWithFullData } = await import("./crud");
+    const { getAssetWithFullData } = await import("./get-asset");
     const assetResult = await getAssetWithFullData(assetId);
 
     if (!assetResult.success || !assetResult.asset) {
@@ -327,7 +306,7 @@ export async function regenerateAssetImage(
     }
 
     // 创建新版本
-    const { createAssetVersion } = await import("./crud");
+    const { createAssetVersion } = await import("./version");
     const versionResult = await createAssetVersion(assetId, {
       prompt: existingAsset.prompt,
       modelUsed: existingAsset.modelUsed || "nano-banana-pro",
@@ -409,7 +388,7 @@ export async function editAssetImageAsVersion(
     }
 
     // 获取原素材
-    const { getAssetWithFullData } = await import("./crud");
+    const { getAssetWithFullData } = await import("./get-asset");
     const assetResult = await getAssetWithFullData(assetId);
 
     if (!assetResult.success || !assetResult.asset) {
@@ -448,7 +427,7 @@ export async function editAssetImageAsVersion(
     }
 
     // 创建新版本记录
-    const { createAssetVersion } = await import("./crud");
+    const { createAssetVersion } = await import("./version");
     const versionResult = await createAssetVersion(assetId, {
       prompt: editPrompt.trim(),
       modelUsed: "nano-banana-pro",

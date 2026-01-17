@@ -2,7 +2,8 @@
 
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { createAsset, updateAsset, getAsset, getAssetWithFullData } from "./crud";
+import { createAsset, updateAsset } from "./base-crud";
+import { getAsset, getAssetWithFullData } from "./get-asset";
 import type { AssetWithTags } from "@/types/asset";
 
 /**
@@ -144,47 +145,5 @@ export async function getTextAssetContent(
     name: asset.name,
     tags: asset.tags.map(tag => tag.tagValue),
   };
-}
-
-/**
- * 批量获取文本资产内容（用于 Agent 查询）
- */
-export async function getTextAssetsContent(
-  assetIds: string[]
-): Promise<{
-  success: boolean;
-  assets?: Array<{
-    id: string;
-    name: string;
-    content: string;
-    tags: string[];
-  }>;
-  error?: string;
-}> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录" };
-  }
-
-  if (assetIds.length === 0) {
-    return { success: true, assets: [] };
-  }
-
-  const results = await Promise.all(
-    assetIds.map(id => getTextAssetContent(id))
-  );
-
-  const assets = results
-    .filter(r => r.success && r.content)
-    .map((r, idx) => ({
-      id: assetIds[idx],
-      name: r.name || "",
-      content: r.content || "",
-      tags: r.tags || [],
-    }));
-
-  return { success: true, assets };
 }
 

@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { AgentContext } from "@/types/agent";
 import { getProjectDetail } from "@/lib/actions/project/base";
-import { getVideoAssets } from "@/lib/actions/asset/crud";
+import { getVideoAssets } from "@/lib/actions/asset";
 import { queryAssets } from "@/lib/actions/asset/queries";
 import { analyzeAssetsByType, getTopTagStats } from "@/lib/actions/asset/stats";
 

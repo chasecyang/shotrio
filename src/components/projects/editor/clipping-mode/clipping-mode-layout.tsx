@@ -12,7 +12,7 @@ import { TimelinePanel } from "./timeline-panel";
 import { getOrCreateProjectTimeline } from "@/lib/actions/timeline";
 import { toast } from "sonner";
 import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
-import { useVideoPlayback } from "@/hooks/use-video-playback";
+import { usePlayback } from "@/hooks/use-playback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 import { DEFAULT_TRACK_STATES, TrackStates, getTimelineTracks, generateTrackStates } from "@/types/timeline";
@@ -59,8 +59,8 @@ export function ClippingModeLayout() {
   // 自动保存
   useTimelineAutosave(timeline);
 
-  // 集中管理视频播放控制
-  const videoPlayback = useVideoPlayback({ timeline });
+  // 集中管理播放控制（包含视频和音频）
+  const playback = usePlayback({ timeline, trackStates });
 
   // 加载或创建时间轴
   useEffect(() => {
@@ -112,10 +112,7 @@ export function ClippingModeLayout() {
           {/* 上部：预览窗口 */}
           <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
             <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
-              <VideoPreview
-                playback={videoPlayback}
-                trackStates={trackStates}
-              />
+              <VideoPreview playback={playback} />
             </div>
           </ResizablePanel>
 
@@ -124,7 +121,7 @@ export function ClippingModeLayout() {
           {/* 下部：时间轴 */}
           <ResizablePanel defaultSize={40} minSize={30} className="overflow-hidden">
             <TimelinePanel
-              playback={videoPlayback}
+              playback={playback}
               trackStates={trackStates}
               onToggleTrackMute={toggleTrackMute}
               onSetTrackVolume={setTrackVolume}

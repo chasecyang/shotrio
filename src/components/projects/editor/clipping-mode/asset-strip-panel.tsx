@@ -19,7 +19,6 @@ const EXPANDED_KEY = "timeline:assetStrip:expanded";
 
 interface AssetStripPanelProps {
   projectId: string;
-  onAssetDrop: (assetId: string, trackIndex: number, startTime: number) => Promise<void>;
   tracks: TrackConfig[];
 }
 
@@ -28,7 +27,6 @@ interface AssetStripPanelProps {
  */
 export function AssetStripPanel({
   projectId,
-  onAssetDrop,
   tracks,
 }: AssetStripPanelProps) {
   const { state } = useEditor();

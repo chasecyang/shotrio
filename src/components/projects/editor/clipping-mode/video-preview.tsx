@@ -3,22 +3,19 @@
 import { useEditor } from "../editor-context";
 import { Spinner } from "@/components/ui/spinner";
 import { Film, AlertCircle } from "lucide-react";
-import { UseVideoPlaybackReturn } from "@/hooks/use-video-playback";
-import { useAudioPlayback } from "@/hooks/use-audio-playback";
-import { useEffect, useState } from "react";
+import { UsePlaybackReturn } from "@/hooks/use-playback";
+import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { TrackStates, DEFAULT_TRACK_STATES } from "@/types/timeline";
 
 interface VideoPreviewProps {
-  playback: UseVideoPlaybackReturn;
-  trackStates: TrackStates;
+  playback: UsePlaybackReturn;
 }
 
 /**
  * 视频预览组件
  * 使用双缓冲策略实现无缝切换，并同步播放音频轨道
  */
-export function VideoPreview({ playback, trackStates }: VideoPreviewProps) {
+export function VideoPreview({ playback }: VideoPreviewProps) {
   const { state } = useEditor();
   const { timeline } = state;
 
@@ -28,19 +25,58 @@ export function VideoPreview({ playback, trackStates }: VideoPreviewProps) {
     activeVideo,
     currentClip,
     isLoading,
-    isPlaying,
-    currentTime,
   } = playback;
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const [videoError, setVideoError] = useState(false);
 
-  // 音频播放 - 与视频同步
-  useAudioPlayback({
-    timeline,
-    currentTime,
-    isPlaying,
-    trackStates,
-  });
+  // 将 VideoController 创建的视频元素挂载到 DOM
+  useEffect(() => {
+    const container = containerRef.current;
+    const videoA = videoARef.current;
+    const videoB = videoBRef.current;
+
+    if (!container || !videoA || !videoB) return;
+
+    // 设置视频元素样式
+    const baseStyles = "max-w-full max-h-full object-contain absolute transition-opacity duration-100";
+
+    videoA.className = cn(baseStyles, activeVideo === "A" ? "opacity-100 z-10" : "opacity-0 z-0");
+    videoB.className = cn(baseStyles, activeVideo === "B" ? "opacity-100 z-10" : "opacity-0 z-0");
+
+    videoA.playsInline = true;
+    videoB.playsInline = true;
+
+    // 添加到 DOM（如果还没添加）
+    if (!container.contains(videoA)) {
+      container.appendChild(videoA);
+    }
+    if (!container.contains(videoB)) {
+      container.appendChild(videoB);
+    }
+
+    return () => {
+      // 组件卸载时移除视频元素
+      if (container.contains(videoA)) {
+        container.removeChild(videoA);
+      }
+      if (container.contains(videoB)) {
+        container.removeChild(videoB);
+      }
+    };
+  }, [videoARef, videoBRef]);
+
+  // 更新活跃视频的样式
+  useEffect(() => {
+    const videoA = videoARef.current;
+    const videoB = videoBRef.current;
+
+    if (!videoA || !videoB) return;
+
+    const baseStyles = "max-w-full max-h-full object-contain absolute transition-opacity duration-100";
+    videoA.className = cn(baseStyles, activeVideo === "A" ? "opacity-100 z-10" : "opacity-0 z-0");
+    videoB.className = cn(baseStyles, activeVideo === "B" ? "opacity-100 z-10" : "opacity-0 z-0");
+  }, [activeVideo, videoARef, videoBRef]);
 
   // 监听视频错误
   useEffect(() => {
@@ -85,32 +121,11 @@ export function VideoPreview({ playback, trackStates }: VideoPreviewProps) {
     <div className="w-full h-full flex flex-col">
       {/* 预览画面 */}
       <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-        {/* 双缓冲视频元素 */}
-        <div className="relative w-full h-full flex items-center justify-center">
-          {/* Video A */}
-          <video
-            ref={videoARef}
-            className={cn(
-              "max-w-full max-h-full object-contain absolute",
-              activeVideo === "A" ? "opacity-100 z-10" : "opacity-0 z-0"
-            )}
-            preload="auto"
-            playsInline
-            muted={false}
-          />
-
-          {/* Video B */}
-          <video
-            ref={videoBRef}
-            className={cn(
-              "max-w-full max-h-full object-contain absolute",
-              activeVideo === "B" ? "opacity-100 z-10" : "opacity-0 z-0"
-            )}
-            preload="auto"
-            playsInline
-            muted={false}
-          />
-        </div>
+        {/* 视频容器 - VideoController 的视频元素会被挂载到这里 */}
+        <div
+          ref={containerRef}
+          className="relative w-full h-full flex items-center justify-center"
+        />
 
         {/* 加载指示器 */}
         {isLoading && (

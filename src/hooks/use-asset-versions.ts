@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, useTransition } from "react";
-import { setActiveVersion, deleteAssetVersion } from "@/lib/actions/asset/crud";
+import { setActiveVersion, deleteAssetVersion } from "@/lib/actions/asset";
 import type { ImageData, VideoData, AssetWithFullData } from "@/types/asset";
 
 type Version = ImageData | VideoData;
