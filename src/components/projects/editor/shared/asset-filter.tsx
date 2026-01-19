@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   X,
   Search,
@@ -11,7 +12,6 @@ import {
   Music,
   LayoutGrid,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { AssetTypeEnum } from "@/types/asset";
 import { useTranslations } from "next-intl";
 
@@ -45,36 +45,28 @@ export function AssetTypeTabs({ value, onChange }: AssetTypeTabsProps) {
   const currentType: AssetTypeEnum | "all" =
     value.length === 1 ? value[0] : "all";
 
-  const handleTypeChange = (type: AssetTypeEnum | "all") => {
+  const handleTypeChange = (type: string) => {
     if (type === "all") {
       onChange([]);
     } else {
-      onChange([type]);
+      onChange([type as AssetTypeEnum]);
     }
   };
 
   return (
-    <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
-      {assetTypeOptions.map((option) => {
-        const Icon = option.icon;
-        const isActive = currentType === option.value;
-        return (
-          <button
-            key={option.value}
-            onClick={() => handleTypeChange(option.value)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 h-7 rounded-md text-sm font-medium transition-all",
-              isActive
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            <span>{t(option.labelKey)}</span>
-          </button>
-        );
-      })}
-    </div>
+    <Tabs value={currentType} onValueChange={handleTypeChange}>
+      <TabsList>
+        {assetTypeOptions.map((option) => {
+          const Icon = option.icon;
+          return (
+            <TabsTrigger key={option.value} value={option.value}>
+              <Icon className="h-4 w-4" />
+              {t(option.labelKey)}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+    </Tabs>
   );
 }
 

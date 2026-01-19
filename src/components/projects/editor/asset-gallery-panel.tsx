@@ -424,7 +424,7 @@ export function AssetGalleryPanel() {
     // 文本素材使用专门的详情视图
     if (selectedAsset.assetType === "text") {
       return (
-        <div className="h-full flex flex-col bg-background">
+        <div className="h-full flex flex-col overflow-hidden">
           <TextAssetDetailView
             asset={selectedAsset}
             onBack={handleBackToGrid}
@@ -435,7 +435,7 @@ export function AssetGalleryPanel() {
     }
     // 其他素材使用通用详情视图
     return (
-      <div className="h-full flex flex-col bg-background">
+      <div className="h-full flex flex-col overflow-hidden">
         <AssetDetailView
           asset={selectedAsset}
           onBack={handleBackToGrid}
@@ -449,7 +449,7 @@ export function AssetGalleryPanel() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="shrink-0 px-4 py-3 border-b space-y-2">
         {/* 第一行：类型Tab + 刷新按钮 */}
@@ -512,7 +512,7 @@ export function AssetGalleryPanel() {
             <div
               className="grid gap-3"
               style={{
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(192px, 1fr))",
               }}
             >
               {Array.from({ length: 6 }).map((_, i) => (

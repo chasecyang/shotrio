@@ -68,7 +68,8 @@ export function AssetStripPanel({
           limit: 100,
         });
         const completedAssets = result.assets.filter(
-          (asset) => asset.runtimeStatus === "completed"
+          (asset) => asset.runtimeStatus === "completed" &&
+            (asset.assetType === "video" || asset.assetType === "audio")
         );
         setAssets(completedAssets);
       } catch (error) {
@@ -102,13 +103,13 @@ export function AssetStripPanel({
 
       {/* 展开状态的内容 */}
       <CollapsibleContent>
-        <div className="flex items-center gap-2 px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-2">
           {/* 标题 */}
           <span className="text-xs text-muted-foreground shrink-0">素材库</span>
 
           {/* 素材列表 */}
           {isLoading ? (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="flex flex-col items-center shrink-0">
                   <Skeleton className="w-14 h-14 rounded-lg" />
@@ -122,8 +123,8 @@ export function AssetStripPanel({
               暂无素材，请先在素材管理中添加
             </div>
           ) : (
-            <ScrollArea className="flex-1">
-              <div className="flex gap-2 pb-2">
+            <ScrollArea className="w-full">
+              <div className="flex gap-3 pr-3">
                 {assets.map((asset) => (
                   <AssetThumbnailItem
                     key={asset.id}

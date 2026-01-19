@@ -63,7 +63,7 @@ export function AssetGroup({
         <div
           className="grid gap-3 mt-2 pl-2"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(192px, 1fr))",
           }}
         >
           {assets.map((asset) => (

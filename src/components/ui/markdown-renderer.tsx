@@ -18,54 +18,54 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         components={{
         // Headings
         h1: ({ children }) => (
-          <h1 className="text-lg font-bold text-neutral-900 mt-4 mb-2 first:mt-0">
+          <h1 className="text-lg font-bold text-foreground mt-4 mb-2 first:mt-0">
             {children}
           </h1>
         ),
         h2: ({ children }) => (
-          <h2 className="text-base font-bold text-neutral-900 mt-3 mb-2 first:mt-0">
+          <h2 className="text-base font-bold text-foreground mt-3 mb-2 first:mt-0">
             {children}
           </h2>
         ),
         h3: ({ children }) => (
-          <h3 className="text-sm font-semibold text-neutral-900 mt-3 mb-1 first:mt-0">
+          <h3 className="text-sm font-semibold text-foreground mt-3 mb-1 first:mt-0">
             {children}
           </h3>
         ),
         h4: ({ children }) => (
-          <h4 className="text-sm font-semibold text-neutral-800 mt-2 mb-1 first:mt-0">
+          <h4 className="text-sm font-semibold text-foreground/90 mt-2 mb-1 first:mt-0">
             {children}
           </h4>
         ),
         h5: ({ children }) => (
-          <h5 className="text-sm font-medium text-neutral-800 mt-2 mb-1 first:mt-0">
+          <h5 className="text-sm font-medium text-foreground/90 mt-2 mb-1 first:mt-0">
             {children}
           </h5>
         ),
         h6: ({ children }) => (
-          <h6 className="text-sm font-medium text-neutral-700 mt-2 mb-1 first:mt-0">
+          <h6 className="text-sm font-medium text-muted-foreground mt-2 mb-1 first:mt-0">
             {children}
           </h6>
         ),
         // Paragraphs
         p: ({ children }) => (
-          <p className="text-sm leading-relaxed text-neutral-900 mb-2 last:mb-0">
+          <p className="text-sm leading-relaxed text-foreground mb-2 last:mb-0">
             {children}
           </p>
         ),
         // Lists
         ul: ({ children }) => (
-          <ul className="list-disc list-inside space-y-1 mb-2 text-sm text-neutral-900">
+          <ul className="list-disc list-inside space-y-1 mb-2 text-sm text-foreground">
             {children}
           </ul>
         ),
         ol: ({ children }) => (
-          <ol className="list-decimal list-inside space-y-1 mb-2 text-sm text-neutral-900">
+          <ol className="list-decimal list-inside space-y-1 mb-2 text-sm text-foreground">
             {children}
           </ol>
         ),
         li: ({ children }) => (
-          <li className="text-sm text-neutral-900 leading-relaxed">
+          <li className="text-sm text-foreground leading-relaxed">
             {children}
           </li>
         ),
@@ -74,7 +74,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           if (inline) {
             return (
               <code
-                className="px-1.5 py-0.5 rounded bg-neutral-200 text-orange-700 font-mono text-xs"
+                className="px-1.5 py-0.5 rounded bg-muted text-primary font-mono text-xs"
                 {...props}
               >
                 {children}
@@ -84,7 +84,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           return (
             <code
               className={cn(
-                "block px-3 py-2 rounded-lg bg-neutral-800 text-neutral-100 font-mono text-xs overflow-x-auto mb-2",
+                "block px-3 py-2 rounded-lg bg-zinc-800 text-zinc-100 font-mono text-xs overflow-x-auto mb-2",
                 className
               )}
               {...props}
@@ -100,7 +100,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         ),
         // Blockquotes
         blockquote: ({ children }) => (
-          <blockquote className="border-l-4 border-orange-400 pl-3 py-1 my-2 text-neutral-700 italic bg-orange-50 rounded-r">
+          <blockquote className="border-l-4 border-primary/60 pl-3 py-1 my-2 text-muted-foreground italic bg-primary/5 rounded-r">
             {children}
           </blockquote>
         ),
@@ -118,18 +118,18 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         // Tables
         table: ({ children }) => (
           <div className="overflow-x-auto mb-2">
-            <table className="min-w-full divide-y divide-neutral-200 border border-neutral-200 rounded-lg">
+            <table className="min-w-full divide-y divide-border border border-border rounded-lg">
               {children}
             </table>
           </div>
         ),
         thead: ({ children }) => (
-          <thead className="bg-neutral-50">
+          <thead className="bg-muted/50">
             {children}
           </thead>
         ),
         tbody: ({ children }) => (
-          <tbody className="bg-white divide-y divide-neutral-200">
+          <tbody className="bg-background divide-y divide-border">
             {children}
           </tbody>
         ),
@@ -137,34 +137,34 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           <tr>{children}</tr>
         ),
         th: ({ children }) => (
-          <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-900">
+          <th className="px-3 py-2 text-left text-xs font-semibold text-foreground">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="px-3 py-2 text-sm text-neutral-700">
+          <td className="px-3 py-2 text-sm text-muted-foreground">
             {children}
           </td>
         ),
         // Horizontal rule
         hr: () => (
-          <hr className="my-3 border-neutral-200" />
+          <hr className="my-3 border-border" />
         ),
         // Strong/Bold
         strong: ({ children }) => (
-          <strong className="font-semibold text-neutral-900">
+          <strong className="font-semibold text-foreground">
             {children}
           </strong>
         ),
         // Emphasis/Italic
         em: ({ children }) => (
-          <em className="italic text-neutral-800">
+          <em className="italic text-foreground/90">
             {children}
           </em>
         ),
         // Strikethrough (from GFM)
         del: ({ children }) => (
-          <del className="line-through text-neutral-600">
+          <del className="line-through text-muted-foreground">
             {children}
           </del>
         ),

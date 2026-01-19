@@ -18,7 +18,6 @@ interface TimelineClipItemProps {
   clip: TimelineClipWithAsset;
   pixelsPerMs: number;
   temporaryStartTime?: number;
-  trackColor?: string;
   onDelete: () => void;
   onDragStart: () => void;
   onDragEnd: (clipId: string, newStartTime: number) => void;
@@ -36,7 +35,6 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
   clip,
   pixelsPerMs,
   temporaryStartTime,
-  trackColor = "#3b82f6",
   onDelete,
   onDragStart,
   onDragEnd,
@@ -88,15 +86,14 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
           onMouseDown={handleMouseDownOnClip}
           className={cn(
             "absolute top-1 bottom-1 rounded-md border overflow-hidden transition-colors",
+            "bg-primary/10 border-primary/30",
             isDraggingClip || isDragging ? "opacity-50 cursor-grabbing" : "cursor-grab",
-            isTrimmingLeft || isTrimmingRight ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-primary",
+            isTrimmingLeft || isTrimmingRight ? "ring-2 ring-primary dark:shadow-[var(--safelight-glow)]" : "hover:ring-1 hover:ring-primary",
             disabled && "pointer-events-none opacity-50"
           )}
           style={{
             left: `${displayLeft}px`,
             width: `${displayWidth}px`,
-            backgroundColor: `${trackColor}20`,
-            borderColor: `${trackColor}60`,
           }}
         >
           {/* 背景缩略图 */}
@@ -205,7 +202,6 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
     prevProps.pixelsPerMs === nextProps.pixelsPerMs &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.disabled === nextProps.disabled &&
-    prevProps.temporaryStartTime === nextProps.temporaryStartTime &&
-    prevProps.trackColor === nextProps.trackColor
+    prevProps.temporaryStartTime === nextProps.temporaryStartTime
   );
 });

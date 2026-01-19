@@ -14,7 +14,7 @@ export async function Header() {
   const t = await getTranslations("nav");
 
   return (
-    <header className="border-b border-border bg-background sticky top-0 z-50">
+    <header className="border-b border-border bg-background dark:bg-sidebar sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
         <div className="flex items-center gap-3 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">

@@ -11,7 +11,10 @@
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -69,15 +72,18 @@
 
 :root {
   --radius: 0.5rem;
-  
+
   /* Light Mode: Vintage Paper & Ink */
   /* 温暖的纸张质感 */
   --background: oklch(0.97 0.01 85);      /* Warm Paper White */
   --foreground: oklch(0.20 0.03 60);      /* Soft Ink Black (Sepia tone) */
-  
+
+  --surface: oklch(0.98 0.005 85);        /* 表面层 - 略深于背景 */
+  --surface-foreground: oklch(0.20 0.03 60);
+
   --card: oklch(0.985 0.005 85);
   --card-foreground: oklch(0.20 0.03 60);
-  
+
   --popover: oklch(0.985 0.005 85);
   --popover-foreground: oklch(0.20 0.03 60);
   
@@ -114,43 +120,47 @@
 .dark {
   /* Dark Mode: The Darkroom */
   /* 像在冲洗胶片的暗房，深邃温暖 */
-  --background: oklch(0.10 0.002 60);     /* 更深的背景 */
+  /* 层级：sidebar(0.20) → background(0.25) → surface(0.30) → card(0.36) */
+
+  --background: oklch(0.25 0.006 60);     /* 主背景 - 类似 VS Code Dark */
   --foreground: oklch(0.92 0.02 85);      /* Cream / Off-White */
 
-  --card: oklch(0.14 0.004 60);           /* 卡片层级调整 */
+  --surface: oklch(0.30 0.008 60);        /* 表面层 - 内容面板 */
+  --surface-foreground: oklch(0.92 0.02 85);
+
+  --card: oklch(0.36 0.012 60);           /* 卡片层 - 明显提亮 */
   --card-foreground: oklch(0.92 0.02 85);
 
-  --popover: oklch(0.14 0.004 60);
+  --popover: oklch(0.36 0.012 60);
   --popover-foreground: oklch(0.92 0.02 85);
 
   /* Primary: Sunset Orange / Kodak Gold */
-  /* 调整为更深沉的金色，避免在暗黑模式下过于刺眼，接近亮色模式的亮度 */
   --primary: oklch(0.60 0.16 40);         /* Vibrant Film Orange */
-  --primary-foreground: oklch(0.12 0.01 60); /* Dark text on bright button */
+  --primary-foreground: oklch(0.15 0.01 60); /* Dark text on bright button */
 
-  --secondary: oklch(0.16 0.01 60);       /* 次要背景同步调整 */
+  --secondary: oklch(0.32 0.010 60);      /* hover/次要背景 */
   --secondary-foreground: oklch(0.92 0.02 85);
 
-  --muted: oklch(0.16 0.01 60);
+  --muted: oklch(0.32 0.010 60);
   --muted-foreground: oklch(0.65 0.03 85); /* Warm Gray Text */
 
-  --accent: oklch(0.16 0.01 60);
+  --accent: oklch(0.32 0.010 60);
   --accent-foreground: oklch(0.60 0.16 40);
 
-  --destructive: oklch(0.4 0.15 25);
+  --destructive: oklch(0.45 0.15 25);
   --destructive-foreground: oklch(0.92 0.02 85);
 
-  --border: oklch(0.30 0.012 60);         /* 边框更亮，增强对比 */
-  --input: oklch(0.30 0.012 60);
+  --border: oklch(0.40 0.012 60);         /* 边框 - 更亮 */
+  --input: oklch(0.35 0.010 60);
   --ring: oklch(0.60 0.16 40);
 
-  --sidebar: oklch(0.08 0.002 60);        /* 侧边栏更深 */
+  --sidebar: oklch(0.20 0.005 60);        /* 侧边栏/Header - 最深锚点 */
   --sidebar-foreground: oklch(0.92 0.02 85);
   --sidebar-primary: oklch(0.60 0.16 40);
-  --sidebar-primary-foreground: oklch(0.12 0.01 60);
-  --sidebar-accent: oklch(0.14 0.004 60);
+  --sidebar-primary-foreground: oklch(0.15 0.01 60);
+  --sidebar-accent: oklch(0.25 0.006 60);
   --sidebar-accent-foreground: oklch(0.92 0.02 85);
-  --sidebar-border: oklch(0.28 0.012 60);
+  --sidebar-border: oklch(0.35 0.012 60);
   --sidebar-ring: oklch(0.60 0.16 40);
 }
 

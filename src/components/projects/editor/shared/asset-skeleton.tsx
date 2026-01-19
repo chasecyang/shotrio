@@ -36,7 +36,7 @@ export function AssetListSkeleton({ count = 6 }: AssetSkeletonProps) {
     <div
       className="grid gap-3"
       style={{
-        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))"
+        gridTemplateColumns: "repeat(auto-fill, minmax(176px, 1fr))"
       }}
     >
       {Array.from({ length: count }).map((_, i) => (

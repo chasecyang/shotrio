@@ -18,7 +18,7 @@ export const DisplayStepCard = memo(function DisplayStepCard({
   if (step.type === "thinking") {
     // 思考内容
     return (
-      <div className="text-sm break-words">
+      <div className="text-sm break-words text-foreground">
         <MarkdownRenderer content={step.content || ""} className="inline" />
       </div>
     );

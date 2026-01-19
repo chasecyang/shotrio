@@ -429,9 +429,9 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   };
 
   return (
-    <div className="border-t border-border/80 p-4 shrink-0 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/70">
+    <div className="border-t border-border/80 p-4 shrink-0 bg-background/95 dark:bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 dark:supports-[backdrop-filter]:bg-surface/70">
       <div className={cn(
-        "rounded-xl border border-primary/20 bg-accent/30 overflow-hidden transition-all",
+        "rounded-xl border border-border bg-muted/30 overflow-hidden transition-all",
         isLoading && "opacity-70 pointer-events-none"
       )}>
         {/* 可编辑区域容器 - 使用 group 实现联动 hover */}
@@ -443,7 +443,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
           <div
             className={cn(
               "flex items-center justify-between px-4 py-3 border-b border-border/50 transition-colors",
-              canEdit && "group-hover:bg-accent/50"
+              canEdit && "group-hover:bg-muted/50"
             )}
           >
             <div className="flex items-center gap-2">
@@ -471,7 +471,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
             <div
               className={cn(
                 "relative px-4 py-3 border-b border-border/50 max-h-[200px] overflow-y-auto transition-colors",
-                canEdit && "group-hover:bg-accent/50"
+                canEdit && "group-hover:bg-muted/50"
               )}
             >
             {isGenerateAssets && generationAssets && generationAssets.length > 0 ? (

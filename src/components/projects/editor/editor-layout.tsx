@@ -93,7 +93,7 @@ function EditorLayoutInner({
         <AgentChatContainer projectId={project.id} />
 
         {/* 内容面板 - 占满剩余区域，添加卡片包裹 */}
-        <div className="flex-1 h-full overflow-hidden bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
+        <div className="flex-1 h-full overflow-hidden bg-background dark:bg-surface border border-border rounded-2xl">
           {state.actionEditor ? (
             <ActionEditorPanel />
           ) : state.showSettings ? (

@@ -5,6 +5,7 @@ import { AssetWithFullData } from "@/types/asset";
 import { Video, AudioLines } from "lucide-react";
 import Image from "next/image";
 import { useTimelineDrag } from "./timeline-drag-context";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -85,11 +86,11 @@ export function AssetThumbnailItem({ asset, onPreviewAsset }: AssetThumbnailItem
   return (
     <button
       onMouseDown={handleMouseDown}
-      className="group flex flex-col items-center flex-shrink-0 cursor-grab active:cursor-grabbing"
-      style={{
-        width: 56,
-        opacity: isThisItemDragging ? 0.5 : 1,
-      }}
+      className={cn(
+        "group flex flex-col items-center flex-shrink-0 cursor-grab active:cursor-grabbing",
+        "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        isThisItemDragging && "opacity-50"
+      )}
     >
       {/* 缩略图容器 */}
       <div className="relative w-14 h-14 rounded-lg border bg-card overflow-hidden hover:border-primary transition-all hover:shadow-md">
@@ -114,13 +115,10 @@ export function AssetThumbnailItem({ asset, onPreviewAsset }: AssetThumbnailItem
 
         {/* 时长标签 */}
         {asset.duration && (
-          <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded text-[10px] bg-black/70 text-white font-medium">
+          <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded text-[10px] bg-background/90 text-foreground font-medium backdrop-blur-sm">
             {Math.floor(asset.duration / 1000)}s
           </div>
         )}
-
-        {/* 悬停遮罩 */}
-        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       </div>
 
       {/* 素材名称 - 带 Tooltip 显示完整名称 */}

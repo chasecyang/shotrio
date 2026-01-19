@@ -18,7 +18,6 @@ interface AudioClipItemProps {
   clip: TimelineClipWithAsset;
   pixelsPerMs: number;
   temporaryStartTime?: number;
-  trackColor?: string;
   onDelete: () => void;
   onDragStart: () => void;
   onDragEnd: (clipId: string, newStartTime: number) => void;
@@ -35,7 +34,6 @@ function WaveformCanvas({
   waveformData,
   width,
   height,
-  color,
   trimStart,
   duration,
   assetDuration,
@@ -43,7 +41,6 @@ function WaveformCanvas({
   waveformData: number[];
   width: number;
   height: number;
-  color: string;
   trimStart: number;
   duration: number;
   assetDuration: number;
@@ -74,7 +71,9 @@ function WaveformCanvas({
     const barWidth = width / visibleSamples.length;
     const centerY = height / 2;
 
-    ctx.fillStyle = color;
+    // 使用 CSS 变量获取 primary 颜色
+    const primaryColor = getComputedStyle(canvas).getPropertyValue("--primary").trim();
+    ctx.fillStyle = primaryColor ? `oklch(${primaryColor})` : "oklch(0.55 0.18 40)";
 
     visibleSamples.forEach((value, index) => {
       const barHeight = value * (height * 0.8);
@@ -83,13 +82,12 @@ function WaveformCanvas({
 
       ctx.fillRect(x, y, Math.max(1, barWidth - 1), barHeight);
     });
-  }, [waveformData, width, height, color, trimStart, duration, assetDuration]);
+  }, [waveformData, width, height, trimStart, duration, assetDuration]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{ opacity: 0.6 }}
+      className="absolute inset-0 pointer-events-none opacity-60"
     />
   );
 }
@@ -102,7 +100,6 @@ export const AudioClipItem = React.memo(function AudioClipItem({
   clip,
   pixelsPerMs,
   temporaryStartTime,
-  trackColor = "#10b981",
   onDelete,
   onDragStart,
   onDragEnd,
@@ -161,15 +158,14 @@ export const AudioClipItem = React.memo(function AudioClipItem({
           onMouseDown={handleMouseDownOnClip}
           className={cn(
             "absolute top-1 bottom-1 rounded-md border overflow-hidden transition-colors",
+            "bg-primary/10 border-primary/30",
             isDraggingClip || isDragging ? "opacity-50 cursor-grabbing" : "cursor-grab",
-            isTrimmingLeft || isTrimmingRight ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-primary",
+            isTrimmingLeft || isTrimmingRight ? "ring-2 ring-primary dark:shadow-[var(--safelight-glow)]" : "hover:ring-1 hover:ring-primary",
             disabled && "pointer-events-none opacity-50"
           )}
           style={{
             left: `${displayLeft}px`,
             width: `${displayWidth}px`,
-            backgroundColor: `${trackColor}15`,
-            borderColor: `${trackColor}50`,
           }}
         >
           {/* 波形背景 */}
@@ -178,7 +174,6 @@ export const AudioClipItem = React.memo(function AudioClipItem({
               waveformData={waveformData}
               width={displayWidth}
               height={54}
-              color={trackColor}
               trimStart={isTrimmingLeft ? tempTrimStart : clip.trimStart}
               duration={isTrimmingLeft || isTrimmingRight ? tempDuration : clip.duration}
               assetDuration={clip.asset.duration || 1}
@@ -186,7 +181,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
           ) : (
             // 无波形数据时显示占位图案
             <div className="absolute inset-0 flex items-center justify-center opacity-30">
-              <AudioLines className="h-6 w-6" style={{ color: trackColor }} />
+              <AudioLines className="h-6 w-6 text-primary" />
             </div>
           )}
 
@@ -195,10 +190,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
             {/* 顶部：拖动手柄和名称 */}
             <div className="flex items-start gap-1">
               <GripVertical className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <span
-                className="text-xs font-medium truncate flex-1 drop-shadow-sm"
-                style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
-              >
+              <span className="text-xs font-medium truncate flex-1 drop-shadow-sm">
                 {clip.asset.name}
               </span>
             </div>
@@ -283,7 +275,6 @@ export const AudioClipItem = React.memo(function AudioClipItem({
     prevProps.pixelsPerMs === nextProps.pixelsPerMs &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.disabled === nextProps.disabled &&
-    prevProps.temporaryStartTime === nextProps.temporaryStartTime &&
-    prevProps.trackColor === nextProps.trackColor
+    prevProps.temporaryStartTime === nextProps.temporaryStartTime
   );
 });

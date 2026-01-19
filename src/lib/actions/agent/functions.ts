@@ -327,7 +327,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "add_clip",
-    description: "添加素材到时间轴。默认添加到末尾，也可指定插入位置。视频素材默认使用原始时长，图片素材需指定时长。",
+    description:
+      "添加素材到时间轴。支持视频轨道(0-99)和音频轨道(100+)。" +
+      "不指定trackIndex时根据素材类型自动选择（视频/图片→轨道0，音频→轨道100）。" +
+      "音频轨道可通过startTime自由定位实现精确同步。",
     displayName: "添加片段",
     parameters: {
       type: "object",
@@ -336,13 +339,23 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "string",
           description: "素材ID（必填）",
         },
+        trackIndex: {
+          type: "number",
+          description:
+            "轨道索引。视频轨道：0-99，音频轨道：100+。不指定则根据素材类型自动选择",
+        },
         duration: {
           type: "number",
-          description: "显示时长（毫秒），图片必填，视频可选",
+          description: "显示时长（毫秒），图片必填，视频/音频可选",
+        },
+        startTime: {
+          type: "number",
+          description: "在时间轴上的起始位置（毫秒），音频轨道常用此参数精确定位",
         },
         insertAt: {
           type: "string",
-          description: "插入位置：'end'（默认）|'start'|clipId（在该片段后插入）",
+          description:
+            "插入位置（视频轨道用）：'end'（默认）|'start'|clipId（在该片段后插入）",
         },
         trimStart: {
           type: "number",
@@ -408,6 +421,24 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
       },
       required: ["clipId"],
+    },
+    category: "modification",
+    needsConfirmation: true,
+  },
+  {
+    name: "add_audio_track",
+    description:
+      "添加新的音频轨道。当需要多条音频同时播放时使用（如背景音乐+音效+对白）。" +
+      "默认已有一条音频轨道（索引100），此函数用于添加额外的音频轨道。",
+    displayName: "添加音频轨道",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "轨道名称（可选），如'BGM'、'音效'、'对白'",
+        },
+      },
     },
     category: "modification",
     needsConfirmation: true,

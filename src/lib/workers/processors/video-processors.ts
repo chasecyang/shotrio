@@ -330,7 +330,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
           duration: videoDuration * 1000, // 转换为毫秒
-          modelUsed: "veo-2",
+          modelUsed: getVideoServiceProvider() === "veo" ? "veo3_fast" : "kling_o1",
           isActive: true,
         })
         .where(eq(videoData.id, videoDataId));

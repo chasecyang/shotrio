@@ -42,7 +42,7 @@ export function LoginDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-neutral-200 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md rounded-3xl border-border p-0 overflow-hidden">
         <div className="p-6 pb-0">
           <DialogHeader className="space-y-2">
             <div className="mx-auto mb-2 flex items-center justify-center gap-2">
@@ -56,7 +56,7 @@ export function LoginDialog() {
             <DialogDescription className="text-center">
               {t("subtitle")}
             </DialogDescription>
-            <p className="text-center text-sm text-neutral-600">
+            <p className="text-center text-sm text-muted-foreground">
               {t("description")}
             </p>
           </DialogHeader>
@@ -72,7 +72,7 @@ export function LoginDialog() {
 
           <Button
             onClick={handleGoogleLogin}
-            className="w-full h-12 bg-white hover:bg-neutral-50 text-neutral-700 border-2 border-neutral-200 rounded-2xl font-medium shadow-sm hover:shadow transition-all duration-200"
+            className="w-full h-12 bg-background hover:bg-muted text-foreground border-2 border-border rounded-2xl font-medium shadow-sm hover:shadow transition-all duration-200"
             disabled={loading}
           >
             {loading ? (
@@ -97,7 +97,7 @@ export function LoginDialog() {
           </Button>
         </div>
 
-        <div className="px-6 pb-6 text-xs text-center text-neutral-500">
+        <div className="px-6 pb-6 text-xs text-center text-muted-foreground">
           {t("agreeToTerms")}{" "}
           <Link href="/terms" className="text-orange-600 hover:underline" target="_blank">
             {t("termsOfService")}

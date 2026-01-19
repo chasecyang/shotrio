@@ -91,10 +91,10 @@ export function AssetCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative rounded-lg border overflow-hidden transition-all cursor-move",
+        "group relative rounded-lg border overflow-hidden transition-all cursor-move bg-card",
         "hover:border-primary/40 hover:bg-accent/50",
         isDragging && "opacity-50",
-        isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5"
+        isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5 dark:shadow-[var(--safelight-glow)]"
       )}
     >
       {/* 缩略图区域 */}
@@ -223,8 +223,8 @@ export function AssetCard({
             {/* 视频播放图标 */}
             {isVideo && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="bg-black/50 rounded-full p-3 backdrop-blur-sm">
-                  <Play className="h-6 w-6 text-white fill-white" />
+                <div className="bg-background/80 rounded-full p-3 backdrop-blur-sm">
+                  <Play className="h-6 w-6 text-foreground fill-foreground" />
                 </div>
               </div>
             )}
@@ -260,7 +260,7 @@ export function AssetCard({
 
         {/* 底部操作栏 */}
         {isHovered && !isGenerating && !isFailed && (
-          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/70 via-black/40 to-transparent pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-200">
+          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-background/90 via-background/60 to-transparent pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-200">
             <TooltipProvider delayDuration={300}>
               <div className="flex items-center gap-1 pointer-events-auto">
                 {/* AI 编辑按钮 */}
@@ -270,7 +270,7 @@ export function AssetCard({
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 bg-white/10 hover:bg-white/25 text-white/90 hover:text-white backdrop-blur-sm transition-all hover:scale-105"
+                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
                         onClick={(e) => {
                           e.stopPropagation();
                           onEdit(asset);
@@ -291,7 +291,7 @@ export function AssetCard({
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 bg-white/10 hover:bg-white/25 text-white/90 hover:text-white backdrop-blur-sm transition-all hover:scale-105"
+                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
                         onClick={(e) => {
                           e.stopPropagation();
                           onRegenerate(asset);

@@ -44,6 +44,7 @@ export function AspectRatioSelector({ value, onChange }: AspectRatioSelectorProp
             onClick={() => onChange(ratio.value)}
             className={cn(
               "group relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+              "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
               "hover:bg-muted/60",
               isSelected
                 ? "bg-primary/10 ring-1 ring-primary/50"
@@ -54,10 +55,9 @@ export function AspectRatioSelector({ value, onChange }: AspectRatioSelectorProp
             {ratio.value === "auto" ? (
               <div
                 className={cn(
-                  "flex items-center justify-center rounded-sm transition-colors",
+                  "flex items-center justify-center rounded-sm transition-colors w-5 h-5",
                   isSelected ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                 )}
-                style={{ width: 20, height: 20 }}
               >
                 <Sparkles className="h-4 w-4" />
               </div>

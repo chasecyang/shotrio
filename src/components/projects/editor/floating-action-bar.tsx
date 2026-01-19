@@ -62,8 +62,8 @@ export function FloatingActionBar({
       <div
         className={cn(
           "flex items-center gap-3 px-5 py-3 rounded-2xl",
-          "bg-background/95 backdrop-blur-lg",
-          "border shadow-xl",
+          "bg-background",
+          "border",
           "transition-all duration-200"
         )}
       >

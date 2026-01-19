@@ -556,8 +556,7 @@ export function FloatingAgentCard({
         <div
           className={cn(
             "max-h-[400px]",
-            "bg-card/98 backdrop-blur-xl border border-border/70 rounded-2xl shadow-2xl",
-            "dark:border-border/90 dark:shadow-[0_8px_32px_oklch(0_0_0/0.5)]",
+            "bg-background dark:bg-surface border border-border rounded-2xl",
             "flex flex-col overflow-hidden"
           )}
         >
@@ -782,8 +781,7 @@ export function FloatingAgentCard({
       <div
         className={cn(
           "h-full",
-          "bg-card/98 backdrop-blur-xl border border-border/70 rounded-2xl shadow-2xl",
-          "dark:border-border/90 dark:shadow-[0_8px_32px_oklch(0_0_0/0.5)]",
+          "bg-background dark:bg-surface border border-border rounded-2xl",
           "flex flex-col overflow-hidden"
         )}
       >

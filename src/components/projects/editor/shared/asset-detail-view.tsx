@@ -761,7 +761,7 @@ export function AssetDetailView({
               />
 
               {/* 图片工具栏 */}
-              <div className="absolute top-4 left-4 flex items-center gap-1 p-1.5 rounded-xl bg-background/80 backdrop-blur-md border shadow-lg">
+              <div className="absolute top-4 left-4 flex items-center gap-1 p-1.5 rounded-xl bg-background/80 border shadow-lg">
                 <Button
                   variant="ghost"
                   size="sm"

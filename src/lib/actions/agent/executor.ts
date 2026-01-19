@@ -673,9 +673,14 @@ export async function executeFunction(
 
         const timelineData = timelineResult.timeline;
 
-        // 格式化返回数据，包含素材详情
+        // 解析轨道配置
+        const { getTimelineTracks } = await import("@/types/timeline");
+        const trackConfigs = getTimelineTracks(timelineData.metadata);
+
+        // 格式化返回数据，包含 trackIndex 和素材详情
         const formattedClips = timelineData.clips.map((clip) => ({
           id: clip.id,
+          trackIndex: clip.trackIndex,
           order: clip.order,
           startTime: clip.startTime,
           duration: clip.duration,
@@ -691,6 +696,10 @@ export async function executeFunction(
           },
         }));
 
+        // 按轨道分组统计
+        const videoClips = formattedClips.filter((c) => c.trackIndex < 100);
+        const audioClips = formattedClips.filter((c) => c.trackIndex >= 100);
+
         result = {
           functionCallId: functionCall.id,
           success: true,
@@ -700,11 +709,20 @@ export async function executeFunction(
               duration: timelineData.duration,
               clipCount: timelineData.clips.length,
             },
+            tracks: trackConfigs.map((t) => ({
+              index: t.index,
+              type: t.type,
+              name: t.name,
+            })),
             clips: formattedClips,
+            summary: {
+              videoClips: videoClips.length,
+              audioClips: audioClips.length,
+            },
             message:
               timelineData.clips.length === 0
                 ? "时间轴为空，没有任何片段"
-                : `时间轴共 ${timelineData.clips.length} 个片段，总时长 ${Math.round(timelineData.duration / 1000)} 秒`,
+                : `时间轴共 ${timelineData.clips.length} 个片段（视频${videoClips.length}个，音频${audioClips.length}个），总时长 ${Math.round(timelineData.duration / 1000)} 秒`,
           },
         };
         break;
@@ -716,6 +734,8 @@ export async function executeFunction(
         const insertAt = parameters.insertAt as string | undefined;
         const trimStart = parameters.trimStart as number | undefined;
         const trimEnd = parameters.trimEnd as number | undefined;
+        const trackIndexParam = parameters.trackIndex as number | undefined;
+        const startTimeParam = parameters.startTime as number | undefined;
 
         // 获取或创建时间轴
         const timelineResult = await getOrCreateProjectTimeline(projectId);
@@ -740,11 +760,45 @@ export async function executeFunction(
           break;
         }
         const assetData = assetResult.asset;
+        const isAudioAsset = assetData.assetType === "audio";
 
-        // 计算片段时长
+        // ========== 轨道选择逻辑 ==========
+        let finalTrackIndex: number;
+
+        if (trackIndexParam !== undefined) {
+          // 用户指定了轨道，需要验证素材类型与轨道类型匹配
+          const isTargetAudioTrack = trackIndexParam >= 100;
+
+          if (isAudioAsset && !isTargetAudioTrack) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "音频素材必须放在音频轨道（trackIndex >= 100）",
+            };
+            break;
+          }
+
+          if (!isAudioAsset && isTargetAudioTrack) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "视频/图片素材不能放在音频轨道",
+            };
+            break;
+          }
+
+          finalTrackIndex = trackIndexParam;
+        } else {
+          // 自动选择轨道：音频素材→100，其他→0
+          finalTrackIndex = isAudioAsset ? 100 : 0;
+        }
+
+        // ========== 时长计算 ==========
         let clipDuration = duration;
         if (!clipDuration) {
           if (assetData.assetType === "video" && assetData.duration) {
+            clipDuration = assetData.duration;
+          } else if (assetData.assetType === "audio" && assetData.duration) {
             clipDuration = assetData.duration;
           } else if (assetData.assetType === "image") {
             result = {
@@ -756,25 +810,32 @@ export async function executeFunction(
           }
         }
 
-        // 计算插入位置
-        let startTime: number | undefined;
+        // ========== 位置计算 ==========
+        let startTime: number | undefined = startTimeParam;
         let order: number | undefined;
 
-        if (insertAt === "start") {
-          startTime = 0;
-          order = 0;
-        } else if (insertAt && insertAt !== "end") {
-          // insertAt 是 clipId，在该片段后插入
-          const targetClip = timelineData.clips.find((c) => c.id === insertAt);
-          if (targetClip) {
-            startTime = targetClip.startTime + targetClip.duration;
-            order = targetClip.order + 1;
+        // 音频轨道：优先使用 startTime 自由定位
+        // 视频轨道：使用 insertAt 波纹编辑逻辑
+        if (!isAudioAsset && startTime === undefined) {
+          if (insertAt === "start") {
+            startTime = 0;
+            order = 0;
+          } else if (insertAt && insertAt !== "end") {
+            // insertAt 是 clipId，在该片段后插入
+            const targetClip = timelineData.clips.find(
+              (c) => c.id === insertAt
+            );
+            if (targetClip) {
+              startTime = targetClip.startTime + targetClip.duration;
+              order = targetClip.order + 1;
+            }
           }
         }
         // 默认 'end'：startTime 和 order 使用 addClipToTimeline 的默认值
 
         const addResult = await addClipToTimeline(timelineData.id, {
           assetId,
+          trackIndex: finalTrackIndex,
           duration: clipDuration,
           startTime,
           order,
@@ -783,11 +844,13 @@ export async function executeFunction(
         });
 
         if (addResult.success) {
+          const trackTypeLabel = finalTrackIndex >= 100 ? "音频轨道" : "视频轨道";
           result = {
             functionCallId: functionCall.id,
             success: true,
             data: {
-              message: `已添加素材"${assetData.name}"到时间轴`,
+              message: `已添加素材"${assetData.name}"到${trackTypeLabel}（轨道${finalTrackIndex}）`,
+              trackIndex: finalTrackIndex,
               clipCount: addResult.timeline?.clips.length,
               timelineDuration: addResult.timeline?.duration,
             },
@@ -978,6 +1041,73 @@ export async function executeFunction(
                 : "没有需要更新的内容",
           },
         };
+        break;
+      }
+
+      case "add_audio_track": {
+        const trackName = parameters.name as string | undefined;
+
+        // 获取或创建时间轴
+        const timelineResult = await getOrCreateProjectTimeline(projectId);
+        if (!timelineResult.success || !timelineResult.timeline) {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: timelineResult.error || "无法获取或创建时间轴",
+          };
+          break;
+        }
+        const timelineData = timelineResult.timeline;
+
+        // 获取当前轨道配置并添加新音频轨道
+        const { getTimelineTracks, addTrackToConfig } = await import(
+          "@/types/timeline"
+        );
+        const { updateTimelineTracks } = await import(
+          "../timeline/timeline-actions"
+        );
+
+        const currentTracks = getTimelineTracks(timelineData.metadata);
+
+        // 添加新音频轨道
+        let newTracks = addTrackToConfig(currentTracks, "audio");
+
+        // 如果指定了名称，更新最后添加的轨道名称
+        if (trackName) {
+          const lastTrack = newTracks[newTracks.length - 1];
+          newTracks = newTracks.map((t) =>
+            t.index === lastTrack.index ? { ...t, name: trackName } : t
+          );
+        }
+
+        // 更新轨道配置
+        const updateResult = await updateTimelineTracks(
+          timelineData.id,
+          newTracks
+        );
+
+        if (updateResult.success) {
+          const newTrack = newTracks.find(
+            (t) =>
+              t.type === "audio" &&
+              !currentTracks.some((ct) => ct.index === t.index)
+          );
+          result = {
+            functionCallId: functionCall.id,
+            success: true,
+            data: {
+              message: `已添加音频轨道"${newTrack?.name}"（索引 ${newTrack?.index}）`,
+              trackIndex: newTrack?.index,
+              totalTracks: newTracks.length,
+            },
+          };
+        } else {
+          result = {
+            functionCallId: functionCall.id,
+            success: false,
+            error: updateResult.error || "添加音频轨道失败",
+          };
+        }
         break;
       }
 

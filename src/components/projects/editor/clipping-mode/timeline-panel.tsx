@@ -886,7 +886,7 @@ function TimelinePanelContent({
                 >
                   {/* 轨道名称和图标 */}
                   <div className="flex items-center gap-1.5">
-                    <Video className="h-3 w-3" style={{ color: track.color }} />
+                    <Video className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs font-medium truncate">{track.name}</span>
                   </div>
                   {/* 删除按钮 */}
@@ -921,7 +921,7 @@ function TimelinePanelContent({
                 >
                   {/* 轨道名称和控制 */}
                   <div className="flex items-center gap-1.5">
-                    <AudioLines className="h-3 w-3" style={{ color: track.color }} />
+                    <AudioLines className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs font-medium truncate">{track.name}</span>
                     {/* 静音按钮 */}
                     <Button
@@ -1053,15 +1053,6 @@ function TimelinePanelContent({
                         width: Math.max(totalWidth, 800),
                       }}
                     >
-                      {/* 轨道背景色条 */}
-                      <div
-                        className={cn(
-                          "absolute inset-0 opacity-5",
-                          isDropTarget && "opacity-0"
-                        )}
-                        style={{ backgroundColor: track.color }}
-                      />
-
                       {/* 插入位置指示器 */}
                       {isDropTarget && validDrop && dropPosition !== null && (
                         <div
@@ -1102,7 +1093,6 @@ function TimelinePanelContent({
                             clip={clip}
                             pixelsPerMs={pixelsPerMs}
                             temporaryStartTime={temporaryStartTime}
-                            trackColor={track.color}
                             onDelete={() => handleDeleteClip(clip.id)}
                             onDragStart={() => handleClipDragStart(clip.id)}
                             onDragEnd={handleClipDragEnd}
@@ -1139,15 +1129,6 @@ function TimelinePanelContent({
                         width: Math.max(totalWidth, 800),
                       }}
                     >
-                      {/* 轨道背景色条 */}
-                      <div
-                        className={cn(
-                          "absolute inset-0 opacity-5",
-                          isDropTarget && "opacity-0"
-                        )}
-                        style={{ backgroundColor: track.color }}
-                      />
-
                       {/* 插入位置指示器 */}
                       {isDropTarget && validDrop && dropPosition !== null && (
                         <div
@@ -1188,7 +1169,6 @@ function TimelinePanelContent({
                             clip={clip}
                             pixelsPerMs={pixelsPerMs}
                             temporaryStartTime={temporaryStartTime}
-                            trackColor={track.color}
                             onDelete={() => handleDeleteClip(clip.id)}
                             onDragStart={() => handleClipDragStart(clip.id)}
                             onDragEnd={handleClipDragEnd}
