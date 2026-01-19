@@ -52,7 +52,7 @@ export {
 } from "./version";
 
 // 重新生成
-export { regenerateVideoAsset } from "./regenerate";
+export { regenerateVideoAsset, regenerateVideoAssetWithParams } from "./regenerate";
 
 // 标签管理
 export {

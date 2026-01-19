@@ -16,7 +16,8 @@ import {
   Coins,
 } from "lucide-react";
 import { editAssetImageAsVersion } from "@/lib/actions/asset/generate-asset";
-import type { AssetWithFullData, ImageResolution } from "@/types/asset";
+import { regenerateVideoAssetWithParams } from "@/lib/actions/asset";
+import type { AssetWithFullData, ImageResolution, VideoGenerationConfig } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,19 @@ export function AssetEditMode({
 
   const isRegenerate = mode === "regenerate";
 
+  // 检测是否为视频
+  const isVideo = asset.assetType === "video";
+
+  // 解析视频配置
+  const videoConfig = useMemo(() => {
+    if (!isVideo || !asset.generationConfig) return null;
+    try {
+      return JSON.parse(asset.generationConfig) as VideoGenerationConfig;
+    } catch {
+      return null;
+    }
+  }, [isVideo, asset.generationConfig]);
+
   // 解析原始生成参数（仅 regenerate 模式使用）
   const originalConfig = useMemo(
     () => (isRegenerate ? parseGenerationConfig(asset.generationConfig) : null),
@@ -80,7 +94,9 @@ export function AssetEditMode({
     isRegenerate ? asset.prompt || "" : ""
   );
   const [aspectRatio, setAspectRatio] = useState<AspectRatio | "auto">(
-    originalConfig?.aspectRatio ?? "auto"
+    isVideo && videoConfig?.aspect_ratio
+      ? videoConfig.aspect_ratio
+      : originalConfig?.aspectRatio ?? "auto"
   );
   const [resolution, setResolution] = useState<ImageResolution>(
     originalConfig?.resolution ?? "2K"
@@ -97,9 +113,27 @@ export function AssetEditMode({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isLoadingReferences, setIsLoadingReferences] = useState(isRegenerate);
 
+  // 视频首尾帧状态
+  const [startImageAssetId, setStartImageAssetId] = useState<string | null>(null);
+  const [endImageAssetId, setEndImageAssetId] = useState<string | null>(null);
+  const [startImageAsset, setStartImageAsset] = useState<{
+    id: string;
+    name: string;
+    displayUrl: string | null;
+  } | null>(null);
+  const [endImageAsset, setEndImageAsset] = useState<{
+    id: string;
+    name: string;
+    displayUrl: string | null;
+  } | null>(null);
+  const [startFramePickerOpen, setStartFramePickerOpen] = useState(false);
+  const [endFramePickerOpen, setEndFramePickerOpen] = useState(false);
+
   // 积分相关状态
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
-  const requiredCredits = CREDIT_COSTS.IMAGE_GENERATION;
+  const requiredCredits = isVideo
+    ? CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * 8
+    : CREDIT_COSTS.IMAGE_GENERATION;
 
   // 加载参考图详情
   const loadReferenceAssets = useCallback(async (ids: string[]) => {
@@ -128,6 +162,33 @@ export function AssetEditMode({
     initReferenceAssets();
   }, [isRegenerate, asset.id, asset.sourceAssetIds, loadReferenceAssets]);
 
+  // regenerate 模式：初始化加载视频首尾帧
+  useEffect(() => {
+    if (!isRegenerate || !isVideo) return;
+
+    const initVideoFrames = async () => {
+      setIsLoadingReferences(true);
+      const frameIds = asset.sourceAssetIds || [];
+      if (frameIds.length > 0) {
+        setStartImageAssetId(frameIds[0]);
+        if (frameIds.length > 1) {
+          setEndImageAssetId(frameIds[1]);
+        }
+        const result = await getAssetsByIds(frameIds);
+        if (result.success && result.assets) {
+          const startFrame = result.assets.find(a => a.id === frameIds[0]);
+          if (startFrame) setStartImageAsset(startFrame);
+          if (frameIds.length > 1) {
+            const endFrame = result.assets.find(a => a.id === frameIds[1]);
+            if (endFrame) setEndImageAsset(endFrame);
+          }
+        }
+      }
+      setIsLoadingReferences(false);
+    };
+    initVideoFrames();
+  }, [isRegenerate, isVideo, asset.sourceAssetIds]);
+
   // 处理参考图选择确认
   const handleReferenceConfirm = useCallback(async (ids: string[]) => {
     // 过滤掉原素材本身
@@ -143,10 +204,42 @@ export function AssetEditMode({
     setReferenceAssets(prev => prev.filter(a => a.id !== idToRemove));
   }, [referenceAssetIds]);
 
+  // 处理起始帧选择
+  const handleStartFrameConfirm = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const frameId = ids[0];
+    setStartImageAssetId(frameId);
+    const result = await getAssetsByIds([frameId]);
+    if (result.success && result.assets && result.assets[0]) {
+      setStartImageAsset(result.assets[0]);
+    }
+  }, []);
+
+  // 处理结束帧选择
+  const handleEndFrameConfirm = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) {
+      setEndImageAssetId(null);
+      setEndImageAsset(null);
+      return;
+    }
+    const frameId = ids[0];
+    setEndImageAssetId(frameId);
+    const result = await getAssetsByIds([frameId]);
+    if (result.success && result.assets && result.assets[0]) {
+      setEndImageAsset(result.assets[0]);
+    }
+  }, []);
+
   // 提交编辑
   const handleSubmit = async () => {
     if (!editPrompt.trim()) {
       toast.error(t("promptRequired"));
+      return;
+    }
+
+    // 视频特定验证
+    if (isVideo && !startImageAssetId) {
+      toast.error("请选择起始帧");
       return;
     }
 
@@ -160,23 +253,42 @@ export function AssetEditMode({
 
     setIsSubmitting(true);
     try {
-      const result = await editAssetImageAsVersion({
-        assetId: asset.id,
-        editPrompt: editPrompt.trim(),
-        sourceAssetIds: referenceAssetIds,
-        aspectRatio,
-        resolution,
-      });
+      if (isVideo) {
+        const result = await regenerateVideoAssetWithParams({
+          assetId: asset.id,
+          editPrompt: editPrompt.trim(),
+          aspectRatio: aspectRatio as "16:9" | "9:16",
+          startImageAssetId: startImageAssetId!,
+          endImageAssetId: endImageAssetId || undefined,
+        });
 
-      if (result.success) {
-        toast.success(isRegenerate ? t("regenerateSuccess") : t("submitSuccess"));
-        // 触发素材刷新事件
-        window.dispatchEvent(new CustomEvent("asset-created"));
-        window.dispatchEvent(new CustomEvent("credits-changed"));
-        onSuccess();
-        onBack();
+        if (result.success) {
+          toast.success(t("regenerateSuccess"));
+          window.dispatchEvent(new CustomEvent("asset-created"));
+          window.dispatchEvent(new CustomEvent("credits-changed"));
+          onSuccess();
+          onBack();
+        } else {
+          toast.error(result.error || t("submitFailed"));
+        }
       } else {
-        toast.error(result.error || t("submitFailed"));
+        const result = await editAssetImageAsVersion({
+          assetId: asset.id,
+          editPrompt: editPrompt.trim(),
+          sourceAssetIds: referenceAssetIds,
+          aspectRatio,
+          resolution,
+        });
+
+        if (result.success) {
+          toast.success(isRegenerate ? t("regenerateSuccess") : t("submitSuccess"));
+          window.dispatchEvent(new CustomEvent("asset-created"));
+          window.dispatchEvent(new CustomEvent("credits-changed"));
+          onSuccess();
+          onBack();
+        } else {
+          toast.error(result.error || t("submitFailed"));
+        }
       }
     } catch (error) {
       console.error("Edit asset failed:", error);
@@ -209,57 +321,156 @@ export function AssetEditMode({
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         <div className="max-w-xl mx-auto space-y-6">
-          {/* 参考图片 - 移到上方并放大 */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">{t("referenceImages")}</Label>
-              <span className="text-[10px] text-muted-foreground">
-                {t("optional")}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {isLoadingReferences ? (
-                <div className="w-24 h-24 rounded-xl border border-border/50 bg-muted/20 animate-pulse" />
-              ) : (
-                referenceAssets.map((refAsset) => (
-                  <div
-                    key={refAsset.id}
-                    className="relative group w-24 h-24 rounded-xl overflow-hidden border border-border/50 bg-muted/20 shadow-sm transition-shadow hover:shadow-md"
-                  >
-                    {refAsset.displayUrl ? (
-                      <Image
-                        src={refAsset.displayUrl}
-                        alt={refAsset.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                      </div>
-                    )}
-                    <button
-                      onClick={() => removeReferenceAsset(refAsset.id)}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          {/* 参考图片 - 仅图片显示 */}
+          {!isVideo && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">{t("referenceImages")}</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("optional")}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {isLoadingReferences ? (
+                  <div className="w-24 h-24 rounded-xl border border-border/50 bg-muted/20 animate-pulse" />
+                ) : (
+                  referenceAssets.map((refAsset) => (
+                    <div
+                      key={refAsset.id}
+                      className="relative group w-24 h-24 rounded-xl overflow-hidden border border-border/50 bg-muted/20 shadow-sm transition-shadow hover:shadow-md"
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))
-              )}
-              <button
-                onClick={() => setPickerOpen(true)}
-                className={cn(
-                  "w-24 h-24 rounded-xl border-2 border-dashed border-border/60",
-                  "flex items-center justify-center",
-                  "text-muted-foreground/60 hover:text-muted-foreground hover:border-border hover:bg-muted/30",
-                  "transition-all"
+                      {refAsset.displayUrl ? (
+                        <Image
+                          src={refAsset.displayUrl}
+                          alt={refAsset.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <button
+                        onClick={() => removeReferenceAsset(refAsset.id)}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))
                 )}
-              >
-                <Plus className="h-6 w-6" />
-              </button>
+                <button
+                  onClick={() => setPickerOpen(true)}
+                  className={cn(
+                    "w-24 h-24 rounded-xl border-2 border-dashed border-border/60",
+                    "flex items-center justify-center",
+                    "text-muted-foreground/60 hover:text-muted-foreground hover:border-border hover:bg-muted/30",
+                    "transition-all"
+                  )}
+                >
+                  <Plus className="h-6 w-6" />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* 视频首尾帧 - 仅视频显示 */}
+          {isVideo && (
+            <div className="space-y-2">
+              <Label className="text-xs">起始帧和结束帧</Label>
+              <div className="space-y-3">
+                {/* 起始帧 */}
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1.5">起始帧 *</div>
+                  <div className="flex gap-3">
+                    {isLoadingReferences ? (
+                      <div className="w-24 h-24 rounded-xl border border-border/50 bg-muted/20 animate-pulse" />
+                    ) : startImageAsset ? (
+                      <div className="relative group w-24 h-24 rounded-xl overflow-hidden border border-border/50 bg-muted/20 shadow-sm">
+                        {startImageAsset.displayUrl ? (
+                          <Image
+                            src={startImageAsset.displayUrl}
+                            alt="起始帧"
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setStartFramePickerOpen(true)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs"
+                        >
+                          更换
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setStartFramePickerOpen(true)}
+                        className={cn(
+                          "w-24 h-24 rounded-xl border-2 border-dashed border-border/60",
+                          "flex items-center justify-center",
+                          "text-muted-foreground/60 hover:text-muted-foreground hover:border-border hover:bg-muted/30",
+                          "transition-all"
+                        )}
+                      >
+                        <Plus className="h-6 w-6" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 结束帧 */}
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1.5">结束帧（可选）</div>
+                  <div className="flex gap-3">
+                    {isLoadingReferences ? (
+                      <div className="w-24 h-24 rounded-xl border border-border/50 bg-muted/20 animate-pulse" />
+                    ) : endImageAsset ? (
+                      <div className="relative group w-24 h-24 rounded-xl overflow-hidden border border-border/50 bg-muted/20 shadow-sm">
+                        {endImageAsset.displayUrl ? (
+                          <Image
+                            src={endImageAsset.displayUrl}
+                            alt="结束帧"
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            setEndImageAssetId(null);
+                            setEndImageAsset(null);
+                          }}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setEndFramePickerOpen(true)}
+                        className={cn(
+                          "w-24 h-24 rounded-xl border-2 border-dashed border-border/60",
+                          "flex items-center justify-center",
+                          "text-muted-foreground/60 hover:text-muted-foreground hover:border-border hover:bg-muted/30",
+                          "transition-all"
+                        )}
+                      >
+                        <Plus className="h-6 w-6" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Prompt 输入 */}
           <div className="space-y-2">
@@ -280,15 +491,18 @@ export function AssetEditMode({
               <AspectRatioSelector
                 value={aspectRatio}
                 onChange={setAspectRatio}
+                videoOnly={isVideo}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">{t("resolution")}</Label>
-              <ResolutionSelector
-                value={resolution}
-                onChange={setResolution}
-              />
-            </div>
+            {!isVideo && (
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">{t("resolution")}</Label>
+                <ResolutionSelector
+                  value={resolution}
+                  onChange={setResolution}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -331,6 +545,30 @@ export function AssetEditMode({
         maxSelection={7}
         title={t("selectReference")}
         description={t("selectReferenceDescription")}
+      />
+
+      {/* 起始帧选择器 */}
+      <AssetLibraryPickerDialog
+        open={startFramePickerOpen}
+        onOpenChange={setStartFramePickerOpen}
+        projectId={projectId}
+        selectedAssetIds={startImageAssetId ? [startImageAssetId] : []}
+        onConfirm={handleStartFrameConfirm}
+        maxSelection={1}
+        title="选择起始帧"
+        description="选择一张图片作为视频的起始帧"
+      />
+
+      {/* 结束帧选择器 */}
+      <AssetLibraryPickerDialog
+        open={endFramePickerOpen}
+        onOpenChange={setEndFramePickerOpen}
+        projectId={projectId}
+        selectedAssetIds={endImageAssetId ? [endImageAssetId] : []}
+        onConfirm={handleEndFrameConfirm}
+        maxSelection={1}
+        title="选择结束帧"
+        description="选择一张图片作为视频的结束帧（可选）"
       />
 
       {/* 积分不足购买弹窗 */}

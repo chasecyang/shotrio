@@ -7,6 +7,7 @@ import type { AspectRatio } from "@/lib/services/image.service";
 interface AspectRatioSelectorProps {
   value: AspectRatio | "auto";
   onChange: (value: AspectRatio | "auto") => void;
+  videoOnly?: boolean;
 }
 
 const ASPECT_RATIOS: Array<{ value: AspectRatio | "auto"; label: string }> = [
@@ -30,10 +31,14 @@ function getRatioDimensions(ratio: AspectRatio | "auto"): { width: number; heigh
   return { width: Math.round(w * scale), height: Math.round(h * scale) };
 }
 
-export function AspectRatioSelector({ value, onChange }: AspectRatioSelectorProps) {
+export function AspectRatioSelector({ value, onChange, videoOnly = false }: AspectRatioSelectorProps) {
+  const ratios = videoOnly
+    ? ASPECT_RATIOS.filter(r => r.value === "16:9" || r.value === "9:16")
+    : ASPECT_RATIOS;
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {ASPECT_RATIOS.map((ratio) => {
+      {ratios.map((ratio) => {
         const isSelected = value === ratio.value;
         const { width, height } = getRatioDimensions(ratio.value);
 
