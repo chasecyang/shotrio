@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AssetDetailView } from "./shared/asset-detail-view";
 import { AssetEditMode } from "./shared/asset-edit-mode";
-import { AssetRegenerateMode } from "./shared/asset-regenerate-mode";
 import {
   AssetFilterOptions,
   AssetTypeTabs,
@@ -410,11 +409,12 @@ export function AssetGalleryPanel() {
   // 如果在重新生成模式，显示重新生成视图
   if (regeneratingAsset) {
     return (
-      <AssetRegenerateMode
+      <AssetEditMode
         asset={regeneratingAsset}
         projectId={project.id}
         onBack={handleExitRegenerateMode}
         onSuccess={handleAssetUpdated}
+        mode="regenerate"
       />
     );
   }

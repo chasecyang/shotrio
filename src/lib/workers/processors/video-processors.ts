@@ -398,20 +398,19 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
 /**
  * 处理最终成片导出
- * 注意：这是一个基础实现，生成视频列表文件
- * 实际的FFmpeg合成可以在客户端或使用专门的视频处理服务
+ * 使用 Remotion 渲染时间轴为视频文件
  */
 export async function processFinalVideoExport(jobData: Job, workerToken: string): Promise<void> {
   // 严格验证输入数据
   const input = jobData.inputData as FinalVideoExportInput | null;
-  
-  if (!input || !input.projectId || !input.videoIds || !Array.isArray(input.videoIds)) {
-    throw new Error("Job 格式错误：缺少 projectId 或 videoIds");
-  }
-  
-  const { projectId, videoIds } = input;
 
-  console.log(`[Worker] 开始导出成片: Project ${projectId}, ${videoIds.length} 个视频片段`);
+  if (!input || !input.projectId) {
+    throw new Error("Job 格式错误：缺少 projectId");
+  }
+
+  const { projectId, timelineId, includeAudio, exportQuality } = input;
+
+  console.log(`[Worker] 开始导出成片: Project ${projectId}, Timeline ${timelineId}`);
 
   try {
     // 验证项目所有权
@@ -428,91 +427,292 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     await updateJobProgress(
       {
         jobId: jobData.id,
-        progress: 10,
-        progressMessage: "加载视频数据...",
+        progress: 5,
+        progressMessage: "加载时间轴数据...",
       },
       workerToken
     );
 
-    // 获取所有视频资产（加载 videoData 扩展表）
-    const videos = await db.query.asset.findMany({
-      where: (asset, { inArray, and, eq }) => and(
-        inArray(asset.id, videoIds),
-        eq(asset.assetType, "video")
-      ),
+    // 查询时间轴数据（包含 clips 和 assets）
+    const timeline = await db.query.timeline.findFirst({
+      where: (t, { eq }) => eq(t.id, timelineId || ""),
       with: {
-        videoDataList: true,
+        clips: {
+          with: {
+            asset: {
+              with: {
+                videoDataList: true,
+                audioDataList: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    if (videos.length === 0) {
-      throw new Error("没有找到任何视频");
+    if (!timeline) {
+      throw new Error("时间轴不存在");
     }
 
-    // 辅助函数：获取激活的 videoData
-    const getActiveVideoData = (v: typeof videos[0]) =>
-      v.videoDataList?.find((vd: { isActive: boolean }) => vd.isActive);
-
-    // 过滤出已完成的视频（有 videoUrl 的视频）
-    // 注意：videoUrl 现在在 videoData 表中
-    const completedVideos = videos.filter((v) => getActiveVideoData(v)?.videoUrl);
-
-    if (completedVideos.length === 0) {
-      throw new Error("没有已完成的视频");
+    if (timeline.clips.length === 0) {
+      throw new Error("时间轴为空，无法导出");
     }
+
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 10,
+        progressMessage: `找到 ${timeline.clips.length} 个片段，准备渲染...`,
+      },
+      workerToken
+    );
+
+    // 获取每个片段的 mediaUrl
+    const getMediaUrl = (clip: typeof timeline.clips[0]): string | null => {
+      const assetObj = clip.asset;
+      if (assetObj.assetType === "video") {
+        const activeVideo = assetObj.videoDataList?.find((v: { isActive: boolean }) => v.isActive);
+        return activeVideo?.videoUrl || null;
+      } else if (assetObj.assetType === "audio") {
+        const activeAudio = assetObj.audioDataList?.find((a: { isActive: boolean }) => a.isActive);
+        return activeAudio?.audioUrl || null;
+      }
+      return null;
+    };
+
+    // 过滤出有效片段（有 mediaUrl）
+    const validClips = timeline.clips.filter((clip) => {
+      const mediaUrl = getMediaUrl(clip);
+      return mediaUrl !== null;
+    });
+
+    if (validClips.length === 0) {
+      throw new Error("没有可渲染的片段");
+    }
+
+    // 解析分辨率
+    const [width, height] = (timeline.resolution || "1080x1920").split("x").map(Number);
+    const fps = timeline.fps || 30;
+
+    // 构建 Remotion props
+    const trackMap = new Map<number, Array<{
+      id: string;
+      from: number;
+      durationInFrames: number;
+      src: string;
+      startFrom: number;
+    }>>();
+
+    for (const clip of validClips) {
+      const mediaUrl = getMediaUrl(clip);
+      if (!mediaUrl) continue;
+
+      if (!trackMap.has(clip.trackIndex)) {
+        trackMap.set(clip.trackIndex, []);
+      }
+
+      const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
+
+      trackMap.get(clip.trackIndex)!.push({
+        id: clip.id,
+        from: msToFrames(clip.startTime),
+        durationInFrames: msToFrames(clip.duration),
+        src: mediaUrl,
+        startFrom: msToFrames(clip.trimStart),
+      });
+    }
+
+    // 构建轨道数组
+    const tracks: Array<{
+      name: string;
+      trackIndex: number;
+      type: "video" | "audio";
+      items: Array<{
+        id: string;
+        from: number;
+        durationInFrames: number;
+        src: string;
+        startFrom: number;
+      }>;
+    }> = [];
+
+    trackMap.forEach((items, trackIndex) => {
+      const isVideo = trackIndex < 100;
+      // 如果不包含音频，跳过音频轨道
+      if (!isVideo && !includeAudio) return;
+
+      tracks.push({
+        name: `Track ${trackIndex}`,
+        trackIndex,
+        type: isVideo ? "video" : "audio",
+        items: items.sort((a, b) => a.from - b.from),
+      });
+    });
+
+    const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
+    const durationInFrames = Math.max(1, msToFrames(timeline.duration));
+
+    // 构建轨道状态（默认所有音频轨道不静音）
+    const trackStates: Record<number, { volume: number; isMuted: boolean }> = {};
+    tracks.forEach((track) => {
+      if (track.type === "audio") {
+        trackStates[track.trackIndex] = { volume: 1, isMuted: false };
+      }
+    });
+
+    const compositionProps = {
+      tracks,
+      fps,
+      width: width || 1080,
+      height: height || 1920,
+      durationInFrames,
+      trackStates,
+    };
+
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 20,
+        progressMessage: "准备 Remotion 渲染环境...",
+      },
+      workerToken
+    );
+
+    // 动态导入 Remotion 模块（避免在非 worker 环境加载）
+    const { bundle } = await import("@remotion/bundler");
+    const { renderMedia, selectComposition } = await import("@remotion/renderer");
+    const path = await import("path");
+    const os = await import("os");
+    const fs = await import("fs/promises");
+
+    // 创建临时目录
+    const tempDir = path.join(os.tmpdir(), `remotion-export-${jobData.id}`);
+    await fs.mkdir(tempDir, { recursive: true });
+
+    const outputPath = path.join(tempDir, "output.mp4");
 
     await updateJobProgress(
       {
         jobId: jobData.id,
         progress: 30,
-        progressMessage: `找到 ${completedVideos.length} 个视频片段...`,
+        progressMessage: "打包 Remotion 项目...",
       },
       workerToken
     );
 
-    // 按照 videoIds 的顺序排序
-    const sortedVideos = videoIds
-      .map((id) => completedVideos.find((v) => v.id === id))
-      .filter((v): v is NonNullable<typeof v> => v !== undefined);
+    // 打包 Remotion 项目
+    const entryPoint = path.join(process.cwd(), "src", "lib", "remotion", "index.ts");
 
-    // 计算总时长（duration 现在在 videoData 表中，是毫秒，需要转换为秒）
-    const totalDuration = sortedVideos.reduce((sum, v) => sum + ((getActiveVideoData(v)?.duration || 0) / 1000), 0);
+    let bundleLocation: string;
+    try {
+      bundleLocation = await bundle({
+        entryPoint,
+        onProgress: (progress) => {
+          // 打包进度：30-50%
+          const bundleProgress = 30 + Math.round(progress * 20);
+          updateJobProgress(
+            {
+              jobId: jobData.id,
+              progress: bundleProgress,
+              progressMessage: `打包进度: ${Math.round(progress * 100)}%`,
+            },
+            workerToken
+          ).catch(console.error);
+        },
+      });
+    } catch (bundleError) {
+      console.error("[Worker] Remotion 打包失败:", bundleError);
+      throw new Error(`Remotion 打包失败: ${bundleError instanceof Error ? bundleError.message : "未知错误"}`);
+    }
 
     await updateJobProgress(
       {
         jobId: jobData.id,
         progress: 50,
-        progressMessage: "准备导出信息...",
+        progressMessage: "开始渲染视频...",
       },
       workerToken
     );
 
-    // 基础实现：返回视频列表供前端处理（从 videoData 读取）
-    const videoList = sortedVideos.map((v, index) => {
-      const activeVD = getActiveVideoData(v);
-      return {
-        videoId: v.id,
-        order: index + 1,
-        videoUrl: activeVD!.videoUrl!,
-        duration: (activeVD?.duration || 0) / 1000, // 转换为秒
-      };
+    // 选择 composition
+    const composition = await selectComposition({
+      serveUrl: bundleLocation,
+      id: "TimelineComposition",
+      inputProps: compositionProps,
+    });
+
+    // 渲染视频
+    await renderMedia({
+      composition,
+      serveUrl: bundleLocation,
+      codec: "h264",
+      outputLocation: outputPath,
+      inputProps: compositionProps,
+      // 根据质量设置选择不同的渲染参数
+      ...(exportQuality === "draft"
+        ? {
+            jpegQuality: 70,
+            scale: 0.5, // 草稿模式降低分辨率
+          }
+        : {
+            jpegQuality: 95,
+          }),
+      onProgress: ({ progress }) => {
+        // 渲染进度：50-85%
+        const renderProgress = 50 + Math.round(progress * 35);
+        updateJobProgress(
+          {
+            jobId: jobData.id,
+            progress: renderProgress,
+            progressMessage: `渲染进度: ${Math.round(progress * 100)}%`,
+          },
+          workerToken
+        ).catch(console.error);
+      },
     });
 
     await updateJobProgress(
       {
         jobId: jobData.id,
-        progress: 90,
-        progressMessage: "生成导出信息...",
+        progress: 85,
+        progressMessage: "上传视频到存储...",
+      },
+      workerToken
+    );
+
+    // 读取渲染后的视频文件
+    const videoBuffer = await fs.readFile(outputPath);
+    const fileSize = videoBuffer.length;
+
+    // 上传到 R2
+    const fileName = `export-${projectId}-${Date.now()}.mp4`;
+    const uploadResult = await uploadVideoFromUrl(
+      `data:video/mp4;base64,${videoBuffer.toString("base64")}`,
+      fileName,
+      jobData.userId
+    );
+
+    // 清理临时文件
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(console.error);
+
+    if (!uploadResult.success || !uploadResult.url) {
+      throw new Error(`上传视频失败: ${uploadResult.error || "未知错误"}`);
+    }
+
+    await updateJobProgress(
+      {
+        jobId: jobData.id,
+        progress: 95,
+        progressMessage: "完成导出...",
       },
       workerToken
     );
 
     const result: FinalVideoExportResult = {
       projectId,
-      videoUrl: "", // 暂时返回空，实际应该是合成后的视频URL
-      duration: totalDuration,
-      fileSize: 0, // 暂时返回0
-      videoList,
+      videoUrl: uploadResult.url,
+      duration: timeline.duration / 1000, // 转换为秒
+      fileSize,
     };
 
     await completeJob(
@@ -523,7 +723,7 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       workerToken
     );
 
-    console.log(`[Worker] 导出完成: Project ${projectId}, ${sortedVideos.length} 个片段`);
+    console.log(`[Worker] 导出完成: Project ${projectId}, URL: ${uploadResult.url}`);
   } catch (error) {
     console.error(`[Worker] 导出失败:`, error);
     throw error;

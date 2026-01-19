@@ -1095,7 +1095,7 @@
     },
     "assetEdit": {
       "title": "Edit Asset",
-      "originalImage": "Original Image",
+      "regenerateTitle": "Regenerate",
       "promptLabel": "Edit Prompt",
       "promptPlaceholder": "Describe the changes you want...",
       "promptRequired": "Please enter an edit prompt",
@@ -1109,14 +1109,10 @@
       "submit": "Generate New Version",
       "submitting": "Generating...",
       "submitSuccess": "Generation task submitted",
-      "submitFailed": "Submission failed"
-    },
-    "assetRegenerate": {
-      "title": "Regenerate",
-      "submit": "Regenerate",
-      "submitting": "Regenerating...",
-      "submitSuccess": "Regeneration task submitted",
-      "submitFailed": "Regeneration failed"
+      "submitFailed": "Submission failed",
+      "regenerateSubmit": "Regenerate",
+      "regenerateSubmitting": "Regenerating...",
+      "regenerateSuccess": "Regeneration task submitted"
     },
     "projectSettings": "Project Settings",
     "expandAgent": "Expand Agent Chat",

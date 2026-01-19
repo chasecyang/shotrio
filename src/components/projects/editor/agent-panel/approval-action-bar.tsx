@@ -51,11 +51,13 @@ interface ApprovalActionBarProps {
     };
   };
   currentBalance?: number;
+  isBottomMode?: boolean;
 }
 
 export const ApprovalActionBar = memo(function ApprovalActionBar({
   approvalInfo,
   currentBalance,
+  isBottomMode = false,
 }: ApprovalActionBarProps) {
   const t = useTranslations();
   const agent = useAgent();
@@ -429,7 +431,10 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   };
 
   return (
-    <div className="border-t border-border/80 p-4 shrink-0 bg-background/95 dark:bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 dark:supports-[backdrop-filter]:bg-surface/70">
+    <div className={cn(
+      "border-t border-border/80 shrink-0 bg-background/95 dark:bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 dark:supports-[backdrop-filter]:bg-surface/70",
+      isBottomMode ? "p-2" : "p-4"
+    )}>
       <div className={cn(
         "rounded-xl border border-border bg-muted/30 overflow-hidden transition-all",
         isLoading && "opacity-70 pointer-events-none"
@@ -470,8 +475,9 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
           {hasParamsToShow && (
             <div
               className={cn(
-                "relative px-4 py-3 border-b border-border/50 max-h-[200px] overflow-y-auto transition-colors",
-                canEdit && "group-hover:bg-muted/50"
+                "relative border-b border-border/50 overflow-y-auto transition-colors",
+                canEdit && "group-hover:bg-muted/50",
+                isBottomMode ? "max-h-[100px] py-2 px-3" : "max-h-[200px] px-4 py-3"
               )}
             >
             {isGenerateAssets && generationAssets && generationAssets.length > 0 ? (
@@ -630,92 +636,185 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
         </div>
 
         {/* Actions */}
-        <div className="p-3 space-y-2">
-          {/* 第一行：确认、拒绝、修改 */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleConfirm}
-              disabled={isLoading}
-              size="sm"
-              className="flex-1"
-            >
-              {isConfirming ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  执行中...
-                </>
-              ) : (
-                <>
-                  <Check className="h-3.5 w-3.5 mr-1.5" />
-                  {t("editor.agent.pendingAction.confirm")}
-                </>
-              )}
-            </Button>
+        <div className={cn(isBottomMode ? "px-2 py-2" : "p-3 space-y-2")}>
+          {isBottomMode ? (
+            /* 底部模式：水平紧凑布局 */
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleConfirm}
+                    disabled={isLoading}
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    {isConfirming ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("editor.agent.pendingAction.confirm")}</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleConfirmAndAutoAccept}
+                    disabled={isLoading}
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <Check className="h-3.5 w-3.5 -ml-2" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("editor.agent.pendingAction.confirmAllDescription")}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleReject}
+                    variant="outline"
+                    size="sm"
+                    disabled={isLoading}
+                    className="shrink-0"
+                  >
+                    {isRejecting && !feedbackText.trim() ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <X className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t("editor.agent.pendingAction.reject")}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="w-px h-6 bg-border mx-1" />
+
+              <Textarea
+                ref={textareaRef}
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
+                className="flex-1 min-h-[32px] max-h-[32px] resize-none text-sm py-1.5"
+                disabled={isLoading}
+                rows={1}
+              />
+
+              <Button
+                size="sm"
+                onClick={handleRejectWithFeedback}
+                disabled={isLoading || !feedbackText.trim()}
+                className="shrink-0"
+              >
+                {isRejecting && feedbackText.trim() ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+          ) : (
+            /* 默认模式：两行垂直布局 */
+            <>
+              {/* 第一行：确认、拒绝、修改 */}
+              <div className="flex items-center gap-2">
                 <Button
-                  onClick={handleConfirmAndAutoAccept}
+                  onClick={handleConfirm}
                   disabled={isLoading}
-                  variant="secondary"
                   size="sm"
                   className="flex-1"
                 >
-                  <Check className="h-3.5 w-3.5 mr-1.5" />
-                  {t("editor.agent.pendingAction.confirmAll")}
+                  {isConfirming ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      执行中...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-3.5 w-3.5 mr-1.5" />
+                      {t("editor.agent.pendingAction.confirm")}
+                    </>
+                  )}
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t("editor.agent.pendingAction.confirmAllDescription")}</p>
-              </TooltipContent>
-            </Tooltip>
 
-            <Button
-              onClick={handleReject}
-              variant="outline"
-              size="sm"
-              disabled={isLoading}
-              className="flex-1"
-            >
-              {isRejecting && !feedbackText.trim() ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  处理中...
-                </>
-              ) : (
-                <>
-                  <X className="h-3.5 w-3.5 mr-1.5" />
-                  {t("editor.agent.pendingAction.reject")}
-                </>
-              )}
-            </Button>
-          </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleConfirmAndAutoAccept}
+                      disabled={isLoading}
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <Check className="h-3.5 w-3.5 mr-1.5" />
+                      {t("editor.agent.pendingAction.confirmAll")}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t("editor.agent.pendingAction.confirmAllDescription")}</p>
+                  </TooltipContent>
+                </Tooltip>
 
-          {/* 第二行：反馈输入框 + 发送按钮 */}
-          <div className="flex items-center gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
-              className="flex-1 min-h-[36px] max-h-[80px] resize-none text-sm py-2"
-              disabled={isLoading}
-              rows={1}
-            />
-            <Button
-              size="sm"
-              onClick={handleRejectWithFeedback}
-              disabled={isLoading || !feedbackText.trim()}
-              className="shrink-0"
-            >
-              {isRejecting && feedbackText.trim() ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          </div>
+                <Button
+                  onClick={handleReject}
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  {isRejecting && !feedbackText.trim() ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      处理中...
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-3.5 w-3.5 mr-1.5" />
+                      {t("editor.agent.pendingAction.reject")}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* 第二行：反馈输入框 + 发送按钮 */}
+              <div className="flex items-center gap-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
+                  className="flex-1 min-h-[36px] max-h-[80px] resize-none text-sm py-2"
+                  disabled={isLoading}
+                  rows={1}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleRejectWithFeedback}
+                  disabled={isLoading || !feedbackText.trim()}
+                  className="shrink-0"
+                >
+                  {isRejecting && feedbackText.trim() ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

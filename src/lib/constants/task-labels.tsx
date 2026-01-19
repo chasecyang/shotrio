@@ -64,7 +64,7 @@ export const TASK_STATUS_ICONS: Record<JobStatus, { iconName: string; color: str
 /**
  * Viewable task types list
  */
-export const VIEWABLE_TASK_TYPES: JobType[] = [];
+export const VIEWABLE_TASK_TYPES: JobType[] = ["final_video_export"];
 
 /**
  * Icon mapping

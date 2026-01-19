@@ -1095,7 +1095,7 @@
     },
     "assetEdit": {
       "title": "编辑素材",
-      "originalImage": "原图",
+      "regenerateTitle": "重新生成",
       "promptLabel": "编辑提示词",
       "promptPlaceholder": "描述你想要的修改效果...",
       "promptRequired": "请输入编辑提示词",
@@ -1109,14 +1109,10 @@
       "submit": "生成新版本",
       "submitting": "生成中...",
       "submitSuccess": "已提交生成任务",
-      "submitFailed": "提交失败"
-    },
-    "assetRegenerate": {
-      "title": "重新生成",
-      "submit": "重新生成",
-      "submitting": "重新生成中...",
-      "submitSuccess": "已提交重新生成任务",
-      "submitFailed": "重新生成失败"
+      "submitFailed": "提交失败",
+      "regenerateSubmit": "重新生成",
+      "regenerateSubmitting": "重新生成中...",
+      "regenerateSuccess": "已提交重新生成任务"
     },
     "projectSettings": "项目设置",
     "expandAgent": "展开 Agent 对话",

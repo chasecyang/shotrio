@@ -28,7 +28,7 @@ import {
   X as XIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Job } from "@/types/job";
+import type { Job, FinalVideoExportResult } from "@/types/job";
 import {
   getTaskTypeLabel,
   getTaskStatusConfig,
@@ -118,6 +118,23 @@ export function BackgroundTasks() {
     // 根据任务类型处理
     try {
       switch (job.type) {
+        case "final_video_export": {
+          const result = job.resultData as FinalVideoExportResult | null;
+          if (result?.videoUrl) {
+            // 触发下载
+            const link = document.createElement("a");
+            link.href = result.videoUrl;
+            link.download = `export-${Date.now()}.mp4`;
+            link.target = "_blank";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("开始下载导出视频");
+          } else {
+            toast.error("导出视频URL不存在");
+          }
+          break;
+        }
         default:
           toast.info("该任务暂不支持查看结果");
           break;

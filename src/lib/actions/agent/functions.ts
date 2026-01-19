@@ -70,10 +70,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "generate_image_asset",
-    description: `生成或编辑图片资产。支持三种模式：
+    description: `生成或编辑图片资产。支持四种模式：
 
 **模式1：文生图** - 从零生成全新图片
-- 不需要 sourceAssetIds
+- 不需要 sourceAssetIds 和 targetAssetId
 - prompt 描述完整的画面内容
 
 **模式2：图片编辑** - 修改已有图片的某个部分
@@ -93,6 +93,11 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   - "Have this person wear the red dress from the second image"（人物+服装）
   - "Create a pattern of the logo on the t-shirt"（Logo+产品）
 
+**模式4：重新生成** - 对已有素材生成新版本，保留历史版本可回滚
+- targetAssetId 传入要重新生成的素材ID
+- assets 数组只需提供第一个元素的 prompt（新的生成描述）
+- 示例：用户说"这张图片的光线不好，重新生成"时使用此模式
+
 使用建议：编辑操作一次只改一件事，复杂编辑分步进行。`,
     displayName: "生成图片资产",
     parameters: {
@@ -101,6 +106,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         assets: {
           type: "array",
           description: "素材数组，每个素材包含: prompt（必填，英文描述）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）",
+        },
+        targetAssetId: {
+          type: "string",
+          description: "目标素材ID（重新生成模式）。如果提供，将为该素材生成新版本而非创建新素材。历史版本会保留，用户可在界面切换回滚",
         },
       },
       required: ["assets"],
@@ -121,6 +130,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - **start_image_url**（必填）：起始帧图片的资产ID或URL
 - **end_image_url**（可选）：结束帧图片的资产ID或URL，不提供则由AI自动生成过渡
 - **aspect_ratio**（可选）：宽高比，"16:9" 或 "9:16"，默认 "16:9"
+- **targetAssetId**（可选）：重新生成模式。传入已有视频素材ID，将生成新版本而非新素材
 
 **示例：**
 \`\`\`json
@@ -129,6 +139,15 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   "start_image_url": "asset-winter-scene",
   "end_image_url": "asset-spring-scene",
   "title": "冬春季节过渡"
+}
+\`\`\`
+
+**重新生成示例：**
+\`\`\`json
+{
+  "targetAssetId": "existing-video-id",
+  "prompt": "Faster camera movement with more dramatic lighting",
+  "start_image_url": "asset-scene"
 }
 \`\`\`
 
@@ -177,6 +196,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         order: {
           type: "number",
           description: "排序值（可选），用于在视频库中排序",
+        },
+        targetAssetId: {
+          type: "string",
+          description: "目标素材ID（重新生成模式）。如果提供，将为该视频素材生成新版本而非创建新素材。历史版本会保留，用户可在界面切换回滚",
         },
       },
       required: ["prompt", "start_image_url"],

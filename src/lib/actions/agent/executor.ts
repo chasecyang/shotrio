@@ -214,6 +214,7 @@ export async function executeFunction(
             type: a.assetType,
             status: a.runtimeStatus,
             tags: a.tags.map(t => t.tagValue),
+            versionCount: a.versionCount || 1, // 版本数量（用于判断是否有历史版本可回滚）
           };
 
           // 生成信息（仅AI生成的素材）
@@ -262,7 +263,100 @@ export async function executeFunction(
           tags?: string[];
           sourceAssetIds?: string[];
         }>;
+        const targetAssetId = parameters.targetAssetId as string | undefined;
 
+        // ========== 重新生成模式 ==========
+        if (targetAssetId) {
+          // 验证素材存在且类型为 image
+          const existingAsset = await getAssetWithFullData(targetAssetId);
+          if (!existingAsset.success || !existingAsset.asset) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: `素材 ${targetAssetId} 不存在`,
+            };
+            break;
+          }
+          if (existingAsset.asset.assetType !== "image") {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: `素材 ${targetAssetId} 不是图片类型，无法重新生成`,
+            };
+            break;
+          }
+
+          // 取第一个 asset 配置用于重新生成
+          const assetData = assets[0];
+          if (!assetData?.prompt) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: "重新生成模式需要在 assets 数组中提供 prompt",
+            };
+            break;
+          }
+
+          // 获取项目画风并前置拼接到 prompt
+          const stylePrompt = await getProjectStylePrompt(projectId);
+          const finalPrompt = stylePrompt
+            ? `${stylePrompt}. ${assetData.prompt}`
+            : assetData.prompt;
+
+          // 创建新版本记录
+          const { createAssetVersion } = await import("../asset/version");
+          const versionResult = await createAssetVersion(targetAssetId, {
+            prompt: finalPrompt,
+            modelUsed: "nano-banana-pro",
+            sourceAssetIds: assetData.sourceAssetIds,
+            generationConfig: JSON.stringify({
+              aspectRatio: "16:9",
+              numImages: 1,
+            }),
+          }, { activateImmediately: false });
+
+          if (!versionResult.success || !versionResult.versionId) {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: versionResult.error || "创建新版本失败",
+            };
+            break;
+          }
+
+          // 创建 job 关联新版本，标记完成后自动激活
+          const jobResult = await createJob({
+            userId: session.user.id,
+            projectId,
+            type: "asset_image",
+            assetId: targetAssetId,
+            imageDataId: versionResult.versionId,
+            inputData: { activateOnComplete: true },
+          });
+
+          if (jobResult.success && jobResult.jobId) {
+            result = {
+              functionCallId: functionCall.id,
+              success: true,
+              data: {
+                message: `正在为素材"${existingAsset.asset.name}"生成新版本`,
+                assetId: targetAssetId,
+                versionId: versionResult.versionId,
+                jobId: jobResult.jobId,
+                isRegeneration: true,
+              },
+            };
+          } else {
+            result = {
+              functionCallId: functionCall.id,
+              success: false,
+              error: jobResult.error || "创建生成任务失败",
+            };
+          }
+          break;
+        }
+
+        // ========== 创建新素材模式（原有逻辑）==========
         const jobIds: string[] = [];
         const assetIds: string[] = [];
         const errors: string[] = [];
@@ -361,6 +455,7 @@ export async function executeFunction(
         const referenceAssetIds = parameters.referenceAssetIds as string[] | undefined;
         const tags = parameters.tags as string[] | undefined;
         const order = parameters.order as number | undefined;
+        const targetAssetId = parameters.targetAssetId as string | undefined;
 
         try {
           // 使用 validation.ts 中的统一校验
@@ -369,7 +464,7 @@ export async function executeFunction(
             "generate_video_asset",
             JSON.stringify(parameters)
           );
-          
+
           if (!validationResult.valid) {
             result = {
               functionCallId: functionCall.id,
@@ -378,7 +473,7 @@ export async function executeFunction(
             };
             break;
           }
-          
+
           // 从校验结果中获取标准化配置
           const normalizedConfig = validationResult.normalizedConfig!;
 
@@ -398,6 +493,78 @@ export async function executeFunction(
             negative_prompt: normalizedConfig.negative_prompt as string | undefined,
           };
 
+          // ========== 重新生成模式 ==========
+          if (targetAssetId) {
+            // 验证素材存在且类型为 video
+            const existingAsset = await getAssetWithFullData(targetAssetId);
+            if (!existingAsset.success || !existingAsset.asset) {
+              result = {
+                functionCallId: functionCall.id,
+                success: false,
+                error: `素材 ${targetAssetId} 不存在`,
+              };
+              break;
+            }
+            if (existingAsset.asset.assetType !== "video") {
+              result = {
+                functionCallId: functionCall.id,
+                success: false,
+                error: `素材 ${targetAssetId} 不是视频类型，无法重新生成`,
+              };
+              break;
+            }
+
+            // 创建新版本记录
+            const { createAssetVersion } = await import("../asset/version");
+            const versionResult = await createAssetVersion(targetAssetId, {
+              prompt: finalPrompt,
+              modelUsed: "veo3",
+              sourceAssetIds: referenceAssetIds,
+              generationConfig: JSON.stringify(generationConfig),
+            }, { activateImmediately: false });
+
+            if (!versionResult.success || !versionResult.versionId) {
+              result = {
+                functionCallId: functionCall.id,
+                success: false,
+                error: versionResult.error || "创建新版本失败",
+              };
+              break;
+            }
+
+            // 创建 job 关联新版本，标记完成后自动激活
+            const jobResult = await createJob({
+              userId: session.user.id,
+              projectId,
+              type: "asset_video",
+              assetId: targetAssetId,
+              videoDataId: versionResult.versionId,
+              inputData: { activateOnComplete: true },
+            });
+
+            if (jobResult.success && jobResult.jobId) {
+              result = {
+                functionCallId: functionCall.id,
+                success: true,
+                data: {
+                  message: `正在为视频"${existingAsset.asset.name}"生成新版本`,
+                  assetId: targetAssetId,
+                  versionId: versionResult.versionId,
+                  jobId: jobResult.jobId,
+                  isRegeneration: true,
+                },
+              };
+            } else {
+              result = {
+                functionCallId: functionCall.id,
+                success: false,
+                error: jobResult.error || "创建生成任务失败",
+              };
+            }
+            break;
+          }
+
+          // ========== 创建新素材模式（原有逻辑）==========
           // 创建视频生成任务
           const generateResult = await createVideoAsset({
             projectId,

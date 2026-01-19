@@ -70,10 +70,13 @@ export interface AudioGenerationResult {
 // 最终成片导出输入
 export interface FinalVideoExportInput {
   projectId: string;
+  timelineId?: string; // 时间轴 ID（新增）
   videoIds: string[]; // 要导出的视频片段ID列表（按顺序）
   includeAudio?: boolean; // 是否包含音频
   includeSubtitles?: boolean; // 是否包含字幕
   exportQuality?: "draft" | "high"; // 草稿/高清
+  resolution?: string; // 分辨率（新增）
+  fps?: number; // 帧率（新增）
   transitions?: Array<{
     fromVideoId?: string;
     toVideoId: string;

@@ -17,6 +17,7 @@ import {
   Volume2,
   VolumeX,
   Trash2,
+  Download,
 } from "lucide-react";
 import { TimelineClipItem } from "./timeline-clip-item";
 import { AudioClipItem } from "./audio-clip-item";
@@ -25,6 +26,7 @@ import { TimelineDragProvider, useTimelineDrag } from "./timeline-drag-context";
 import { cn } from "@/lib/utils";
 import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks, updateTimeline as updateTimelineAction } from "@/lib/actions/timeline";
 import { ResolutionSelector } from "./resolution-selector";
+import { ExportDialog } from "./export-dialog";
 import { toast } from "sonner";
 import { AssetWithFullData } from "@/types/asset";
 import {
@@ -114,6 +116,7 @@ function TimelinePanelContent({
     clipId: string;
     newDuration: number;
   } | null>(null);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const timelineRulerRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
@@ -857,6 +860,18 @@ function TimelinePanelContent({
               {Math.round(zoom * 100)}%
             </span>
           </div>
+
+          {/* 导出按钮 */}
+          <Button
+            variant="default"
+            size="sm"
+            className="h-7 gap-1.5 border-l ml-3 pl-3"
+            onClick={() => setIsExportDialogOpen(true)}
+            disabled={timeline.clips.length === 0}
+          >
+            <Download className="h-3.5 w-3.5" />
+            导出
+          </Button>
         </div>
       </div>
 
@@ -1190,6 +1205,16 @@ function TimelinePanelContent({
           </div>
         </div>
       </div>
+
+      {/* 导出对话框 */}
+      {state.project && (
+        <ExportDialog
+          open={isExportDialogOpen}
+          onOpenChange={setIsExportDialogOpen}
+          timeline={timeline}
+          projectId={state.project.id}
+        />
+      )}
     </div>
   );
 }

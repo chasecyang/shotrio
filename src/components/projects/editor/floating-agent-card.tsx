@@ -549,7 +549,7 @@ export function FloatingAgentCard({
           damping: 25,
         }}
         className={cn(
-          "absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4",
+          "absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4",
           isDragging && "cursor-grabbing"
         )}
       >
@@ -660,8 +660,8 @@ export function FloatingAgentCard({
             </Tooltip>
           </div>
 
-          {/* Messages - 底部模式高度受限 */}
-          <div className="flex-1 overflow-hidden relative min-h-[100px] max-h-[200px]">
+          {/* Messages - 底部模式高度受限，约3行 */}
+          <div className="flex-1 overflow-hidden relative min-h-[60px] max-h-[80px]">
             <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
               <div className="py-2">
                 {isEmptyState ? (
@@ -706,6 +706,7 @@ export function FloatingAgentCard({
             <ApprovalActionBar
               approvalInfo={pendingApproval}
               currentBalance={creditBalance}
+              isBottomMode
             />
           ) : (
             <div className="border-t p-3 shrink-0 bg-background/80">
