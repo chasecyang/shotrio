@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { TrackConfig } from "@/types/timeline";
 import { AssetThumbnailItem } from "./asset-thumbnail-item";
 import { AssetStripDragPreview } from "./asset-strip-drag-preview";
 import { useTimelineDrag } from "./timeline-drag-context";
@@ -18,8 +17,6 @@ import { useTimelineDrag } from "./timeline-drag-context";
 const EXPANDED_KEY = "timeline:assetStrip:expanded";
 
 interface AssetStripPanelProps {
-  projectId: string;
-  tracks: TrackConfig[];
   onPreviewAsset?: (asset: AssetWithFullData) => void;
 }
 
@@ -27,8 +24,6 @@ interface AssetStripPanelProps {
  * 时间轴内嵌素材条 - 横向显示素材缩略图，支持拖拽到轨道
  */
 export function AssetStripPanel({
-  projectId,
-  tracks,
   onPreviewAsset,
 }: AssetStripPanelProps) {
   const { state } = useEditor();
@@ -72,7 +67,10 @@ export function AssetStripPanel({
           projectId: project.id,
           limit: 100,
         });
-        setAssets(result.assets);
+        const completedAssets = result.assets.filter(
+          (asset) => asset.runtimeStatus === "completed"
+        );
+        setAssets(completedAssets);
       } catch (error) {
         console.error("加载素材失败:", error);
         toast.error("加载素材失败");

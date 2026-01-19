@@ -862,8 +862,6 @@ function TimelinePanelContent({
 
       {/* 素材条 */}
       <AssetStripPanel
-        projectId={timeline.projectId}
-        tracks={tracks}
         onPreviewAsset={onPreviewAsset}
       />
 
