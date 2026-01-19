@@ -43,7 +43,6 @@ export function timelineToRemotionProps(
       id: clip.id,
       from: msToFrames(clip.startTime, fps),
       durationInFrames: msToFrames(clip.duration, fps),
-      type: isVideoTrack(clip.trackIndex) ? "video" : "audio",
       src: clip.asset.mediaUrl,
       startFrom: msToFrames(clip.trimStart, fps),
     });

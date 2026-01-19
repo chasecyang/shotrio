@@ -16,7 +16,6 @@ export interface RemotionTrackItem {
   id: string;
   from: number; // 开始帧
   durationInFrames: number;
-  type: "video" | "audio";
   src: string; // mediaUrl
   startFrom: number; // trimStart 转换为帧
 }

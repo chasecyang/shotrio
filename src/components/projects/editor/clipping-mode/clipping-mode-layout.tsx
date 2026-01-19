@@ -45,17 +45,6 @@ export function ClippingModeLayout() {
     }));
   }, []);
 
-  // 设置轨道音量
-  const setTrackVolume = useCallback((trackIndex: number, volume: number) => {
-    setTrackStates((prev) => ({
-      ...prev,
-      [trackIndex]: {
-        ...prev[trackIndex],
-        volume,
-      },
-    }));
-  }, []);
-
   // 自动保存
   useTimelineAutosave(timeline);
 
@@ -124,7 +113,6 @@ export function ClippingModeLayout() {
               playback={playback}
               trackStates={trackStates}
               onToggleTrackMute={toggleTrackMute}
-              onSetTrackVolume={setTrackVolume}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

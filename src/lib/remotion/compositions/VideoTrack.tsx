@@ -1,6 +1,8 @@
-import { Sequence, OffthreadVideo, useVideoConfig } from "remotion";
+import { Series } from "remotion";
+import { Video } from "@remotion/media";
 import { RemotionTrack, RemotionTrackItem } from "../types";
 import { TrackStates } from "@/types/timeline";
+import { useTrackConfig } from "../hooks/use-track-config";
 
 interface VideoTrackProps {
   track: RemotionTrack;
@@ -11,35 +13,31 @@ export const VideoTrack: React.FC<VideoTrackProps> = ({
   track,
   trackStates,
 }) => {
-  const { fps } = useVideoConfig();
-  const trackState = trackStates[track.trackIndex];
-
-  // 提前 5 秒预加载下一个片段
-  const premountFrames = Math.round(fps * 5);
+  const { premountFrames, volume } = useTrackConfig(
+    track.trackIndex,
+    trackStates
+  );
 
   return (
-    <>
+    <Series>
       {track.items.map((item: RemotionTrackItem) => (
-        <Sequence
+        <Series.Sequence
           key={item.id}
-          from={item.from}
           durationInFrames={item.durationInFrames}
           premountFor={premountFrames}
         >
-          <OffthreadVideo
+          <Video
             src={item.src}
-            startFrom={item.startFrom}
-            volume={trackState?.isMuted ? 0 : trackState?.volume ?? 1}
-            muted={trackState?.isMuted}
-            pauseWhenBuffering
+            trimBefore={item.startFrom}
+            volume={volume}
             style={{
               width: "100%",
               height: "100%",
               objectFit: "contain",
             }}
           />
-        </Sequence>
+        </Series.Sequence>
       ))}
-    </>
+    </Series>
   );
 };

@@ -1,6 +1,8 @@
-import { Sequence, Audio, useVideoConfig } from "remotion";
+import { Sequence } from "remotion";
+import { Audio } from "@remotion/media";
 import { RemotionTrack, RemotionTrackItem } from "../types";
 import { TrackStates } from "@/types/timeline";
+import { useTrackConfig } from "../hooks/use-track-config";
 
 interface AudioTrackProps {
   track: RemotionTrack;
@@ -11,11 +13,10 @@ export const AudioTrack: React.FC<AudioTrackProps> = ({
   track,
   trackStates,
 }) => {
-  const { fps } = useVideoConfig();
-  const trackState = trackStates[track.trackIndex];
-
-  // 提前 5 秒预加载下一个片段
-  const premountFrames = Math.round(fps * 5);
+  const { premountFrames, volume } = useTrackConfig(
+    track.trackIndex,
+    trackStates
+  );
 
   return (
     <>
@@ -28,9 +29,8 @@ export const AudioTrack: React.FC<AudioTrackProps> = ({
         >
           <Audio
             src={item.src}
-            startFrom={item.startFrom}
-            volume={trackState?.isMuted ? 0 : trackState?.volume ?? 1}
-            pauseWhenBuffering
+            trimBefore={item.startFrom}
+            volume={volume}
           />
         </Sequence>
       ))}

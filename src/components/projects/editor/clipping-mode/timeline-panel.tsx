@@ -25,7 +25,6 @@ import { TimelineDragProvider, useTimelineDrag } from "./timeline-drag-context";
 import { cn } from "@/lib/utils";
 import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks } from "@/lib/actions/timeline";
 import { toast } from "sonner";
-import { AddAssetDialog } from "./add-asset-dialog";
 import { AssetWithFullData } from "@/types/asset";
 import {
   recalculateTrackClipPositions,
@@ -49,7 +48,6 @@ interface TimelinePanelProps {
   playback: UseRemotionPlaybackReturn;
   trackStates: TrackStates;
   onToggleTrackMute: (trackIndex: number) => void;
-  onSetTrackVolume: (trackIndex: number, volume: number) => void;
 }
 
 /**
@@ -91,7 +89,6 @@ function TimelinePanelContent({
   playback,
   trackStates,
   onToggleTrackMute,
-  onSetTrackVolume,
 }: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
@@ -108,14 +105,12 @@ function TimelinePanelContent({
 
   const [zoom, setZoom] = useState(1); // 缩放级别
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
   const [trimmingClipInfo, setTrimmingClipInfo] = useState<{
     clipId: string;
     newDuration: number;
   } | null>(null);
-  const [selectedTrackIndex, setSelectedTrackIndex] = useState<number>(0); // 当前选中的轨道，用于添加素材
   const trackRef = useRef<HTMLDivElement>(null);
   const timelineRulerRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
@@ -128,10 +123,8 @@ function TimelinePanelContent({
     isPlaying,
     currentTime,
     currentTimeRef,
-    currentClip,
     togglePlayPause,
-    seekTo,
-    seekToImmediate,
+    seek,
     pause,
   } = playback;
 
@@ -164,11 +157,11 @@ function TimelinePanelContent({
     const newTime = Math.max(0, Math.min(clickX / pixelsPerMs, timeline.duration));
     
     // 立即跳转到点击位置
-    seekTo(newTime);
-    
+    seek(newTime);
+
     // 启动拖拽模式
     setIsDraggingPlayhead(true);
-  }, [pause, pixelsPerMs, timeline, seekTo]);
+  }, [pause, pixelsPerMs, timeline, seek]);
 
   // 鼠标移动处理（拖拽播放头）- 添加节流
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -183,17 +176,13 @@ function TimelinePanelContent({
     const offsetX = e.clientX - rect.left;
     const newTime = Math.max(0, Math.min(offsetX / pixelsPerMs, timeline.duration));
 
-    seekTo(newTime);
-  }, [isDraggingPlayhead, pixelsPerMs, timeline, seekTo]);
+    seek(newTime);
+  }, [isDraggingPlayhead, pixelsPerMs, timeline, seek]);
 
   // 鼠标释放处理
   const handleMouseUp = useCallback(() => {
-    if (isDraggingPlayhead && timeline) {
-      // 拖拽结束后，执行一次精确 seek
-      seekToImmediate(currentTime);
-    }
     setIsDraggingPlayhead(false);
-  }, [isDraggingPlayhead, timeline, currentTime, seekToImmediate]);
+  }, []);
 
   // 监听全局鼠标事件（用于拖拽）
   useEffect(() => {
@@ -296,7 +285,7 @@ function TimelinePanelContent({
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleAssetDragEnd = async (e: MouseEvent) => {
+    const handleAssetDragEnd = async () => {
       if (dropTargetTrack !== null && draggedAsset && dropPosition !== null) {
         await handleAssetDropFromDrag(draggedAsset, dropTargetTrack, dropPosition);
       }
@@ -352,27 +341,38 @@ function TimelinePanelContent({
     }
   };
 
-  if (!timeline) return null;
+  // 基于当前时间查找当前片段
+  const findCurrentClipIndex = () => {
+    if (!timeline) return -1;
+    const videoClips = timeline.clips.filter((c) => c.trackIndex < 100);
+    for (let i = 0; i < videoClips.length; i++) {
+      const clip = videoClips[i];
+      if (currentTime >= clip.startTime && currentTime < clip.startTime + clip.duration) {
+        return i;
+      }
+    }
+    return -1;
+  };
 
   // 跳转到上一个片段
   const skipToPrevious = () => {
-    if (!timeline || !currentClip) return;
-    const currentIndex = timeline.clips.findIndex((c) => c.id === currentClip.id);
+    if (!timeline) return;
+    const videoClips = timeline.clips.filter((c) => c.trackIndex < 100);
+    const currentIndex = findCurrentClipIndex();
     if (currentIndex > 0) {
-      const prevClip = timeline.clips[currentIndex - 1];
-      seekTo(prevClip.startTime);
+      seek(videoClips[currentIndex - 1].startTime);
     } else {
-      seekTo(0);
+      seek(0);
     }
   };
 
   // 跳转到下一个片段
   const skipToNext = () => {
-    if (!timeline || !currentClip) return;
-    const currentIndex = timeline.clips.findIndex((c) => c.id === currentClip.id);
-    if (currentIndex < timeline.clips.length - 1) {
-      const nextClip = timeline.clips[currentIndex + 1];
-      seekTo(nextClip.startTime);
+    if (!timeline) return;
+    const videoClips = timeline.clips.filter((c) => c.trackIndex < 100);
+    const currentIndex = findCurrentClipIndex();
+    if (currentIndex >= 0 && currentIndex < videoClips.length - 1) {
+      seek(videoClips[currentIndex + 1].startTime);
     }
   };
 
@@ -669,41 +669,6 @@ function TimelinePanelContent({
     setZoom(value[0] / 100);
   };
 
-  // 处理添加素材到指定轨道
-  const handleAddAsset = async (asset: AssetWithFullData, trackIndex: number) => {
-    if (!timeline) return;
-
-    const validationError = validateAssetTrackCompatibility(asset, trackIndex);
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
-    // 计算该轨道上的下一个开始时间
-    const trackClips = clipsByTrack.get(trackIndex) || [];
-    let startTime = 0;
-    if (trackClips.length > 0) {
-      const lastClip = trackClips[trackClips.length - 1];
-      startTime = lastClip.startTime + lastClip.duration;
-    }
-
-    // 添加片段到时间轴
-    const result = await addClipToTimeline(timeline.id, {
-      assetId: asset.id,
-      trackIndex,
-      startTime,
-      duration: asset.duration || 0,
-      trimStart: 0,
-    });
-
-    if (result.success && result.timeline) {
-      updateTimeline(result.timeline);
-      toast.success("已添加到时间轴");
-    } else {
-      toast.error(result.error || "添加失败");
-    }
-  };
-
   // 添加新轨道
   const handleAddTrack = async (type: "video" | "audio") => {
     if (!timeline) return;
@@ -752,21 +717,22 @@ function TimelinePanelContent({
   };
 
   // 根据缩放级别计算刻度间隔
-  const getTimeStepByZoom = (zoom: number): number => {
-    if (zoom < 0.5) return 10000;  // 10s
-    if (zoom < 1) return 5000;     // 5s
-    if (zoom < 2) return 2000;     // 2s
-    if (zoom < 3) return 1000;     // 1s
+  const getTimeStepByZoom = (zoomLevel: number): number => {
+    if (zoomLevel < 0.5) return 10000;  // 10s
+    if (zoomLevel < 1) return 5000;     // 5s
+    if (zoomLevel < 2) return 2000;     // 2s
+    if (zoomLevel < 3) return 1000;     // 1s
     return 500;                     // 0.5s
   };
 
   // 使用 useMemo 缓存时间标尺计算
   const { totalWidth, marks } = useMemo(() => {
-    const totalWidth = (timeline.duration || 10000) * pixelsPerMs;
+    const duration = timeline?.duration || 10000;
+    const totalWidth = duration * pixelsPerMs;
     const stepMs = getTimeStepByZoom(zoom);
     const marks: { time: number; label: string }[] = [];
 
-    for (let time = 0; time <= timeline.duration; time += stepMs) {
+    for (let time = 0; time <= duration; time += stepMs) {
       let label: string;
 
       if (zoom >= 2) {
@@ -779,7 +745,7 @@ function TimelinePanelContent({
     }
 
     return { totalWidth, marks };
-  }, [timeline.duration, pixelsPerMs, zoom]);
+  }, [timeline?.duration, pixelsPerMs, zoom]);
 
   // 验证拖拽目标是否有效（类型匹配）
   const isValidDropTarget = (trackIndex: number): boolean => {
@@ -790,23 +756,15 @@ function TimelinePanelContent({
     return (targetIsVideo && isVideo) || (!targetIsVideo && isAudio);
   };
 
+  if (!timeline) return null;
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* 工具栏 */}
       <div className="h-12 border-b flex items-center justify-between px-4 gap-3 shrink-0">
-        {/* 左侧：添加素材 */}
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1 px-2"
-            onClick={() => setAddDialogOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span className="text-xs">添加素材</span>
-          </Button>
-        </div>
-        
+        {/* 左侧占位 */}
+        <div className="flex items-center gap-3" />
+
         {/* 中央：播放控制按钮组 */}
         <div className="flex items-center gap-1">
           <Button
@@ -814,7 +772,7 @@ function TimelinePanelContent({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={skipToPrevious}
-            disabled={!currentClip}
+            disabled={timeline.clips.length === 0}
           >
             <SkipBack className="h-4 w-4" />
           </Button>
@@ -823,7 +781,7 @@ function TimelinePanelContent({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={togglePlayPause}
-            disabled={!currentClip}
+            disabled={timeline.clips.length === 0}
           >
             {isPlaying ? (
               <Pause className="h-4 w-4" />
@@ -836,7 +794,7 @@ function TimelinePanelContent({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={skipToNext}
-            disabled={!currentClip}
+            disabled={timeline.clips.length === 0}
           >
             <SkipForward className="h-4 w-4" />
           </Button>
@@ -1253,16 +1211,6 @@ function TimelinePanelContent({
           </div>
         </div>
       </div>
-
-      {/* 添加素材对话框 */}
-      <AddAssetDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSelect={(asset) => handleAddAsset(asset, selectedTrackIndex)}
-        selectedTrackIndex={selectedTrackIndex}
-        onTrackIndexChange={setSelectedTrackIndex}
-        tracks={tracks}
-      />
     </div>
   );
 }

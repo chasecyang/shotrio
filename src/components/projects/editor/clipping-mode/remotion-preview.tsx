@@ -17,18 +17,15 @@ interface RemotionPreviewProps {
 
 /**
  * Remotion 预览组件
- * 使用 Remotion Player 实现帧精确的视频预览
  */
 export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
   const {
     playerRef,
     compositionProps,
-    currentClip,
     handleFrameUpdate,
     handlePlayingChange,
   } = playback;
 
-  // 渲染加载状态
   const renderLoading = useCallback(() => {
     return (
       <div className="flex items-center justify-center w-full h-full bg-black">
@@ -37,7 +34,6 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     );
   }, []);
 
-  // 渲染错误状态
   const errorFallback = useCallback(({ error }: { error: Error }) => {
     console.error("Remotion Player error:", error);
     return (
@@ -48,7 +44,6 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     );
   }, []);
 
-  // 设置 Player 事件监听
   useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
@@ -72,7 +67,6 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     };
   }, [playerRef, handleFrameUpdate, handlePlayingChange]);
 
-  // 空状态
   if (!timeline || timeline.clips.length === 0 || !compositionProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 text-white/60 h-full">
@@ -84,7 +78,6 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* 预览画面 */}
       <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-black">
         <Player<z.ZodTypeAny, TimelineCompositionProps>
           ref={playerRef}
@@ -104,18 +97,6 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
           renderLoading={renderLoading}
           errorFallback={errorFallback}
         />
-
-        {/* 当前片段信息 */}
-        {currentClip && (
-          <div className="absolute top-4 left-4 px-3 py-2 rounded-lg bg-black/80 backdrop-blur-sm text-white text-sm z-30">
-            <div className="font-medium">{currentClip.asset.name}</div>
-            <div className="text-xs text-white/70 mt-1">
-              片段{" "}
-              {timeline.clips.findIndex((c) => c.id === currentClip.id) + 1} /{" "}
-              {timeline.clips.length}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
