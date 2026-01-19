@@ -100,7 +100,7 @@ export function ClippingModeLayout() {
         <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
           {/* 上部：预览窗口 */}
           <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
-            <div className="h-full w-full bg-zinc-950 flex items-center justify-center">
+            <div className="h-full w-full bg-zinc-950 relative">
               <RemotionPreview playback={playback} timeline={timeline} />
             </div>
           </ResizablePanel>

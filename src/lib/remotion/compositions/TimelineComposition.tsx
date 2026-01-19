@@ -12,7 +12,7 @@ export const TimelineComposition: React.FC<TimelineCompositionProps> = ({
   const audioTracks = tracks.filter((t) => t.type === "audio");
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "black" }}>
+    <AbsoluteFill style={{ backgroundColor: "#1a1a1a" }}>
       {/* 视频轨道层 - 按 trackIndex 堆叠，索引小的在下层 */}
       {videoTracks
         .sort((a, b) => a.trackIndex - b.trackIndex)

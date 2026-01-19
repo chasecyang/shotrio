@@ -28,7 +28,7 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
 
   const renderLoading = useCallback(() => {
     return (
-      <div className="flex items-center justify-center w-full h-full bg-black">
+      <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a]">
         <Spinner className="w-8 h-8 text-white" />
       </div>
     );
@@ -37,7 +37,7 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
   const errorFallback = useCallback(({ error }: { error: Error }) => {
     console.error("Remotion Player error:", error);
     return (
-      <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-black">
+      <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-[#1a1a1a]">
         <AlertCircle className="w-12 h-12 text-red-400" />
         <p className="text-sm text-white/80">视频加载失败</p>
       </div>
@@ -77,27 +77,25 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-black">
-        <Player<z.ZodTypeAny, TimelineCompositionProps>
-          ref={playerRef}
-          component={TimelineComposition}
-          inputProps={compositionProps}
-          durationInFrames={compositionProps.durationInFrames}
-          compositionWidth={compositionProps.width}
-          compositionHeight={compositionProps.height}
-          fps={compositionProps.fps}
-          style={{
-            width: "100%",
-            height: "100%",
-          }}
-          controls={false}
-          spaceKeyToPlayOrPause
-          clickToPlay
-          renderLoading={renderLoading}
-          errorFallback={errorFallback}
-        />
-      </div>
+    <div className="absolute inset-0 bg-black">
+      <Player<z.ZodTypeAny, TimelineCompositionProps>
+        ref={playerRef}
+        component={TimelineComposition}
+        inputProps={compositionProps}
+        durationInFrames={compositionProps.durationInFrames}
+        compositionWidth={compositionProps.width}
+        compositionHeight={compositionProps.height}
+        fps={compositionProps.fps}
+        style={{
+          width: "100%",
+          height: "100%",
+        }}
+        controls={false}
+        spaceKeyToPlayOrPause
+        clickToPlay
+        renderLoading={renderLoading}
+        errorFallback={errorFallback}
+      />
     </div>
   );
 }

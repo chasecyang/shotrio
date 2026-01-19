@@ -23,7 +23,8 @@ import { AudioClipItem } from "./audio-clip-item";
 import { AssetStripPanel } from "./asset-strip-panel";
 import { TimelineDragProvider, useTimelineDrag } from "./timeline-drag-context";
 import { cn } from "@/lib/utils";
-import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks } from "@/lib/actions/timeline";
+import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks, updateTimeline as updateTimelineAction } from "@/lib/actions/timeline";
+import { ResolutionSelector } from "./resolution-selector";
 import { toast } from "sonner";
 import { AssetWithFullData } from "@/types/asset";
 import {
@@ -138,6 +139,17 @@ function TimelinePanelContent({
   // 分离视频和音频轨道
   const videoTracks = useMemo(() => getVideoTracks(tracks), [tracks]);
   const audioTracks = useMemo(() => getAudioTracks(tracks), [tracks]);
+
+  // 分辨率变更处理
+  const handleResolutionChange = useCallback(async (newResolution: string) => {
+    if (!timeline) return;
+    const result = await updateTimelineAction(timeline.id, { resolution: newResolution });
+    if (result.success && result.timeline) {
+      updateTimeline(result.timeline);
+    } else {
+      toast.error("更新分辨率失败");
+    }
+  }, [timeline, updateTimeline]);
 
   // 按轨道分组片段
   const clipsByTrack = useMemo(() => {
@@ -762,8 +774,13 @@ function TimelinePanelContent({
     <div className="h-full flex flex-col bg-background">
       {/* 工具栏 */}
       <div className="h-12 border-b flex items-center justify-between px-4 gap-3 shrink-0">
-        {/* 左侧占位 */}
-        <div className="flex items-center gap-3" />
+        {/* 左侧：分辨率选择 */}
+        <div className="flex items-center gap-3">
+          <ResolutionSelector
+            value={timeline.resolution}
+            onValueChange={handleResolutionChange}
+          />
+        </div>
 
         {/* 中央：播放控制按钮组 */}
         <div className="flex items-center gap-1">

@@ -119,7 +119,7 @@ export async function createTimeline(
       description: input.description,
       duration: 0,
       fps: input.fps || 30,
-      resolution: input.resolution || "1080x1920",
+      resolution: input.resolution || "1920x1080",
       metadata: initialMetadata,
       createdAt: now,
       updatedAt: now,
