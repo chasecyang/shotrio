@@ -71,8 +71,11 @@ export function useClipDrag({
 
       setDragOffset(0);
 
+      // 始终调用 onDragEnd，让父组件清除 draggedClipId
       if (Math.abs(newStartTime - clip.startTime) > 10) {
         onDragEnd(clip.id, newStartTime);
+      } else {
+        onDragEnd(clip.id, clip.startTime);
       }
     };
 

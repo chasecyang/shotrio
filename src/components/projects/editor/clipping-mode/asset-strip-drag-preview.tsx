@@ -28,7 +28,7 @@ export function AssetStripDragPreview({ asset, position }: AssetStripDragPreview
 
   const content = (
     <div
-      className="fixed pointer-events-none z-[9999]"
+      className="fixed pointer-events-none z-[9999] flex flex-col items-center"
       style={{
         left: position.x - 28, // 居中显示（56/2 = 28）
         top: position.y - 28,
@@ -36,7 +36,7 @@ export function AssetStripDragPreview({ asset, position }: AssetStripDragPreview
       }}
     >
       <div
-        className="rounded-lg border-2 border-primary bg-card overflow-hidden shadow-2xl"
+        className="relative rounded-lg border-2 border-primary bg-card overflow-hidden shadow-2xl"
         style={{ width: 56, height: 56 }}
       >
         {asset.displayUrl && asset.assetType === "video" ? (
@@ -64,6 +64,11 @@ export function AssetStripDragPreview({ asset, position }: AssetStripDragPreview
           </div>
         )}
       </div>
+
+      {/* 素材名称 */}
+      <span className="text-[10px] text-white truncate text-center mt-1 leading-tight drop-shadow-md max-w-14">
+        {asset.name}
+      </span>
     </div>
   );
 

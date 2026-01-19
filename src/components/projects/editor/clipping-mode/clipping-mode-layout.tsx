@@ -16,6 +16,8 @@ import { useRemotionPlayback } from "@/hooks/use-remotion-playback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 import { DEFAULT_TRACK_STATES, TrackStates, getTimelineTracks, generateTrackStates } from "@/types/timeline";
+import { AssetPreviewOverlay } from "./asset-preview-overlay";
+import { AssetWithFullData } from "@/types/asset";
 
 export function ClippingModeLayout() {
   const { state, setTimeline } = useEditor();
@@ -25,6 +27,9 @@ export function ClippingModeLayout() {
 
   // 轨道状态（音量、静音）- 根据 timeline 的轨道配置动态生成
   const [trackStates, setTrackStates] = useState<TrackStates>(DEFAULT_TRACK_STATES);
+
+  // 单素材预览状态
+  const [previewAsset, setPreviewAsset] = useState<AssetWithFullData | null>(null);
 
   // 当 timeline 加载后，根据其轨道配置更新 trackStates
   useEffect(() => {
@@ -102,6 +107,12 @@ export function ClippingModeLayout() {
           <ResizablePanel defaultSize={60} minSize={30} className="overflow-hidden">
             <div className="h-full w-full bg-zinc-950 relative">
               <RemotionPreview playback={playback} timeline={timeline} />
+              {previewAsset && (
+                <AssetPreviewOverlay
+                  asset={previewAsset}
+                  onClose={() => setPreviewAsset(null)}
+                />
+              )}
             </div>
           </ResizablePanel>
 
@@ -113,6 +124,7 @@ export function ClippingModeLayout() {
               playback={playback}
               trackStates={trackStates}
               onToggleTrackMute={toggleTrackMute}
+              onPreviewAsset={setPreviewAsset}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

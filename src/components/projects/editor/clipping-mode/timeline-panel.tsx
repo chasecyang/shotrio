@@ -49,6 +49,7 @@ interface TimelinePanelProps {
   playback: UseRemotionPlaybackReturn;
   trackStates: TrackStates;
   onToggleTrackMute: (trackIndex: number) => void;
+  onPreviewAsset?: (asset: AssetWithFullData) => void;
 }
 
 /**
@@ -90,6 +91,7 @@ function TimelinePanelContent({
   playback,
   trackStates,
   onToggleTrackMute,
+  onPreviewAsset,
 }: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
@@ -258,9 +260,6 @@ function TimelinePanelContent({
         }
         currentY += track.height;
       }
-
-      // 添加视频轨道按钮占位 (28px)
-      currentY += 28;
 
       // 分隔线 (1px)
       currentY += 1;
@@ -681,16 +680,16 @@ function TimelinePanelContent({
     setZoom(value[0] / 100);
   };
 
-  // 添加新轨道
-  const handleAddTrack = async (type: "video" | "audio") => {
+  // 添加音频轨道
+  const handleAddAudioTrack = async () => {
     if (!timeline) return;
 
-    const newTracks = addTrackToConfig(tracks, type);
+    const newTracks = addTrackToConfig(tracks, "audio");
     const result = await updateTimelineTracks(timeline.id, newTracks);
 
     if (result.success && result.timeline) {
       updateTimeline(result.timeline);
-      toast.success(`已添加${type === "video" ? "视频" : "音频"}轨道`);
+      toast.success("已添加音频轨道");
     } else {
       toast.error(result.error || "添加轨道失败");
     }
@@ -865,6 +864,7 @@ function TimelinePanelContent({
       <AssetStripPanel
         projectId={timeline.projectId}
         tracks={tracks}
+        onPreviewAsset={onPreviewAsset}
       />
 
       {/* 时间轴主体 */}
@@ -905,19 +905,6 @@ function TimelinePanelContent({
                 </div>
               );
             })}
-
-            {/* 添加视频轨道按钮 */}
-            <div className="h-7 border-b flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 text-xs gap-1 px-2 text-muted-foreground hover:text-foreground"
-                onClick={() => handleAddTrack("video")}
-              >
-                <Plus className="h-3 w-3" />
-                视频轨
-              </Button>
-            </div>
 
             {/* 视频/音频分隔线 */}
             <div className="h-px bg-border" />
@@ -973,7 +960,7 @@ function TimelinePanelContent({
                 variant="ghost"
                 size="sm"
                 className="h-5 text-xs gap-1 px-2 text-muted-foreground hover:text-foreground"
-                onClick={() => handleAddTrack("audio")}
+                onClick={handleAddAudioTrack}
               >
                 <Plus className="h-3 w-3" />
                 音频轨
@@ -1131,9 +1118,6 @@ function TimelinePanelContent({
                     </div>
                   );
                 })}
-
-                {/* 添加视频轨道按钮占位 */}
-                <div className="h-7 border-b mr-4" style={{ width: Math.max(totalWidth, 800) }} />
 
                 {/* 视频/音频分隔线 */}
                 <div className="h-px bg-border mr-4" />

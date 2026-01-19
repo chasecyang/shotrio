@@ -20,6 +20,7 @@ const EXPANDED_KEY = "timeline:assetStrip:expanded";
 interface AssetStripPanelProps {
   projectId: string;
   tracks: TrackConfig[];
+  onPreviewAsset?: (asset: AssetWithFullData) => void;
 }
 
 /**
@@ -28,6 +29,7 @@ interface AssetStripPanelProps {
 export function AssetStripPanel({
   projectId,
   tracks,
+  onPreviewAsset,
 }: AssetStripPanelProps) {
   const { state } = useEditor();
   const { project } = state;
@@ -110,7 +112,10 @@ export function AssetStripPanel({
           {isLoading ? (
             <div className="flex gap-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="w-14 h-14 rounded-lg shrink-0" />
+                <div key={i} className="flex flex-col items-center shrink-0">
+                  <Skeleton className="w-14 h-14 rounded-lg" />
+                  <Skeleton className="w-12 h-3 mt-1 rounded" />
+                </div>
               ))}
             </div>
           ) : assets.length === 0 ? (
@@ -122,7 +127,11 @@ export function AssetStripPanel({
             <ScrollArea className="flex-1">
               <div className="flex gap-2 pb-2">
                 {assets.map((asset) => (
-                  <AssetThumbnailItem key={asset.id} asset={asset} />
+                  <AssetThumbnailItem
+                    key={asset.id}
+                    asset={asset}
+                    onPreviewAsset={onPreviewAsset}
+                  />
                 ))}
               </div>
               <ScrollBar orientation="horizontal" />
