@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import NextImage from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -134,11 +135,14 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
                 poster={project.template.thumbnail || undefined}
               />
             ) : project.template.thumbnail ? (
-              <img
-                src={project.template.thumbnail}
-                alt={project.title}
-                className="w-full aspect-video object-cover"
-              />
+              <div className="relative w-full aspect-video">
+                <NextImage
+                  src={project.template.thumbnail}
+                  alt={project.title}
+                  fill
+                  className="object-cover"
+                />
+              </div>
             ) : (
               <div className="w-full aspect-video bg-muted flex items-center justify-center text-muted-foreground">
                 暂无预览

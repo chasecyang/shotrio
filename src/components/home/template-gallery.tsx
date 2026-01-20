@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,10 +105,11 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
           <>
             {/* 缩略图（默认显示） */}
             {template.thumbnail && (
-              <img
+              <Image
                 src={template.thumbnail}
                 alt={template.title}
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                fill
+                className={`object-cover transition-opacity duration-300 ${
                   isHovering ? "opacity-0" : "opacity-100"
                 }`}
               />
@@ -133,10 +135,11 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
             )}
           </>
         ) : template.thumbnail ? (
-          <img
+          <Image
             src={template.thumbnail}
             alt={template.title}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">

@@ -401,8 +401,8 @@ export async function editAssetImageAsVersion(
       return { success: false, error: "此方法仅支持图片素材" };
     }
 
-    // 合并参考图：原素材 + 额外参考图
-    const allSourceAssetIds = [assetId, ...sourceAssetIds].slice(0, 8);
+    // 直接使用用户选择的参考素材
+    const allSourceAssetIds = sourceAssetIds.slice(0, 8);
 
     // 查询源资产的激活版本，记录版本快照
     const sourceVersionIds: string[] = [];
