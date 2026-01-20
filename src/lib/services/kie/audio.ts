@@ -83,21 +83,33 @@ export interface MusicGenerateResponse {
 
 /**
  * Suno Music 任务详情响应
+ * 注意：API 返回的状态是大写的，数据在 response.sunoData 中
  */
 export interface MusicTaskDetails {
   code: number;
   msg: string;
   data: {
     taskId: string;
-    status: "waiting" | "processing" | "complete" | "failed";
-    songs?: Array<{
-      id: string;
-      audioUrl: string;
-      imageUrl?: string;
-      title?: string;
-      duration?: number;
-    }>;
-    errorMessage?: string;
+    status:
+      | "PENDING"
+      | "TEXT_SUCCESS"
+      | "FIRST_SUCCESS"
+      | "SUCCESS"
+      | "CREATE_TASK_FAILED"
+      | "GENERATE_AUDIO_FAILED"
+      | "CALLBACK_EXCEPTION"
+      | "SENSITIVE_WORD_ERROR";
+    response?: {
+      sunoData?: Array<{
+        id: string;
+        audioUrl: string;
+        imageUrl?: string;
+        title?: string;
+        duration?: number;
+      }>;
+    };
+    errorCode?: string | null;
+    errorMessage?: string | null;
   };
 }
 
@@ -287,6 +299,8 @@ export async function getMusicTaskDetails(
     throw new Error(`Suno 任务查询失败: ${data.msg || "未知错误"}`);
   }
 
+  console.log(`[Kie Audio] 任务 ${taskId} 状态: ${data.data.status}`);
+
   // 转换状态
   let status: MusicGenerationOutput["status"];
   let audioUrl: string | undefined;
@@ -294,21 +308,28 @@ export async function getMusicTaskDetails(
   let title: string | undefined;
 
   switch (data.data.status) {
-    case "waiting":
-    case "processing":
+    case "PENDING":
+    case "TEXT_SUCCESS":
+    case "FIRST_SUCCESS":
       status = "processing";
       break;
-    case "complete":
+    case "SUCCESS":
       status = "completed";
-      // 取第一首歌
-      if (data.data.songs && data.data.songs.length > 0) {
-        const song = data.data.songs[0];
+      // 从 response.sunoData 获取歌曲数据
+      if (
+        data.data.response?.sunoData &&
+        data.data.response.sunoData.length > 0
+      ) {
+        const song = data.data.response.sunoData[0];
         audioUrl = song.audioUrl;
         duration = song.duration ? song.duration * 1000 : undefined; // 转为毫秒
         title = song.title;
       }
       break;
-    case "failed":
+    case "CREATE_TASK_FAILED":
+    case "GENERATE_AUDIO_FAILED":
+    case "CALLBACK_EXCEPTION":
+    case "SENSITIVE_WORD_ERROR":
       status = "failed";
       break;
     default:
@@ -321,7 +342,7 @@ export async function getMusicTaskDetails(
     audioUrl,
     duration,
     title,
-    error: data.data.errorMessage,
+    error: data.data.errorMessage ?? undefined,
   };
 }
 
