@@ -116,6 +116,7 @@ export function getAssetErrorMessage(
  *
  * @param imageDataList - 图片数据版本列表（新版本化结构）
  * @param videoDataList - 视频数据版本列表（新版本化结构）
+ * @param otherGeneratingJob - 其他正在生成的版本的 Job（可选）
  */
 export function enrichAssetWithFullData(
   asset: Asset,
@@ -124,7 +125,8 @@ export function enrichAssetWithFullData(
   videoDataList: VideoData[],
   textData: TextData | null,
   audioData: AudioData | null,
-  latestJob?: Job | null
+  latestJob?: Job | null,
+  otherGeneratingJob?: Job | null
 ): AssetWithFullData {
   // 找到激活版本
   const activeImageData = imageDataList.find((v) => v.isActive) ?? imageDataList[0] ?? null;
@@ -169,6 +171,13 @@ export function enrichAssetWithFullData(
   const generationConfig = activeImageData?.generationConfig ?? activeVideoData?.generationConfig ?? audioData?.generationConfig ?? null;
   const sourceAssetIds = activeImageData?.sourceAssetIds ?? activeVideoData?.sourceAssetIds ?? audioData?.sourceAssetIds ?? null;
 
+  // 计算其他版本生成状态
+  const hasOtherVersionGenerating = !!otherGeneratingJob &&
+    (otherGeneratingJob.status === 'pending' || otherGeneratingJob.status === 'processing');
+  const otherVersionStatus = hasOtherVersionGenerating
+    ? (otherGeneratingJob!.status as 'pending' | 'processing')
+    : null;
+
   return {
     ...asset,
     tags,
@@ -200,6 +209,11 @@ export function enrichAssetWithFullData(
     generationConfig,
     sourceAssetIds,
     latestJobId: latestJob?.id ?? null,
+
+    // 其他版本生成状态
+    hasOtherVersionGenerating,
+    otherVersionJob: otherGeneratingJob ?? null,
+    otherVersionStatus,
   };
 }
 
@@ -225,10 +239,12 @@ export function enrichAssetsWithFullData(
     textData: TextData | null;
     audioData: AudioData | null;
   }>,
-  jobsMap: Map<string, Job>
+  jobsMap: Map<string, Job>,
+  otherGeneratingJobsMap: Map<string, Job> = new Map()
 ): AssetWithFullData[] {
   return assetsWithRelations.map((assetData) => {
     const latestJob = jobsMap.get(assetData.id);
+    const otherGeneratingJob = otherGeneratingJobsMap.get(assetData.id);
     return enrichAssetWithFullData(
       assetData as Asset,
       assetData.tags,
@@ -236,7 +252,8 @@ export function enrichAssetsWithFullData(
       assetData.videoDataList ?? [],
       assetData.textData,
       assetData.audioData,
-      latestJob
+      latestJob,
+      otherGeneratingJob
     );
   });
 }

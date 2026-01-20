@@ -541,6 +541,14 @@ export interface AssetWithFullData extends Asset {
   sourceAssetIds: string[] | null;
   /** 最新关联任务 ID（用于重试等操作） */
   latestJobId: string | null;
+
+  // ========== 其他版本生成状态 ==========
+  /** 是否有其他版本（非激活）正在生成 */
+  hasOtherVersionGenerating: boolean;
+  /** 其他正在生成的版本的 Job（用于显示进度） */
+  otherVersionJob: import("@/types/job").Job | null;
+  /** 其他版本的状态：'pending' | 'processing' | null */
+  otherVersionStatus: 'pending' | 'processing' | null;
 }
 
 /**

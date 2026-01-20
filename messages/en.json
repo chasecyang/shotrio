@@ -1091,7 +1091,8 @@
     "assetCard": {
       "aiEdit": "AI Edit Image",
       "regenerate": "Regenerate",
-      "delete": "Delete"
+      "delete": "Delete",
+      "generatingNewVersion": "Generating new version"
     },
     "assetEdit": {
       "title": "Edit Asset",

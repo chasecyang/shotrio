@@ -258,14 +258,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "delete_asset",
-    description: "删除资产（支持单个或批量，同时支持图片素材和视频素材）。删除后无法恢复，请谨慎使用。适合清理不需要的素材、删除生成失败的资产。",
+    description: "删除资产（支持单个或批量，同时支持图片、视频、音频和文本素材）。删除后无法恢复，请谨慎使用。适合清理不需要的素材、删除生成失败的资产。",
     displayName: "删除资产",
     parameters: {
       type: "object",
       properties: {
         assetIds: {
           type: "array",
-          description: "要删除的资产ID数组（可以是图片或视频的ID）",
+          description: "要删除的资产ID数组（可以是图片、视频、音频或文本的ID）",
         },
       },
       required: ["assetIds"],

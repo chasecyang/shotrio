@@ -42,18 +42,37 @@ export async function getAssetWithFullData(
   const activeImageData = assetData.imageDataList?.find((v: any) => v.isActive) ?? null;
   const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive) ?? null;
 
-  // 查询激活版本关联的最新 job
-  let latestJob = null;
-  if (activeImageData?.id) {
-    latestJob = await db.query.job.findFirst({
-      where: eq(job.imageDataId, activeImageData.id),
+  // 收集所有版本 ID
+  const allVersionIds = [
+    ...(assetData.imageDataList?.map((v: any) => v.id) || []),
+    ...(assetData.videoDataList?.map((v: any) => v.id) || []),
+  ];
+
+  // 查询所有版本的 jobs
+  const allJobsMap = new Map<string, Job>();
+
+  if (allVersionIds.length > 0) {
+    // 查询所有版本关联的 jobs
+    const versionJobs = await db.query.job.findMany({
+      where: sql`(${job.imageDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}) OR ${job.videoDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}))`,
       orderBy: [desc(job.createdAt)],
     });
-  } else if (activeVideoData?.id) {
-    latestJob = await db.query.job.findFirst({
-      where: eq(job.videoDataId, activeVideoData.id),
-      orderBy: [desc(job.createdAt)],
-    });
+
+    // 为每个版本保存最新的 job
+    for (const versionJob of versionJobs) {
+      const versionId = versionJob.imageDataId || versionJob.videoDataId;
+      if (versionId && !allJobsMap.has(versionId)) {
+        allJobsMap.set(versionId, versionJob as Job);
+      }
+    }
+  }
+
+  // 获取激活版本的 job
+  let latestJob: Job | null = null;
+  if (activeImageData?.id && allJobsMap.has(activeImageData.id)) {
+    latestJob = allJobsMap.get(activeImageData.id)!;
+  } else if (activeVideoData?.id && allJobsMap.has(activeVideoData.id)) {
+    latestJob = allJobsMap.get(activeVideoData.id)!;
   }
 
   // 如果新关联没找到，回退到旧的 assetId 关联（迁移兼容）
@@ -64,7 +83,20 @@ export async function getAssetWithFullData(
         inArray(job.type, ['asset_image', 'asset_video', 'asset_audio'])
       ),
       orderBy: [desc(job.createdAt)],
-    });
+    }) as Job | null;
+  }
+
+  // 查找其他正在生成的版本
+  let otherGeneratingJob: Job | null = null;
+  for (const versionId of allVersionIds) {
+    // 跳过激活版本
+    if (versionId === activeImageData?.id || versionId === activeVideoData?.id) continue;
+
+    const versionJob = allJobsMap.get(versionId);
+    if (versionJob && (versionJob.status === 'pending' || versionJob.status === 'processing')) {
+      otherGeneratingJob = versionJob;
+      break; // 只需要第一个正在生成的版本
+    }
   }
 
   return enrichAssetWithFullData(
@@ -74,7 +106,8 @@ export async function getAssetWithFullData(
     assetData.videoDataList ?? [],
     assetData.textData,
     assetData.audioData,
-    latestJob as Job | null
+    latestJob,
+    otherGeneratingJob
   );
 }
 
@@ -110,23 +143,33 @@ export async function queryAssetsWithFullData(
     return [];
   }
 
-  // 收集所有激活版本的 ID
-  const imageDataIds: string[] = [];
-  const videoDataIds: string[] = [];
+  // 收集所有版本 ID 和激活版本 ID
+  const allImageDataIds: string[] = [];
+  const allVideoDataIds: string[] = [];
+  const activeImageDataMap = new Map<string, string>(); // assetId -> activeImageDataId
+  const activeVideoDataMap = new Map<string, string>(); // assetId -> activeVideoDataId
   const assetIds = assetsData.map((a) => a.id);
 
   for (const assetData of assetsData) {
     const activeImageData = assetData.imageDataList?.find((v: any) => v.isActive);
     const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive);
-    if (activeImageData?.id) imageDataIds.push(activeImageData.id);
-    if (activeVideoData?.id) videoDataIds.push(activeVideoData.id);
+
+    // 记录激活版本
+    if (activeImageData?.id) activeImageDataMap.set(assetData.id, activeImageData.id);
+    if (activeVideoData?.id) activeVideoDataMap.set(assetData.id, activeVideoData.id);
+
+    // 收集所有版本 ID
+    assetData.imageDataList?.forEach((v: any) => allImageDataIds.push(v.id));
+    assetData.videoDataList?.forEach((v: any) => allVideoDataIds.push(v.id));
   }
 
-  // 批量查询所有关联的 jobs（优先通过版本 ID，回退到 assetId）
-  const jobsMap = new Map<string, Job>();
+  // 批量查询所有关联的 jobs（所有版本，不仅仅是激活版本）
+  const allJobsMap = new Map<string, Job>(); // versionId -> latest job
+  const activeJobsMap = new Map<string, Job>(); // assetId -> active version's job
+  const otherGeneratingJobsMap = new Map<string, Job>(); // assetId -> other generating job
 
-  // 查询版本关联的 jobs
-  if (imageDataIds.length > 0) {
+  // 查询所有图片版本关联的 jobs
+  if (allImageDataIds.length > 0) {
     const imageJobs = await db
       .select({
         imageDataId: job.imageDataId,
@@ -134,22 +177,17 @@ export async function queryAssetsWithFullData(
         rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.imageDataId} ORDER BY ${job.createdAt} DESC)`,
       })
       .from(job)
-      .where(inArray(job.imageDataId, imageDataIds));
+      .where(inArray(job.imageDataId, allImageDataIds));
 
     for (const row of imageJobs) {
       if (Number(row.rn) === 1 && row.imageDataId) {
-        // 找到对应的 assetId
-        const assetData = assetsData.find((a: any) =>
-          a.imageDataList?.some((v: any) => v.id === row.imageDataId)
-        );
-        if (assetData) {
-          jobsMap.set(assetData.id, row.job as Job);
-        }
+        allJobsMap.set(row.imageDataId, row.job as Job);
       }
     }
   }
 
-  if (videoDataIds.length > 0) {
+  // 查询所有视频版本关联的 jobs
+  if (allVideoDataIds.length > 0) {
     const videoJobs = await db
       .select({
         videoDataId: job.videoDataId,
@@ -157,22 +195,47 @@ export async function queryAssetsWithFullData(
         rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.videoDataId} ORDER BY ${job.createdAt} DESC)`,
       })
       .from(job)
-      .where(inArray(job.videoDataId, videoDataIds));
+      .where(inArray(job.videoDataId, allVideoDataIds));
 
     for (const row of videoJobs) {
       if (Number(row.rn) === 1 && row.videoDataId) {
-        const assetData = assetsData.find((a: any) =>
-          a.videoDataList?.some((v: any) => v.id === row.videoDataId)
-        );
-        if (assetData && !jobsMap.has(assetData.id)) {
-          jobsMap.set(assetData.id, row.job as Job);
-        }
+        allJobsMap.set(row.videoDataId, row.job as Job);
+      }
+    }
+  }
+
+  // 分配 jobs 到激活版本和其他生成中的版本
+  for (const assetData of assetsData) {
+    const activeImageId = activeImageDataMap.get(assetData.id);
+    const activeVideoId = activeVideoDataMap.get(assetData.id);
+
+    // 获取激活版本的 job
+    if (activeImageId && allJobsMap.has(activeImageId)) {
+      activeJobsMap.set(assetData.id, allJobsMap.get(activeImageId)!);
+    } else if (activeVideoId && allJobsMap.has(activeVideoId)) {
+      activeJobsMap.set(assetData.id, allJobsMap.get(activeVideoId)!);
+    }
+
+    // 检查非激活版本中是否有正在生成的
+    const allVersionIds = [
+      ...(assetData.imageDataList?.map((v: any) => v.id) || []),
+      ...(assetData.videoDataList?.map((v: any) => v.id) || []),
+    ];
+
+    for (const versionId of allVersionIds) {
+      // 跳过激活版本
+      if (versionId === activeImageId || versionId === activeVideoId) continue;
+
+      const versionJob = allJobsMap.get(versionId);
+      if (versionJob && (versionJob.status === 'pending' || versionJob.status === 'processing')) {
+        otherGeneratingJobsMap.set(assetData.id, versionJob);
+        break; // 只需要第一个正在生成的版本
       }
     }
   }
 
   // 回退：查询通过 assetId 关联的 jobs（迁移兼容）
-  const assetsWithoutJobs = assetIds.filter((id) => !jobsMap.has(id));
+  const assetsWithoutJobs = assetIds.filter((id) => !activeJobsMap.has(id));
   if (assetsWithoutJobs.length > 0) {
     const fallbackJobs = await db
       .select({
@@ -189,13 +252,13 @@ export async function queryAssetsWithFullData(
       );
 
     for (const row of fallbackJobs) {
-      if (Number(row.rn) === 1 && row.assetId && !jobsMap.has(row.assetId)) {
-        jobsMap.set(row.assetId, row.job as Job);
+      if (Number(row.rn) === 1 && row.assetId && !activeJobsMap.has(row.assetId)) {
+        activeJobsMap.set(row.assetId, row.job as Job);
       }
     }
   }
 
-  return enrichAssetsWithFullData(assetsData as any, jobsMap);
+  return enrichAssetsWithFullData(assetsData as any, activeJobsMap, otherGeneratingJobsMap);
 }
 
 /**

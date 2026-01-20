@@ -108,6 +108,11 @@ function TimelinePanelContent({
     resetDrag,
   } = useTimelineDrag();
 
+  // Refs to store latest drag state values (avoid frequent useEffect re-runs)
+  const dropTargetTrackRef = useRef(dropTargetTrack);
+  const draggedAssetRef = useRef(draggedAsset);
+  const dropPositionRef = useRef(dropPosition);
+
   const [zoom, setZoom] = useState(1); // 缩放级别
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
@@ -295,20 +300,33 @@ function TimelinePanelContent({
     return () => window.removeEventListener("mousemove", handleAssetDragMove);
   }, [isDragging, videoTracks, audioTracks, pixelsPerMs, setDropTarget]);
 
-  // 素材拖拽释放监听
+  // Sync refs with latest drag state values
+  useEffect(() => {
+    dropTargetTrackRef.current = dropTargetTrack;
+  }, [dropTargetTrack]);
+
+  useEffect(() => {
+    draggedAssetRef.current = draggedAsset;
+  }, [draggedAsset]);
+
+  useEffect(() => {
+    dropPositionRef.current = dropPosition;
+  }, [dropPosition]);
+
+  // 素材拖拽释放监听 - 使用 ref 避免频繁替换监听器
   useEffect(() => {
     if (!isDragging) return;
 
     const handleAssetDragEnd = async () => {
-      if (dropTargetTrack !== null && draggedAsset && dropPosition !== null) {
-        await handleAssetDropFromDrag(draggedAsset, dropTargetTrack, dropPosition);
+      if (dropTargetTrackRef.current !== null && draggedAssetRef.current && dropPositionRef.current !== null) {
+        await handleAssetDropFromDrag(draggedAssetRef.current, dropTargetTrackRef.current, dropPositionRef.current);
       }
       resetDrag();
     };
 
     window.addEventListener("mouseup", handleAssetDragEnd);
     return () => window.removeEventListener("mouseup", handleAssetDragEnd);
-  }, [isDragging, dropTargetTrack, draggedAsset, dropPosition, resetDrag]);
+  }, [isDragging, resetDrag]);
 
   // ESC 键取消拖拽
   useEffect(() => {

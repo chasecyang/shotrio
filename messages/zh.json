@@ -1091,7 +1091,8 @@
     "assetCard": {
       "aiEdit": "AI 编辑图片",
       "regenerate": "重新生成",
-      "delete": "删除"
+      "delete": "删除",
+      "generatingNewVersion": "正在生成新版本"
     },
     "assetEdit": {
       "title": "编辑素材",

@@ -61,6 +61,9 @@ export function AssetCard({
   // 检查资产是否失败
   const isFailed = asset.runtimeStatus === "failed";
 
+  // 检查是否有其他版本正在生成（当前激活版本已完成但有其他版本正在生成）
+  const hasOtherGenerating = asset.hasOtherVersionGenerating && !isGenerating && !isFailed;
+
   // 获取 job
   const currentJob = job;
 
@@ -225,6 +228,62 @@ export function AssetCard({
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="bg-background/80 rounded-full p-3 backdrop-blur-sm">
                   <Play className="h-6 w-6 text-foreground fill-foreground" />
+                </div>
+              </div>
+            )}
+            {/* 其他版本生成中指示器 - 与 AssetProgressOverlay 风格统一 */}
+            {hasOtherGenerating && (
+              <div className="absolute inset-0 pointer-events-none bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+                {/* 波纹动画背景 - 简化版 */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }} />
+                </div>
+
+                {/* 主内容区域 */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  {/* 环形进度指示器 */}
+                  <div className="relative w-12 h-12">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        className="text-muted/30"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 42}`}
+                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - (asset.otherVersionJob?.progress || 0) / 100)}`}
+                        className="text-primary transition-all duration-500 ease-out"
+                      />
+                    </svg>
+                    {/* 中心旋转图标 */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <RefreshCw className="h-5 w-5 text-primary animate-spin" />
+                    </div>
+                  </div>
+
+                  {/* 状态文字 */}
+                  <span className="text-xs font-medium text-foreground">
+                    {t("generatingNewVersion")}
+                  </span>
+                </div>
+
+                {/* 底部进度条 */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/50 overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-500 ease-out"
+                    style={{ width: `${asset.otherVersionJob?.progress || 0}%` }}
+                  />
                 </div>
               </div>
             )}

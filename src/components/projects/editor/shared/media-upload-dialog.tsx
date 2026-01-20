@@ -509,6 +509,8 @@ export function MediaUploadDialog({
                   <div
                     className="border-2 border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/30 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
                   >
                     <span className="text-sm text-muted-foreground">
                       {t("addMoreFiles")}
