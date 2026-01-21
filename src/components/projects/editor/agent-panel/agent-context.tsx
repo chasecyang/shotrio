@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
 import type {
   AgentMessage,
   AgentContext as AgentContextType,
@@ -220,6 +221,7 @@ interface AgentProviderProps {
 export function AgentProvider({ children, projectId }: AgentProviderProps) {
   const [state, dispatch] = useReducer(agentReducer, initialState);
   const editorContext = useEditor();
+  const locale = useLocale();
 
   // 防抖：跟踪刷新状态，避免并发刷新
   const isRefreshingRef = useRef(false);
@@ -444,14 +446,16 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       status: job.status,
       progressMessage: job.progressMessage,
     }));
-    
+
     return {
       projectId,
       recentJobs: serializableJobs,
+      locale: locale as "en" | "zh",
     };
   }, [
     projectId,
     editorContext.jobs,
+    locale,
   ]);
 
   // Context value（包含 state 以触发重新渲染）

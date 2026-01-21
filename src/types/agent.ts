@@ -70,6 +70,7 @@ export interface SerializableJobInfo {
 export interface AgentContext {
   projectId: string;
   recentJobs: SerializableJobInfo[]; // 使用序列化友好的格式
+  locale?: "en" | "zh"; // 用户语言设置
 }
 
 /**

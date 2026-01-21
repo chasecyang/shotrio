@@ -118,7 +118,7 @@ export class AgentEngine {
 
       // 构建系统消息
       const contextText = await collectContext(projectContext, conv.projectId);
-      const systemPrompt = buildSystemPrompt();
+      const systemPrompt = buildSystemPrompt(projectContext.locale);
       state.messages.push({ 
         role: "system", 
         content: `${systemPrompt}\n\n# 当前上下文\n\n${contextText}` 

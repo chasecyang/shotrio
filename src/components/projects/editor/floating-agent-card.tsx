@@ -116,7 +116,6 @@ export function FloatingAgentCard({
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
   const titleGeneratedRef = useRef<Set<string>>(new Set());
   const dragStartXRef = useRef<number>(0);
   const pendingMessageHandledRef = useRef(false);
@@ -240,9 +239,13 @@ export function FloatingAgentCard({
     if (!agent.state.isInitialLoadComplete) return;
     if (!pendingMessage || pendingMessageHandledRef.current) return;
 
-    pendingMessageHandledRef.current = true;
-
     const timer = setTimeout(async () => {
+      // 在 setTimeout 内部再次检查，避免竞态条件：
+      // 当依赖变化时 useEffect 会重新执行，清理函数取消 timer，
+      // 但如果标记在外部设置，后续执行会直接跳过
+      if (pendingMessageHandledRef.current) return;
+      pendingMessageHandledRef.current = true;
+
       try {
         const { conversationId, message } = pendingMessage;
 
@@ -533,7 +536,6 @@ export function FloatingAgentCard({
   if (position === "bottom") {
     const bottomContent = (
       <motion.div
-        ref={cardRef}
         animate={{
           x: dragOffset.x,
           y: dragOffset.y,
@@ -759,7 +761,6 @@ export function FloatingAgentCard({
   // 左右侧边栏模式
   const sidebarContent = (
     <motion.div
-      ref={cardRef}
       animate={{
         x: dragOffset.x,
         y: dragOffset.y,
