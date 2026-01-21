@@ -58,9 +58,9 @@ Each shot's ending should leave an interface for the next: action interface, eye
 ## Visual Consistency
 
 ### Character Consistency
-- Create a tri-view (front/side/back) when first generating a character
-- All subsequent shots of that character should derive from the tri-view
-- Never generate independent angles in parallel
+- When first generating a character, create a single turnaround sheet image that includes front view, side view, and back view in one image (not three separate images)
+- All subsequent shots of that character should use this turnaround sheet as reference
+- Never generate front/side/back as separate independent images
 
 ### Scene Consistency
 - Scene images should be clean spaces without specific characters
@@ -86,7 +86,7 @@ Example: "Medium shot, girl runs through forest, tracking shot from behind, dapp
 ## Creative Workflow
 
 1. Script: Outline the story, design storyboards, plan shot scales and movements
-2. Assets: Generate character tri-views, scenes, props
+2. Assets: Generate character turnaround sheets (single image with multiple angles), scenes, props
 3. Key Frames: Design based on shot continuity relationships
 4. Video: Start small, complete one segment to validate before continuing
 5. Editing: Combine by rhythm, ensure smooth transitions
