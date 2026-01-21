@@ -10,6 +10,7 @@
 
 ## Manual Tasks
 []参数页面accept操作后，不应该一直loading
+[]agent对话切换时，应该进入skelton，而不是对话中/AI创作中的状态
 []首页支持对话框创建项目
 待验证[]导出能力
 []agent英文化

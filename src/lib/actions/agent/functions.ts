@@ -70,35 +70,22 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   // ============================================
   {
     name: "generate_image_asset",
-    description: `生成或编辑图片资产。支持四种模式：
+    description: `生成或编辑图片资产。
 
-**模式1：文生图** - 从零生成全新图片
-- 不需要 sourceAssetIds 和 targetAssetId
-- prompt 描述完整的画面内容
+**四种模式**：
+1. **文生图**：只提供 prompt，从零生成
+2. **图片编辑**：sourceAssetIds + prompt 描述修改操作
+3. **多图合成**：多个 sourceAssetIds + prompt 描述如何合成
+4. **重新生成**：targetAssetId + prompt，为已有素材生成新版本
 
-**模式2：图片编辑** - 修改已有图片的某个部分
-- sourceAssetIds 传入要编辑的图片ID
-- prompt 描述要进行的修改操作
-- 示例：
-  - "Remove the person standing on the left"（移除人物）
-  - "Replace the background with a sunset beach"（换背景）
-  - "Change the hair color to blonde"（修改属性）
-  - "Make the lighting warmer, like golden hour"（调整氛围）
+**作为视频首尾帧时**：
+- 首帧：考虑从上一镜头的视觉延续（人物朝向、视线方向）
+- 尾帧：为下一镜头预留衔接点（动作趋势、视线指向）
 
-**模式3：多图合成** - 将多张图片的元素融合
-- sourceAssetIds 传入所有参考图片ID（最多8张）
-- prompt 描述如何合成
-- 示例：
-  - "Place the character from image 1 into the forest scene from image 2"（角色+场景）
-  - "Have this person wear the red dress from the second image"（人物+服装）
-  - "Create a pattern of the logo on the t-shirt"（Logo+产品）
-
-**模式4：重新生成** - 对已有素材生成新版本，保留历史版本可回滚
-- targetAssetId 传入要重新生成的素材ID
-- assets 数组只需提供第一个元素的 prompt（新的生成描述）
-- 示例：用户说"这张图片的光线不好，重新生成"时使用此模式
-
-使用建议：编辑操作一次只改一件事，复杂编辑分步进行。`,
+**编辑示例**：
+- "Remove the person on the left"（移除元素）
+- "Replace background with sunset beach"（换背景）
+- "Place character from image 1 into scene from image 2"（合成）`,
     displayName: "生成图片资产",
     parameters: {
       type: "object",
@@ -119,43 +106,21 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产。基于起始帧（必填）和结束帧（可选）生成视频过渡动画。使用 Veo3 视频生成服务，时长固定为 8 秒。
+    description: `生成视频资产（8秒，Veo3）。
 
-## 使用说明
+**prompt 结构**：[景别] + [主体动作] + [镜头运动] + [氛围]
 
-**适用场景：** 场景切换、时间流逝、物体变化等需要画面过渡的场景
+**好的 prompt 示例**：
+- "Wide establishing shot, village at dawn, slow pan left to right, golden morning mist"
+- "Medium shot, detective examines clues on desk, slow push-in, mysterious low-key lighting"
+- "Close-up on her trembling hands, static camera, shallow depth of field, emotional tension"
+- "Full shot, warrior charges forward, tracking shot from side, dust particles in dramatic backlight"
 
-**参数要求：**
-- **prompt**（必填）：详细描述视频内容和镜头运动（≥10字符）
-- **start_image_url**（必填）：起始帧图片的资产ID或URL
-- **end_image_url**（可选）：结束帧图片的资产ID或URL，不提供则由AI自动生成过渡
-- **aspect_ratio**（可选）：宽高比，"16:9" 或 "9:16"，默认 "16:9"
-- **targetAssetId**（可选）：重新生成模式。传入已有视频素材ID，将生成新版本而非新素材
-
-**示例：**
-\`\`\`json
-{
-  "prompt": "Smooth camera push-in. Cinematic transition from winter to spring.",
-  "start_image_url": "asset-winter-scene",
-  "end_image_url": "asset-spring-scene",
-  "title": "冬春季节过渡"
-}
-\`\`\`
-
-**重新生成示例：**
-\`\`\`json
-{
-  "targetAssetId": "existing-video-id",
-  "prompt": "Faster camera movement with more dramatic lighting",
-  "start_image_url": "asset-scene"
-}
-\`\`\`
-
-**注意事项：**
-1. prompt 应该详细描述镜头运动和画面内容
-2. 图片资产ID需要从 query_assets 查询获得
-3. 视频时长固定为 8 秒（Veo3 限制）
-4. 视频生成需要一定时间，任务创建后可通过轮询查看状态
+**参数**：
+- prompt（必填）：≥10字符，用英文描述
+- start_image_url（必填）：起始帧资产ID
+- end_image_url（可选）：结束帧资产ID，不提供则AI自动生成过渡
+- targetAssetId（可选）：重新生成模式，传入已有视频ID生成新版本
 `,
     displayName: "生成视频资产",
     parameters: {
