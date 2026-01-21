@@ -539,6 +539,15 @@
     "title": "What's New",
     "description": "Track the latest updates and improvements to Shotrio",
     "entries": {
+      "0121": {
+        "item1": "Agent responses adapt to your interface language",
+        "item2": "Agent cinematography improved for professional shot descriptions",
+        "item3": "Video regeneration with custom parameters and auto-filled frames",
+        "item4": "Timeline export feature launched",
+        "item5": "Asset thumbnails now show names for quick identification",
+        "item6": "New resolution selector with more output sizes",
+        "item7": "Editor UI polished for smoother interactions"
+      },
       "0109": {
         "item1": "Asset management UI fully upgraded"
       },
@@ -546,8 +555,7 @@
         "item1": "Audio generation launched (sound effects + background music)",
         "item2": "Dark mode optimized",
         "item3": "Video/Image generation capabilities enhanced",
-        "item4": "Template management feature",
-        "item5": "Google One Tap quick login"
+        "item4": "Google One Tap quick login"
       },
       "0107": {
         "item1": "Agent auto-accept mode",

@@ -42,3 +42,16 @@ export {
   type MusicGenerationOutput,
   type SunoModel,
 } from "./audio";
+
+// Sora 2 视频生成
+export {
+  generateSora2Video,
+  getSora2VideoDetails,
+  waitForSora2Video,
+  type Sora2Model,
+  type Sora2AspectRatio,
+  type Sora2Duration,
+  type Sora2Size,
+  type Sora2GenerateInput,
+  type Sora2VideoOutput,
+} from "./sora";

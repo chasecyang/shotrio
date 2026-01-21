@@ -35,6 +35,18 @@ export default async function ChangelogPage() {
 
   const changelog: ChangelogEntry[] = [
     {
+      date: "2026-01-21",
+      items: [
+        t("entries.0121.item1"),
+        t("entries.0121.item2"),
+        t("entries.0121.item3"),
+        t("entries.0121.item4"),
+        t("entries.0121.item5"),
+        t("entries.0121.item6"),
+        t("entries.0121.item7"),
+      ],
+    },
+    {
       date: "2026-01-09",
       items: [t("entries.0109.item1")],
     },
@@ -45,7 +57,6 @@ export default async function ChangelogPage() {
         t("entries.0108.item2"),
         t("entries.0108.item3"),
         t("entries.0108.item4"),
-        t("entries.0108.item5"),
       ],
     },
     {
@@ -147,7 +158,7 @@ export default async function ChangelogPage() {
           <div className="container px-4 mx-auto">
             <div className="max-w-3xl mx-auto">
               <StaggerContainer className="space-y-8">
-                {changelog.map((entry, index) => (
+                {changelog.map((entry) => (
                   <StaggerItem key={entry.date}>
                     <Card>
                       <CardHeader className="pb-3">
