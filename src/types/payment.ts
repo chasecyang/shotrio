@@ -132,7 +132,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
 // 积分消费配置 (1美金 = 10积分)
 export const CREDIT_COSTS = {
   IMAGE_GENERATION: 6, // Nano Banana 图片生成：6积分/张 ($0.06, 成本$0.03, 利润率50%)
-  VIDEO_GENERATION_PER_SECOND: 6, // Veo 3.1 视频生成：6积分/秒 ($0.06, 成本$0.0125, 利润率79%)
+  VIDEO_GENERATION_PER_SECOND: 6, // Seedance 1.5 Pro 视频生成：6积分/秒 ($0.06, 成本$0.0175, 利润率70.8%)
   SOUND_EFFECT_GENERATION: 1, // ElevenLabs 音效生成：1积分/次 ($0.01, 成本$0.0012, 利润率88%)
   MUSIC_GENERATION: 10, // Suno 背景音乐生成：10积分/次 ($0.10, 成本$0.06, 利润率40%)
 } as const;

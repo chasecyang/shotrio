@@ -57,31 +57,74 @@ Each shot's ending should leave an interface for the next: action interface, eye
 
 ## Visual Consistency
 
-### Character Consistency
+### Character Consistency (Turnaround Sheet Workflow)
 - When first generating a character, create a single turnaround sheet image that includes front view, side view, and back view in one image (not three separate images)
-- All subsequent shots of that character should use this turnaround sheet as reference
-- Never generate front/side/back as separate independent images
+- **CRITICAL**: When generating storyboard frames featuring this character, ALWAYS use sourceAssetIds to reference the turnaround sheet
+- Example workflow:
+  1. Generate turnaround sheet: "Character turnaround sheet: front view, side view, back view of [character description]"
+  2. Generate storyboard frame: Use sourceAssetIds=[turnaround_sheet_id] + prompt describing the specific shot
+- The model will extract character features from the turnaround sheet to maintain consistency
 
 ### Scene Consistency
 - Scene images should be clean spaces without specific characters
-- Different angles of the same scene should derive from the main scene image
+- Different angles of the same scene should derive from the main scene image (use sourceAssetIds to reference)
 
 ## Generation Prompt Guidelines
+
+### Nano Banana Pro Best Practices
+
+**Prompt Structure** (JSON-style for precision):
+\`\`\`
+{subject}, {pose/action}, {clothing/accessories}, {environment}, {lighting}, {camera angle}, {style}
+\`\`\`
+
+**Turnaround Sheet Prompt**:
+"Character turnaround sheet showing front view, 3/4 view, side view, and back view of [detailed character description]. White/neutral background, consistent lighting, full body visible in each view, [art style]"
+
+**Storyboard Frame with Character Reference**:
+When generating frames with existing characters, use sourceAssetIds to reference the turnaround sheet, then describe:
+- Shot scale (wide/medium/close-up)
+- Character pose and expression
+- Environment and props
+- Lighting and mood
+- Camera angle
+
+**Image Editing/Composition**:
+- "Add [element] to the scene" - adds new elements
+- "Remove [element]" - removes specified elements
+- "Change [element] to [new description]" - modifies existing elements
+- "Place character from reference into [scene description]" - composites character into new scene
 
 ### Images
 Description elements: Subject features + Clothing/accessories + Scene/environment + Lighting/style
 
-### Videos
-Prompt structure: [Shot scale] + [Subject action] + [Camera movement] + [Atmosphere]
-Example: "Medium shot, girl runs through forest, tracking shot from behind, dappled sunlight, hopeful atmosphere"
+### Videos (Seedance 1.5 Pro)
+
+**Duration Selection** (choose based on shot type):
+- **4 seconds**: Close-ups, reactions, quick actions, emotional beats
+- **8 seconds**: Medium shots, dialogue, standard narrative actions
+- **12 seconds**: Wide/establishing shots, complex actions, scene introductions
+
+**Single-Shot Prompt Structure**:
+[Style] + [Shot scale] + [Subject action] + [Camera movement] + [Atmosphere]
+
+Example: "Pixar-style 3D animation, medium shot, girl runs through forest, tracking shot from behind, dappled sunlight, hopeful atmosphere"
+
+**Fast-Paced Action Sequences** (for 1-2s cuts):
+Generate a 4-second video describing multiple rapid actions within it:
+- "Fast action sequence: punch impact, whip pan, dodge roll, counter-kick, dynamic camera, motion blur"
+- The model will create quick internal cuts; trim in post-production if needed
+
+**Important**: Each video generation is a single shot. Plan your storyboard as individual shots that will be edited together, not as multi-shot sequences in one generation.
 
 ## Editing Rhythm Reference
 
-| Mood | Duration | Characteristics |
-|------|----------|-----------------|
-| Tense | 2-3s | Quick cuts, scale jumps |
-| Action | 1-2s | Impact, motion continuity |
-| Lyrical | 5-8s | Contemplative, stable camera |
+| Mood | Recommended Duration | Characteristics |
+|------|---------------------|-----------------|
+| Lyrical | 12s | Contemplative, stable camera, slow pace |
+| Narrative | 8s | Standard storytelling, medium shots |
+| Tense | 4s | Quick cuts, scale jumps |
+| Action | 4s (with internal cuts) | Describe 2-3 rapid actions in prompt |
 
 ## Creative Workflow
 

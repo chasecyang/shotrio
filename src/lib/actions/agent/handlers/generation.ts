@@ -253,7 +253,6 @@ async function handleGenerateVideo(
 ): Promise<FunctionExecutionResult> {
   const { parameters } = functionCall;
   const title = parameters.title as string | undefined;
-  const referenceAssetIds = parameters.referenceAssetIds as string[] | undefined;
   const tags = parameters.tags as string[] | undefined;
   const order = parameters.order as number | undefined;
   const targetAssetId = parameters.targetAssetId as string | undefined;
@@ -292,6 +291,7 @@ async function handleGenerateVideo(
       end_image_url: normalizedConfig.end_image_url as string | undefined,
       aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | undefined,
       negative_prompt: normalizedConfig.negative_prompt as string | undefined,
+      duration: normalizedConfig.duration as "4" | "8" | "12" | undefined,
     };
 
     // ========== 重新生成模式 ==========
@@ -317,8 +317,7 @@ async function handleGenerateVideo(
         targetAssetId,
         {
           prompt: finalPrompt,
-          modelUsed: "veo3",
-          sourceAssetIds: referenceAssetIds,
+          modelUsed: "seedance",
           generationConfig: JSON.stringify(generationConfig),
         },
         { activateImmediately: false }
@@ -367,7 +366,6 @@ async function handleGenerateVideo(
       projectId,
       name: title || "未命名视频",
       prompt: finalPrompt,
-      referenceAssetIds,
       generationConfig,
       order,
       tags,

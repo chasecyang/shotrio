@@ -146,7 +146,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       prompt: (parsedArgs.prompt as string) || "",
       startImageUrl: (parsedArgs.start_image_url as string) || "",
       endImageUrl: (parsedArgs.end_image_url as string) || undefined,
-      duration: (parsedArgs.duration as string) || "5",
+      duration: (parsedArgs.duration as string) || "4",
       aspectRatio: (parsedArgs.aspect_ratio as string) || "16:9",
       title: (parsedArgs.title as string) || undefined,
     };

@@ -156,10 +156,10 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
     // 注意：不需要手动更新asset状态为processing
     // 状态从关联的job动态计算，job已经在startJob时被设置为processing
 
-    // 3. 计算积分消费（Veo3 固定 8 秒）
-    const videoDuration = 8;
+    // 3. 计算积分消费（根据配置的时长）
+    const videoDuration = config.duration ? parseInt(config.duration) : 8;
     const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
-    
+
     await updateJobProgress(
       {
         jobId: jobData.id,
@@ -193,20 +193,21 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     // 获取当前视频服务提供商
     const provider = getVideoServiceProvider();
+    const providerName = provider === "seedance" ? "Seedance" : provider === "veo" ? "Veo 3.1" : "Kling";
 
     await updateJobProgress(
       {
         jobId: jobData.id,
         progress: 25,
-        progressMessage: `调用 ${provider === "veo" ? "Veo 3.1" : "Kling"} API 生成视频（${type}）...`,
+        progressMessage: `调用 ${providerName} API 生成视频（${type}, ${videoDuration}s）...`,
       },
       workerToken
     );
 
     // 5. 调用统一的视频生成服务
-    console.log(`[Worker] 使用 ${provider} 服务生成视频 (${type})`);
+    console.log(`[Worker] 使用 ${provider} 服务生成视频 (${type}, ${videoDuration}s)`);
     console.log(`[Worker] 完整配置:`, JSON.stringify(config, null, 2));
-    
+
     let videoResult;
     try {
       // 使用统一的视频服务接口
@@ -217,7 +218,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       if (error && typeof error === 'object' && 'body' in error) {
         console.error(`[Worker] 错误详情:`, JSON.stringify((error as any).body, null, 2));
       }
-      
+
       // 生成失败，退还积分
       if (transactionId) {
         await refundCredits({
@@ -235,7 +236,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           },
         });
       }
-      
+
       // 注意：不再手动更新asset状态，状态从job自动计算
       // job会在外层被标记为failed，asset状态会自动反映失败
       
@@ -336,7 +337,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
           duration: videoDuration * 1000, // 转换为毫秒
-          modelUsed: getVideoServiceProvider() === "veo" ? "veo3_fast" : "kling_o1",
+          modelUsed: provider === "seedance" ? "seedance" : provider === "veo" ? "veo3_fast" : "kling_o1",
           isActive: true,
         })
         .where(eq(videoData.id, videoDataId));

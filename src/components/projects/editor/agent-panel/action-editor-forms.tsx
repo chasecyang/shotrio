@@ -692,22 +692,39 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
         />
       </div>
 
-      {/* 宽高比 */}
-      <div className="grid gap-2">
-        <Label>宽高比</Label>
-        <Select
-          value={(params.aspect_ratio as string) || "16:9"}
-          onValueChange={(value) => onChange({ ...params, aspect_ratio: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="16:9">16:9 (宽屏)</SelectItem>
-            <SelectItem value="9:16">9:16 (竖屏)</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">视频时长固定 8 秒</p>
+      {/* 时长和宽高比 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label>时长</Label>
+          <Select
+            value={(params.duration as string) || "4"}
+            onValueChange={(value) => onChange({ ...params, duration: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="4">4 秒</SelectItem>
+              <SelectItem value="8">8 秒</SelectItem>
+              <SelectItem value="12">12 秒</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label>宽高比</Label>
+          <Select
+            value={(params.aspect_ratio as string) || "16:9"}
+            onValueChange={(value) => onChange({ ...params, aspect_ratio: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="16:9">16:9 (宽屏)</SelectItem>
+              <SelectItem value="9:16">9:16 (竖屏)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* 起始帧和结束帧 */}

@@ -55,3 +55,15 @@ export {
   type Sora2GenerateInput,
   type Sora2VideoOutput,
 } from "./sora";
+
+// Seedance 1.5 Pro 视频生成
+export {
+  generateSeedanceVideo,
+  getSeedanceVideoDetails,
+  waitForSeedanceVideo,
+  type SeedanceDuration,
+  type SeedanceAspectRatio,
+  type SeedanceResolution,
+  type SeedanceGenerateInput,
+  type SeedanceVideoOutput,
+} from "./seedance";

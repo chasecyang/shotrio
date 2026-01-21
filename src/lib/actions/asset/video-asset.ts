@@ -17,7 +17,6 @@ export async function createVideoAsset(data: {
   projectId: string;
   name: string;
   prompt: string;
-  referenceAssetIds?: string[];
   generationConfig: import("@/types/asset").VideoGenerationConfig;
   order?: number;
   tags?: string[];

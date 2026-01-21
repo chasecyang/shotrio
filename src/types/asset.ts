@@ -163,16 +163,17 @@ export interface ImageGenerationConfig {
  *
  * 统一的首尾帧生成方式：
  * - 基于起始帧（必填）和结束帧（可选）生成视频
- * - 系统会自动使用配置的视频服务提供商（Kling 或 Veo）
- * - Veo3 固定时长 8 秒，不支持 1:1 宽高比
+ * - 系统会自动使用配置的视频服务提供商（Seedance / Veo / Kling）
+ * - Seedance 支持 4/8/12 秒时长
  */
 export interface VideoGenerationConfig {
   prompt: string;                // 视频描述（必填）
   start_image_url: string;       // 起始帧（必填）
   end_image_url?: string;        // 结束帧（可选）
-  aspect_ratio?: "16:9" | "9:16";  // 宽高比（Veo3 不支持 1:1）
+  aspect_ratio?: "16:9" | "9:16";  // 宽高比
   negative_prompt?: string;      // 负面提示词
   type: string;                  // 生成类型（image-to-video | reference-to-video）
+  duration?: "4" | "8" | "12";   // 视频时长（秒），默认 8
 
   // 版本快照（内部使用，Job 创建时记录源资产的版本 ID，Worker 执行时优先使用）
   _versionSnapshot?: {

@@ -78,14 +78,11 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 3. **多图合成**：多个 sourceAssetIds + prompt 描述如何合成
 4. **重新生成**：targetAssetId + prompt，为已有素材生成新版本
 
+**角色一致性**：生成分镜图时，用 sourceAssetIds 引用角色三视图，模型会提取角色特征保持一致
+
 **作为视频首尾帧时**：
 - 首帧：考虑从上一镜头的视觉延续（人物朝向、视线方向）
-- 尾帧：为下一镜头预留衔接点（动作趋势、视线指向）
-
-**编辑示例**：
-- "Remove the person on the left"（移除元素）
-- "Replace background with sunset beach"（换背景）
-- "Place character from image 1 into scene from image 2"（合成）`,
+- 尾帧：为下一镜头预留衔接点（动作趋势、视线指向）`,
     displayName: "生成图片资产",
     parameters: {
       type: "object",
@@ -106,7 +103,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产（8秒，Veo3）。
+    description: `生成视频资产（Seedance 1.5 Pro，支持 4/8/12 秒）。
 
 **prompt 结构**：[景别] + [主体动作] + [镜头运动] + [氛围]
 
@@ -116,10 +113,16 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - "Close-up on her trembling hands, static camera, shallow depth of field, emotional tension"
 - "Full shot, warrior charges forward, tracking shot from side, dust particles in dramatic backlight"
 
+**时长选择**：
+- 4秒：特写镜头、快速动作、表情变化
+- 8秒（默认）：中景镜头、标准动作
+- 12秒：全景镜头、复杂场景、长动作
+
 **参数**：
 - prompt（必填）：≥10字符，用英文描述
 - start_image_url（必填）：起始帧资产ID
 - end_image_url（可选）：结束帧资产ID，不提供则AI自动生成过渡
+- duration（可选）：视频时长，'4'/'8'/'12'，默认 '4'
 - targetAssetId（可选）：重新生成模式，传入已有视频ID生成新版本
 `,
     displayName: "生成视频资产",
@@ -138,6 +141,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "string",
           description: "结束帧（可选），图片资产的ID或URL。不提供则由AI生成过渡",
         },
+        duration: {
+          type: "string",
+          description: "视频时长（可选），'4'/'8'/'12' 秒，默认 '4'",
+        },
         aspect_ratio: {
           type: "string",
           description: "宽高比（可选），'16:9' 或 '9:16'，默认 '16:9'",
@@ -149,10 +156,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         title: {
           type: "string",
           description: "视频标题（可选），便于识别和管理",
-        },
-        referenceAssetIds: {
-          type: "array",
-          description: "参考素材ID数组（可选）。这些素材将用于视频生成",
         },
         tags: {
           type: "array",
