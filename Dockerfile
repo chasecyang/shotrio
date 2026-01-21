@@ -48,9 +48,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# 安装 ffmpeg 用于视频缩略图生成
-RUN apk add --no-cache ffmpeg
-
 # 创建非 root 用户以提高安全性
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

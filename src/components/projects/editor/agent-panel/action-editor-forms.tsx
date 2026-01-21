@@ -20,7 +20,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ImageIcon, X } from "lucide-react";
+import { Loader2, ImageIcon, X, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { PRESET_TAGS } from "@/lib/constants/asset-tags";
 import { Button } from "@/components/ui/button";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithFullData } from "@/types/asset";
@@ -183,6 +185,93 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
   );
 }
 
+// 本地状态标签输入组件
+interface TagInputProps {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}
+
+function TagInput({ tags, onChange }: TagInputProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  const existingTags = new Set(tags);
+  const availablePresetTags = PRESET_TAGS.filter(tag => !existingTags.has(tag));
+
+  const handleAddTag = (tagValue: string) => {
+    const trimmed = tagValue.trim();
+    if (!trimmed || existingTags.has(trimmed)) return;
+    onChange([...tags, trimmed]);
+    setInputValue("");
+  };
+
+  const handleRemoveTag = (tagValue: string) => {
+    onChange(tags.filter(t => t !== tagValue));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && inputValue.trim()) {
+      e.preventDefault();
+      handleAddTag(inputValue);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="bg-secondary/50 text-foreground gap-1 pr-1">
+              {tag}
+              <button
+                type="button"
+                onClick={() => handleRemoveTag(tag)}
+                className="ml-1 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="添加自定义标签..."
+          className="h-8 text-sm"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => handleAddTag(inputValue)}
+          disabled={!inputValue.trim()}
+          className="h-8 px-3"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+      {availablePresetTags.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-xs text-muted-foreground">快捷添加:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {availablePresetTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => handleAddTag(tag)}
+                className="px-2 py-0.5 text-xs rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+              >
+                + {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 图片生成表单
 interface ImageGenerationFormProps {
   params: Record<string, unknown>;
@@ -214,8 +303,8 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
         const prompt = asset.prompt || "-";
         const name = asset.name || "未命名";
         const tags = Array.isArray(asset.tags)
-          ? asset.tags.join(", ")
-          : (typeof asset.tags === "string" ? asset.tags : "-");
+          ? asset.tags as string[]
+          : (typeof asset.tags === "string" ? asset.tags.split(",").map(t => t.trim()).filter(Boolean) : []);
 
         // 提取sourceAssetIds（用于图生图）
         let sourceIds: string[] = [];
@@ -235,7 +324,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
         return {
           name: name as string,
           prompt: prompt as string,
-          tags: tags as string,
+          tags: tags,
           sourceAssetIds: sourceIds,
         };
       });
@@ -285,14 +374,13 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
             </div>
             <div className="grid gap-2">
               <Label>标签</Label>
-              <Input
-                value={asset.tags}
-                onChange={(e) => {
+              <TagInput
+                tags={asset.tags}
+                onChange={(newTags) => {
                   const newAssets = [...generationAssets];
-                  newAssets[index] = { ...newAssets[index], tags: e.target.value };
+                  newAssets[index] = { ...newAssets[index], tags: newTags };
                   onChange({ ...params, assets: newAssets });
                 }}
-                placeholder="用逗号分隔，如: 角色, 主角"
               />
             </div>
             <MultiAssetSelector
@@ -792,26 +880,17 @@ export function TextAssetForm({ params, onChange }: TextAssetFormProps) {
       
       <div className="grid gap-2">
         <Label>标签</Label>
-        <Input
-          value={
-            Array.isArray(params.tags) 
-              ? params.tags.join(", ") 
-              : (params.tags as string || "")
+        <TagInput
+          tags={
+            Array.isArray(params.tags)
+              ? params.tags as string[]
+              : (typeof params.tags === "string" ? params.tags.split(",").map(t => t.trim()).filter(Boolean) : [])
           }
-          onChange={(e) => {
-            const tagsStr = e.target.value;
-            const tagsArray = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
-            onChange({ ...params, tags: tagsArray });
-          }}
-          placeholder="用逗号分隔，如: 角色小传, 主角"
+          onChange={(newTags) => onChange({ ...params, tags: newTags })}
         />
       </div>
     </div>
   );
 }
-
-
-
-
 
 
