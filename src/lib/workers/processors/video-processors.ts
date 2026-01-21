@@ -68,15 +68,21 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       throw new Error("视频资产不存在");
     }
 
-    // 找到激活版本
-    const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive) ?? assetData.videoDataList?.[0];
+    // 优先使用 job 指定的版本（用于重新生成），其次使用激活版本
+    let targetVideoData = jobData.videoDataId
+      ? assetData.videoDataList?.find((v: any) => v.id === jobData.videoDataId)
+      : null;
 
-    if (!activeVideoData?.generationConfig) {
+    if (!targetVideoData) {
+      targetVideoData = assetData.videoDataList?.find((v: any) => v.isActive) ?? assetData.videoDataList?.[0];
+    }
+
+    if (!targetVideoData?.generationConfig) {
       throw new Error("视频生成配置不存在（videoData）");
     }
 
     // 2. 解析视频生成配置（从 videoData 表读取）
-    const config: VideoGenerationConfig = JSON.parse(activeVideoData.generationConfig);
+    const config: VideoGenerationConfig = JSON.parse(targetVideoData.generationConfig);
     const type = config.type;
 
     console.log(`[Worker] 视频生成类型: ${type}`);

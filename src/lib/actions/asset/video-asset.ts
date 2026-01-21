@@ -88,6 +88,21 @@ export async function createVideoAsset(data: {
       configWithSnapshot._versionSnapshot = versionSnapshot;
     }
 
+    // 提取首尾帧 asset ID（用于重新生成时加载原始帧）
+    const sourceAssetIds: string[] = [];
+    if (
+      configWithSnapshot.start_image_url &&
+      !configWithSnapshot.start_image_url.startsWith("http")
+    ) {
+      sourceAssetIds.push(configWithSnapshot.start_image_url);
+    }
+    if (
+      configWithSnapshot.end_image_url &&
+      !configWithSnapshot.end_image_url.startsWith("http")
+    ) {
+      sourceAssetIds.push(configWithSnapshot.end_image_url);
+    }
+
     // 3. 创建 videoData 记录（版本化结构，包含生成信息和版本快照）
     await db.insert(videoData).values({
       id: videoDataId,
@@ -97,7 +112,7 @@ export async function createVideoAsset(data: {
       duration: null,
       prompt: data.prompt,
       generationConfig: JSON.stringify(configWithSnapshot),
-      sourceAssetIds: data.referenceAssetIds ?? null,
+      sourceAssetIds: sourceAssetIds.length > 0 ? sourceAssetIds : null,
       isActive: true,
     });
 
