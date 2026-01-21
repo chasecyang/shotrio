@@ -32,7 +32,7 @@
 []让agent有简单控制素材版本的能力
 []给剪辑区域的时间轴更大的默认高度
 []支持gemini 3 flash，可读图
-[]更新changelog
+
 []agent停止功能有时无效
 []agent生成音乐的时候并没有很好的刷新素材库
 []开始创作没有记忆用户上次选中的项目
@@ -52,8 +52,10 @@
 []重新生成视频缺乏参数填充
 []现在素材库的加载阶段挺奇怪的，进去会空状态，然后出一些素材，然后又自动切换到之前的tab，要优化一下
 []每次换模型都得修改function，我们希望这个function是装载式的，而且approve function和可修改的ui，也是配置装载式的
+[]approve function中会循环加载素材
 
 ## Completed
+[x]更新changelog
 [x]图片上传bug，拖拽了一个素材后，再拖拽其他素材，无法成功应用
   - root cause: useEffect 依赖数组包含频繁变化的值导致 mouseup 监听器被不断替换，事件丢失
   - fix: 使用 useRef 存储最新值，避免 useEffect 频繁重新执行

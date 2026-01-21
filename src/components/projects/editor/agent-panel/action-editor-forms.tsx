@@ -65,6 +65,8 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
   const [isLoading, setIsLoading] = useState(true);
   // 使用 ref 跟踪当前请求的 assetIds，防止竞态条件
   const currentRequestRef = useRef<string>("");
+  // 使用 ref 存储上一次的 assetIds 内容，避免引用变化导致重复加载
+  const prevAssetIdsRef = useRef<string>("");
   // 获取 Editor Context 中的 jobs 状态
   const { jobs } = useEditor();
 
@@ -98,9 +100,16 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
   // 初始加载
   useEffect(() => {
     const requestId = JSON.stringify(assetIds.sort());
+
+    // 如果内容没变，不重新加载（避免引用变化导致的抽搐）
+    if (prevAssetIdsRef.current === requestId) {
+      return;
+    }
+
+    prevAssetIdsRef.current = requestId;
     currentRequestRef.current = requestId;
 
-    // 立即重置状态，避免显示旧的图片
+    // 只有内容变化时才重置状态
     setAssets([]);
     setIsLoading(true);
 

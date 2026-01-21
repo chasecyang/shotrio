@@ -289,6 +289,19 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     console.log(`[Worker] 视频已上传: ${uploadResult.url}`);
 
+    // 获取视频真实时长
+    let actualDuration = videoDuration * 1000;
+    try {
+      const { getVideoDuration } = await import("@/lib/utils/video-thumbnail");
+      const realDuration = await getVideoDuration(uploadResult.url);
+      if (realDuration) {
+        actualDuration = realDuration;
+        console.log(`[Worker] 视频真实时长: ${actualDuration}ms`);
+      }
+    } catch (e) {
+      console.warn(`[Worker] 获取视频时长失败，使用配置时长:`, e);
+    }
+
     // 8. 提取视频缩略图（不阻塞流程）
     let thumbnailUrl: string | undefined;
     try {
@@ -336,7 +349,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         .set({
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
-          duration: videoDuration * 1000, // 转换为毫秒
+          duration: actualDuration, // 使用真实时长
           modelUsed: provider === "seedance" ? "seedance" : provider === "veo" ? "veo3_fast" : "kling_o1",
           isActive: true,
         })
@@ -354,7 +367,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           .set({
             videoUrl: uploadResult.url,
             thumbnailUrl: thumbnailUrl || null,
-            duration: videoDuration * 1000,
+            duration: actualDuration,
           })
           .where(eq(videoData.id, existingVideoData.id));
       } else {
@@ -364,7 +377,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           assetId: assetId,
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
-          duration: videoDuration * 1000,
+          duration: actualDuration,
           isActive: true,
         });
       }

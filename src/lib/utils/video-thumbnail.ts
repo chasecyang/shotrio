@@ -103,6 +103,24 @@ export async function extractVideoThumbnail(
  * @param userId - 用户 ID
  * @returns 缩略图的 URL 或 null（失败时）
  */
+/**
+ * 获取视频的真实时长
+ * @param videoUrl - 视频的 URL 地址
+ * @returns 视频时长（毫秒）或 null（失败时）
+ */
+export async function getVideoDuration(videoUrl: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    ffmpeg(videoUrl).ffprobe((err, data) => {
+      if (err || !data?.format?.duration) {
+        console.warn(`[Video] 获取视频时长失败:`, err);
+        resolve(null);
+        return;
+      }
+      resolve(Math.round(data.format.duration * 1000));
+    });
+  });
+}
+
 export async function extractVideoThumbnailFromFile(
   videoPath: string,
   userId: string
