@@ -359,8 +359,8 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
   // 确认并开启自动模式
   const handleConfirmAndAutoAccept = async () => {
-    await handleConfirm();
     agent.setAutoAccept(true);
+    await handleConfirm();
   };
 
   // 拒绝操作

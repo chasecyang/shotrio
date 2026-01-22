@@ -291,7 +291,7 @@ async function handleGenerateVideo(
       end_image_url: normalizedConfig.end_image_url as string | undefined,
       aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | undefined,
       negative_prompt: normalizedConfig.negative_prompt as string | undefined,
-      duration: normalizedConfig.duration as "4" | "8" | "12" | undefined,
+      duration: normalizedConfig.duration as "10" | "15" | undefined,
     };
 
     // ========== 重新生成模式 ==========

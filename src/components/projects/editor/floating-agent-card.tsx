@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect, memo, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo, type KeyboardEvent } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-panel/agent-context";
@@ -127,7 +127,7 @@ const AutoModeBar = memo(function AutoModeBar({ isBottomMode, onExit, t, asOverl
   );
 
   return asOverlay ? (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+    <div className="absolute inset-x-0 bottom-0 top-[60%] z-10 flex items-center justify-center bg-background/40 backdrop-blur-sm">
       {content}
     </div>
   ) : content;
@@ -211,24 +211,6 @@ function ChatInputArea({
   );
 }
 
-function useActionAreaMinHeight(resetSignal: boolean) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [minHeight, setMinHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (resetSignal) {
-      setMinHeight(null);
-    }
-  }, [resetSignal]);
-
-  useLayoutEffect(() => {
-    if (!ref.current) return;
-    const height = ref.current.offsetHeight;
-    setMinHeight((prev) => (prev === null || height > prev ? height : prev));
-  });
-
-  return { ref, minHeight };
-}
 
 export function FloatingAgentCard({
   projectId,
@@ -293,8 +275,6 @@ export function FloatingAgentCard({
     };
   }, [agent.state.messages]);
 
-  const bottomActionArea = useActionAreaMinHeight(agent.state.isAutoAcceptEnabled);
-  const sidebarActionArea = useActionAreaMinHeight(agent.state.isAutoAcceptEnabled);
 
   // 检测用户是否在底部
   const handleScroll = useCallback(() => {
@@ -883,36 +863,38 @@ export function FloatingAgentCard({
           )}
         >
           {renderHeader(false)}
-          {renderMessagesArea(true)}
 
-          {/* Input or Approval Action Bar */}
-          <div
-            className="relative"
-            ref={bottomActionArea.ref}
-            style={bottomActionArea.minHeight ? { minHeight: bottomActionArea.minHeight } : undefined}
-          >
-            {pendingApproval ? (
-              <ApprovalActionBar
-                approvalInfo={pendingApproval}
-                currentBalance={creditBalance}
-                isBottomMode
-              />
-            ) : (
-              <ChatInputArea
-                input={input}
-                onInputChange={setInput}
-                onKeyDown={handleKeyDown}
-                onSend={handleSend}
-                onStop={handleStop}
-                isLoading={agent.state.isLoading}
-                isEmptyState={isEmptyState}
-                isBottomMode
-                placeholder={t("editor.agent.chatInput.placeholder")}
-                emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
-                stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
-                enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
-              />
-            )}
+          {/* Messages and Action Area Container with Auto Mode Overlay */}
+          <div className="relative flex-1 flex flex-col overflow-hidden">
+            {renderMessagesArea(true)}
+
+            {/* Input or Approval Action Bar */}
+            <div className="relative">
+              {pendingApproval ? (
+                <ApprovalActionBar
+                  approvalInfo={pendingApproval}
+                  currentBalance={creditBalance}
+                  isBottomMode
+                />
+              ) : (
+                <ChatInputArea
+                  input={input}
+                  onInputChange={setInput}
+                  onKeyDown={handleKeyDown}
+                  onSend={handleSend}
+                  onStop={handleStop}
+                  isLoading={agent.state.isLoading}
+                  isEmptyState={isEmptyState}
+                  isBottomMode
+                  placeholder={t("editor.agent.chatInput.placeholder")}
+                  emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
+                  stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
+                  enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
+                />
+              )}
+            </div>
+
+            {/* Auto Mode Overlay */}
             {agent.state.isAutoAcceptEnabled && (
               <AutoModeBar
                 isBottomMode
@@ -922,7 +904,6 @@ export function FloatingAgentCard({
               />
             )}
           </div>
-
         </div>
       </motion.div>
     );
@@ -964,45 +945,46 @@ export function FloatingAgentCard({
           "flex flex-col overflow-hidden"
         )}
       >
-      {renderHeader(true)}
-      {renderMessagesArea(false)}
+        {renderHeader(true)}
 
-      {/* Input or Approval Action Bar */}
-      <div
-        className="relative"
-        ref={sidebarActionArea.ref}
-        style={sidebarActionArea.minHeight ? { minHeight: sidebarActionArea.minHeight } : undefined}
-      >
-        {pendingApproval ? (
-          <ApprovalActionBar
-            approvalInfo={pendingApproval}
-            currentBalance={creditBalance}
-          />
-        ) : (
-          <ChatInputArea
-            input={input}
-            onInputChange={setInput}
-            onKeyDown={handleKeyDown}
-            onSend={handleSend}
-            onStop={handleStop}
-            isLoading={agent.state.isLoading}
-            isEmptyState={isEmptyState}
-            showHint
-            placeholder={t("editor.agent.chatInput.placeholder")}
-            emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
-            stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
-            enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
-          />
-        )}
-        {agent.state.isAutoAcceptEnabled && (
-          <AutoModeBar
-            onExit={() => agent.setAutoAccept(false)}
-            t={t}
-            asOverlay
-          />
-        )}
-      </div>
+        {/* Messages and Action Area Container with Auto Mode Overlay */}
+        <div className="relative flex-1 flex flex-col overflow-hidden">
+          {renderMessagesArea(false)}
 
+          {/* Input or Approval Action Bar */}
+          <div className="relative">
+            {pendingApproval ? (
+              <ApprovalActionBar
+                approvalInfo={pendingApproval}
+                currentBalance={creditBalance}
+              />
+            ) : (
+              <ChatInputArea
+                input={input}
+                onInputChange={setInput}
+                onKeyDown={handleKeyDown}
+                onSend={handleSend}
+                onStop={handleStop}
+                isLoading={agent.state.isLoading}
+                isEmptyState={isEmptyState}
+                showHint
+                placeholder={t("editor.agent.chatInput.placeholder")}
+                emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
+                stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
+                enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
+              />
+            )}
+          </div>
+
+          {/* Auto Mode Overlay */}
+          {agent.state.isAutoAcceptEnabled && (
+            <AutoModeBar
+              onExit={() => agent.setAutoAccept(false)}
+              t={t}
+              asOverlay
+            />
+          )}
+        </div>
       </div>
     </motion.div>
   );

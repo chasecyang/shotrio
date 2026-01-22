@@ -2,12 +2,14 @@
  * 视频生成服务抽象层
  *
  * 提供统一的接口，支持多个视频生成服务提供商：
- * - Seedance 1.5 Pro (kie.ai) - 默认提供商，字节跳动的视频生成模型
+ * - Sora2 Pro (kie.ai) - 默认提供商，OpenAI 的视频生成模型
+ * - Seedance 1.5 Pro (kie.ai) - 备用提供商，字节跳动的视频生成模型
  * - Veo 3.1 (kie.ai) - 备用提供商，Google 的视频生成模型
  * - Kling (fal.ai) - 备用提供商
  *
  * 通过环境变量 VIDEO_SERVICE_PROVIDER 配置：
- * - "seedance" (默认) - 使用 Seedance 1.5 Pro 模型
+ * - "sora2" (默认) - 使用 Sora2 Pro 模型
+ * - "seedance" - 使用 Seedance 1.5 Pro 模型
  * - "veo" - 使用 Veo 3.1 模型
  * - "kling" - 使用 Kling O1 模型
  */
@@ -16,7 +18,7 @@ import type { VideoGenerationConfig } from "@/types/asset";
 
 // ============= 服务提供商类型 =============
 
-export type VideoServiceProvider = "seedance" | "veo" | "kling";
+export type VideoServiceProvider = "sora2" | "seedance" | "veo" | "kling";
 
 /**
  * 统一的视频输出接口
@@ -35,6 +37,9 @@ export interface VideoServiceOutput {
 export function getVideoServiceProvider(): VideoServiceProvider {
   const provider = process.env.VIDEO_SERVICE_PROVIDER?.toLowerCase();
 
+  if (provider === "seedance") {
+    return "seedance";
+  }
   if (provider === "veo") {
     return "veo";
   }
@@ -42,8 +47,55 @@ export function getVideoServiceProvider(): VideoServiceProvider {
     return "kling";
   }
 
-  // 默认使用 Seedance 1.5 Pro
-  return "seedance";
+  // 默认使用 Sora2 Pro
+  return "sora2";
+}
+
+// ============= Sora2 Pro 服务适配器 =============
+
+async function generateVideoWithSora2(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
+  const {
+    generateSora2Video,
+    waitForSora2Video,
+  } = await import("@/lib/services/kie");
+
+  const duration = config.duration === "15" ? "15" : "10";
+  console.log(`[VideoService] 使用 Sora2 Pro 生成视频 (${duration}s)`);
+
+  // 收集图片URL（起始帧和结束帧）
+  const imageUrls: string[] = [config.start_image_url];
+  if (config.end_image_url) {
+    imageUrls.push(config.end_image_url);
+  }
+
+  // 选择模型：如果只有起始帧，使用图生视频；如果有首尾帧，也使用图生视频
+  const model = "sora-2-pro-image-to-video";
+
+  const taskResult = await generateSora2Video({
+    model,
+    prompt: config.prompt,
+    imageUrls,
+    duration,
+    aspectRatio: config.aspect_ratio === "9:16" ? "portrait" : "landscape",
+    size: "high",
+    removeWatermark: true,
+  });
+
+  console.log(`[VideoService] Sora2 Pro 任务创建成功: ${taskResult.taskId}`);
+  console.log(`[VideoService] 开始轮询等待视频生成...`);
+
+  const result = await waitForSora2Video(taskResult.taskId);
+
+  if (!result.videoUrl) {
+    throw new Error("Sora2 Pro 视频生成失败：未返回视频URL");
+  }
+
+  return {
+    videoUrl: result.videoUrl,
+    duration: parseInt(duration),
+  };
 }
 
 // ============= Seedance 1.5 Pro 服务适配器 =============
@@ -56,7 +108,14 @@ async function generateVideoWithSeedance(
     waitForSeedanceVideo,
   } = await import("@/lib/services/kie");
 
-  const duration = config.duration || "4";
+  // 将新的 duration 映射到 Seedance 支持的值
+  let duration: "4" | "8" | "12";
+  if (config.duration === "15") {
+    duration = "12"; // 15s 映射到 12s
+  } else {
+    duration = "8"; // 10s 或默认映射到 8s
+  }
+
   console.log(`[VideoService] 使用 Seedance 1.5 Pro 生成视频 (${duration}s)`);
 
   // 收集图片URL（起始帧和结束帧）
@@ -162,7 +221,8 @@ async function generateVideoWithVeo(
  * 生成视频（统一接口）
  *
  * 根据环境变量自动选择服务提供商：
- * - VIDEO_SERVICE_PROVIDER=seedance (默认) → 使用 Seedance 1.5 Pro
+ * - VIDEO_SERVICE_PROVIDER=sora2 (默认) → 使用 Sora2 Pro
+ * - VIDEO_SERVICE_PROVIDER=seedance → 使用 Seedance 1.5 Pro
  * - VIDEO_SERVICE_PROVIDER=veo → 使用 Veo 3.1
  * - VIDEO_SERVICE_PROVIDER=kling → 使用 Kling O1
  *
@@ -178,6 +238,9 @@ export async function generateVideo(
 
   try {
     switch (provider) {
+      case "sora2":
+        return await generateVideoWithSora2(config);
+
       case "seedance":
         return await generateVideoWithSeedance(config);
 
@@ -188,7 +251,7 @@ export async function generateVideo(
         return await generateVideoWithKling(config);
 
       default:
-        return await generateVideoWithSeedance(config);
+        return await generateVideoWithSora2(config);
     }
   } catch (error) {
     console.error(`[VideoService] ${provider} 视频生成失败:`, error);

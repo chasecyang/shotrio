@@ -6,6 +6,12 @@
 
 // 错误模式映射表
 const ERROR_PATTERNS: Array<{ pattern: RegExp; messageKey: string }> = [
+  // OpenAI 内容审核错误
+  {
+    pattern: /violate.*OpenAI.*guardrails|similarity to third-party content/i,
+    messageKey: "errors.generation.contentPolicy"
+  },
+
   // 超时类错误
   { pattern: /超时（?已尝试.*次）?/i, messageKey: "errors.generation.timeout" },
   { pattern: /timeout/i, messageKey: "errors.generation.timeout" },

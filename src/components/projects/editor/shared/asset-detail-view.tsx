@@ -39,6 +39,8 @@ import { toast } from "sonner";
 import { updateAsset, getProjectAssets } from "@/lib/actions/asset";
 import { TagEditor } from "./tag-editor";
 import { AssetVersionPanel } from "./asset-version-panel";
+import { useTranslations } from "next-intl";
+import { getErrorMessageKey } from "@/lib/utils/error-sanitizer";
 
 interface AssetDetailViewProps {
   asset: AssetWithFullData;
@@ -61,11 +63,12 @@ export function AssetDetailView({
   onRegenerate,
   onAssetUpdated,
 }: AssetDetailViewProps) {
+  const t = useTranslations();
   const isVideo = asset.assetType === "video";
   const isAudio = asset.assetType === "audio";
   const isFailed = asset.runtimeStatus === "failed";
   const isGenerating = asset.runtimeStatus === "pending" || asset.runtimeStatus === "processing";
-  const errorMessage = asset.errorMessage || "生成失败，请重试";
+  const errorMessage = t(getErrorMessageKey(asset.errorMessage));
 
   // 名称编辑状态
   const [isEditingName, setIsEditingName] = useState(false);

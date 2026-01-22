@@ -80,9 +80,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 
 **角色一致性**：生成分镜图时，用 sourceAssetIds 引用角色三视图，模型会提取角色特征保持一致
 
-**作为视频首尾帧时**：
-- 首帧：考虑从上一镜头的视觉延续（人物朝向、视线方向）
-- 尾帧：为下一镜头预留衔接点（动作趋势、视线指向）`,
+**参考素材背景要求**：
+- 角色三视图/四视图、道具、场景等参考素材必须使用白色或浅灰色背景
+- 场景素材应只表达场景本身，不应包含人物
+`,
     displayName: "生成图片资产",
     parameters: {
       type: "object",
@@ -103,7 +104,13 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产（Seedance 1.5 Pro，支持 4/8/12 秒）。
+    description: `生成视频资产（Sora2 Pro，支持 10/15 秒）。
+
+**Grid Storyboard Support**：
+Sora2 Pro 可以理解网格分镜图（2x2、2x3、3x3），每个网格对应一个镜头片段。
+- 2x2 (4 shots): 标准叙事节奏
+- 2x3 (6 shots): 中快节奏，适合对话或中等动作
+- 3x3 (9 shots): 快节奏动作，打斗场景，快速情绪变化
 
 **prompt 结构**：[景别] + [主体动作] + [镜头运动] + [镜头参数] + [氛围]
 
@@ -119,21 +126,23 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - "Close-up on her trembling hands, 85mm lens, f/2 shallow depth of field, static camera, neutral background bokeh, emotional tension"
 - "Full shot, warrior charges forward, 50mm lens, tracking shot from side, dust particles in dramatic backlight"
 
+**Grid Storyboard prompt 示例**：
+- "3x3 grid storyboard: martial arts fight sequence. Grid 1: wide shot warriors face off. Grid 2: medium shot warrior charges. Grid 3: close-up determined face. Grid 4-6: rapid action beats (strike, dodge, counter). Grid 7: impact moment. Grid 8: warrior stumbles. Grid 9: reset stance. 50mm lens, dynamic camera movements, dramatic lighting"
+
 **相机运动与背景一致性**：
 - 推进特写时：使用 85mm + f/2 + "neutral background bokeh" 确保背景自然虚化
 - 拉远全景时：使用 24mm + f/8 + "deep depth of field" 保持背景清晰
 - 固定镜头：添加 "locked-off camera remains still" 避免意外运动
 
 **时长选择**：
-- 4秒：特写镜头、快速动作、表情变化
-- 8秒（默认）：中景镜头、标准动作
-- 12秒：全景镜头、复杂场景、长动作
+- 10秒（默认）：标准镜头，适合大多数场景
+- 15秒：长镜头，复杂场景，需要更多时间展开的动作
 
 **参数**：
 - prompt（必填）：≥10字符，用英文描述
-- start_image_url（必填）：起始帧资产ID
+- start_image_url（必填）：起始帧资产ID（可以是网格分镜图）
 - end_image_url（可选）：结束帧资产ID，不提供则AI自动生成过渡
-- duration（可选）：视频时长，'4'/'8'/'12'，默认 '4'
+- duration（可选）：视频时长，'10'/'15'，默认 '10'
 - targetAssetId（可选）：重新生成模式，传入已有视频ID生成新版本
 `,
     displayName: "生成视频资产",
@@ -154,7 +163,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         duration: {
           type: "string",
-          description: "视频时长（可选），'4'/'8'/'12' 秒，默认 '4'",
+          description: "视频时长（可选），'10'/'15' 秒，默认 '10'",
         },
         aspect_ratio: {
           type: "string",

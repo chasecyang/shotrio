@@ -163,8 +163,8 @@ export interface ImageGenerationConfig {
  *
  * 统一的首尾帧生成方式：
  * - 基于起始帧（必填）和结束帧（可选）生成视频
- * - 系统会自动使用配置的视频服务提供商（Seedance / Veo / Kling）
- * - Seedance 支持 4/8/12 秒时长
+ * - 系统会自动使用配置的视频服务提供商（Sora2 / Seedance / Veo / Kling）
+ * - Sora2 Pro 支持 10/15 秒时长
  */
 export interface VideoGenerationConfig {
   prompt: string;                // 视频描述（必填）
@@ -173,7 +173,7 @@ export interface VideoGenerationConfig {
   aspect_ratio?: "16:9" | "9:16";  // 宽高比
   negative_prompt?: string;      // 负面提示词
   type: string;                  // 生成类型（image-to-video | reference-to-video）
-  duration?: "4" | "8" | "12";   // 视频时长（秒），默认 8
+  duration?: "10" | "15";   // 视频时长（秒），默认 10
 
   // 版本快照（内部使用，Job 创建时记录源资产的版本 ID，Worker 执行时优先使用）
   _versionSnapshot?: {

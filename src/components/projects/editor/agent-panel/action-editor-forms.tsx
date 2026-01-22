@@ -794,16 +794,15 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
         <div className="grid gap-2">
           <Label>时长</Label>
           <Select
-            value={(params.duration as string) || "4"}
+            value={(params.duration as string) || "10"}
             onValueChange={(value) => onChange({ ...params, duration: value })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="4">4 秒</SelectItem>
-              <SelectItem value="8">8 秒</SelectItem>
-              <SelectItem value="12">12 秒</SelectItem>
+              <SelectItem value="10">10 秒</SelectItem>
+              <SelectItem value="15">15 秒</SelectItem>
             </SelectContent>
           </Select>
         </div>
