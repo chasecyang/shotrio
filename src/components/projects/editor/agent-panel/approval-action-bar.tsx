@@ -34,6 +34,8 @@ import { getArtStyleById } from "@/lib/actions/art-style/queries";
 import { AssetPreview } from "./action-editor-forms";
 import { formatParametersForConfirmation } from "@/lib/utils/agent-params-formatter";
 
+const AUTO_CONFIRM_DELAY_MS = 500;
+
 interface ApprovalActionBarProps {
   approvalInfo: {
     toolCall: {
@@ -291,11 +293,10 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       }
 
       if (!isActive) return;
-      // 延迟 500ms 后自动确认
       timer = setTimeout(() => {
         console.log("[AutoAccept] 自动确认操作:", approvalInfo.toolCall.id);
         handleConfirm();
-      }, 500);
+      }, AUTO_CONFIRM_DELAY_MS);
     };
 
     attemptAutoConfirm();

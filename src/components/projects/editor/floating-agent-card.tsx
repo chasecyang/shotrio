@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect, memo, type KeyboardEvent } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-panel/agent-context";
@@ -97,10 +97,11 @@ interface AutoModeBarProps {
   isBottomMode?: boolean;
   onExit: () => void;
   t: (key: string) => string;
+  asOverlay?: boolean;
 }
 
-function AutoModeBar({ isBottomMode, onExit, t }: AutoModeBarProps) {
-  return (
+const AutoModeBar = memo(function AutoModeBar({ isBottomMode, onExit, t, asOverlay }: AutoModeBarProps) {
+  const content = (
     <div className="pointer-events-auto p-3">
       <div
         className={cn(
@@ -124,15 +125,13 @@ function AutoModeBar({ isBottomMode, onExit, t }: AutoModeBarProps) {
       </div>
     </div>
   );
-}
 
-function AutoModeOverlay({ isBottomMode, onExit, t }: AutoModeBarProps) {
-  return (
+  return asOverlay ? (
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40 backdrop-blur-sm">
-      <AutoModeBar isBottomMode={isBottomMode} onExit={onExit} t={t} />
+      {content}
     </div>
-  );
-}
+  ) : content;
+});
 
 interface ChatInputAreaProps {
   input: string;
@@ -212,12 +211,12 @@ function ChatInputArea({
   );
 }
 
-function useActionAreaMinHeight(dependencies: unknown[], resetSignal: boolean) {
+function useActionAreaMinHeight(resetSignal: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   const [minHeight, setMinHeight] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!resetSignal) {
+    if (resetSignal) {
       setMinHeight(null);
     }
   }, [resetSignal]);
@@ -226,7 +225,7 @@ function useActionAreaMinHeight(dependencies: unknown[], resetSignal: boolean) {
     if (!ref.current) return;
     const height = ref.current.offsetHeight;
     setMinHeight((prev) => (prev === null || height > prev ? height : prev));
-  }, dependencies);
+  });
 
   return { ref, minHeight };
 }
@@ -294,14 +293,8 @@ export function FloatingAgentCard({
     };
   }, [agent.state.messages]);
 
-  const bottomActionArea = useActionAreaMinHeight(
-    [pendingApproval, agent.state.isAutoAcceptEnabled, isEmptyState],
-    agent.state.isAutoAcceptEnabled
-  );
-  const sidebarActionArea = useActionAreaMinHeight(
-    [pendingApproval, agent.state.isAutoAcceptEnabled, isEmptyState],
-    agent.state.isAutoAcceptEnabled
-  );
+  const bottomActionArea = useActionAreaMinHeight(agent.state.isAutoAcceptEnabled);
+  const sidebarActionArea = useActionAreaMinHeight(agent.state.isAutoAcceptEnabled);
 
   // 检测用户是否在底部
   const handleScroll = useCallback(() => {
@@ -921,10 +914,11 @@ export function FloatingAgentCard({
               />
             )}
             {agent.state.isAutoAcceptEnabled && (
-              <AutoModeOverlay
+              <AutoModeBar
                 isBottomMode
                 onExit={() => agent.setAutoAccept(false)}
                 t={t}
+                asOverlay
               />
             )}
           </div>
@@ -1001,9 +995,10 @@ export function FloatingAgentCard({
           />
         )}
         {agent.state.isAutoAcceptEnabled && (
-          <AutoModeOverlay
+          <AutoModeBar
             onExit={() => agent.setAutoAccept(false)}
             t={t}
+            asOverlay
           />
         )}
       </div>
