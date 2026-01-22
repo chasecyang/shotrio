@@ -6,33 +6,19 @@ import db from "@/lib/db";
 import { asset, assetTag, project } from "@/lib/db/schemas/project";
 import { eq, and, sql } from "drizzle-orm";
 import type { AssetWithFullData } from "@/types/asset";
-import { isAssetReady } from "@/lib/utils/asset-status";
 
 /**
  * 统计素材类型分布
- * 纯工具函数（改为 async 以符合 Next.js Server Actions 要求）
+ * 按媒体类型（image/video/text/audio）分类
  */
 export async function analyzeAssetsByType(assets: AssetWithFullData[]) {
   const stats = {
     byType: {} as Record<string, number>,
-    notReady: 0,
   };
 
   assets.forEach((asset) => {
-    const tags = asset.tags.map((t) => t.tagValue);
-    if (tags.includes("character")) {
-      stats.byType.character = (stats.byType.character || 0) + 1;
-    } else if (tags.includes("scene")) {
-      stats.byType.scene = (stats.byType.scene || 0) + 1;
-    } else if (tags.includes("prop")) {
-      stats.byType.prop = (stats.byType.prop || 0) + 1;
-    } else {
-      stats.byType.other = (stats.byType.other || 0) + 1;
-    }
-
-    if (!isAssetReady(asset)) {
-      stats.notReady++;
-    }
+    const type = asset.assetType; // image | video | text | audio
+    stats.byType[type] = (stats.byType[type] || 0) + 1;
   });
 
   return stats;

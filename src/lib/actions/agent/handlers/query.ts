@@ -116,7 +116,7 @@ async function handleQueryContext(
 
     const assetStats = assetsResult.assets
       ? await analyzeAssetsByType(assetsResult.assets)
-      : { byType: {}, notReady: 0 };
+      : { byType: {} };
 
     const completedCount = assetsResult.assets.filter(
       (a) => a.runtimeStatus === "completed"

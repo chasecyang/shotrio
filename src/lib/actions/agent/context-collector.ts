@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import type { AgentContext } from "@/types/agent";
 import { getProjectDetail } from "@/lib/actions/project/base";
-import { getVideoAssets } from "@/lib/actions/asset";
 import { queryAssets } from "@/lib/actions/asset/queries";
 import { analyzeAssetsByType, getTopTagStats } from "@/lib/actions/asset/stats";
 
@@ -48,39 +47,7 @@ export async function collectContext(context: AgentContext, projectId: string): 
       parts.push("");
     }
 
-    // 2. 项目视频
-    if (project) {
-      const videosResult = await getVideoAssets(project.id, { orderBy: "created" });
-      if (videosResult.success && videosResult.videos && videosResult.videos.length > 0) {
-        parts.push(`# 项目视频`);
-        parts.push(`总视频数: ${videosResult.videos.length}`);
-        
-        // 显示前5个视频的信息
-        const videosToShow = videosResult.videos.slice(0, 5);
-        parts.push(`\n最近视频（前${videosToShow.length}个）:`);
-        videosToShow.forEach((video) => {
-          parts.push(`- ${video.name || "未命名视频"}`);
-          if (video.prompt) {
-            const truncatedPrompt = video.prompt.length > 50 
-              ? video.prompt.slice(0, 50) + "..." 
-              : video.prompt;
-            parts.push(`  描述: ${truncatedPrompt}`);
-          }
-          if (video.videoUrl) {
-            parts.push(`  状态: 已生成`);
-          } else {
-            parts.push(`  状态: 待生成`);
-          }
-        });
-        
-        if (videosResult.videos.length > 5) {
-          parts.push(`...还有 ${videosResult.videos.length - 5} 个视频`);
-        }
-        parts.push("");
-      }
-    }
-
-    // 3. 项目素材统计
+    // 2. 项目素材统计
     if (project) {
       const assetsResult = await queryAssets({
         projectId,
@@ -93,16 +60,12 @@ export async function collectContext(context: AgentContext, projectId: string): 
         
         // 统计各类素材
         const assetStats = await analyzeAssetsByType(assetsResult.assets);
-        
-        if (assetStats.byType.character) parts.push(`- 角色: ${assetStats.byType.character} 个`);
-        if (assetStats.byType.scene) parts.push(`- 场景: ${assetStats.byType.scene} 个`);
-        if (assetStats.byType.prop) parts.push(`- 道具: ${assetStats.byType.prop} 个`);
-        if (assetStats.byType.other) parts.push(`- 其他: ${assetStats.byType.other} 个`);
-        
-        if (assetStats.notReady > 0) {
-          parts.push(`- 待生成/处理中: ${assetStats.notReady} 个`);
-        }
-        
+
+        if (assetStats.byType.image) parts.push(`- 图片: ${assetStats.byType.image} 个`);
+        if (assetStats.byType.video) parts.push(`- 视频: ${assetStats.byType.video} 个`);
+        if (assetStats.byType.text) parts.push(`- 文本: ${assetStats.byType.text} 个`);
+        if (assetStats.byType.audio) parts.push(`- 音频: ${assetStats.byType.audio} 个`);
+
         // 获取最常用的标签（前10个）
         const topTags = await getTopTagStats(projectId);
         if (topTags.length > 0) {
