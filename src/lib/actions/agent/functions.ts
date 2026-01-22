@@ -105,13 +105,24 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     name: "generate_video_asset",
     description: `生成视频资产（Seedance 1.5 Pro，支持 4/8/12 秒）。
 
-**prompt 结构**：[景别] + [主体动作] + [镜头运动] + [氛围]
+**prompt 结构**：[景别] + [主体动作] + [镜头运动] + [镜头参数] + [氛围]
+
+**镜头技术参数（重要）**：
+为确保相机运动时背景正确响应（虚化、透视变化），必须包含：
+- **焦距**：24mm（广角，保持背景清晰）、50mm（标准）、85mm（人像特写，自然背景虚化）、200mm（长焦，强烈背景虚化）
+- **景深**：f/2 shallow depth of field（浅景深，背景虚化）、f/8 deep depth of field（深景深，背景清晰）
+- **背景处理**：neutral background bokeh（中性背景虚化）、soft background blur（柔和背景模糊）、atmospheric perspective（大气透视）
 
 **好的 prompt 示例**：
-- "Wide establishing shot, village at dawn, slow pan left to right, golden morning mist"
-- "Medium shot, detective examines clues on desk, slow push-in, mysterious low-key lighting"
-- "Close-up on her trembling hands, static camera, shallow depth of field, emotional tension"
-- "Full shot, warrior charges forward, tracking shot from side, dust particles in dramatic backlight"
+- "Wide establishing shot, village at dawn, 24mm lens, f/8 deep DOF, slow pan left to right, golden morning mist"
+- "Medium shot, detective examines clues on desk, 50mm lens, slow push-in, mysterious low-key lighting"
+- "Close-up on her trembling hands, 85mm lens, f/2 shallow depth of field, static camera, neutral background bokeh, emotional tension"
+- "Full shot, warrior charges forward, 50mm lens, tracking shot from side, dust particles in dramatic backlight"
+
+**相机运动与背景一致性**：
+- 推进特写时：使用 85mm + f/2 + "neutral background bokeh" 确保背景自然虚化
+- 拉远全景时：使用 24mm + f/8 + "deep depth of field" 保持背景清晰
+- 固定镜头：添加 "locked-off camera remains still" 避免意外运动
 
 **时长选择**：
 - 4秒：特写镜头、快速动作、表情变化

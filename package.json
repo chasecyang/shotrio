@@ -60,7 +60,6 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@remotion/bundler": "4.0.406",
     "@remotion/cli": "4.0.406",
-    "@remotion/media": "4.0.406",
     "@remotion/player": "4.0.406",
     "@remotion/preload": "4.0.406",
     "@remotion/renderer": "4.0.406",

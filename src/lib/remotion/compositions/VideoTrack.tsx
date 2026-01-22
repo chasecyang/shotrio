@@ -1,5 +1,4 @@
-import { Series } from "remotion";
-import { Video } from "@remotion/media";
+import { Series, OffthreadVideo } from "remotion";
 import { RemotionTrack, RemotionTrackItem } from "../types";
 import { TrackStates } from "@/types/timeline";
 import { useTrackConfig } from "../hooks/use-track-config";
@@ -26,9 +25,9 @@ export const VideoTrack: React.FC<VideoTrackProps> = ({
           durationInFrames={item.durationInFrames}
           premountFor={premountFrames}
         >
-          <Video
+          <OffthreadVideo
             src={item.src}
-            trimBefore={item.startFrom}
+            startFrom={item.startFrom}
             volume={volume}
             style={{
               width: "100%",

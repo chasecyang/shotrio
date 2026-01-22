@@ -1,5 +1,4 @@
-import { Sequence } from "remotion";
-import { Audio } from "@remotion/media";
+import { Sequence, Audio } from "remotion";
 import { RemotionTrack, RemotionTrackItem } from "../types";
 import { TrackStates } from "@/types/timeline";
 import { useTrackConfig } from "../hooks/use-track-config";
@@ -29,7 +28,7 @@ export const AudioTrack: React.FC<AudioTrackProps> = ({
         >
           <Audio
             src={item.src}
-            trimBefore={item.startFrom}
+            startFrom={item.startFrom}
             volume={volume}
           />
         </Sequence>

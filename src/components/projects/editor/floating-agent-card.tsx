@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect, type KeyboardEvent } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useAgent } from "./agent-panel/agent-context";
@@ -23,7 +23,8 @@ import {
   Trash2,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,144 @@ function isCreditConsumingFunction(functionName: string): boolean {
   return ['generate_video_asset', 'generate_image_asset'].includes(functionName);
 }
 
+interface AutoModeBarProps {
+  isBottomMode?: boolean;
+  onExit: () => void;
+  t: (key: string) => string;
+}
+
+function AutoModeBar({ isBottomMode, onExit, t }: AutoModeBarProps) {
+  return (
+    <div className="pointer-events-auto p-3">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-xl border border-input bg-background/90 shadow-lg backdrop-blur px-3 py-2",
+          isBottomMode ? "min-h-[48px]" : "min-h-[56px]"
+        )}
+      >
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+          <span>{t("editor.agent.panel.autoModeProcessing")}</span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onExit}
+          className={cn("gap-1", isBottomMode ? "h-7 px-2 text-xs" : "h-8")}
+        >
+          <X className="h-3.5 w-3.5" />
+          {t("editor.agent.panel.exitAutoMode")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AutoModeOverlay({ isBottomMode, onExit, t }: AutoModeBarProps) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40 backdrop-blur-sm">
+      <AutoModeBar isBottomMode={isBottomMode} onExit={onExit} t={t} />
+    </div>
+  );
+}
+
+interface ChatInputAreaProps {
+  input: string;
+  onInputChange: (value: string) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSend: () => void;
+  onStop: () => void;
+  isLoading: boolean;
+  isEmptyState: boolean;
+  isBottomMode?: boolean;
+  showHint?: boolean;
+  placeholder: string;
+  emptyPlaceholder: string;
+  stopToInterruptLabel: string;
+  enterToSendLabel: string;
+}
+
+function ChatInputArea({
+  input,
+  onInputChange,
+  onKeyDown,
+  onSend,
+  onStop,
+  isLoading,
+  isEmptyState,
+  isBottomMode,
+  showHint,
+  placeholder,
+  emptyPlaceholder,
+  stopToInterruptLabel,
+  enterToSendLabel,
+}: ChatInputAreaProps) {
+  return (
+    <div className="border-t p-3 shrink-0 bg-background/80">
+      <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
+        <Textarea
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={isEmptyState ? emptyPlaceholder : placeholder}
+          className={cn(
+            "min-h-[20px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12",
+            isBottomMode ? "max-h-[80px]" : "max-h-[150px]"
+          )}
+          style={{ height: 'auto', minHeight: '40px' }}
+        />
+        <div className="absolute bottom-2 right-2">
+          {isLoading && !input.trim() ? (
+            <Button
+              onClick={onStop}
+              size="icon"
+              variant="destructive"
+              className="h-8 w-8 rounded-lg"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              onClick={onSend}
+              disabled={!input.trim()}
+              size="icon"
+              className="h-8 w-8 rounded-lg"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+      {showHint && (
+        <p className="mt-2 text-xs text-center text-muted-foreground/60">
+          {isLoading
+            ? (input.trim() ? "发送消息将中断当前输出" : stopToInterruptLabel)
+            : enterToSendLabel}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function useActionAreaMinHeight(dependencies: unknown[], resetSignal: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [minHeight, setMinHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!resetSignal) {
+      setMinHeight(null);
+    }
+  }, [resetSignal]);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const height = ref.current.offsetHeight;
+    setMinHeight((prev) => (prev === null || height > prev ? height : prev));
+  }, dependencies);
+
+  return { ref, minHeight };
+}
+
 export function FloatingAgentCard({
   projectId,
   position,
@@ -154,6 +293,15 @@ export function FloatingAgentCard({
       funcDef,
     };
   }, [agent.state.messages]);
+
+  const bottomActionArea = useActionAreaMinHeight(
+    [pendingApproval, agent.state.isAutoAcceptEnabled, isEmptyState],
+    agent.state.isAutoAcceptEnabled
+  );
+  const sidebarActionArea = useActionAreaMinHeight(
+    [pendingApproval, agent.state.isAutoAcceptEnabled, isEmptyState],
+    agent.state.isAutoAcceptEnabled
+  );
 
   // 检测用户是否在底部
   const handleScroll = useCallback(() => {
@@ -381,7 +529,7 @@ export function FloatingAgentCard({
   }, [abort, agent]);
 
   // 键盘快捷键
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (input.trim()) {
@@ -422,7 +570,7 @@ export function FloatingAgentCard({
           newTarget = "right";
         } else if (position === "right" && deltaX < -horizontalThreshold) {
           newTarget = "left";
-        } else if (position === "bottom") {
+  } else if (position === "bottom") {
           if (deltaX < -horizontalThreshold) {
             newTarget = "left";
           } else if (deltaX > horizontalThreshold) {
@@ -532,6 +680,185 @@ export function FloatingAgentCard({
     </AlertDialog>
   );
 
+  const renderHeader = (showCollapse: boolean) => (
+    <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* 拖拽手柄 */}
+        <div
+          onMouseDown={handleDragStart}
+          className={cn(
+            "p-1 rounded cursor-grab hover:bg-muted/50 transition-colors",
+            isDragging && "cursor-grabbing"
+          )}
+          title="拖拽切换位置"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shrink-0">
+          <Bot className="h-4 w-4 text-primary-foreground" />
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex-1 justify-start min-w-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className="text-sm font-semibold truncate">
+                  {agent.state.isNewConversation
+                    ? t('editor.agent.panel.newChat')
+                    : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
+                </h3>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[300px]">
+            <DropdownMenuItem onClick={handleCreateNewConversation} className="font-medium">
+              <MessageSquarePlus className="h-4 w-4 mr-2" />
+              新建对话
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="max-h-[300px] overflow-y-auto">
+              {agent.state.conversations.length === 0 ? (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  暂无对话历史
+                </div>
+              ) : (
+                agent.state.conversations.map((conv) => {
+                  const { Icon, className } = getStatusIcon(conv.status);
+                  const isActive = conv.id === agent.state.currentConversationId;
+
+                  return (
+                    <DropdownMenuItem
+                      key={conv.id}
+                      onClick={() => agent.loadConversation(conv.id)}
+                      className={cn(
+                        "flex items-start gap-2 py-2 px-2 cursor-pointer",
+                        isActive && "bg-accent"
+                      )}
+                    >
+                      <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", className)} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{conv.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatTime(conv.lastActivityAt)}
+                        </p>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => handleDeleteClick(conv.id, e)}
+                        className="h-6 w-6 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <AutoModeToggle />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCreateNewConversation}
+              className="shrink-0"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('editor.agent.panel.newChat')}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {showCollapse && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCollapse}
+                className="shrink-0"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>收起</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderMessagesArea = (compact: boolean) => (
+    <div
+      className={cn(
+        "flex-1 overflow-hidden relative",
+        compact ? "min-h-[60px] max-h-[80px]" : undefined
+      )}
+    >
+      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
+        <div className="py-2">
+          {isEmptyState ? (
+            <div className={cn(
+              "flex h-full flex-col items-center justify-center text-center",
+              compact ? "p-4" : "p-8"
+            )}>
+              <Bot className={cn(
+                "text-muted-foreground/60",
+                compact ? "mb-2 h-6 w-6" : "mb-3 h-8 w-8"
+              )} />
+              <p className="text-sm text-muted-foreground/80">
+                {t('editor.agent.panel.emptyState')}
+              </p>
+            </div>
+          ) : (
+            <>
+              {agent.state.messages
+                .filter(msg => msg.role !== "tool")
+                .map((message) => (
+                  <ChatMessage
+                    key={message.id}
+                    message={message}
+                  />
+                ))}
+              {agent.state.isLoading && <TypingIndicator />}
+            </>
+          )}
+        </div>
+      </div>
+
+      {!isUserNearBottom && (
+        <div className={cn(
+          "absolute z-10",
+          compact ? "bottom-2 right-4" : "bottom-4 right-4"
+        )}>
+          <Button
+            size="icon"
+            onClick={() => scrollToBottom(true)}
+            className={cn(
+              "rounded-full shadow-lg",
+              compact ? "h-8 w-8" : "h-9 w-9"
+            )}
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   // 底部模式的布局
   if (position === "bottom") {
     const bottomContent = (
@@ -562,189 +889,45 @@ export function FloatingAgentCard({
             "flex flex-col overflow-hidden"
           )}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {/* 拖拽手柄 */}
-              <div
-                onMouseDown={handleDragStart}
-                className={cn(
-                  "p-1 rounded cursor-grab hover:bg-muted/50 transition-colors",
-                  isDragging && "cursor-grabbing"
-                )}
-                title="拖拽切换位置"
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </div>
-
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shrink-0">
-                <Bot className="h-4 w-4 text-primary-foreground" />
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex-1 justify-start min-w-0">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold truncate">
-                        {agent.state.isNewConversation
-                          ? t('editor.agent.panel.newChat')
-                          : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
-                      </h3>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[300px]">
-                  <DropdownMenuItem onClick={handleCreateNewConversation} className="font-medium">
-                    <MessageSquarePlus className="h-4 w-4 mr-2" />
-                    新建对话
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <div className="max-h-[300px] overflow-y-auto">
-                    {agent.state.conversations.length === 0 ? (
-                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                        暂无对话历史
-                      </div>
-                    ) : (
-                      agent.state.conversations.map((conv) => {
-                        const { Icon, className } = getStatusIcon(conv.status);
-                        const isActive = conv.id === agent.state.currentConversationId;
-
-                        return (
-                          <DropdownMenuItem
-                            key={conv.id}
-                            onClick={() => agent.loadConversation(conv.id)}
-                            className={cn(
-                              "flex items-start gap-2 py-2 px-2 cursor-pointer",
-                              isActive && "bg-accent"
-                            )}
-                          >
-                            <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", className)} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{conv.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatTime(conv.lastActivityAt)}
-                              </p>
-                            </div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={(e) => handleDeleteClick(conv.id, e)}
-                              className="h-6 w-6 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuItem>
-                        );
-                      })
-                    )}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <AutoModeToggle />
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCreateNewConversation}
-                  className="shrink-0"
-                >
-                  <MessageSquarePlus className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('editor.agent.panel.newChat')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          {/* Messages - 底部模式高度受限，约3行 */}
-          <div className="flex-1 overflow-hidden relative min-h-[60px] max-h-[80px]">
-            <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
-              <div className="py-2">
-                {isEmptyState ? (
-                  <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                    <Bot className="mb-2 h-6 w-6 text-muted-foreground/60" />
-                    <p className="text-sm text-muted-foreground/80">
-                      {t('editor.agent.panel.emptyState')}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {agent.state.messages
-                      .filter(msg => msg.role !== "tool")
-                      .map((message) => (
-                        <ChatMessage
-                          key={message.id}
-                          message={message}
-                        />
-                      ))}
-                    {agent.state.isLoading && <TypingIndicator />}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* 回到底部按钮 */}
-            {!isUserNearBottom && (
-              <div className="absolute bottom-2 right-4 z-10">
-                <Button
-                  size="icon"
-                  onClick={() => scrollToBottom(true)}
-                  className="h-8 w-8 rounded-full shadow-lg"
-                >
-                  <ArrowDown className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
+          {renderHeader(false)}
+          {renderMessagesArea(true)}
 
           {/* Input or Approval Action Bar */}
-          {pendingApproval ? (
-            <ApprovalActionBar
-              approvalInfo={pendingApproval}
-              currentBalance={creditBalance}
-              isBottomMode
-            />
-          ) : (
-            <div className="border-t p-3 shrink-0 bg-background/80">
-              <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
-                <Textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
-                  className="min-h-[20px] max-h-[80px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
-                  style={{ height: 'auto', minHeight: '40px' }}
-                />
-                <div className="absolute bottom-2 right-2">
-                  {agent.state.isLoading && !input.trim() ? (
-                    <Button
-                      onClick={handleStop}
-                      size="icon"
-                      variant="destructive"
-                      className="h-8 w-8 rounded-lg"
-                    >
-                      <Square className="h-3.5 w-3.5 fill-current" />
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => handleSend()}
-                      disabled={!input.trim()}
-                      size="icon"
-                      className="h-8 w-8 rounded-lg"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          <div
+            className="relative"
+            ref={bottomActionArea.ref}
+            style={bottomActionArea.minHeight ? { minHeight: bottomActionArea.minHeight } : undefined}
+          >
+            {pendingApproval ? (
+              <ApprovalActionBar
+                approvalInfo={pendingApproval}
+                currentBalance={creditBalance}
+                isBottomMode
+              />
+            ) : (
+              <ChatInputArea
+                input={input}
+                onInputChange={setInput}
+                onKeyDown={handleKeyDown}
+                onSend={handleSend}
+                onStop={handleStop}
+                isLoading={agent.state.isLoading}
+                isEmptyState={isEmptyState}
+                isBottomMode
+                placeholder={t("editor.agent.chatInput.placeholder")}
+                emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
+                stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
+                enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
+              />
+            )}
+            {agent.state.isAutoAcceptEnabled && (
+              <AutoModeOverlay
+                isBottomMode
+                onExit={() => agent.setAutoAccept(false)}
+                t={t}
+              />
+            )}
+          </div>
 
         </div>
       </motion.div>
@@ -787,211 +970,43 @@ export function FloatingAgentCard({
           "flex flex-col overflow-hidden"
         )}
       >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* 拖拽手柄 */}
-          <div
-            onMouseDown={handleDragStart}
-            className={cn(
-              "p-1 rounded cursor-grab hover:bg-muted/50 transition-colors",
-              isDragging && "cursor-grabbing"
-            )}
-            title="拖拽切换位置"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
-
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shrink-0">
-            <Bot className="h-4 w-4 text-primary-foreground" />
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-auto p-0 hover:bg-transparent flex-1 justify-start min-w-0">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold truncate">
-                    {agent.state.isNewConversation
-                      ? t('editor.agent.panel.newChat')
-                      : agent.state.conversations.find(c => c.id === agent.state.currentConversationId)?.title || t('editor.agent.panel.aiAssistant')}
-                  </h3>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[300px]">
-              <DropdownMenuItem onClick={handleCreateNewConversation} className="font-medium">
-                <MessageSquarePlus className="h-4 w-4 mr-2" />
-                新建对话
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="max-h-[300px] overflow-y-auto">
-                {agent.state.conversations.length === 0 ? (
-                  <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                    暂无对话历史
-                  </div>
-                ) : (
-                  agent.state.conversations.map((conv) => {
-                    const { Icon, className } = getStatusIcon(conv.status);
-                    const isActive = conv.id === agent.state.currentConversationId;
-
-                    return (
-                      <DropdownMenuItem
-                        key={conv.id}
-                        onClick={() => agent.loadConversation(conv.id)}
-                        className={cn(
-                          "flex items-start gap-2 py-2 px-2 cursor-pointer",
-                          isActive && "bg-accent"
-                        )}
-                      >
-                        <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", className)} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{conv.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatTime(conv.lastActivityAt)}
-                          </p>
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => handleDeleteClick(conv.id, e)}
-                          className="h-6 w-6 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuItem>
-                    );
-                  })
-                )}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <AutoModeToggle />
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCreateNewConversation}
-                className="shrink-0"
-              >
-                <MessageSquarePlus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('editor.agent.panel.newChat')}</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onCollapse}
-                className="shrink-0"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>收起</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-hidden relative">
-        <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden" onScroll={handleScroll}>
-          <div className="py-2">
-            {isEmptyState ? (
-              <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                <Bot className="mb-3 h-8 w-8 text-muted-foreground/60" />
-                <p className="text-sm text-muted-foreground/80">
-                  {t('editor.agent.panel.emptyState')}
-                </p>
-              </div>
-            ) : (
-              <>
-                {agent.state.messages
-                  .filter(msg => msg.role !== "tool")
-                  .map((message) => (
-                    <ChatMessage
-                      key={message.id}
-                      message={message}
-                    />
-                  ))}
-                {agent.state.isLoading && <TypingIndicator />}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* 回到底部按钮 */}
-        {!isUserNearBottom && (
-          <div className="absolute bottom-4 right-4 z-10">
-            <Button
-              size="icon"
-              onClick={() => scrollToBottom(true)}
-              className="h-9 w-9 rounded-full shadow-lg"
-            >
-              <ArrowDown className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+      {renderHeader(true)}
+      {renderMessagesArea(false)}
 
       {/* Input or Approval Action Bar */}
-      {pendingApproval ? (
-        <ApprovalActionBar
-          approvalInfo={pendingApproval}
-          currentBalance={creditBalance}
-        />
-      ) : (
-        <div className="border-t p-3 shrink-0 bg-background/80">
-          <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isEmptyState ? t('editor.agent.chatInput.emptyPlaceholder') : t('editor.agent.chatInput.placeholder')}
-              className="min-h-[20px] max-h-[150px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12"
-              style={{ height: 'auto', minHeight: '40px' }}
-            />
-            <div className="absolute bottom-2 right-2">
-              {agent.state.isLoading && !input.trim() ? (
-                <Button
-                  onClick={handleStop}
-                  size="icon"
-                  variant="destructive"
-                  className="h-8 w-8 rounded-lg"
-                >
-                  <Square className="h-3.5 w-3.5 fill-current" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => handleSend()}
-                  disabled={!input.trim()}
-                  size="icon"
-                  className="h-8 w-8 rounded-lg"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-center text-muted-foreground/60">
-            {agent.state.isLoading
-              ? (input.trim() ? "发送消息将中断当前输出" : t('editor.agent.chatInput.stopToInterrupt'))
-              : t('editor.agent.chatInput.enterToSend')}
-          </p>
-        </div>
-      )}
+      <div
+        className="relative"
+        ref={sidebarActionArea.ref}
+        style={sidebarActionArea.minHeight ? { minHeight: sidebarActionArea.minHeight } : undefined}
+      >
+        {pendingApproval ? (
+          <ApprovalActionBar
+            approvalInfo={pendingApproval}
+            currentBalance={creditBalance}
+          />
+        ) : (
+          <ChatInputArea
+            input={input}
+            onInputChange={setInput}
+            onKeyDown={handleKeyDown}
+            onSend={handleSend}
+            onStop={handleStop}
+            isLoading={agent.state.isLoading}
+            isEmptyState={isEmptyState}
+            showHint
+            placeholder={t("editor.agent.chatInput.placeholder")}
+            emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
+            stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
+            enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
+          />
+        )}
+        {agent.state.isAutoAcceptEnabled && (
+          <AutoModeOverlay
+            onExit={() => agent.setAutoAccept(false)}
+            t={t}
+          />
+        )}
+      </div>
 
       </div>
     </motion.div>

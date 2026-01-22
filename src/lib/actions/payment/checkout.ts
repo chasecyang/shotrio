@@ -6,7 +6,12 @@ import db from "@/lib/db";
 import { orders, OrderStatus } from "@/lib/db/schemas/payment";
 import { eq, and, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { creemConfig } from "@/lib/payment/creem.config";
+import { Creem } from "creem";
+import {
+  creemConfig,
+  creemProductIds,
+  validateCreemConfig,
+} from "@/lib/payment/creem.config";
 import { CREDIT_PACKAGES, type PackageType } from "@/types/payment";
 
 /**
@@ -44,7 +49,6 @@ export async function createCheckoutSession(params: {
 
     // 创建订单
     const orderId = nanoid();
-    const creemSessionId = nanoid();
 
     await db.insert(orders).values({
       id: orderId,
@@ -55,7 +59,6 @@ export async function createCheckoutSession(params: {
       bonusCredits,
       isFirstPurchase: false, // 保留字段用于历史兼容性
       status: OrderStatus.PENDING,
-      creemSessionId,
       metadata: JSON.stringify({
         packageName: pkg.name,
         packageDescription: pkg.description,
@@ -64,14 +67,46 @@ export async function createCheckoutSession(params: {
       updatedAt: new Date(),
     });
 
-    // 构建Creem checkout URL
-    // 注意：这里需要根据实际的Creem API来构建URL
-    // 由于Creem的具体API文档可能不同，这里使用占位实现
-    const checkoutUrl = `${creemConfig.storeId ? `https://creem.io/checkout/${creemConfig.storeId}` : "/credits"}?session_id=${creemSessionId}&order_id=${orderId}&package=${packageType}&amount=${pkg.price}&success_url=${encodeURIComponent(creemConfig.successUrl)}&cancel_url=${encodeURIComponent(creemConfig.cancelUrl)}`;
+    validateCreemConfig();
+    const productId = creemProductIds[packageType];
+    if (!productId) {
+      return { success: false, error: "缺少Creem产品ID配置" };
+    }
+
+    const creem = new Creem({
+      serverIdx: creemConfig.testMode ? 1 : 0,
+    });
+
+    const checkout = await creem.createCheckout({
+      xApiKey: creemConfig.apiKey,
+      createCheckoutRequest: {
+        productId,
+        requestId: orderId,
+        successUrl: creemConfig.successUrl,
+        metadata: {
+          orderId,
+          userId,
+          packageType,
+          packageName: pkg.name,
+        },
+      },
+    });
+
+    if (!checkout.checkoutUrl) {
+      return { success: false, error: "Creem checkout URL缺失" };
+    }
+
+    await db
+      .update(orders)
+      .set({
+        creemSessionId: checkout.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
 
     return {
       success: true,
-      checkoutUrl,
+      checkoutUrl: checkout.checkoutUrl,
       orderId,
     };
   } catch (error) {
@@ -217,4 +252,3 @@ export async function getOrderById(orderId: string): Promise<{
     };
   }
 }
-

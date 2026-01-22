@@ -1226,6 +1226,8 @@
         "aiGenerating": "Agent 正在努力创作",
         "autoMode": "自动模式",
         "autoModeDescription": "开启后，Agent 的操作将自动执行，无需手动确认",
+        "autoModeProcessing": "自动处理中",
+        "exitAutoMode": "退出自动模式",
         "suggestions": {
           "title": "快速开始",
           "clickToUse": "点击使用",
