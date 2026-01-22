@@ -28,6 +28,7 @@ import { useAgentStream } from "./use-agent-stream";
 import { useEditor } from "../editor-context";
 import { toast } from "sonner";
 import { estimateActionCredits } from "@/lib/actions/credits/estimate";
+import { hasEnoughCredits } from "@/lib/actions/credits/balance";
 import type { FunctionCall } from "@/types/agent";
 import { getArtStyleById } from "@/lib/actions/art-style/queries";
 import { AssetPreview } from "./action-editor-forms";
@@ -69,6 +70,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [artStyleName, setArtStyleName] = useState<string | null>(null);
+  const autoBalanceCheckRef = useRef<{ toolCallId: string; inFlight: boolean } | null>(null);
 
   // 解析参数
   const parsedArgs = useMemo(() => {
@@ -178,15 +180,20 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
   // 异步获取积分估算
   const [creditCost, setCreditCost] = useState<CreditCost | undefined>();
+  const [isEstimatingCredits, setIsEstimatingCredits] = useState(false);
 
   useEffect(() => {
     if (!approvalInfo) {
       setCreditCost(undefined);
+      setIsEstimatingCredits(false);
       return;
     }
 
+    setCreditCost(undefined);
+    let isActive = true;
     const estimate = async () => {
       try {
+        setIsEstimatingCredits(true);
         const functionCall: FunctionCall = {
           id: approvalInfo.toolCall.id,
           name: approvalInfo.toolCall.function.name,
@@ -197,15 +204,22 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
         };
 
         const result = await estimateActionCredits([functionCall]);
-        if (result.success && result.creditCost) {
+        if (isActive && result.success && result.creditCost) {
           setCreditCost(result.creditCost);
         }
       } catch (error) {
         console.error("估算积分失败:", error);
+      } finally {
+        if (isActive) {
+          setIsEstimatingCredits(false);
+        }
       }
     };
 
     estimate();
+    return () => {
+      isActive = false;
+    };
   }, [approvalInfo, parsedArgs]);
 
   const totalCost = creditCost?.total || 0;
@@ -236,31 +250,89 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
   // 自动执行模式
   useEffect(() => {
-    if (
-      approvalInfo &&
-      agent.state.isAutoAcceptEnabled &&
-      !isConfirming &&
-      !isRejecting
-    ) {
-      // 检查积分余额
-      if (currentBalance !== undefined && totalCost > currentBalance) {
-        toast.warning("积分不足，无法自动执行");
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const attemptAutoConfirm = async () => {
+      if (
+        !approvalInfo ||
+        !agent.state.isAutoAcceptEnabled ||
+        isConfirming ||
+        isRejecting ||
+        isEstimatingCredits ||
+        !creditCost
+      ) {
         return;
       }
 
+      if (totalCost > 0) {
+        if (currentBalance !== undefined) {
+          if (totalCost > currentBalance) {
+            toast.warning("积分不足，无法自动执行");
+            agent.setAutoAccept(false);
+            return;
+          }
+        } else {
+          const toolCallId = approvalInfo.toolCall.id;
+          if (autoBalanceCheckRef.current?.toolCallId === toolCallId && autoBalanceCheckRef.current?.inFlight) {
+            return;
+          }
+
+          autoBalanceCheckRef.current = { toolCallId, inFlight: true };
+          const creditCheck = await hasEnoughCredits(totalCost);
+          autoBalanceCheckRef.current = { toolCallId, inFlight: false };
+
+          if (!creditCheck.success || !creditCheck.hasEnough) {
+            toast.warning("积分不足，无法自动执行");
+            agent.setAutoAccept(false);
+            return;
+          }
+        }
+      }
+
+      if (!isActive) return;
       // 延迟 500ms 后自动确认
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         console.log("[AutoAccept] 自动确认操作:", approvalInfo.toolCall.id);
         handleConfirm();
       }, 500);
+    };
 
-      return () => clearTimeout(timer);
-    }
-  }, [approvalInfo, agent.state.isAutoAcceptEnabled, isConfirming, isRejecting, totalCost, currentBalance]);
+    attemptAutoConfirm();
+
+    return () => {
+      isActive = false;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [
+    approvalInfo,
+    agent.state.isAutoAcceptEnabled,
+    isConfirming,
+    isRejecting,
+    isEstimatingCredits,
+    creditCost,
+    totalCost,
+    currentBalance,
+  ]);
 
   // 确认操作
   const handleConfirm = async () => {
     if (!agent.state.currentConversationId || isConfirming) return;
+
+    if (isEstimatingCredits || !creditCost) {
+      toast.info("正在计算积分，请稍候...");
+      return;
+    }
+
+    if (totalCost > 0 && currentBalance === undefined) {
+      const creditCheck = await hasEnoughCredits(totalCost);
+      if (!creditCheck.success || !creditCheck.hasEnough) {
+        setShowPurchaseDialog(true);
+        return;
+      }
+    }
 
     if (insufficientBalance) {
       setShowPurchaseDialog(true);
@@ -644,7 +716,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                 <TooltipTrigger asChild>
                   <Button
                     onClick={handleConfirm}
-                    disabled={isLoading}
+                    disabled={isLoading || isEstimatingCredits}
                     size="sm"
                     className="shrink-0"
                   >
@@ -664,7 +736,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                 <TooltipTrigger asChild>
                   <Button
                     onClick={handleConfirmAndAutoAccept}
-                    disabled={isLoading}
+                    disabled={isLoading || isEstimatingCredits}
                     variant="secondary"
                     size="sm"
                     className="shrink-0"
@@ -732,7 +804,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleConfirm}
-                  disabled={isLoading}
+                  disabled={isLoading || isEstimatingCredits}
                   size="sm"
                   className="flex-1"
                 >
@@ -753,7 +825,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                   <TooltipTrigger asChild>
                     <Button
                       onClick={handleConfirmAndAutoAccept}
-                      disabled={isLoading}
+                      disabled={isLoading || isEstimatingCredits}
                       variant="secondary"
                       size="sm"
                       className="flex-1"

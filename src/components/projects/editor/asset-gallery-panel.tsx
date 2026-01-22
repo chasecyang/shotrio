@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useEditor } from "./editor-context";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useEditor, type LoadAssetsOptions } from "./editor-context";
 import { AssetGroup } from "./shared/asset-group";
 import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
 import { AssetWithFullData, AssetTypeEnum } from "@/types/asset";
@@ -128,31 +128,41 @@ export function AssetGalleryPanel() {
   const [downloadProgress, setDownloadProgress] = useState<
     DownloadProgress | undefined
   >(undefined);
-  const [filterOptions, setFilterOptions] =
-    useState<AssetFilterOptions>(DEFAULT_FILTER);
-
-  // 从 localStorage 恢复素材类型筛选
-  const filterRestoredRef = useRef(false);
-  useEffect(() => {
-    if (!project?.id || filterRestoredRef.current) return;
-    filterRestoredRef.current = true;
+  const [initialLoadStarted, setInitialLoadStarted] = useState(false);
+  const getSavedAssetTypes = (projectId?: string) => {
+    if (!projectId || typeof window === "undefined") return [];
     try {
-      const saved = localStorage.getItem(getAssetTypeFilterKey(project.id));
-      if (saved) {
-        const parsed = JSON.parse(saved) as string[];
-        const validTypes = parsed.filter((t): t is AssetTypeEnum =>
-          VALID_ASSET_TYPES.includes(t as AssetTypeEnum)
-        );
-        if (validTypes.length > 0) {
-          setFilterOptions(prev => ({ ...prev, assetTypes: validTypes }));
-        }
-      }
-    } catch {}
+      const saved = localStorage.getItem(getAssetTypeFilterKey(projectId));
+      if (!saved) return [];
+      const parsed = JSON.parse(saved) as string[];
+      return parsed.filter((t): t is AssetTypeEnum =>
+        VALID_ASSET_TYPES.includes(t as AssetTypeEnum)
+      );
+    } catch {
+      return [];
+    }
+  };
+
+  const [filterOptions, setFilterOptions] = useState<AssetFilterOptions>(() => ({
+    ...DEFAULT_FILTER,
+    assetTypes: getSavedAssetTypes(project?.id),
+  }));
+
+  // 切换项目时恢复素材类型筛选
+  const lastProjectIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!project?.id) return;
+    if (lastProjectIdRef.current === project.id) return;
+    lastProjectIdRef.current = project.id;
+    setFilterOptions(prev => ({
+      ...prev,
+      assetTypes: getSavedAssetTypes(project.id),
+    }));
   }, [project?.id]);
 
   // 保存素材类型筛选到 localStorage
   useEffect(() => {
-    if (!project?.id || !filterRestoredRef.current) return;
+    if (!project?.id) return;
     try {
       localStorage.setItem(getAssetTypeFilterKey(project.id), JSON.stringify(filterOptions.assetTypes));
     } catch {}
@@ -170,22 +180,32 @@ export function AssetGalleryPanel() {
   const [regeneratingAsset, setRegeneratingAsset] = useState<AssetWithFullData | null>(null);
 
   // 初始加载或静默刷新
+  const refreshAssets = useCallback(
+    (options?: LoadAssetsOptions) =>
+      loadAssets({
+        search: filterOptions.search,
+        ...options,
+      }),
+    [loadAssets, filterOptions.search]
+  );
+
   useEffect(() => {
     if (!project?.id) return;
-    loadAssets({ search: filterOptions.search });
-  }, [project?.id, loadAssets, filterOptions.search]);
+    setInitialLoadStarted(true);
+    refreshAssets();
+  }, [project?.id, refreshAssets]);
 
   // 监听素材创建事件
   useEffect(() => {
     const handleAssetCreated = () => {
-      loadAssets({ search: filterOptions.search });
+      refreshAssets();
     };
 
     window.addEventListener("asset-created", handleAssetCreated);
     return () => {
       window.removeEventListener("asset-created", handleAssetCreated);
     };
-  }, [loadAssets, filterOptions.search]);
+  }, [refreshAssets]);
 
   // 客户端筛选逻辑
   const filteredAssets = useMemo(() => {
@@ -215,9 +235,7 @@ export function AssetGalleryPanel() {
   };
 
   // 素材更新后刷新
-  const handleAssetUpdated = () => {
-    loadAssets({ search: filterOptions.search });
-  };
+  const handleAssetUpdated = refreshAssets;
 
   // 当 allAssets 更新时，同步更新 selectedAsset
   useEffect(() => {
@@ -265,7 +283,7 @@ export function AssetGalleryPanel() {
         const count = deletedIds.length;
         toast.success(t("deleteSuccess", { count }));
         setSelectedAssetIds(new Set());
-        await loadAssets({ search: filterOptions.search });
+        await refreshAssets();
       } else {
         toast.error(result.error || t("deleteFailed"));
       }
@@ -348,7 +366,7 @@ export function AssetGalleryPanel() {
 
   // 处理上传成功
   const handleUploadSuccess = () => {
-    loadAssets({ search: filterOptions.search });
+    refreshAssets();
   };
 
   // 处理重试
@@ -357,7 +375,7 @@ export function AssetGalleryPanel() {
       const result = await retryJob(jobId);
       if (result.success) {
         toast.success(t("retrySubmitted"));
-        await loadAssets({ search: filterOptions.search });
+        await refreshAssets();
       } else {
         toast.error(result.error || t("retryFailed"));
       }
@@ -475,10 +493,7 @@ export function AssetGalleryPanel() {
               size="icon"
               className="h-7 w-7 shrink-0"
               onClick={() =>
-                loadAssets({
-                  search: filterOptions.search,
-                  showLoading: true,
-                })
+                refreshAssets({ showLoading: true })
               }
               disabled={assetsLoading}
             >
@@ -507,7 +522,7 @@ export function AssetGalleryPanel() {
       {/* 素材区域 */}
       <div className="flex-1 overflow-auto">
         <div className="p-4">
-          {!assetsLoaded && assetsLoading ? (
+          {!assetsLoaded && (assetsLoading || !initialLoadStarted) ? (
             // 加载骨架屏
             <div
               className="grid gap-3"
