@@ -344,6 +344,7 @@ export function FloatingAgentCard({
     },
     onComplete: () => {
       agent.setLoading(false);
+      agent.setAutoAccept(false); // 对话结束后自动退出自动模式
       setTimeout(() => agent.refreshConversations(true), 100);
     },
     onError: (error) => {
