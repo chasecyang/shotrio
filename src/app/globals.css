@@ -384,6 +384,44 @@
     animation: auto-mode-pulse 2s ease-in-out infinite;
   }
 
+  /* Energy Flow Animation */
+  @keyframes energy-flow {
+    0%, 100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* Particle Travel Animation */
+  @keyframes particle-travel {
+    0% {
+      offset-distance: 0%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      offset-distance: 100%;
+      opacity: 0;
+    }
+  }
+
+  /* Soft Glow Animation */
+  @keyframes soft-glow {
+    0%, 100% {
+      filter: drop-shadow(0 0 2px oklch(0.60 0.16 40 / 0.3));
+    }
+    50% {
+      filter: drop-shadow(0 0 4px oklch(0.60 0.16 40 / 0.5));
+    }
+  }
+
   /* 暗色模式卡片质感边框 */
   .dark-card-glow {
     box-shadow:

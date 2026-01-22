@@ -110,7 +110,44 @@ const AutoModeBar = memo(function AutoModeBar({ isBottomMode, onExit, t, asOverl
         )}
       >
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="relative flex items-center justify-center w-4 h-4"
+          >
+            {/* Core breathing indicator */}
+            <motion.span
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [1, 0.8, 1],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="relative z-10 block h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_3px_oklch(0.60_0.16_40/0.3)]"
+            />
+
+            {/* Ripple layers */}
+            {[0, 0.7, 1.4].map((delay, i) => (
+              <motion.span
+                key={i}
+                className="absolute inset-0 rounded-full border-2 border-primary"
+                animate={{
+                  scale: [1, 2.5],
+                  opacity: [0.6, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  delay,
+                  ease: "easeOut"
+                }}
+              />
+            ))}
+          </motion.div>
           <span>{t("editor.agent.panel.autoModeProcessing")}</span>
         </div>
         <Button

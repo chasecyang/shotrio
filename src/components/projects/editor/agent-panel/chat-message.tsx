@@ -5,6 +5,7 @@ import type { AgentMessage } from "@/types/agent";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { Hand } from "lucide-react";
 import { DisplayStepCard } from "./display-step-card";
+import { EnergyStream } from "./energy-stream";
 import { useMessageDisplay } from "./use-message-display";
 import { useAgent } from "./agent-context";
 
@@ -57,12 +58,20 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
           {/* Display Steps (思考过程和工具调用) */}
           {currentDisplay && currentDisplay.steps.length > 0 && (
             <div className="space-y-3">
-              {currentDisplay.steps.map(step => (
-                <DisplayStepCard
-                  key={step.id}
-                  step={step}
-                  isStreaming={message.isStreaming}
-                />
+              {currentDisplay.steps.map((step, index) => (
+                <div key={step.id} className="space-y-0">
+                  <DisplayStepCard
+                    step={step}
+                    isStreaming={message.isStreaming}
+                  />
+                  {/* Show energy stream between executing steps in auto mode */}
+                  {agent.state.isAutoAcceptEnabled &&
+                    index < currentDisplay.steps.length - 1 &&
+                    step.type === "tool_call" &&
+                    step.toolCall?.status === "executing" && (
+                      <EnergyStream />
+                    )}
+                </div>
               ))}
             </div>
           )}

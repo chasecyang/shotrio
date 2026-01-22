@@ -37,7 +37,11 @@ export const DisplayStepCard = memo(function DisplayStepCard({
         case "rejected":
           return <Ban className="h-3.5 w-3.5 text-gray-600 shrink-0" />;
         case "executing":
-          return <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 shrink-0" />;
+          return (
+            <div className="relative inline-flex items-center justify-center">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 shrink-0 drop-shadow-[0_0_3px_rgba(37,99,235,0.4)]" />
+            </div>
+          );
         case "awaiting_confirmation":
           return <Clock className="h-3.5 w-3.5 text-orange-600 shrink-0" />;
         default:
