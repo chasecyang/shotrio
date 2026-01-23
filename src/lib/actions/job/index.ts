@@ -20,4 +20,5 @@ export {
   completeJob,
   failJob,
   getPendingJobs,
+  requeueJob,
 } from "./worker-operations";

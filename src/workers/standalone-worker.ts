@@ -8,10 +8,11 @@
  * - 使用 PM2：pm2 start ecosystem.config.js
  */
 
-import { getPendingJobs, failJob } from "../lib/actions/job";
+import { getPendingJobs, failJob, requeueJob } from "../lib/actions/job";
 import { processJob, registerAllProcessors } from "../lib/workers/job-processor";
 import { getWorkerToken } from "../lib/workers/auth";
 import { recoverTimeoutJobs } from "../lib/workers/utils/timeout-handler";
+import { DependencyNotReadyError } from "../lib/workers/errors/DependencyNotReadyError";
 import type { Job } from "@/types/job";
 
 const POLL_INTERVAL = parseInt(process.env.WORKER_POLL_INTERVAL || '2000'); // 2 秒轮询一次（更短的轮询间隔以充分利用并发能力）
@@ -87,8 +88,45 @@ async function processJobAsync(job: Job): Promise<void> {
     console.log(`[Worker] ✅ 任务 ${job.id} 处理完成 (耗时 ${duration}s)`);
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    // 特殊处理依赖未就绪错误
+    if (error instanceof DependencyNotReadyError) {
+      const retryCount = ((job.inputData as Record<string, unknown>)?._retryCount as number || 0) + 1;
+      const MAX_RETRIES = 20; // ~40秒（2秒轮询间隔）
+
+      if (retryCount <= MAX_RETRIES) {
+        // 重新排队
+        const waitingForIds = error.waitingFor.map(d => d.imageDataId);
+        try {
+          await requeueJob(job.id, retryCount, waitingForIds, workerToken);
+          console.log(`[Worker] 🔄 任务 ${job.id} 等待依赖，重试 ${retryCount}/${MAX_RETRIES}`);
+          return;
+        } catch (requeueError) {
+          console.error(`[Worker] ⚠️  重新排队任务 ${job.id} 失败:`, requeueError);
+          // 如果重新排队失败，继续执行失败逻辑
+        }
+      } else {
+        // 超过最大重试次数，标记为失败
+        console.error(`[Worker] ❌ 任务 ${job.id} 依赖超时 (耗时 ${duration}s)`);
+        try {
+          await failJob(
+            {
+              jobId: job.id,
+              errorMessage: "依赖超时：引用的图片生成未完成",
+            },
+            workerToken
+          );
+          console.log(`[Worker] 📝 已将任务 ${job.id} 标记为失败（依赖超时）`);
+        } catch (failError) {
+          console.error(`[Worker] ⚠️  标记任务 ${job.id} 失败时出错:`, failError);
+        }
+        return;
+      }
+    }
+
+    // 其他错误照常处理
     console.error(`[Worker] ❌ 任务 ${job.id} 处理失败 (耗时 ${duration}s):`, error);
-    
+
     // 立即标记任务为失败，不等待超时
     try {
       await failJob(

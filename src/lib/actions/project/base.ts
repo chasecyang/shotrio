@@ -65,7 +65,7 @@ export async function getUserProjects(): Promise<ProjectWithStats[]> {
   try {
     const projects = await db.query.project.findMany({
       where: eq(project.userId, session.user.id),
-      orderBy: [desc(project.updatedAt)],
+      orderBy: [desc(project.lastAccessedAt)],
       with: {
         assets: true,
       },
@@ -172,5 +172,30 @@ export async function deleteProject(projectId: string) {
       success: false,
       error: error instanceof Error ? error.message : "删除失败",
     };
+  }
+}
+
+/**
+ * 更新项目最后访问时间
+ */
+export async function updateProjectAccess(projectId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return { success: false };
+  }
+
+  try {
+    await db
+      .update(project)
+      .set({ lastAccessedAt: new Date() })
+      .where(
+        and(eq(project.id, projectId), eq(project.userId, session.user.id)),
+      );
+    return { success: true };
+  } catch (error) {
+    console.error("更新项目访问时间失败:", error);
+    return { success: false };
   }
 }

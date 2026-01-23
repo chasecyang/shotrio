@@ -1,0 +1,1 @@
+ALTER TABLE "project" ADD COLUMN "last_accessed_at" timestamp DEFAULT now() NOT NULL;

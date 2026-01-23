@@ -18,6 +18,25 @@ import type {
 import type { VideoGenerationConfig } from "@/types/asset";
 import { verifyProjectOwnership } from "../utils/validation";
 import { extractVideoThumbnail } from "@/lib/utils/video-thumbnail";
+import { checkImageDependencies, extractDependenciesFromSnapshot } from "../utils/dependency-checker";
+import { DependencyNotReadyError } from "../errors/DependencyNotReadyError";
+
+function getVideoModelUsed(provider: ReturnType<typeof getVideoServiceProvider>): string {
+  if (provider === "veo") {
+    const platform = process.env.VEO_PLATFORM?.toLowerCase() || "yunwu";
+    return platform === "yunwu" ? "veo_3_1-fast-4K" : "veo3_fast";
+  }
+  if (provider === "seedance") {
+    return "seedance";
+  }
+  if (provider === "kling") {
+    return "kling_o1";
+  }
+  if (provider === "sora2" || provider === "sora2pro") {
+    return provider;
+  }
+  return provider;
+}
 
 /**
  * 处理视频生成任务（新架构：使用 asset 表）
@@ -92,11 +111,39 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       aspectRatio: config.aspect_ratio,
     });
 
+    // 2.5 检查依赖是否就绪（在扣除积分之前）
+    const versionSnapshot = config._versionSnapshot;
+    if (versionSnapshot) {
+      const dependencyIds = extractDependenciesFromSnapshot(versionSnapshot);
+      if (dependencyIds.length > 0) {
+        console.log(`[Worker] 检查依赖: ${dependencyIds.join(", ")}`);
+        const dependencyCheck = await checkImageDependencies(dependencyIds);
+
+        if (!dependencyCheck.ready) {
+          if (dependencyCheck.failedDependencies && dependencyCheck.failedDependencies.length > 0) {
+            // 依赖失败（被删除等），直接抛出错误
+            const reasons = dependencyCheck.failedDependencies.map(d => d.reason).join("; ");
+            throw new Error(`依赖检查失败: ${reasons}`);
+          }
+
+          if (dependencyCheck.waitingFor && dependencyCheck.waitingFor.length > 0) {
+            // 依赖未就绪，抛出特殊错误以触发重新排队
+            console.log(`[Worker] 依赖未就绪，等待: ${dependencyCheck.waitingFor.map(d => d.imageDataId).join(", ")}`);
+            throw new DependencyNotReadyError(
+              "依赖的图片还在生成中",
+              dependencyCheck.waitingFor
+            );
+          }
+        }
+        console.log(`[Worker] 所有依赖已就绪`);
+      }
+    }
+
     // 3. 将 Asset ID 转换为真实的图片 URL（支持版本快照）
     const resolveImageUrl = async (
       assetIdOrUrl: string,
       versionId?: string // 可选：版本快照中的 imageData.id
-    ): Promise<string> => {
+    ): Promise<string | null> => {
       // 如果已经是 HTTP URL，直接返回
       if (assetIdOrUrl.startsWith("http")) {
         return assetIdOrUrl;
@@ -129,27 +176,33 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
         (img: { isActive: boolean }) => img.isActive
       );
       if (!activeImageData?.imageUrl) {
-        throw new Error(`无法找到图片资产或图片 URL: ${assetIdOrUrl}`);
+        // 返回 null 而不是抛出错误，让调用方处理
+        return null;
       }
       return activeImageData.imageUrl;
     };
 
-    // 获取版本快照
-    const versionSnapshot = config._versionSnapshot;
-
     // 解析起始帧和结束帧的真实 URL（传入版本快照）
     if (config.start_image_url) {
-      config.start_image_url = await resolveImageUrl(
+      const resolvedUrl = await resolveImageUrl(
         config.start_image_url,
         versionSnapshot?.start_image_version_id
       );
+      if (!resolvedUrl) {
+        throw new Error(`无法找到起始帧图片 URL: ${config.start_image_url}`);
+      }
+      config.start_image_url = resolvedUrl;
       console.log(`[Worker] 起始帧 URL: ${config.start_image_url}`);
     }
     if (config.end_image_url) {
-      config.end_image_url = await resolveImageUrl(
+      const resolvedUrl = await resolveImageUrl(
         config.end_image_url,
         versionSnapshot?.end_image_version_id
       );
+      if (!resolvedUrl) {
+        throw new Error(`无法找到结束帧图片 URL: ${config.end_image_url}`);
+      }
+      config.end_image_url = resolvedUrl;
       console.log(`[Worker] 结束帧 URL: ${config.end_image_url}`);
     }
 
@@ -350,7 +403,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
           duration: actualDuration, // 使用真实时长
-          modelUsed: provider === "seedance" ? "seedance" : provider === "veo" ? "veo3_fast" : "kling_o1",
+          modelUsed: getVideoModelUsed(provider),
           isActive: true,
         })
         .where(eq(videoData.id, videoDataId));

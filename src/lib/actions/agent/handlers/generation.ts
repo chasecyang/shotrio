@@ -12,6 +12,7 @@ import { project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { createVideoAsset, getAssetWithFullData } from "@/lib/actions/asset";
 import { createJob } from "@/lib/actions/job";
+import { getVideoServiceProvider } from "@/lib/services/video-service";
 
 /**
  * 获取项目的画风prompt
@@ -309,12 +310,25 @@ async function handleGenerateVideo(
         };
       }
 
+      const provider = getVideoServiceProvider();
+      const veoPlatform = process.env.VEO_PLATFORM?.toLowerCase() || "yunwu";
+      const modelUsed =
+        provider === "veo"
+          ? veoPlatform === "yunwu"
+            ? "veo_3_1-fast-4K"
+            : "veo3_fast"
+          : provider === "seedance"
+            ? "seedance"
+            : provider === "kling"
+              ? "kling_o1"
+              : provider;
+
       const { createAssetVersion } = await import("@/lib/actions/asset/version");
       const versionResult = await createAssetVersion(
         targetAssetId,
         {
           prompt: finalPrompt,
-          modelUsed: "seedance",
+          modelUsed,
           generationConfig: JSON.stringify(generationConfig),
         },
         { activateImmediately: false }

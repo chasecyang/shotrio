@@ -426,7 +426,11 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     }, []),
 
     onRefreshAssets: useCallback(async () => {
-      // 直接刷新素材列表，同时保留事件以兼容其他监听器
+      // 直接刷新素材列表
+      if (loadAssetsRef.current) {
+        await loadAssetsRef.current();
+      }
+      // 同时触发事件以兼容其他监听器
       window.dispatchEvent(new CustomEvent("asset-created"));
     }, []),
   });
@@ -489,6 +493,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   // 用于防止重复加载的 ref
   const isLoadingAssetsRef = useRef(false);
 
+  // 用于在 useTaskRefresh 中调用 loadAssets 的 ref
+  const loadAssetsRef = useRef<((options?: LoadAssetsOptions) => Promise<void>) | null>(null);
+
   // 加载素材列表
   const loadAssets = useCallback(async (options?: LoadAssetsOptions) => {
     if (!state.project?.id) return;
@@ -515,6 +522,11 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       isLoadingAssetsRef.current = false;
     }
   }, [state.project?.id, state.assetsLoaded]);
+
+  // 将 loadAssets 存储到 ref 中，供 useTaskRefresh 使用
+  useEffect(() => {
+    loadAssetsRef.current = loadAssets;
+  }, [loadAssets]);
 
   // 素材生成相关方法
   const setAssetGenerationMode = useCallback((mode: "text-to-image" | "image-to-image") => {

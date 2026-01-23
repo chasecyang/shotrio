@@ -104,45 +104,27 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产（Sora2 Pro，支持 10/15 秒）。
+    description: `生成视频资产（Veo 3.1 Fast 4K，yunwu.ai）。
 
-**Grid Storyboard Support**：
-Sora2 Pro 可以理解网格分镜图（2x2、2x3、3x3），每个网格对应一个镜头片段。
-- 2x2 (4 shots): 标准叙事节奏
-- 2x3 (6 shots): 中快节奏，适合对话或中等动作
-- 3x3 (9 shots): 快节奏动作，打斗场景，快速情绪变化
+**输入方式**：
+- 起始帧模式：start_image_url（必填），可选 end_image_url 作为收尾帧
+- 自动过渡：不提供 end_image_url 时，模型自动生成过渡
 
 **prompt 结构**：[景别] + [主体动作] + [镜头运动] + [镜头参数] + [氛围]
 
-**镜头技术参数（重要）**：
-为确保相机运动时背景正确响应（虚化、透视变化），必须包含：
-- **焦距**：24mm（广角，保持背景清晰）、50mm（标准）、85mm（人像特写，自然背景虚化）、200mm（长焦，强烈背景虚化）
-- **景深**：f/2 shallow depth of field（浅景深，背景虚化）、f/8 deep depth of field（深景深，背景清晰）
-- **背景处理**：neutral background bokeh（中性背景虚化）、soft background blur（柔和背景模糊）、atmospheric perspective（大气透视）
+**镜头技术参数（推荐）**：
+- **焦距**：24mm（广角）、50mm（标准）、85mm（人像特写）、200mm（长焦）
+- **景深**：f/2 shallow depth of field、f/8 deep depth of field
+- **背景**：neutral background bokeh、soft background blur、atmospheric perspective
 
-**好的 prompt 示例**：
-- "Wide establishing shot, village at dawn, 24mm lens, f/8 deep DOF, slow pan left to right, golden morning mist"
-- "Medium shot, detective examines clues on desk, 50mm lens, slow push-in, mysterious low-key lighting"
-- "Close-up on her trembling hands, 85mm lens, f/2 shallow depth of field, static camera, neutral background bokeh, emotional tension"
-- "Full shot, warrior charges forward, 50mm lens, tracking shot from side, dust particles in dramatic backlight"
-
-**Grid Storyboard prompt 示例**：
-- "3x3 grid storyboard: martial arts fight sequence. Grid 1: wide shot warriors face off. Grid 2: medium shot warrior charges. Grid 3: close-up determined face. Grid 4-6: rapid action beats (strike, dodge, counter). Grid 7: impact moment. Grid 8: warrior stumbles. Grid 9: reset stance. 50mm lens, dynamic camera movements, dramatic lighting"
-
-**相机运动与背景一致性**：
-- 推进特写时：使用 85mm + f/2 + "neutral background bokeh" 确保背景自然虚化
-- 拉远全景时：使用 24mm + f/8 + "deep depth of field" 保持背景清晰
-- 固定镜头：添加 "locked-off camera remains still" 避免意外运动
-
-**时长选择**：
-- 10秒（默认）：标准镜头，适合大多数场景
-- 15秒：长镜头，复杂场景，需要更多时间展开的动作
+**时长**：
+- Veo 3.1 默认约 8 秒；duration 参数仅保留兼容，可能不生效
 
 **参数**：
-- prompt（必填）：≥10字符，用英文描述
-- start_image_url（必填）：起始帧资产ID（可以是网格分镜图）
-- end_image_url（可选）：结束帧资产ID，不提供则AI自动生成过渡
-- duration（可选）：视频时长，'10'/'15'，默认 '10'
+- prompt（必填）：≥10字符，英文描述
+- start_image_url（必填）：起始帧资产ID或URL
+- end_image_url（可选）：结束帧资产ID或URL
+- duration（可选）：兼容字段，Veo 3.1 可能忽略
 - targetAssetId（可选）：重新生成模式，传入已有视频ID生成新版本
 `,
     displayName: "生成视频资产",
@@ -163,7 +145,7 @@ Sora2 Pro 可以理解网格分镜图（2x2、2x3、3x3），每个网格对应�
         },
         duration: {
           type: "string",
-          description: "视频时长（可选），'10'/'15' 秒，默认 '10'",
+          description: "视频时长（可选），兼容字段，Veo 3.1 可能忽略",
         },
         aspect_ratio: {
           type: "string",

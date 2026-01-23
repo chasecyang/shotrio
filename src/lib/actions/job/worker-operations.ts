@@ -293,3 +293,76 @@ export async function getPendingJobs(
     };
   }
 }
+
+/**
+ * 重新排队任务（用于依赖未就绪的情况）
+ * @param jobId - 任务 ID
+ * @param retryCount - 重试次数
+ * @param waitingFor - 等待的依赖列表
+ * @param workerToken - Worker 认证 token（仅供内部 Worker 使用）
+ */
+export async function requeueJob(
+  jobId: string,
+  retryCount: number,
+  waitingFor: string[],
+  workerToken?: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  // 验证 Worker 身份
+  if (!verifyWorkerToken(workerToken)) {
+    console.error("[Security] 未授权的 requeueJob 调用");
+    return {
+      success: false,
+      error: "未授权",
+    };
+  }
+
+  try {
+    // 获取当前任务的 inputData
+    const currentJob = await db.query.job.findFirst({
+      where: eq(job.id, jobId),
+      columns: {
+        inputData: true,
+      },
+    });
+
+    if (!currentJob) {
+      return {
+        success: false,
+        error: "任务不存在",
+      };
+    }
+
+    // 更新 inputData 中的重试元数据
+    const updatedInputData = {
+      ...(currentJob.inputData as Record<string, unknown> || {}),
+      _retryCount: retryCount,
+      _lastRetryAt: new Date().toISOString(),
+      _waitingForDependencies: waitingFor,
+    };
+
+    // 将任务状态改回 pending，更新元数据和进度消息
+    await db
+      .update(job)
+      .set({
+        status: "pending",
+        inputData: updatedInputData,
+        progressMessage: "等待图片生成...",
+        updatedAt: new Date(),
+        // 注意：不修改 startedAt，保留原始开始时间
+      })
+      .where(eq(job.id, jobId));
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("重新排队任务失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "重新排队任务失败",
+    };
+  }
+}

@@ -333,11 +333,12 @@ function validateSetProjectInfoParams(
 
   const hasTitle = params.title !== undefined;
   const hasDescription = params.description !== undefined;
+  const hasStylePrompt = params.stylePrompt !== undefined;
   const hasStyleId = params.styleId !== undefined;
 
   // 至少需要一个字段
-  if (!hasTitle && !hasDescription && !hasStyleId) {
-    errors.push("至少需要提供 title、description 或 styleId 中的一个字段");
+  if (!hasTitle && !hasDescription && !hasStylePrompt && !hasStyleId) {
+    errors.push("至少需要提供 title、description 或 stylePrompt 中的一个字段");
   }
 
   // 校验各字段类型
@@ -346,6 +347,9 @@ function validateSetProjectInfoParams(
   }
   if (hasDescription && typeof params.description !== "string") {
     errors.push("description 必须是字符串");
+  }
+  if (hasStylePrompt && typeof params.stylePrompt !== "string") {
+    errors.push("stylePrompt 必须是字符串");
   }
   if (hasStyleId && typeof params.styleId !== "string") {
     errors.push("styleId 必须是字符串");

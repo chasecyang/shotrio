@@ -89,6 +89,9 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   const isGenerateVideo = functionName === "generate_video_asset";
   const isCreateTextAsset = functionName === "create_text_asset";
   const isSetProjectInfo = functionName === "set_project_info";
+  const stylePrompt = typeof parsedArgs.stylePrompt === "string" ? parsedArgs.stylePrompt : "";
+  const hasStylePrompt = stylePrompt.trim().length > 0;
+  const styleId = typeof parsedArgs.styleId === "string" ? parsedArgs.styleId : "";
 
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
@@ -166,19 +169,31 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
   // 获取美术风格名称
   useEffect(() => {
-    if (!isSetProjectInfo) return;
+    if (!isSetProjectInfo) {
+      setArtStyleName(null);
+      return;
+    }
 
-    const styleId = parsedArgs.styleId as string;
-    if (!styleId) return;
+    if (hasStylePrompt || !styleId) {
+      setArtStyleName(null);
+      return;
+    }
 
+    let isActive = true;
     getArtStyleById(styleId).then((style) => {
-      if (style) {
-        setArtStyleName(style.name);
+      if (isActive) {
+        setArtStyleName(style ? style.name : null);
       }
     }).catch((error) => {
-      console.error("获取美术风格名称失败:", error);
+      if (isActive) {
+        console.error("获取美术风格名称失败:", error);
+      }
     });
-  }, [isSetProjectInfo, parsedArgs.styleId]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [hasStylePrompt, isSetProjectInfo, styleId]);
 
   // 异步获取积分估算
   const [creditCost, setCreditCost] = useState<CreditCost | undefined>();
@@ -471,7 +486,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     : isCreateTextAsset
     ? parsedArgs.content
     : isSetProjectInfo
-    ? parsedArgs.title || parsedArgs.description || parsedArgs.styleId
+    ? parsedArgs.title || parsedArgs.description || parsedArgs.stylePrompt || parsedArgs.styleId
     : formattedParams.length > 0;
 
   // 键盘快捷键
@@ -672,7 +687,13 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                     <span className="text-xs text-foreground break-words">{parsedArgs.description}</span>
                   </div>
                 )}
-                {parsedArgs.styleId && (
+                {hasStylePrompt && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs font-medium text-muted-foreground shrink-0">美术风格:</span>
+                    <span className="text-xs text-foreground break-words">{stylePrompt}</span>
+                  </div>
+                )}
+                {!hasStylePrompt && styleId && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">美术风格:</span>
                     {artStyleName ? (

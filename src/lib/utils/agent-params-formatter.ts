@@ -35,6 +35,7 @@ const PARAM_KEY_LABELS: Record<string, string> = {
   reason: "原因",
   description: "描述",
   visualPrompt: "视觉提示词",
+  stylePrompt: "美术风格",
 
   // 生成参数
   numImages: "生成数量",
@@ -295,6 +296,7 @@ const KEY_PARAMS_PRIORITY = [
   "title",
   "description",
   "prompt",
+  "stylePrompt",
   "tags",
   "duration",
   "aspectRatio",
@@ -418,4 +420,3 @@ export function parsePromptReferences(prompt: string): PromptPart[] {
   
   return parts;
 }
-

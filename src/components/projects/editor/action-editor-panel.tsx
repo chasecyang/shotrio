@@ -39,22 +39,41 @@ export function ActionEditorPanel() {
   const isCreateTextAsset = functionCall.name === "create_text_asset";
   const isSetProjectInfo = functionCall.name === "set_project_info";
 
-  // 获取美术风格名称（仅当 set_project_info 包含 styleId 时）
+  // 获取美术风格名称（仅当 set_project_info 使用 styleId 时）
   useEffect(() => {
-    if (!isSetProjectInfo) return;
+    if (!isSetProjectInfo) {
+      setArtStyleName(null);
+      return;
+    }
+
+    const stylePrompt = functionCall.arguments.stylePrompt as string | undefined;
+    if (stylePrompt && stylePrompt.trim()) {
+      setArtStyleName(null);
+      return;
+    }
 
     const styleId = functionCall.arguments.styleId as string;
-    if (!styleId) return;
+    if (!styleId) {
+      setArtStyleName(null);
+      return;
+    }
 
     // 异步获取美术风格名称
+    let isActive = true;
     getArtStyleById(styleId).then((style) => {
-      if (style) {
-        setArtStyleName(style.name);
+      if (isActive) {
+        setArtStyleName(style ? style.name : null);
       }
     }).catch((error) => {
-      console.error("获取美术风格名称失败:", error);
+      if (isActive) {
+        console.error("获取美术风格名称失败:", error);
+      }
     });
-  }, [isSetProjectInfo, functionCall.arguments.styleId]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [isSetProjectInfo, functionCall.arguments.styleId, functionCall.arguments.stylePrompt]);
 
   // 获取标题
   const getTitle = () => {
@@ -62,11 +81,20 @@ export function ActionEditorPanel() {
     if (isGenerateVideo) return "生成视频素材";
     if (isCreateTextAsset) return "创建文本资产";
     if (isSetProjectInfo) {
-      const args = functionCall.arguments as { title?: string; description?: string; styleId?: string };
+      const args = functionCall.arguments as {
+        title?: string;
+        description?: string;
+        stylePrompt?: string;
+        styleId?: string;
+      };
       const fields: string[] = [];
       if (args.title) fields.push("标题");
       if (args.description) fields.push("描述");
-      if (args.styleId) fields.push(artStyleName ? `美术风格(${artStyleName})` : "美术风格");
+      if (args.stylePrompt) {
+        fields.push("美术风格");
+      } else if (args.styleId) {
+        fields.push(artStyleName ? `美术风格(${artStyleName})` : "美术风格");
+      }
       return fields.length > 0 ? `设置项目${fields.join("、")}` : "设置项目信息";
     }
     return functionCall.displayName || functionCall.name;
@@ -247,5 +275,4 @@ export function ActionEditorPanel() {
     </div>
   );
 }
-
 

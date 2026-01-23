@@ -11,6 +11,7 @@ export {
   getProjectDetail,
   updateProject,
   deleteProject,
+  updateProjectAccess,
 } from "./base";
 
 // 注意: 视频相关操作现在统一在 @/lib/actions/asset 中

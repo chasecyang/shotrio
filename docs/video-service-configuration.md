@@ -6,8 +6,8 @@
 
 ### 1. Veo 3.1 (默认)
 
-**提供商**: kie.ai (Google)  
-**模型**: Veo 3.1 Fast / Quality  
+**提供商**: yunwu.ai  
+**模型**: Veo 3.1 Fast 4K  
 **特点**:
 - Google 最新的视频生成模型
 - 价格为 Google 官方的 25%
@@ -46,8 +46,9 @@
 # 可选值: "veo" (默认) | "kling"
 VIDEO_SERVICE_PROVIDER=veo
 
-# Veo 服务配置 (kie.ai) - 默认
-KIE_API_KEY=your_kie_api_key
+# Veo 服务配置 (yunwu.ai) - 默认
+YUNWU_API_KEY=your_yunwu_api_key
+VEO_PLATFORM=yunwu
 
 # Kling 服务配置 (fal.ai) - 备用
 FAL_KEY=your_fal_api_key
@@ -68,7 +69,8 @@ Veo 3.1 是默认服务，设置：
 
 ```bash
 VIDEO_SERVICE_PROVIDER=veo
-KIE_API_KEY=your_kie_api_key
+YUNWU_API_KEY=your_yunwu_api_key
+VEO_PLATFORM=yunwu
 ```
 
 或者直接移除 `VIDEO_SERVICE_PROVIDER` 环境变量（默认使用 Veo 3.1）。
@@ -211,15 +213,15 @@ VIDEO_SERVICE_PROVIDER=veo
        │             │
        ▼             ▼
 ┌──────────┐  ┌──────────────┐
-│ fal.ai   │  │ kie.ai       │
+│ fal.ai   │  │ yunwu.ai     │
 └──────────┘  └──────────────┘
 ```
 
 ### 核心文件
 
 - `src/lib/services/video-service.ts` - 统一抽象层
-- `src/lib/services/fal.service.ts` - Kling 服务实现
-- `src/lib/services/kie.service.ts` - Veo 3.1 服务实现
+- `src/lib/services/fal/` - Kling 服务实现
+- `src/lib/services/yunwu.ts` - Veo 3.1 服务实现
 - `src/lib/workers/processors/video-processors.ts` - Worker 处理器
 
 ## 未来扩展
@@ -259,6 +261,5 @@ export async function generateVideo(config: VideoGenerationConfig) {
 ## 相关文档
 
 - [Kling O1 API 文档](https://fal.ai/models/fal-ai/kling-video/o1)
-- [Veo 3.1 API 文档](https://docs.kie.ai/veo3-api/generate-veo-3-video)
+- [Veo 3.1 API 文档](https://yunwu.apifox.cn/api-311044999)
 - [KIE 集成指南](./kie-integration.md)
-

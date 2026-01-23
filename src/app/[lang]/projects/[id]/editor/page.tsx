@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { getProjectDetail, getUserProjects } from "@/lib/actions/project";
+import { getProjectDetail, getUserProjects, updateProjectAccess } from "@/lib/actions/project";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
 import { EditorLayout } from "@/components/projects/editor/editor-layout";
 import { EditorSkeleton } from "./loading";
@@ -36,6 +36,7 @@ async function EditorWrapper({
     getProjectDetail(projectId),
     getUserProjects(),
     getCurrentUser(),
+    updateProjectAccess(projectId),
   ]);
 
   if (!project) {

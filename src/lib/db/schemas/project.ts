@@ -107,6 +107,7 @@ export const project = pgTable("project", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow().notNull(),
 });
 
 // 2. 资产表 (Asset) - 统一的资产管理基表

@@ -2,23 +2,32 @@
  * 视频生成服务抽象层
  *
  * 提供统一的接口，支持多个视频生成服务提供商：
- * - Sora2 Pro (kie.ai) - 默认提供商，OpenAI 的视频生成模型
- * - Seedance 1.5 Pro (kie.ai) - 备用提供商，字节跳动的视频生成模型
- * - Veo 3.1 (kie.ai) - 备用提供商，Google 的视频生成模型
- * - Kling (fal.ai) - 备用提供商
+ * - Sora2 - OpenAI 的视频生成模型（标准版）
+ *   - yunwu.ai 平台（默认）
+ * - Sora2 Pro - OpenAI 的视频生成模型（专业版）
+ *   - yunwu.ai 平台（默认）
+ *   - kie.ai 平台（通过 SORA2_PLATFORM=kie 配置）
+ * - Seedance 1.5 Pro - 字节跳动的视频生成模型
+ *   - kie.ai 平台（默认）
+ * - Veo 3.1 - Google 的视频生成模型
+ *   - yunwu.ai 平台（默认）
+ *   - kie.ai 平台（通过 VEO_PLATFORM=kie 配置）
+ * - Kling - 快手的视频生成模型
+ *   - fal.ai 平台（默认）
  *
- * 通过环境变量 VIDEO_SERVICE_PROVIDER 配置：
- * - "sora2" (默认) - 使用 Sora2 Pro 模型
- * - "seedance" - 使用 Seedance 1.5 Pro 模型
- * - "veo" - 使用 Veo 3.1 模型
- * - "kling" - 使用 Kling O1 模型
+ * 通过环境变量配置：
+ * - VIDEO_SERVICE_PROVIDER: 选择使用的模型（sora2/sora2pro/seedance/veo/kling）
+ * - SORA2_PLATFORM: Sora2 模型的平台（kie/yunwu，默认 yunwu）
+ * - VEO_PLATFORM: Veo 模型的平台（yunwu/kie，默认 yunwu）
+ * - SEEDANCE_PLATFORM: Seedance 模型的平台（kie，默认 kie）
+ * - KLING_PLATFORM: Kling 模型的平台（fal，默认 fal）
  */
 
 import type { VideoGenerationConfig } from "@/types/asset";
 
 // ============= 服务提供商类型 =============
 
-export type VideoServiceProvider = "sora2" | "seedance" | "veo" | "kling";
+export type VideoServiceProvider = "sora2" | "sora2pro" | "seedance" | "veo" | "kling";
 
 /**
  * 统一的视频输出接口
@@ -37,6 +46,12 @@ export interface VideoServiceOutput {
 export function getVideoServiceProvider(): VideoServiceProvider {
   const provider = process.env.VIDEO_SERVICE_PROVIDER?.toLowerCase();
 
+  if (provider === "sora2") {
+    return "sora2";
+  }
+  if (provider === "sora2pro") {
+    return "sora2pro";
+  }
   if (provider === "seedance") {
     return "seedance";
   }
@@ -47,13 +62,78 @@ export function getVideoServiceProvider(): VideoServiceProvider {
     return "kling";
   }
 
-  // 默认使用 Sora2 Pro
-  return "sora2";
+  // 默认使用 Veo 3.1
+  return "veo";
+}
+
+// ============= Sora2 标准版服务适配器 =============
+
+async function generateVideoWithSora2(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
+  // Sora2 标准版目前仅支持 yunwu.ai 平台
+  return await generateVideoWithSora2Yunwu(config);
+}
+
+/**
+ * 使用 yunwu.ai 平台的 Sora2 标准版
+ */
+async function generateVideoWithSora2Yunwu(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
+  const {
+    generateYunwuSora2StandardVideo,
+  } = await import("@/lib/services/yunwu");
+
+  // Sora2 标准版支持 10 或 15 秒
+  const duration = config.duration === "15" ? 15 : 10;
+  console.log(`[VideoService] 使用 Sora2 (yunwu.ai) 生成视频 (${duration}s)`);
+
+  // 收集图片URL（起始帧和结束帧）
+  const imageUrls: string[] = [config.start_image_url];
+  if (config.end_image_url) {
+    imageUrls.push(config.end_image_url);
+  }
+
+  const result = await generateYunwuSora2StandardVideo({
+    prompt: config.prompt,
+    imageUrls,
+    duration,
+    orientation: config.aspect_ratio === "9:16" ? "portrait" : "landscape",
+    watermark: false,
+    private: true,
+  });
+
+  if (!result.videoUrl) {
+    throw new Error("Sora2 (yunwu.ai) 视频生成失败：未返回视频URL");
+  }
+
+  return {
+    videoUrl: result.videoUrl,
+    duration,
+  };
 }
 
 // ============= Sora2 Pro 服务适配器 =============
 
-async function generateVideoWithSora2(
+async function generateVideoWithSora2Pro(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
+  // 检查使用哪个平台
+  const platform = process.env.SORA2_PLATFORM?.toLowerCase() || "yunwu";
+
+  if (platform === "kie") {
+    return await generateVideoWithSora2ProKie(config);
+  }
+
+  // 默认使用 yunwu 平台
+  return await generateVideoWithSora2ProYunwu(config);
+}
+
+/**
+ * 使用 kie.ai 平台的 Sora2 Pro
+ */
+async function generateVideoWithSora2ProKie(
   config: VideoGenerationConfig
 ): Promise<VideoServiceOutput> {
   const {
@@ -62,7 +142,7 @@ async function generateVideoWithSora2(
   } = await import("@/lib/services/kie");
 
   const duration = config.duration === "15" ? "15" : "10";
-  console.log(`[VideoService] 使用 Sora2 Pro 生成视频 (${duration}s)`);
+  console.log(`[VideoService] 使用 Sora2 Pro (kie.ai) 生成视频 (${duration}s)`);
 
   // 收集图片URL（起始帧和结束帧）
   const imageUrls: string[] = [config.start_image_url];
@@ -83,18 +163,58 @@ async function generateVideoWithSora2(
     removeWatermark: true,
   });
 
-  console.log(`[VideoService] Sora2 Pro 任务创建成功: ${taskResult.taskId}`);
+  console.log(`[VideoService] Sora2 Pro (kie.ai) 任务创建成功: ${taskResult.taskId}`);
   console.log(`[VideoService] 开始轮询等待视频生成...`);
 
-  const result = await waitForSora2Video(taskResult.taskId);
+  // Sora2 生成时间可能较长，设置 30 分钟超时（180 次 × 10 秒）
+  const result = await waitForSora2Video(taskResult.taskId, 180);
 
   if (!result.videoUrl) {
-    throw new Error("Sora2 Pro 视频生成失败：未返回视频URL");
+    throw new Error("Sora2 Pro (kie.ai) 视频生成失败：未返回视频URL");
   }
 
   return {
     videoUrl: result.videoUrl,
     duration: parseInt(duration),
+  };
+}
+
+/**
+ * 使用 yunwu.ai 平台的 Sora2 Pro
+ */
+async function generateVideoWithSora2ProYunwu(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
+  const {
+    generateYunwuSora2Video,
+  } = await import("@/lib/services/yunwu");
+
+  // 云雾支持 15 或 25 秒，将 10 秒映射到 15 秒
+  const duration = config.duration === "15" ? 15 : 15;
+  console.log(`[VideoService] 使用 Sora2 Pro (yunwu.ai) 生成视频 (${duration}s)`);
+
+  // 收集图片URL（起始帧和结束帧）
+  const imageUrls: string[] = [config.start_image_url];
+  if (config.end_image_url) {
+    imageUrls.push(config.end_image_url);
+  }
+
+  const result = await generateYunwuSora2Video({
+    prompt: config.prompt,
+    imageUrls,
+    duration,
+    orientation: config.aspect_ratio === "9:16" ? "portrait" : "landscape",
+    watermark: false,
+    private: true,
+  });
+
+  if (!result.videoUrl) {
+    throw new Error("Sora2 Pro (yunwu.ai) 视频生成失败：未返回视频URL");
+  }
+
+  return {
+    videoUrl: result.videoUrl,
+    duration,
   };
 }
 
@@ -180,12 +300,29 @@ async function generateVideoWithKling(
 async function generateVideoWithVeo(
   config: VideoGenerationConfig
 ): Promise<VideoServiceOutput> {
+  // 检查使用哪个平台
+  const platform = process.env.VEO_PLATFORM?.toLowerCase() || "yunwu";
+
+  if (platform === "yunwu") {
+    return await generateVideoWithVeoYunwu(config);
+  }
+
+  // 非 yunwu 时使用 kie 平台
+  return await generateVideoWithVeoKie(config);
+}
+
+/**
+ * 使用 kie.ai 平台的 Veo 3.1
+ */
+async function generateVideoWithVeoKie(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
   const {
     generateVeo3Video,
     waitForVeo3Video,
   } = await import("@/lib/services/kie");
 
-  console.log(`[VideoService] 使用 Veo 3.1 首尾帧生成视频`);
+  console.log(`[VideoService] 使用 Veo 3.1 (kie.ai) 首尾帧生成视频`);
 
   const imageUrls: string[] = [config.start_image_url];
   if (config.end_image_url) {
@@ -201,13 +338,51 @@ async function generateVideoWithVeo(
     enableTranslation: true,
   });
 
-  console.log(`[VideoService] Veo 3.1 任务创建成功: ${taskResult.taskId}`);
+  console.log(`[VideoService] Veo 3.1 (kie.ai) 任务创建成功: ${taskResult.taskId}`);
   console.log(`[VideoService] 开始轮询等待视频生成...`);
 
   const result = await waitForVeo3Video(taskResult.taskId);
 
   if (!result.videoUrl) {
-    throw new Error("Veo 3.1 视频生成失败：未返回视频URL");
+    throw new Error("Veo 3.1 (kie.ai) 视频生成失败：未返回视频URL");
+  }
+
+  return {
+    videoUrl: result.videoUrl,
+  };
+}
+
+/**
+ * 使用 yunwu.ai 平台的 Veo 3.1
+ */
+async function generateVideoWithVeoYunwu(
+  config: VideoGenerationConfig
+): Promise<VideoServiceOutput> {
+  const {
+    generateYunwuVeo3Video,
+  } = await import("@/lib/services/yunwu");
+
+  console.log(`[VideoService] 使用 Veo 3.1 (yunwu.ai) 生成视频`);
+
+  // 收集图片URL（起始帧和结束帧）
+  const imageUrls: string[] = [];
+  if (config.start_image_url) {
+    imageUrls.push(config.start_image_url);
+  }
+  if (config.end_image_url) {
+    imageUrls.push(config.end_image_url);
+  }
+
+  const result = await generateYunwuVeo3Video({
+    prompt: config.prompt,
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+    aspectRatio: config.aspect_ratio === "9:16" ? "9:16" : config.aspect_ratio === "16:9" ? "16:9" : undefined,
+    enhancePrompt: true,
+    enableUpsample: true,
+  });
+
+  if (!result.videoUrl) {
+    throw new Error("Veo 3.1 (yunwu.ai) 视频生成失败：未返回视频URL");
   }
 
   return {
@@ -221,7 +396,8 @@ async function generateVideoWithVeo(
  * 生成视频（统一接口）
  *
  * 根据环境变量自动选择服务提供商：
- * - VIDEO_SERVICE_PROVIDER=sora2 (默认) → 使用 Sora2 Pro
+ * - VIDEO_SERVICE_PROVIDER=sora2 → 使用 Sora2 标准版
+ * - VIDEO_SERVICE_PROVIDER=veo (默认) → 使用 Veo 3.1
  * - VIDEO_SERVICE_PROVIDER=seedance → 使用 Seedance 1.5 Pro
  * - VIDEO_SERVICE_PROVIDER=veo → 使用 Veo 3.1
  * - VIDEO_SERVICE_PROVIDER=kling → 使用 Kling O1
@@ -241,6 +417,9 @@ export async function generateVideo(
       case "sora2":
         return await generateVideoWithSora2(config);
 
+      case "sora2pro":
+        return await generateVideoWithSora2Pro(config);
+
       case "seedance":
         return await generateVideoWithSeedance(config);
 
@@ -251,7 +430,7 @@ export async function generateVideo(
         return await generateVideoWithKling(config);
 
       default:
-        return await generateVideoWithSora2(config);
+        return await generateVideoWithSora2Pro(config);
     }
   } catch (error) {
     console.error(`[VideoService] ${provider} 视频生成失败:`, error);
