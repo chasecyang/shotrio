@@ -104,7 +104,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产（Veo 3.1 Fast 4K，yunwu.ai）。
+    description: `生成视频资产（Veo 3.1 Fast 4K，kie.ai）。
 
 **输入方式**：
 - 起始帧模式：start_image_url（必填），可选 end_image_url 作为收尾帧

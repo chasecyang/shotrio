@@ -10,15 +10,15 @@
  * - Seedance 1.5 Pro - 字节跳动的视频生成模型
  *   - kie.ai 平台（默认）
  * - Veo 3.1 - Google 的视频生成模型
- *   - yunwu.ai 平台（默认）
- *   - kie.ai 平台（通过 VEO_PLATFORM=kie 配置）
+ *   - kie.ai 平台（默认）
+ *   - yunwu.ai 平台（通过 VEO_PLATFORM=yunwu 配置）
  * - Kling - 快手的视频生成模型
  *   - fal.ai 平台（默认）
  *
  * 通过环境变量配置：
  * - VIDEO_SERVICE_PROVIDER: 选择使用的模型（sora2/sora2pro/seedance/veo/kling）
  * - SORA2_PLATFORM: Sora2 模型的平台（kie/yunwu，默认 yunwu）
- * - VEO_PLATFORM: Veo 模型的平台（yunwu/kie，默认 yunwu）
+ * - VEO_PLATFORM: Veo 模型的平台（kie/yunwu，默认 kie）
  * - SEEDANCE_PLATFORM: Seedance 模型的平台（kie，默认 kie）
  * - KLING_PLATFORM: Kling 模型的平台（fal，默认 fal）
  */
@@ -301,13 +301,13 @@ async function generateVideoWithVeo(
   config: VideoGenerationConfig
 ): Promise<VideoServiceOutput> {
   // 检查使用哪个平台
-  const platform = process.env.VEO_PLATFORM?.toLowerCase() || "yunwu";
+  const platform = process.env.VEO_PLATFORM?.toLowerCase() || "kie";
 
   if (platform === "yunwu") {
     return await generateVideoWithVeoYunwu(config);
   }
 
-  // 非 yunwu 时使用 kie 平台
+  // 默认使用 kie 平台
   return await generateVideoWithVeoKie(config);
 }
 
