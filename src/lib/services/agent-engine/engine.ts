@@ -117,7 +117,7 @@ export class AgentEngine {
       };
 
       // 构建系统消息
-      const contextText = await collectContext(projectContext, conv.projectId);
+      const contextText = await collectContext(projectContext, conv.projectId, projectContext.locale);
       const systemPrompt = buildSystemPrompt(projectContext.locale);
       state.messages.push({ 
         role: "system", 

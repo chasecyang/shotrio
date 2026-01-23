@@ -210,7 +210,7 @@ export async function loadConversationState(conversationId: string): Promise<Con
         recentJobs: [],
       };
     }
-    const contextText = await collectContext(agentContext, conv.projectId);
+    const contextText = await collectContext(agentContext, conv.projectId, agentContext.locale);
     messages.push({ role: "system", content: `# 当前上下文\n\n${contextText}` });
     
     // 3. 获取最后的 assistant 消息（messages 已按 createdAt asc 排序）

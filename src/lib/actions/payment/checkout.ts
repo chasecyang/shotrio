@@ -6,7 +6,7 @@ import db from "@/lib/db";
 import { orders, OrderStatus } from "@/lib/db/schemas/payment";
 import { eq, and, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Creem } from "creem";
+import { createCreem } from "creem_io";
 import {
   creemConfig,
   creemProductIds,
@@ -73,22 +73,20 @@ export async function createCheckoutSession(params: {
       return { success: false, error: "缺少Creem产品ID配置" };
     }
 
-    const creem = new Creem({
-      serverIdx: creemConfig.testMode ? 1 : 0,
+    const creem = createCreem({
+      apiKey: creemConfig.apiKey,
+      webhookSecret: creemConfig.webhookSecret,
+      testMode: creemConfig.testMode,
     });
 
-    const checkout = await creem.createCheckout({
-      xApiKey: creemConfig.apiKey,
-      createCheckoutRequest: {
-        productId,
-        requestId: orderId,
-        successUrl: creemConfig.successUrl,
-        metadata: {
-          orderId,
-          userId,
-          packageType,
-          packageName: pkg.name,
-        },
+    const checkout = await creem.checkouts.create({
+      productId,
+      successUrl: creemConfig.successUrl,
+      metadata: {
+        orderId,
+        userId,
+        packageType,
+        packageName: pkg.name,
       },
     });
 

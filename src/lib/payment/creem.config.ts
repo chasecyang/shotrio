@@ -13,8 +13,8 @@ export const creemConfig = {
   apiKey: process.env.CREEM_API_KEY || "",
   webhookSecret: process.env.CREEM_WEBHOOK_SECRET || "",
   storeId: process.env.NEXT_PUBLIC_CREEM_STORE_ID || "",
-  testMode: process.env.NODE_ENV !== "production",
-  
+  testMode: process.env.CREEM_TEST_MODE === "true",
+
   // 回调URL
   successUrl: process.env.NEXT_PUBLIC_APP_URL
     ? `${process.env.NEXT_PUBLIC_APP_URL}/credits/success`

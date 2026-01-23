@@ -298,12 +298,13 @@
       "projectDescription": "Project Description",
       "projectDescriptionPlaceholder": "Briefly describe this project...",
       "artStyle": "Art Style",
-      "artStyleDescription": "Choose a preset or custom style to apply to all character and scene image generation in the project",
-      "presetStyle": "Preset Styles",
-      "customStyle": "Custom Style",
-      "customStyleName": "Custom Style",
-      "customStylePlaceholder": "e.g., Cyberpunk style, neon lights, 8k resolution, cinematic lighting",
-      "customStyleHint": "Enter custom English style description for AI image generation's global style prompt",
+      "artStyleDescription": "Define the global art style for all AI-generated images in this project",
+      "stylePromptPlaceholder": "e.g., Cyberpunk style, neon lights, 8k resolution, cinematic lighting",
+      "stylePromptHint": "Enter English style description for AI image generation",
+      "quickTemplates": "Quick Templates",
+      "expandTemplates": "Expand",
+      "collapseTemplates": "Collapse",
+      "characterCount": "{count} characters",
       "noStyleSet": "No Style Set",
       "settingsButton": "Settings",
       "saveButton": "Save Settings",
@@ -979,7 +980,10 @@
       "projectDeleted": "Project deleted successfully",
       "referenceAssetAdded": "Reference asset added",
       "videoTaskStarted": "Video generation task started",
-      "taskCreatedAiProcessing": "Task created, AI is processing..."
+      "taskCreatedAiProcessing": "Task created, AI is processing...",
+      "timelineClipAdded": "Added to timeline",
+      "audioTrackAdded": "Audio track added",
+      "trackDeleted": "Track deleted"
     },
     "error": {
       "parseResultFailed": "Failed to parse result",
@@ -1020,14 +1024,22 @@
       "batchGenerationFailed": "Failed to batch generate",
       "batchDeletionFailed": "Failed to batch delete",
       "codeGenerationFailed": "Code generation failed, please try again later",
-      "projectCreationFailed": "Project creation failed, please try again"
+      "projectCreationFailed": "Project creation failed, please try again",
+      "resolutionUpdateFailed": "Failed to update resolution",
+      "addFailed": "Failed to add",
+      "reorderFailed": "Failed to reorder",
+      "trimFailed": "Failed to trim",
+      "addTrackFailed": "Failed to add track",
+      "deleteTrackFailed": "Failed to delete track"
     },
     "info": {
       "derivationInDevelopment": "Derivation feature in development, stay tuned",
       "taskResultNotSupported": "This task result is not supported for viewing",
       "uploadingReferenceImages": "Uploading reference images..."
     },
-    "warning": {}
+    "warning": {
+      "clipTrimmedButAutoArrangeFailed": "Clip trimmed, but auto-arrange failed"
+    }
   },
   "validation": {
     "required": "This field is required",
@@ -1365,6 +1377,20 @@
         "success": "Derivation request submitted",
         "cancel": "Cancel",
         "nameSuffix": " - Derived"
+      }
+    },
+    "timeline": {
+      "video": "video",
+      "audio": "audio",
+      "audioTrack": "Audio Track",
+      "export": "Export",
+      "dragToAddVideo": "Drag or click to add video",
+      "dragToAddAudio": "Drag or click to add audio",
+      "errors": {
+        "videoTrackVideoOnly": "Video tracks can only contain video assets",
+        "audioTrackAudioOnly": "Audio tracks can only contain audio assets",
+        "cannotDeleteNonEmptyTrack": "Cannot delete non-empty track. Please remove clips first.",
+        "mustKeepOneTrack": "Must keep at least one {type} track"
       }
     },
     "preview": {

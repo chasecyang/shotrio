@@ -7,12 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProjectDetail } from "@/types/project";
 import { ArtStyle } from "@/types/art-style";
 import { updateProject, deleteProject } from "@/lib/actions/project";
 import { getSystemArtStyles, getUserArtStyles } from "@/lib/actions/art-style/queries";
-import { StyleSelector } from "./style-selector";
+import { StyleTemplateSelector } from "./style-template-selector";
 import { toast } from "sonner";
 import { Loader2, Trash2, Check, AlertCircle } from "lucide-react";
 import {
@@ -148,48 +147,43 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
         />
       </div>
 
-      {/* 美术风格选择 */}
+      {/* 美术风格设置 */}
       <div className="space-y-3" id="style">
         <Label>{t("artStyle")}</Label>
         <p className="text-xs text-muted-foreground">
           {t("artStyleDescription")}
         </p>
-        
+
         {loadingStyles ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <Tabs defaultValue="preset" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="preset">{t("presetStyle")}</TabsTrigger>
-              <TabsTrigger value="custom">{t("customStyle")}</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="preset" className="mt-4">
-              <StyleSelector
-                styles={systemStyles}
-                selectedStylePrompt={formData.stylePrompt}
-                onSelect={(stylePrompt) => setFormData({ ...formData, stylePrompt })}
+          <>
+            {/* 主要文本输入区 */}
+            <div className="space-y-2">
+              <Textarea
+                value={formData.stylePrompt}
+                onChange={(e) =>
+                  setFormData({ ...formData, stylePrompt: e.target.value })
+                }
+                placeholder={t("stylePromptPlaceholder")}
+                rows={4}
+                className="font-mono text-sm"
               />
-            </TabsContent>
-            
-            <TabsContent value="custom" className="mt-4">
-              <div className="space-y-2">
-                <Textarea
-                  value={formData.stylePrompt}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stylePrompt: e.target.value })
-                  }
-                  placeholder={t("customStylePlaceholder")}
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("customStyleHint")}
-                </p>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{t("stylePromptHint")}</span>
+                <span>{t("characterCount", { count: formData.stylePrompt?.length || 0 })}</span>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+
+            {/* 快速模板区 */}
+            <StyleTemplateSelector
+              styles={systemStyles}
+              currentPrompt={formData.stylePrompt}
+              onSelect={(stylePrompt) => setFormData({ ...formData, stylePrompt })}
+            />
+          </>
         )}
       </div>
 

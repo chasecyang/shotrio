@@ -9,12 +9,23 @@
 
 
 ## Manual Tasks
+
+### 本地化任务
+[x]Timeline 面板本地化 (timeline-panel.tsx)
+[]Agent 组件本地化 (floating-agent-card, approval-action-bar, action-editor-forms)
+[]素材管理组件本地化 (asset-detail-view, media-viewer, image-upload)
+[]素材生成和预览组件本地化
+[]项目设置和验证本地化
+[]Console 日志和注释转英文
+[]运行本地化检测脚本验证
+[]测试语言切换功能
+
 []参数页面accept操作后，不应该一直loading
 []agent对话切换时，应该进入skelton，而不是对话中/AI创作中的状态
 []首页支持对话框创建项目
 []对话框进入自动模式状态和退出这个状态
 待验证[]导出能力
-[]agent英文化
+[x]agent英文化
 []页面英文化
 []定价页面优化，更多说明、优势等等
 []实际接入并测试支付

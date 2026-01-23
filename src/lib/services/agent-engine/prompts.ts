@@ -164,10 +164,10 @@ Use timeline tools to assemble 4 videos in sequence (\`query_timeline\`, \`add_c
 
 **Final output**: 45s complete hero rescue story`;
 
-  // Add language instruction for non-English locales
+  // Add language instruction for both locales
   const languageInstruction = locale === "zh"
     ? "\n\n## Response Language\nAlways respond in Chinese (简体中文)."
-    : "";
+    : "\n\n## Response Language\nAlways respond in English.";
 
   return corePrompt + languageInstruction;
 }

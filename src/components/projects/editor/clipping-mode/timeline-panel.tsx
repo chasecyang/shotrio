@@ -28,6 +28,7 @@ import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimeline
 import { ResolutionSelector } from "./resolution-selector";
 import { ExportDialog } from "./export-dialog";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { AssetWithFullData } from "@/types/asset";
 import {
   recalculateTrackClipPositions,
@@ -55,28 +56,28 @@ interface TimelinePanelProps {
 }
 
 /**
- * 验证素材类型与轨道类型是否匹配
- * @returns 如果验证失败返回错误消息，否则返回 null
+ * Validate asset type matches track type
+ * @returns Error key if validation fails, otherwise null
  */
 function validateAssetTrackCompatibility(
   asset: AssetWithFullData,
   trackIndex: number
-): string | null {
+): "videoTrackVideoOnly" | "audioTrackAudioOnly" | null {
   const isVideo = asset.assetType === "video";
   const isAudio = asset.assetType === "audio";
   const targetIsVideoTrack = isVideoTrack(trackIndex);
 
   if (targetIsVideoTrack && !isVideo) {
-    return "视频轨道只能添加视频素材";
+    return "videoTrackVideoOnly";
   }
   if (!targetIsVideoTrack && !isAudio) {
-    return "音频轨道只能添加音频素材";
+    return "audioTrackAudioOnly";
   }
   return null;
 }
 
 /**
- * 时间轴面板组件
+ * Timeline panel component
  */
 export function TimelinePanel(props: TimelinePanelProps) {
   return (
@@ -87,7 +88,7 @@ export function TimelinePanel(props: TimelinePanelProps) {
 }
 
 /**
- * 时间轴面板内部组件
+ * Timeline panel internal component
  */
 function TimelinePanelContent({
   playback,
@@ -97,8 +98,10 @@ function TimelinePanelContent({
 }: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
+  const t = useTranslations("editor.timeline");
+  const tToasts = useTranslations("toasts");
 
-  // 拖拽状态
+  // Drag state
   const {
     isDragging,
     draggedAsset,
@@ -113,7 +116,7 @@ function TimelinePanelContent({
   const draggedAssetRef = useRef(draggedAsset);
   const dropPositionRef = useRef(dropPosition);
 
-  const [zoom, setZoom] = useState(1); // 缩放级别
+  const [zoom, setZoom] = useState(1); // Zoom level
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
@@ -127,9 +130,9 @@ function TimelinePanelContent({
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const lastSeekTimeRef = useRef<number>(0);
   const playheadRef = useRef<HTMLDivElement>(null);
-  const THROTTLE_MS = 32; // 约 30fps，给视频加载更多时间
+  const THROTTLE_MS = 32; // ~30fps, give video loading more time
 
-  // 从 playback prop 获取播放控制
+  // Get playback controls from playback prop
   const {
     isPlaying,
     currentTime,
@@ -139,57 +142,57 @@ function TimelinePanelContent({
     pause,
   } = playback;
 
-  const pixelsPerMs = 0.1 * zoom; // 每毫秒对应的像素数
+  const pixelsPerMs = 0.1 * zoom; // Pixels per millisecond
 
-  // 从 timeline metadata 获取轨道配置
+  // Get track configuration from timeline metadata
   const tracks = useMemo(() => {
     return getTimelineTracks(timeline?.metadata);
   }, [timeline?.metadata]);
 
-  // 分离视频和音频轨道
+  // Separate video and audio tracks
   const videoTracks = useMemo(() => getVideoTracks(tracks), [tracks]);
   const audioTracks = useMemo(() => getAudioTracks(tracks), [tracks]);
 
-  // 分辨率变更处理
+  // Handle resolution change
   const handleResolutionChange = useCallback(async (newResolution: string) => {
     if (!timeline) return;
     const result = await updateTimelineAction(timeline.id, { resolution: newResolution });
     if (result.success && result.timeline) {
       updateTimeline(result.timeline);
     } else {
-      toast.error("更新分辨率失败");
+      toast.error(tToasts("error.resolutionUpdateFailed"));
     }
-  }, [timeline, updateTimeline]);
+  }, [timeline, updateTimeline, tToasts]);
 
-  // 按轨道分组片段
+  // Group clips by track
   const clipsByTrack = useMemo(() => {
     if (!timeline) return new Map<number, TimelineClipWithAsset[]>();
     return groupClipsByTrack(timeline.clips);
   }, [timeline]);
 
-  // 时间标尺鼠标按下 - 开始拖拽或跳转
+  // Timeline ruler mouse down - start dragging or seeking
   const handleTimelineMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!timelineRulerRef.current || !timeline) return;
     
     e.preventDefault();
-    pause(); // 按下时暂停播放
-    
+    pause(); // Pause playback on mouse down
+
     const rect = timelineRulerRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = Math.max(0, Math.min(clickX / pixelsPerMs, timeline.duration));
-    
-    // 立即跳转到点击位置
+
+    // Immediately seek to click position
     seek(newTime);
 
-    // 启动拖拽模式
+    // Start drag mode
     setIsDraggingPlayhead(true);
   }, [pause, pixelsPerMs, timeline, seek]);
 
-  // 鼠标移动处理（拖拽播放头）- 添加节流
+  // Mouse move handler (dragging playhead) - with throttling
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingPlayhead || !timelineRulerRef.current || !timeline) return;
 
-    // 节流：限制更新频率
+    // Throttle: limit update frequency
     const now = performance.now();
     if (now - lastSeekTimeRef.current < THROTTLE_MS) return;
     lastSeekTimeRef.current = now;
@@ -201,7 +204,7 @@ function TimelinePanelContent({
     seek(newTime);
   }, [isDraggingPlayhead, pixelsPerMs, timeline, seek]);
 
-  // 鼠标释放处理
+  // Mouse release handler
   const handleMouseUp = useCallback(() => {
     setIsDraggingPlayhead(false);
   }, []);
@@ -352,11 +355,11 @@ function TimelinePanelContent({
 
     const validationError = validateAssetTrackCompatibility(asset, trackIndex);
     if (validationError) {
-      toast.error(validationError);
+      toast.error(t(`errors.${validationError}`));
       return;
     }
 
-    // 添加片段到时间轴
+    // Add clip to timeline
     const result = await addClipToTimeline(timeline.id, {
       assetId: asset.id,
       trackIndex,
@@ -367,13 +370,13 @@ function TimelinePanelContent({
 
     if (result.success && result.timeline) {
       updateTimeline(result.timeline);
-      toast.success("已添加到时间轴");
+      toast.success(tToasts("success.timelineClipAdded"));
     } else {
-      toast.error(result.error || "添加失败");
+      toast.error(result.error || tToasts("error.addFailed"));
     }
   };
 
-  // 基于当前时间查找当前片段
+  // Find current clip index based on current time
   const findCurrentClipIndex = () => {
     if (!timeline) return -1;
     const videoClips = timeline.clips.filter((c) => c.trackIndex < 100);
@@ -386,7 +389,7 @@ function TimelinePanelContent({
     return -1;
   };
 
-  // 跳转到上一个片段
+  // Skip to previous clip
   const skipToPrevious = () => {
     if (!timeline) return;
     const videoClips = timeline.clips.filter((c) => c.trackIndex < 100);
@@ -398,7 +401,7 @@ function TimelinePanelContent({
     }
   };
 
-  // 跳转到下一个片段
+  // Skip to next clip
   const skipToNext = () => {
     if (!timeline) return;
     const videoClips = timeline.clips.filter((c) => c.trackIndex < 100);
@@ -408,34 +411,34 @@ function TimelinePanelContent({
     }
   };
 
-  // 删除片段
+  // Delete clip
   const handleDeleteClip = async (clipId: string) => {
     if (!timeline) return;
 
-    // 保存原始timeline用于回滚
+    // Save original timeline for rollback
     const originalTimeline = timeline;
 
-    // 获取被删除片段的轨道信息
+    // Get deleted clip's track info
     const deletedClip = timeline.clips.find(clip => clip.id === clipId);
     if (!deletedClip) return;
 
     const deletedTrackIndex = deletedClip.trackIndex;
 
     try {
-      // 乐观更新：立即从本地状态中移除片段
+      // Optimistic update: immediately remove clip from local state
       const remainingClips = timeline.clips.filter(clip => clip.id !== clipId);
 
       let optimisticClips: TimelineClipWithAsset[];
 
       if (isAudioTrack(deletedTrackIndex)) {
-        // 音频轨道：自由定位模式，不进行波纹重排
+        // Audio track: free positioning mode, no ripple reordering
         optimisticClips = remainingClips;
       } else {
-        // 视频轨道：只对该轨道的片段进行波纹重排
+        // Video track: ripple reorder only this track's clips
         const reorderData = recalculateTrackClipPositions(remainingClips, deletedTrackIndex);
         optimisticClips = remainingClips.map((clip) => {
           if (clip.trackIndex !== deletedTrackIndex) {
-            return clip; // 其他轨道的片段保持不变
+            return clip; // Other tracks' clips remain unchanged
           }
           const reorderItem = reorderData.find(r => r.clipId === clip.id);
           return {
@@ -446,49 +449,49 @@ function TimelinePanelContent({
         });
       }
 
-      // 计算新的总时长（基于所有片段的最大结束时间）
+      // Calculate new total duration (based on max end time of all clips)
       const newDuration = optimisticClips.length > 0
         ? Math.max(...optimisticClips.map(c => c.startTime + c.duration))
         : 0;
 
-      // 立即更新UI（乐观更新）
+      // Immediately update UI (optimistic update)
       updateTimeline({
         ...timeline,
         clips: optimisticClips,
         duration: newDuration,
       });
 
-      // 调用API删除
+      // Call API to delete
       const result = await removeClip(clipId);
 
       if (result.success && result.timeline) {
-        // API成功，使用服务器返回的数据
+        // API success, use server-returned data
         updateTimeline(result.timeline);
       } else {
-        // API失败，回滚
+        // API failed, rollback
         updateTimeline(originalTimeline);
-        toast.error(result.error || "删除失败");
+        toast.error(result.error || tToasts("error.deleteFailed"));
       }
     } catch (error) {
-      // 出错时回滚
+      // Rollback on error
       updateTimeline(originalTimeline);
-      console.error("删除片段失败:", error);
-      toast.error("删除失败");
+      console.error("Failed to delete clip:", error);
+      toast.error(tToasts("error.deleteFailed"));
     }
   };
 
-  // 片段拖拽开始
+  // Clip drag start
   const handleClipDragStart = (clipId: string) => {
     setDraggedClipId(clipId);
   };
 
-  // 片段拖拽结束 - 重新排序
+  // Clip drag end - reorder
   const handleClipDragEnd = async (clipId: string, newStartTime: number) => {
     setDraggedClipId(null);
 
     if (!timeline) return;
 
-    // 获取被拖拽片段的轨道信息
+    // Get dragged clip's track info
     const draggedClip = timeline.clips.find(clip => clip.id === clipId);
     if (!draggedClip) return;
 
@@ -496,11 +499,11 @@ function TimelinePanelContent({
 
     setIsReordering(true);
 
-    // 保存原始timeline用于回滚
+    // Save original timeline for rollback
     const originalTimeline = timeline;
 
     try {
-      // 创建新的片段数组副本并更新拖拽片段的位置
+      // Create new clips array copy and update dragged clip's position
       const updatedClips = timeline.clips.map((clip) =>
         clip.id === clipId
           ? { ...clip, startTime: newStartTime }
@@ -511,26 +514,26 @@ function TimelinePanelContent({
       let reorderData: Array<{ clipId: string; order: number; startTime: number }>;
 
       if (isAudioTrack(draggedTrackIndex)) {
-        // 音频轨道：自由定位模式，只更新该片段的 startTime，不影响其他片段
+        // Audio track: free positioning mode, only update this clip's startTime, doesn't affect other clips
         optimisticClips = updatedClips;
         reorderData = [{ clipId, order: draggedClip.order, startTime: Math.round(newStartTime) }];
       } else {
-        // 视频轨道：对该轨道进行波纹重排
-        // 先按照新的 startTime 排序该轨道的片段
+        // Video track: ripple reorder this track
+        // First sort this track's clips by new startTime
         const trackClips = updatedClips
           .filter(c => c.trackIndex === draggedTrackIndex)
           .sort((a, b) => a.startTime - b.startTime);
 
-        // 重新计算该轨道片段的 order 和 startTime（连续排列）
+        // Recalculate this track's clips' order and startTime (continuous arrangement)
         reorderData = recalculateTrackClipPositions(
           trackClips.map((clip, idx) => ({ ...clip, order: idx })),
           draggedTrackIndex
         );
 
-        // 应用重排结果到乐观更新
+        // Apply reorder results to optimistic update
         optimisticClips = updatedClips.map((clip) => {
           if (clip.trackIndex !== draggedTrackIndex) {
-            return clip; // 其他轨道的片段保持不变
+            return clip; // Other tracks' clips remain unchanged
           }
           const reorderItem = reorderData.find(r => r.clipId === clip.id);
           return {
@@ -541,47 +544,47 @@ function TimelinePanelContent({
         });
       }
 
-      // 计算新的总时长（基于所有片段的最大结束时间）
+      // Calculate new total duration (based on max end time of all clips)
       const newDuration = optimisticClips.length > 0
         ? Math.max(...optimisticClips.map(c => c.startTime + c.duration))
         : 0;
 
-      // 立即更新UI（乐观更新）
+      // Immediately update UI (optimistic update)
       updateTimeline({
         ...timeline,
         clips: optimisticClips,
         duration: newDuration,
       });
 
-      // 调用 API 更新
+      // Call API to update
       const result = await reorderClips(timeline.id, reorderData);
 
       if (result.success && result.timeline) {
-        // API成功，使用服务器返回的数据确保一致性
+        // API success, use server-returned data to ensure consistency
         updateTimeline(result.timeline);
       } else {
-        // API失败，回滚到原始状态
+        // API failed, rollback to original state
         updateTimeline(originalTimeline);
-        toast.error(result.error || "重排序失败");
+        toast.error(result.error || tToasts("error.reorderFailed"));
       }
     } catch (error) {
-      // 出错时回滚
+      // Rollback on error
       updateTimeline(originalTimeline);
-      console.error("重排序失败:", error);
-      toast.error("重排序失败");
+      console.error("Failed to reorder:", error);
+      toast.error(tToasts("error.reorderFailed"));
     } finally {
       setIsReordering(false);
     }
   };
 
-  // 裁剪预览（拖拽过程中实时更新）
+  // Trim preview (real-time update during dragging)
   const handleClipTrimming = (clipId: string, newDuration: number) => {
     if (!timeline) return;
-    
-    // 查找片段
+
+    // Find clip
     const clip = timeline.clips.find(c => c.id === clipId);
-    
-    // 如果时长没有变化，清除预览状态
+
+    // If duration hasn't changed, clear preview state
     if (clip && Math.abs(newDuration - clip.duration) < 10) {
       setTrimmingClipInfo(null);
     } else {
@@ -589,7 +592,7 @@ function TimelinePanelContent({
     }
   };
 
-  // 更新片段裁剪
+  // Update clip trim
   const handleClipTrim = async (
     clipId: string,
     trimStart: number,
@@ -597,20 +600,20 @@ function TimelinePanelContent({
   ) => {
     if (!timeline) return;
 
-    // 清除裁剪预览状态
+    // Clear trim preview state
     setTrimmingClipInfo(null);
 
-    // 获取被裁剪片段的轨道信息
+    // Get trimmed clip's track info
     const trimmedClip = timeline.clips.find(clip => clip.id === clipId);
     if (!trimmedClip) return;
 
     const trimmedTrackIndex = trimmedClip.trackIndex;
 
-    // 保存原始timeline用于回滚
+    // Save original timeline for rollback
     const originalTimeline = timeline;
 
     try {
-      // 乐观更新：立即更新本地状态
+      // Optimistic update: immediately update local state
       const updatedClips = timeline.clips.map((clip) =>
         clip.id === clipId
           ? { ...clip, trimStart, duration }
@@ -620,14 +623,14 @@ function TimelinePanelContent({
       let finalClips: TimelineClipWithAsset[];
 
       if (isAudioTrack(trimmedTrackIndex)) {
-        // 音频轨道：自由定位模式，不进行波纹重排
+        // Audio track: free positioning mode, no ripple reordering
         finalClips = updatedClips;
       } else {
-        // 视频轨道：只对该轨道进行波纹重排
+        // Video track: ripple reorder only this track
         const reorderData = recalculateTrackClipPositions(updatedClips, trimmedTrackIndex);
         finalClips = updatedClips.map((clip) => {
           if (clip.trackIndex !== trimmedTrackIndex) {
-            return clip; // 其他轨道的片段保持不变
+            return clip; // Other tracks' clips remain unchanged
           }
           const reorderItem = reorderData.find(r => r.clipId === clip.id);
           return {
@@ -638,19 +641,19 @@ function TimelinePanelContent({
         });
       }
 
-      // 计算新的总时长（基于所有片段的最大结束时间）
+      // Calculate new total duration (based on max end time of all clips)
       const newDuration = finalClips.length > 0
         ? Math.max(...finalClips.map(c => c.startTime + c.duration))
         : 0;
 
-      // 立即更新UI（乐观更新）
+      // Immediately update UI (optimistic update)
       updateTimeline({
         ...timeline,
         clips: finalClips,
         duration: newDuration,
       });
 
-      // 1. 更新片段的裁剪参数
+      // 1. Update clip's trim parameters
       const result = await updateClip(clipId, {
         trimStart,
         duration,
@@ -658,36 +661,36 @@ function TimelinePanelContent({
 
       if (result.success && result.timeline) {
         if (isAudioTrack(trimmedTrackIndex)) {
-          // 音频轨道：不需要波纹重排，直接使用返回结果
+          // Audio track: no ripple reordering needed, use returned result directly
           updateTimeline(result.timeline);
         } else {
-          // 视频轨道：应用波纹效果 - 只重排该轨道的片段
+          // Video track: apply ripple effect - reorder only this track's clips
           const reorderData = recalculateTrackClipPositions(result.timeline.clips, trimmedTrackIndex);
           const rippleResult = await reorderClips(result.timeline.id, reorderData);
 
           if (rippleResult.success && rippleResult.timeline) {
-            // API成功，使用服务器返回的数据
+            // API success, use server-returned data
             updateTimeline(rippleResult.timeline);
           } else {
-            // 重排失败，但裁剪成功
+            // Reorder failed, but trim succeeded
             updateTimeline(result.timeline);
-            toast.warning("片段已裁剪，但自动整理失败");
+            toast.warning(tToasts("warning.clipTrimmedButAutoArrangeFailed"));
           }
         }
       } else {
-        // 裁剪失败，回滚
+        // Trim failed, rollback
         updateTimeline(originalTimeline);
-        toast.error(result.error || "裁剪失败");
+        toast.error(result.error || tToasts("error.trimFailed"));
       }
     } catch (error) {
-      // 出错时回滚
+      // Rollback on error
       updateTimeline(originalTimeline);
-      console.error("裁剪失败:", error);
-      toast.error("裁剪失败");
+      console.error("Failed to trim:", error);
+      toast.error(tToasts("error.trimFailed"));
     }
   };
 
-  // 缩放控制
+  // Zoom controls
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev * 1.5, 5));
   };
@@ -696,12 +699,12 @@ function TimelinePanelContent({
     setZoom(prev => Math.max(prev / 1.5, 0.2));
   };
 
-  // Slider 缩放控制（将 zoom 转换为 20-500 的整数范围）
+  // Slider zoom control (convert zoom to 20-500 integer range)
   const handleZoomChange = (value: number[]) => {
     setZoom(value[0] / 100);
   };
 
-  // 添加音频轨道
+  // Add audio track
   const handleAddAudioTrack = async () => {
     if (!timeline) return;
 
@@ -710,30 +713,30 @@ function TimelinePanelContent({
 
     if (result.success && result.timeline) {
       updateTimeline(result.timeline);
-      toast.success("已添加音频轨道");
+      toast.success(tToasts("success.audioTrackAdded"));
     } else {
-      toast.error(result.error || "添加轨道失败");
+      toast.error(result.error || tToasts("error.addTrackFailed"));
     }
   };
 
-  // 删除轨道
+  // Delete track
   const handleDeleteTrack = async (trackIndex: number) => {
     if (!timeline) return;
 
-    // 检查轨道是否有片段
+    // Check if track has clips
     const trackClips = clipsByTrack.get(trackIndex) || [];
     if (trackClips.length > 0) {
-      toast.error("无法删除非空轨道，请先移除轨道上的片段");
+      toast.error(t("errors.cannotDeleteNonEmptyTrack"));
       return;
     }
 
-    // 检查是否是最后一个同类型轨道
+    // Check if it's the last track of this type
     const track = tracks.find((t) => t.index === trackIndex);
     if (!track) return;
 
     const sameTypeTracks = tracks.filter((t) => t.type === track.type);
     if (sameTypeTracks.length <= 1) {
-      toast.error(`至少需要保留一个${track.type === "video" ? "视频" : "音频"}轨道`);
+      toast.error(t("errors.mustKeepOneTrack", { type: t(track.type) }));
       return;
     }
 
@@ -742,13 +745,13 @@ function TimelinePanelContent({
 
     if (result.success && result.timeline) {
       updateTimeline(result.timeline);
-      toast.success("已删除轨道");
+      toast.success(tToasts("success.trackDeleted"));
     } else {
-      toast.error(result.error || "删除轨道失败");
+      toast.error(result.error || tToasts("error.deleteTrackFailed"));
     }
   };
 
-  // 根据缩放级别计算刻度间隔
+  // Calculate tick interval based on zoom level
   const getTimeStepByZoom = (zoomLevel: number): number => {
     if (zoomLevel < 0.5) return 10000;  // 10s
     if (zoomLevel < 1) return 5000;     // 5s
@@ -757,7 +760,7 @@ function TimelinePanelContent({
     return 500;                     // 0.5s
   };
 
-  // 使用 useMemo 缓存时间标尺计算
+  // Use useMemo to cache timeline ruler calculation
   const { totalWidth, marks } = useMemo(() => {
     const duration = timeline?.duration || 10000;
     const totalWidth = duration * pixelsPerMs;
@@ -779,7 +782,7 @@ function TimelinePanelContent({
     return { totalWidth, marks };
   }, [timeline?.duration, pixelsPerMs, zoom]);
 
-  // 验证拖拽目标是否有效（类型匹配）
+  // Validate if drop target is valid (type matches)
   const isValidDropTarget = (trackIndex: number): boolean => {
     if (!draggedAsset) return false;
     const isVideo = draggedAsset.assetType === "video";
@@ -792,9 +795,9 @@ function TimelinePanelContent({
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 工具栏 */}
+      {/* Toolbar */}
       <div className="h-12 border-b flex items-center justify-between px-4 gap-3 shrink-0">
-        {/* 左侧：分辨率选择 */}
+        {/* Left: Resolution selector */}
         <div className="flex items-center gap-3">
           <ResolutionSelector
             value={timeline.resolution}
@@ -802,7 +805,7 @@ function TimelinePanelContent({
           />
         </div>
 
-        {/* 中央：播放控制按钮组 */}
+        {/* Center: Playback control buttons */}
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -836,15 +839,15 @@ function TimelinePanelContent({
             <SkipForward className="h-4 w-4" />
           </Button>
         </div>
-        
-        {/* 右侧：时间显示和缩放控制 */}
+
+        {/* Right: Time display and zoom controls */}
         <div className="flex items-center gap-3">
-          {/* 时间显示 */}
+          {/* Time display */}
           <div className="text-xs text-muted-foreground font-mono">
             {formatTimeDisplay(currentTime)} / {formatTimeDisplay(timeline.duration)}
           </div>
-          
-          {/* 缩放控制 */}
+
+          {/* Zoom controls */}
           <div className="flex items-center gap-2 border-l pl-3">
             <Button
               variant="ghost"
@@ -854,8 +857,8 @@ function TimelinePanelContent({
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            
-            {/* 缩放滑块 */}
+
+            {/* Zoom slider */}
             <Slider
               value={[zoom * 100]}
               onValueChange={handleZoomChange}
@@ -879,7 +882,7 @@ function TimelinePanelContent({
             </span>
           </div>
 
-          {/* 导出按钮 */}
+          {/* Export button */}
           <Button
             variant="default"
             size="sm"
@@ -888,25 +891,25 @@ function TimelinePanelContent({
             disabled={timeline.clips.length === 0}
           >
             <Download className="h-3.5 w-3.5" />
-            导出
+            {t("export")}
           </Button>
         </div>
       </div>
 
-      {/* 素材条 */}
+      {/* Asset strip */}
       <AssetStripPanel
         onPreviewAsset={onPreviewAsset}
       />
 
-      {/* 时间轴主体 */}
+      {/* Timeline body */}
       <div ref={timelineBodyRef} className="flex-1 overflow-auto">
         <div className="flex">
-          {/* 左侧：轨道头部 */}
+          {/* Left: Track headers */}
           <div className="w-28 shrink-0 border-r bg-muted/30">
-            {/* 时间尺占位 */}
+            {/* Timeline ruler placeholder */}
             <div className="h-8 border-b" />
 
-            {/* 视频轨道区 */}
+            {/* Video track area */}
             {videoTracks.map((track) => {
               const trackClips = clipsByTrack.get(track.index) || [];
               const canDelete = videoTracks.length > 1 && trackClips.length === 0;
@@ -917,12 +920,12 @@ function TimelinePanelContent({
                   className="border-b flex items-center justify-between px-2 group"
                   style={{ height: track.height }}
                 >
-                  {/* 轨道名称和图标 */}
+                  {/* Track name and icon */}
                   <div className="flex items-center gap-1.5">
                     <Video className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs font-medium truncate">{track.name}</span>
                   </div>
-                  {/* 删除按钮 */}
+                  {/* Delete button */}
                   {canDelete && (
                     <Button
                       variant="ghost"
@@ -937,10 +940,10 @@ function TimelinePanelContent({
               );
             })}
 
-            {/* 视频/音频分隔线 */}
+            {/* Video/Audio separator */}
             <div className="h-px bg-border" />
 
-            {/* 音频轨道区 */}
+            {/* Audio track area */}
             {audioTracks.map((track) => {
               const trackState = trackStates[track.index] || { volume: 1, isMuted: false };
               const trackClips = clipsByTrack.get(track.index) || [];
@@ -952,11 +955,11 @@ function TimelinePanelContent({
                   className="border-b flex items-center justify-between px-2 group"
                   style={{ height: track.height }}
                 >
-                  {/* 轨道名称和控制 */}
+                  {/* Track name and controls */}
                   <div className="flex items-center gap-1.5">
                     <AudioLines className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs font-medium truncate">{track.name}</span>
-                    {/* 静音按钮 */}
+                    {/* Mute button */}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -970,7 +973,7 @@ function TimelinePanelContent({
                       )}
                     </Button>
                   </div>
-                  {/* 删除按钮 */}
+                  {/* Delete button */}
                   {canDelete && (
                     <Button
                       variant="ghost"
@@ -985,7 +988,7 @@ function TimelinePanelContent({
               );
             })}
 
-            {/* 添加音频轨道按钮 */}
+            {/* Add audio track button */}
             <div className="h-7 border-b flex items-center justify-center">
               <Button
                 variant="ghost"
@@ -994,15 +997,15 @@ function TimelinePanelContent({
                 onClick={handleAddAudioTrack}
               >
                 <Plus className="h-3 w-3" />
-                音频轨
+                {t("audioTrack")}
               </Button>
             </div>
           </div>
 
-          {/* 右侧：轨道内容区域 */}
+          {/* Right: Track content area */}
           <div className="flex-1 overflow-x-auto">
             <div className="pl-2">
-              {/* 时间标尺 */}
+              {/* Timeline ruler */}
               <div
                 ref={timelineRulerRef}
                 className={`relative h-8 border-b mr-4 transition-colors ${
@@ -1028,7 +1031,7 @@ function TimelinePanelContent({
                   </div>
                 ))}
 
-                {/* 播放头指示器 */}
+                {/* Playhead indicator */}
                 <div
                   ref={playheadRef}
                   className="absolute z-10 pointer-events-none"
@@ -1038,7 +1041,7 @@ function TimelinePanelContent({
                     transform: 'translateX(-50%)',
                   }}
                 >
-                  {/* 顶部三角形 */}
+                  {/* Top triangle */}
                   <svg
                     className="absolute left-1/2 -translate-x-1/2 top-0"
                     width="10"
@@ -1054,20 +1057,20 @@ function TimelinePanelContent({
                     />
                   </svg>
 
-                  {/* 指示线 - 高度覆盖所有轨道 */}
+                  {/* Indicator line - height covers all tracks */}
                   <div
                     className="w-px absolute left-1/2 -translate-x-1/2 bg-primary/40"
                     style={{
-                      height: tracks.reduce((sum, t) => sum + t.height, 0) + 16 + 28, // 加上添加轨道按钮的高度
+                      height: tracks.reduce((sum, t) => sum + t.height, 0) + 16 + 28, // Add height of add track button
                       top: '7px',
                     }}
                   />
                 </div>
               </div>
 
-              {/* 多轨道 */}
+              {/* Multi-track */}
               <div ref={trackRef}>
-                {/* 视频轨道区 */}
+                {/* Video track area */}
                 {videoTracks.map((track) => {
                   const trackClips = clipsByTrack.get(track.index) || [];
                   const isDropTarget = dropTargetTrack === track.index;
@@ -1086,7 +1089,7 @@ function TimelinePanelContent({
                         width: Math.max(totalWidth, 800),
                       }}
                     >
-                      {/* 插入位置指示器 */}
+                      {/* Insert position indicator */}
                       {isDropTarget && validDrop && dropPosition !== null && (
                         <div
                           className="absolute top-0 bottom-0 w-0.5 bg-primary z-20"
@@ -1094,16 +1097,16 @@ function TimelinePanelContent({
                         />
                       )}
 
-                      {/* 空轨道提示 */}
+                      {/* Empty track hint */}
                       {trackClips.length === 0 && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-xs text-muted-foreground/50">
-                            拖拽或点击添加视频
+                            {t("dragToAddVideo")}
                           </span>
                         </div>
                       )}
 
-                      {/* 渲染该轨道的片段 */}
+                      {/* Render clips for this track */}
                       {trackClips.map((clip, index) => {
                         let temporaryStartTime = clip.startTime;
 
@@ -1140,10 +1143,10 @@ function TimelinePanelContent({
                   );
                 })}
 
-                {/* 视频/音频分隔线 */}
+                {/* Video/Audio separator */}
                 <div className="h-px bg-border mr-4" />
 
-                {/* 音频轨道区 */}
+                {/* Audio track area */}
                 {audioTracks.map((track) => {
                   const trackClips = clipsByTrack.get(track.index) || [];
                   const isDropTarget = dropTargetTrack === track.index;
@@ -1162,7 +1165,7 @@ function TimelinePanelContent({
                         width: Math.max(totalWidth, 800),
                       }}
                     >
-                      {/* 插入位置指示器 */}
+                      {/* Insert position indicator */}
                       {isDropTarget && validDrop && dropPosition !== null && (
                         <div
                           className="absolute top-0 bottom-0 w-0.5 bg-primary z-20"
@@ -1170,16 +1173,16 @@ function TimelinePanelContent({
                         />
                       )}
 
-                      {/* 空轨道提示 */}
+                      {/* Empty track hint */}
                       {trackClips.length === 0 && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-xs text-muted-foreground/50">
-                            拖拽或点击添加音频
+                            {t("dragToAddAudio")}
                           </span>
                         </div>
                       )}
 
-                      {/* 渲染该轨道的片段 */}
+                      {/* Render clips for this track */}
                       {trackClips.map((clip, index) => {
                         let temporaryStartTime = clip.startTime;
 
@@ -1216,7 +1219,7 @@ function TimelinePanelContent({
                   );
                 })}
 
-                {/* 添加音频轨道按钮占位 */}
+                {/* Add audio track button placeholder */}
                 <div className="h-7 border-b mr-4" style={{ width: Math.max(totalWidth, 800) }} />
               </div>
             </div>
@@ -1224,7 +1227,7 @@ function TimelinePanelContent({
         </div>
       </div>
 
-      {/* 导出对话框 */}
+      {/* Export dialog */}
       {state.project && (
         <ExportDialog
           open={isExportDialogOpen}
