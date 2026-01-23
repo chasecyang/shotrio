@@ -111,7 +111,9 @@ export function AssetEditMode({
     displayUrl: string | null;
   }>>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [isLoadingReferences, setIsLoadingReferences] = useState(isRegenerate);
+  const [isLoadingReferences, setIsLoadingReferences] = useState(
+    isVideo ? isRegenerate : true
+  );
 
   // 视频首尾帧状态
   const [startImageAssetId, setStartImageAssetId] = useState<string | null>(null);
@@ -147,6 +149,21 @@ export function AssetEditMode({
     }
   }, []);
 
+  // edit 模式：初始化加载当前素材作为参考图
+  useEffect(() => {
+    if (isRegenerate || isVideo) return;
+
+    const initEditReferenceAssets = async () => {
+      setIsLoadingReferences(true);
+      // 编辑模式下，将当前素材作为参考图
+      setReferenceAssetIds([asset.id]);
+      await loadReferenceAssets([asset.id]);
+      setIsLoadingReferences(false);
+    };
+    initEditReferenceAssets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRegenerate, isVideo, asset.id]);
+
   // regenerate 模式：初始化加载原始参考图
   useEffect(() => {
     if (!isRegenerate) return;
@@ -160,7 +177,8 @@ export function AssetEditMode({
       setIsLoadingReferences(false);
     };
     initReferenceAssets();
-  }, [isRegenerate, asset.id, asset.sourceAssetIds, loadReferenceAssets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRegenerate, asset.id]);
 
   // regenerate 模式：初始化加载视频首尾帧
   useEffect(() => {
@@ -187,7 +205,8 @@ export function AssetEditMode({
       setIsLoadingReferences(false);
     };
     initVideoFrames();
-  }, [isRegenerate, isVideo, asset.sourceAssetIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRegenerate, isVideo, asset.id]);
 
   // 处理参考图选择确认
   const handleReferenceConfirm = useCallback(async (ids: string[]) => {
