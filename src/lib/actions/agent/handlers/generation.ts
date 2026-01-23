@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { createVideoAsset, getAssetWithFullData } from "@/lib/actions/asset";
 import { createJob } from "@/lib/actions/job";
 import { getVideoServiceProvider } from "@/lib/services/video-service";
+import { translatePromptToEnglish } from "@/lib/services/translation.service";
 
 /**
  * 获取项目的画风prompt
@@ -92,11 +93,14 @@ async function handleGenerateImage(
       };
     }
 
+    // 翻译中文提示词为英文
+    const translatedPrompt = await translatePromptToEnglish(assetData.prompt);
+
     // 获取项目画风并前置拼接到 prompt
     const stylePrompt = await getProjectStylePrompt(projectId);
     const finalPrompt = stylePrompt
-      ? `${stylePrompt}. ${assetData.prompt}`
-      : assetData.prompt;
+      ? `${stylePrompt}. ${translatedPrompt}`
+      : translatedPrompt;
 
     // 创建新版本记录
     const { createAssetVersion } = await import("@/lib/actions/asset/version");
@@ -164,9 +168,13 @@ async function handleGenerateImage(
   for (const assetData of assets) {
     try {
       const assetName = assetData.name || `AI生成-${Date.now()}`;
+
+      // 翻译中文提示词为英文
+      const translatedPrompt = await translatePromptToEnglish(assetData.prompt);
+
       const finalPrompt = stylePrompt
-        ? `${stylePrompt}. ${assetData.prompt}`
-        : assetData.prompt;
+        ? `${stylePrompt}. ${translatedPrompt}`
+        : translatedPrompt;
 
       const createResult = await createAssetInternal({
         projectId,
@@ -275,11 +283,14 @@ async function handleGenerateVideo(
 
     const normalizedConfig = validationResult.normalizedConfig!;
 
+    // 翻译中文提示词为英文
+    const translatedPrompt = await translatePromptToEnglish(normalizedConfig.prompt as string);
+
     // 获取项目画风
     const stylePrompt = await getProjectStylePrompt(projectId);
     const finalPrompt = stylePrompt
-      ? `${stylePrompt}. ${normalizedConfig.prompt}`
-      : (normalizedConfig.prompt as string);
+      ? `${stylePrompt}. ${translatedPrompt}`
+      : translatedPrompt;
 
     // 构建生成配置
     const generationConfig = {
