@@ -9,8 +9,10 @@ import { useEditor } from "./editor-context";
 import { ChatMessage } from "./agent-panel/chat-message";
 import { TypingIndicator } from "./agent-panel/typing-indicator";
 import { AutoModeToggle } from "./agent-panel/auto-mode-toggle";
+import { useAssetMention } from "./agent-panel/use-asset-mention";
+import { AssetMentionDropdown } from "./agent-panel/asset-mention-dropdown";
+import { AssetReferenceInput, type AssetReferenceInputHandle } from "./agent-panel/asset-reference-input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Send,
   Square,
@@ -28,6 +30,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { AssetWithFullData } from "@/types/asset";
+import { useAssetReferenceCallback } from "./agent-panel/use-asset-reference-callback";
 import { createConversation, saveInterruptMessage, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval, findPendingApproval } from "@/lib/services/agent-engine/approval-utils";
@@ -190,6 +194,7 @@ interface ChatInputAreaProps {
   emptyPlaceholder: string;
   stopToInterruptLabel: string;
   enterToSendLabel: string;
+  assets: AssetWithFullData[];
 }
 
 function ChatInputArea({
@@ -206,20 +211,50 @@ function ChatInputArea({
   emptyPlaceholder,
   stopToInterruptLabel,
   enterToSendLabel,
+  assets,
 }: ChatInputAreaProps) {
+  const inputRef = useRef<AssetReferenceInputHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const {
+    mentionState,
+    filteredAssets,
+    selectedIndex,
+    handleInputChange,
+    handleKeyDown: handleMentionKeyDown,
+    insertAssetReference,
+  } = useAssetMention({
+    textareaRef: containerRef,
+    value: input,
+    onChange: onInputChange,
+    assets,
+    isContentEditable: true,
+  });
+
+  const combinedKeyDown = (e: React.KeyboardEvent) => {
+    handleMentionKeyDown(e as any);
+    if (!mentionState.isOpen) {
+      onKeyDown(e as any);
+    }
+  };
+
   return (
     <div className="border-t p-3 shrink-0 bg-background/80">
-      <div className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
-        <Textarea
+      <div
+        ref={containerRef}
+        className="relative flex items-end w-full p-2 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all"
+      >
+        <AssetReferenceInput
+          ref={inputRef}
           value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={onKeyDown}
+          onChange={handleInputChange}
+          onKeyDown={combinedKeyDown}
           placeholder={isEmptyState ? emptyPlaceholder : placeholder}
           className={cn(
-            "min-h-[20px] w-full resize-none border-0 shadow-none focus-visible:ring-0 p-2 bg-transparent pr-12",
+            "min-h-[60px] w-full resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent pr-12",
             isBottomMode ? "max-h-[80px]" : "max-h-[150px]"
           )}
-          style={{ height: 'auto', minHeight: '40px' }}
+          maxHeight={isBottomMode ? "80px" : "150px"}
         />
         <div className="absolute bottom-2 right-2">
           {isLoading && !input.trim() ? (
@@ -242,6 +277,16 @@ function ChatInputArea({
             </Button>
           )}
         </div>
+
+        {/* Asset Mention Dropdown */}
+        {mentionState.isOpen && (
+          <AssetMentionDropdown
+            assets={filteredAssets}
+            selectedIndex={selectedIndex}
+            position={mentionState.position}
+            onSelect={insertAssetReference}
+          />
+        )}
       </div>
       {showHint && (
         <p className="mt-2 text-xs text-center text-muted-foreground/60">
@@ -317,6 +362,21 @@ export function FloatingAgentCard({
       funcDef,
     };
   }, [agent.state.messages]);
+
+  // 注册素材引用回调（仅在没有待审批操作时注册）
+  const handleAssetReference = useAssetReferenceCallback({
+    value: input,
+    onChange: setInput,
+  });
+
+  useEffect(() => {
+    // 如果有待审批操作，不注册回调，让 approval bar 处理
+    if (pendingApproval) {
+      return;
+    }
+
+    editorContext.registerReferenceCallback?.(handleAssetReference);
+  }, [editorContext, pendingApproval, handleAssetReference]);
 
 
   // 检测用户是否在底部
@@ -934,6 +994,7 @@ export function FloatingAgentCard({
                   emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
                   stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
                   enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
+                  assets={editorContext.state.assets}
                 />
               )}
             </div>
@@ -1016,6 +1077,7 @@ export function FloatingAgentCard({
                 emptyPlaceholder={t("editor.agent.chatInput.emptyPlaceholder")}
                 stopToInterruptLabel={t("editor.agent.chatInput.stopToInterrupt")}
                 enterToSendLabel={t("editor.agent.chatInput.enterToSend")}
+                assets={editorContext.state.assets}
               />
             )}
           </div>

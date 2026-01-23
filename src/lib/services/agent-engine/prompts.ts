@@ -149,7 +149,22 @@ Every shot should clearly specify:
 - Scene location and visible anchors
 - Character action and emotion
 - Camera framing and motion
-Use sourceAssetIds to reference the turnaround sheet and scene images whenever consistency matters.`;
+Use sourceAssetIds to reference the turnaround sheet and scene images whenever consistency matters.
+
+## Asset References
+Users can reference existing assets in their messages using the format [[asset_name|asset_id]].
+When you see this format in a user message:
+- The asset_name is the display name of the asset
+- The asset_id is the unique identifier you can use with sourceAssetIds parameter
+- Extract the asset_id and use it in your function calls when appropriate
+- Acknowledge the referenced asset in your response to show you understand which asset the user is referring to
+
+Example:
+User: "请用 [[猫转身图|abc123]] 生成一个猫在跳跃的视频"
+You should:
+1. Recognize that the user is referencing an asset named "猫转身图" with ID "abc123"
+2. Use "abc123" in the sourceAssetIds parameter when generating the video
+3. Respond acknowledging the asset: "好的，我将使用「猫转身图」作为参考来生成猫跳跃的视频。"`;
 
   // Add language instruction for non-English locales
   const languageInstruction = locale === "zh"

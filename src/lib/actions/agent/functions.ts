@@ -90,7 +90,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         assets: {
           type: "array",
-          description: "素材数组，每个素材包含: prompt（必填，英文描述）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）",
+          description: "素材数组，每个素材包含: prompt（必填，中英文均可，系统会自动翻译）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）",
         },
         targetAssetId: {
           type: "string",
@@ -121,7 +121,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - Veo 3.1 默认约 8 秒；duration 参数仅保留兼容，可能不生效
 
 **参数**：
-- prompt（必填）：≥10字符，英文描述
+- prompt（必填）：≥10字符，中英文均可，系统会自动翻译
 - start_image_url（必填）：起始帧资产ID或URL
 - end_image_url（可选）：结束帧资产ID或URL
 - duration（可选）：兼容字段，Veo 3.1 可能忽略
@@ -133,7 +133,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         prompt: {
           type: "string",
-          description: "视频描述（必填），详细描述视频内容和镜头运动，至少10个字符",
+          description: "视频描述（必填，中英文均可，系统会自动翻译），详细描述视频内容和镜头运动，至少10个字符",
         },
         start_image_url: {
           type: "string",
@@ -449,7 +449,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 **适用场景：** 脚步声、爆炸声、环境音、UI 音效等
 
 **参数要求：**
-- **prompt**（必填）：英文音效描述，如 "footsteps on wooden floor", "thunder rumbling in distance"
+- **prompt**（必填）：中英文音效描述均可，系统会自动翻译，如 "footsteps on wooden floor", "thunder rumbling in distance"
 - **name**（可选）：资产名称，便于识别
 - **duration**（可选）：时长 0.5-22 秒，不指定则自动
 - **is_loopable**（可选）：是否生成可循环音效
@@ -473,7 +473,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         prompt: {
           type: "string",
-          description: "音效描述（必填，英文），详细描述音效内容",
+          description: "音效描述（必填，中英文均可，系统会自动翻译），详细描述音效内容",
         },
         name: {
           type: "string",
@@ -533,7 +533,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         prompt: {
           type: "string",
-          description: "音乐描述（必填），描述风格、情绪、节奏等",
+          description: "音乐描述（必填，中英文均可，系统会自动翻译），描述风格、情绪、节奏等",
         },
         name: {
           type: "string",

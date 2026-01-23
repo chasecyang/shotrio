@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Trash2, Video, Play, FileText, Music, RefreshCw, Pencil } from "lucide-react";
+import { Trash2, Video, Play, FileText, Music, RefreshCw, Pencil, AtSign } from "lucide-react";
 import { useState } from "react";
 import { VersionCountBadge } from "./asset-version-panel";
 import Image from "next/image";
@@ -29,6 +29,7 @@ interface AssetCardProps {
   onSelectChange?: (assetId: string, selected: boolean) => void;
   onRegenerate?: (asset: AssetWithFullData) => void;
   onEdit?: (asset: AssetWithFullData) => void;
+  onReference?: (asset: AssetWithFullData) => void;
   job?: Job;
 }
 
@@ -40,6 +41,7 @@ export function AssetCard({
   onSelectChange,
   onRegenerate,
   onEdit,
+  onReference,
   job,
 }: AssetCardProps) {
   const t = useTranslations("editor.assetCard");
@@ -340,6 +342,27 @@ export function AssetCard({
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
                       {t("aiEdit")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {/* 引用按钮 */}
+                {onReference && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReference(asset);
+                        }}
+                      >
+                        <AtSign className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      引用到对话
                     </TooltipContent>
                   </Tooltip>
                 )}

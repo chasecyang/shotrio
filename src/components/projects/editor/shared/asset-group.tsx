@@ -17,6 +17,7 @@ interface AssetGroupProps {
   onSelectChange: (assetId: string, selected: boolean) => void;
   onRegenerate?: (asset: AssetWithFullData) => void;
   onEdit?: (asset: AssetWithFullData) => void;
+  onReference?: (asset: AssetWithFullData) => void;
 }
 
 export function AssetGroup({
@@ -30,6 +31,7 @@ export function AssetGroup({
   onSelectChange,
   onRegenerate,
   onEdit,
+  onReference,
 }: AssetGroupProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -76,6 +78,7 @@ export function AssetGroup({
               onSelectChange={onSelectChange}
               onRegenerate={onRegenerate}
               onEdit={onEdit}
+              onReference={onReference}
             />
           ))}
         </div>

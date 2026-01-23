@@ -8,6 +8,8 @@ import { DisplayStepCard } from "./display-step-card";
 import { EnergyStream } from "./energy-stream";
 import { useMessageDisplay } from "./use-message-display";
 import { useAgent } from "./agent-context";
+import { MessageContentWithReferences } from "./message-content-with-references";
+import { hasAssetReferences } from "@/lib/utils/asset-reference";
 
 interface ChatMessageProps {
   message: AgentMessage;
@@ -49,7 +51,14 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
             </span>
           </div>
           <div className="rounded-lg bg-accent/50 backdrop-blur-sm border border-border/50 px-3 py-2 break-words w-full">
-            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            {hasAssetReferences(message.content) ? (
+              <MessageContentWithReferences
+                content={message.content}
+                className="text-sm whitespace-pre-wrap break-words"
+              />
+            ) : (
+              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            )}
           </div>
         </div>
       ) : (

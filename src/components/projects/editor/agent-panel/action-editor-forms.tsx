@@ -20,7 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ImageIcon, X, Plus } from "lucide-react";
+import { Loader2, ImageIcon, X, Plus, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PRESET_TAGS } from "@/lib/constants/asset-tags";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,7 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
     displayUrl: string | null;
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   // 使用 ref 跟踪当前请求的 assetIds，防止竞态条件
   const currentRequestRef = useRef<string>("");
   // 使用 ref 存储上一次的 assetIds 内容，避免引用变化导致重复加载
@@ -75,23 +76,43 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
     if (assetIds.length === 0) {
       if (currentRequestRef.current === requestId) {
         setIsLoading(false);
+        setError(null);
       }
       return;
     }
 
     try {
-      const result = await getAssetsByIds(assetIds);
+      // 添加超时控制（10秒）
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("加载超时，请重试")), 10000);
+      });
+
+      const result = await Promise.race([
+        getAssetsByIds(assetIds),
+        timeoutPromise
+      ]);
+
       // 检查请求是否仍然有效（assetIds 没有变化）
       if (currentRequestRef.current === requestId) {
         if (result.success && result.assets) {
           setAssets(result.assets);
+          setError(null);
+        } else {
+          // 加载失败或没有数据时，清空assets并记录错误
+          const errorMsg = result.error || "加载失败";
+          console.error("加载素材失败:", errorMsg);
+          setAssets([]);
+          setError(errorMsg);
         }
         setIsLoading(false);
       }
     } catch (error) {
       // 只有在当前请求仍然有效时才更新状态
       if (currentRequestRef.current === requestId) {
+        const errorMsg = error instanceof Error ? error.message : "加载素材失败";
         console.error("加载素材失败:", error);
+        setAssets([]);
+        setError(errorMsg);
         setIsLoading(false);
       }
     }
@@ -154,6 +175,29 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
         <span>加载素材...</span>
+      </div>
+    );
+  }
+
+  // 显示错误信息和重试按钮
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-red-500">
+        <AlertCircle className="h-3 w-3" />
+        <span>{error}</span>
+        <button
+          onClick={() => {
+            const requestId = currentRequestRef.current;
+            if (requestId) {
+              setIsLoading(true);
+              setError(null);
+              loadAssets(requestId);
+            }
+          }}
+          className="text-primary hover:underline"
+        >
+          重试
+        </button>
       </div>
     );
   }

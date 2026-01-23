@@ -110,6 +110,7 @@ export function AssetGalleryPanel() {
   const {
     state,
     loadAssets,
+    referenceAssetInChat,
   } = useEditor();
   const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
   const t = useTranslations("editor.assetGallery");
@@ -405,6 +406,13 @@ export function AssetGalleryPanel() {
     setSelectedAsset(null);
   };
 
+  // 处理引用素材到对话
+  const handleReference = (asset: AssetWithFullData) => {
+    // 通过 editor context 触发引用
+    referenceAssetInChat?.(asset);
+    toast.success(`已引用「${asset.name}」到对话框`);
+  };
+
   // 退出编辑模式
   const handleExitEditMode = () => {
     setEditingAsset(null);
@@ -584,6 +592,7 @@ export function AssetGalleryPanel() {
                   onSelectChange={handleSelectChange}
                   onRegenerate={handleRegenerate}
                   onEdit={handleEdit}
+                  onReference={handleReference}
                 />
               ))}
             </div>

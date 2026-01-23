@@ -390,6 +390,10 @@ interface EditorContextType {
   clearEditingAsset: () => void;
   // AI 编辑相关方法
   setPendingEditAsset: (asset: AssetWithFullData | null) => void;
+  // 素材引用相关方法
+  referenceAssetInChat?: (asset: AssetWithFullData) => void;
+  registerReferenceCallback?: (callback: (asset: AssetWithFullData) => void) => void;
+  unregisterReferenceCallback?: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -496,6 +500,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   // 用于在 useTaskRefresh 中调用 loadAssets 的 ref
   const loadAssetsRef = useRef<((options?: LoadAssetsOptions) => Promise<void>) | null>(null);
 
+  // 用于存储素材引用回调的 ref
+  const referenceAssetCallbackRef = useRef<((asset: AssetWithFullData) => void) | null>(null);
+
   // 加载素材列表
   const loadAssets = useCallback(async (options?: LoadAssetsOptions) => {
     if (!state.project?.id) return;
@@ -569,6 +576,23 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "SET_PENDING_EDIT_ASSET", payload: asset });
   }, []);
 
+  // 引用素材到对话框
+  const referenceAssetInChat = useCallback((asset: AssetWithFullData) => {
+    if (referenceAssetCallbackRef.current) {
+      referenceAssetCallbackRef.current(asset);
+    }
+  }, []);
+
+  // 注册引用回调
+  const registerReferenceCallback = useCallback((callback: (asset: AssetWithFullData) => void) => {
+    referenceAssetCallbackRef.current = callback;
+  }, []);
+
+  // 注销引用回调
+  const unregisterReferenceCallback = useCallback(() => {
+    referenceAssetCallbackRef.current = null;
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -588,6 +612,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setEditingAsset,
       clearEditingAsset,
       setPendingEditAsset,
+      referenceAssetInChat,
+      registerReferenceCallback,
+      unregisterReferenceCallback,
       jobs,
       refreshJobs,
     }),
@@ -608,6 +635,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setEditingAsset,
       clearEditingAsset,
       setPendingEditAsset,
+      referenceAssetInChat,
+      registerReferenceCallback,
+      unregisterReferenceCallback,
       jobs,
       refreshJobs,
     ]

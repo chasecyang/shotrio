@@ -49,6 +49,9 @@ export interface AgentState {
   // 是否正在刷新对话列表（静默刷新）
   isRefreshingConversations: boolean;
 
+  // 是否正在加载单个对话（切换对话时）
+  isLoadingConversation: boolean;
+
   // 是否处于"新对话"模式（懒创建）
   isNewConversation: boolean;
 
@@ -72,6 +75,7 @@ type AgentAction =
   | { type: "SET_CONVERSATIONS"; payload: Conversation[] }
   | { type: "SET_LOADING_CONVERSATIONS"; payload: boolean }
   | { type: "SET_REFRESHING_CONVERSATIONS"; payload: boolean }
+  | { type: "SET_LOADING_CONVERSATION"; payload: boolean }
   | { type: "SET_NEW_CONVERSATION"; payload: boolean }
   | { type: "UPDATE_CONVERSATION_TITLE"; payload: { conversationId: string; title: string } }
   | { type: "SET_AUTO_ACCEPT"; payload: boolean }
@@ -87,6 +91,7 @@ const initialState: AgentState = {
   conversations: [],
   isLoadingConversations: false,
   isRefreshingConversations: false,
+  isLoadingConversation: false,
   isNewConversation: false, // 等待恢复逻辑确定后再设置
   isAutoAcceptEnabled: false, // 默认关闭自动执行模式
   isInitialLoadComplete: false, // 初始加载未完成
@@ -151,6 +156,12 @@ function agentReducer(state: AgentState, action: AgentAction): AgentState {
       return {
         ...state,
         isRefreshingConversations: action.payload,
+      };
+
+    case "SET_LOADING_CONVERSATION":
+      return {
+        ...state,
+        isLoadingConversation: action.payload,
       };
 
     case "SET_NEW_CONVERSATION":
@@ -268,7 +279,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
 
   // 加载指定对话
   const loadConversation = useCallback(async (conversationId: string) => {
-    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_LOADING_CONVERSATION", payload: true });
     try {
       const result = await getConversation(conversationId);
       if (result.success && result.messages) {
@@ -287,7 +298,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
       console.error("[Agent] 加载对话失败:", error);
       toast.error("加载对话失败");
     } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
+      dispatch({ type: "SET_LOADING_CONVERSATION", payload: false });
     }
   }, [projectId]);
 

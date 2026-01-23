@@ -115,7 +115,8 @@ export function AgentChatContainer({ projectId }: AgentChatContainerProps) {
   }, []);
 
   // 等待初始化完成（localStorage 配置 + 对话恢复），显示骨架屏
-  if (!isInitialized || !agent.state.isInitialLoadComplete) {
+  // 或者正在切换对话时也显示骨架屏
+  if (!isInitialized || !agent.state.isInitialLoadComplete || agent.state.isLoadingConversation) {
     return <AgentChatSkeleton position={expandedPosition} />;
   }
 

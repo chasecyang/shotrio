@@ -3,7 +3,6 @@
 import { memo, useState, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +32,10 @@ import type { FunctionCall } from "@/types/agent";
 import { getArtStyleById } from "@/lib/actions/art-style/queries";
 import { AssetPreview } from "./action-editor-forms";
 import { formatParametersForConfirmation } from "@/lib/utils/agent-params-formatter";
+import { AssetReferenceInput, type AssetReferenceInputHandle } from "./asset-reference-input";
+import { useAssetMention } from "./use-asset-mention";
+import { AssetMentionDropdown } from "./asset-mention-dropdown";
+import { useAssetReferenceCallback } from "./use-asset-reference-callback";
 
 const AUTO_CONFIRM_DELAY_MS = 500;
 
@@ -70,9 +73,46 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   const [isRejecting, setIsRejecting] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<AssetReferenceInputHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [artStyleName, setArtStyleName] = useState<string | null>(null);
   const autoBalanceCheckRef = useRef<{ toolCallId: string; inFlight: boolean } | null>(null);
+
+  // Asset mention functionality
+  const {
+    mentionState,
+    filteredAssets,
+    selectedIndex,
+    handleInputChange,
+    handleKeyDown: handleMentionKeyDown,
+    insertAssetReference,
+  } = useAssetMention({
+    textareaRef: containerRef,
+    value: feedbackText,
+    onChange: setFeedbackText,
+    assets: editor.state.assets,
+    isContentEditable: true,
+    dropdownRef,
+  });
+
+  // Register asset reference callback
+  const handleAssetReference = useAssetReferenceCallback({
+    value: feedbackText,
+    onChange: setFeedbackText,
+    focusRef: inputRef,
+  });
+
+  useEffect(() => {
+    if (editor.registerReferenceCallback) {
+      editor.registerReferenceCallback(handleAssetReference);
+    }
+
+    // Cleanup: unregister callback when component unmounts
+    return () => {
+      editor.unregisterReferenceCallback?.();
+    };
+  }, [editor, handleAssetReference]);
 
   // 解析参数
   const parsedArgs = useMemo(() => {
@@ -490,11 +530,15 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     : formattedParams.length > 0;
 
   // 键盘快捷键
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (feedbackText.trim()) {
-        handleRejectWithFeedback();
+  const combinedKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // 类型兼容：HTMLDivElement 可以安全地传递给期望 HTMLTextAreaElement | HTMLDivElement 的函数
+    handleMentionKeyDown(e as React.KeyboardEvent<HTMLTextAreaElement | HTMLDivElement>);
+    if (!mentionState.isOpen) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (feedbackText.trim()) {
+          handleRejectWithFeedback();
+        }
       }
     }
   };
@@ -795,16 +839,27 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
               <div className="w-px h-6 bg-border mx-1" />
 
-              <Textarea
-                ref={textareaRef}
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
-                className="flex-1 min-h-[32px] max-h-[32px] resize-none text-sm py-1.5"
-                disabled={isLoading}
-                rows={1}
-              />
+              <div ref={containerRef} className="relative flex-1 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
+                <AssetReferenceInput
+                  ref={inputRef}
+                  value={feedbackText}
+                  onChange={handleInputChange}
+                  onKeyDown={combinedKeyDown}
+                  placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
+                  className="min-h-[20px] text-sm py-1.5 px-2 border-0 shadow-none focus-visible:ring-0 bg-transparent"
+                  maxHeight="32px"
+                  disabled={isLoading}
+                />
+                {mentionState.isOpen && (
+                  <AssetMentionDropdown
+                    ref={dropdownRef}
+                    assets={filteredAssets}
+                    selectedIndex={selectedIndex}
+                    position={mentionState.position}
+                    onSelect={insertAssetReference}
+                  />
+                )}
+              </div>
 
               <Button
                 size="sm"
@@ -884,16 +939,27 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
               {/* 第二行：反馈输入框 + 发送按钮 */}
               <div className="flex items-center gap-2">
-                <Textarea
-                  ref={textareaRef}
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
-                  className="flex-1 min-h-[36px] max-h-[80px] resize-none text-sm py-2"
-                  disabled={isLoading}
-                  rows={1}
-                />
+                <div ref={containerRef} className="relative flex-1 bg-muted/30 rounded-xl border border-input focus-within:ring-1 focus-within:ring-ring transition-all">
+                  <AssetReferenceInput
+                    ref={inputRef}
+                    value={feedbackText}
+                    onChange={handleInputChange}
+                    onKeyDown={combinedKeyDown}
+                    placeholder={t("editor.agent.pendingAction.feedbackPlaceholder")}
+                    className="min-h-[20px] text-sm py-2 px-2 border-0 shadow-none focus-visible:ring-0 bg-transparent"
+                    maxHeight="80px"
+                    disabled={isLoading}
+                  />
+                  {mentionState.isOpen && (
+                    <AssetMentionDropdown
+                      ref={dropdownRef}
+                      assets={filteredAssets}
+                      selectedIndex={selectedIndex}
+                      position={mentionState.position}
+                      onSelect={insertAssetReference}
+                    />
+                  )}
+                </div>
                 <Button
                   size="sm"
                   onClick={handleRejectWithFeedback}
