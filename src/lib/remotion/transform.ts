@@ -60,7 +60,13 @@ export function timelineToRemotionProps(
   });
 
   // 计算总帧数（至少 1 帧）
-  const durationInFrames = Math.max(1, msToFrames(timeline.duration, fps));
+  // 如果没有有效的轨道项，使用默认的 30 帧（1秒）
+  let durationInFrames = Math.max(1, msToFrames(timeline.duration, fps));
+
+  // 额外保护：如果轨道为空，确保至少有 30 帧
+  if (tracks.length === 0 || durationInFrames <= 0) {
+    durationInFrames = 30;
+  }
 
   return {
     tracks,

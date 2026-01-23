@@ -623,7 +623,12 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
     });
 
     const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
-    const durationInFrames = Math.max(1, msToFrames(timeline.duration));
+    let durationInFrames = Math.max(1, msToFrames(timeline.duration));
+
+    // 额外保护：如果轨道为空或时长无效，确保至少有 30 帧
+    if (tracks.length === 0 || durationInFrames <= 0) {
+      durationInFrames = 30;
+    }
 
     // 构建轨道状态（默认所有音频轨道不静音）
     const trackStates: Record<number, { volume: number; isMuted: boolean }> = {};
