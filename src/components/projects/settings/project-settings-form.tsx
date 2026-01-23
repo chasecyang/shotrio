@@ -45,14 +45,12 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   const [formData, setFormData] = useState({
     title: project.title,
     description: project.description || "",
-    styleId: project.styleId || null,
     stylePrompt: project.stylePrompt || "",
   });
 
   const [originalData] = useState({
     title: project.title,
     description: project.description || "",
-    styleId: project.styleId || null,
     stylePrompt: project.stylePrompt || "",
   });
 
@@ -64,7 +62,6 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
     const result = await updateProject(project.id, {
       title: data.title,
       description: data.description || null,
-      styleId: data.styleId,
       stylePrompt: data.stylePrompt || null,
     });
     return result;
@@ -172,8 +169,8 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
             <TabsContent value="preset" className="mt-4">
               <StyleSelector
                 styles={systemStyles}
-                selectedStyleId={formData.styleId}
-                onSelect={(styleId) => setFormData({ ...formData, styleId, stylePrompt: "" })}
+                selectedStylePrompt={formData.stylePrompt}
+                onSelect={(stylePrompt) => setFormData({ ...formData, stylePrompt })}
               />
             </TabsContent>
             
@@ -182,7 +179,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
                 <Textarea
                   value={formData.stylePrompt}
                   onChange={(e) =>
-                    setFormData({ ...formData, stylePrompt: e.target.value, styleId: null })
+                    setFormData({ ...formData, stylePrompt: e.target.value })
                   }
                   placeholder={t("customStylePlaceholder")}
                   rows={4}

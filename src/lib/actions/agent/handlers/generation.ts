@@ -10,7 +10,6 @@ import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
 import { project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
-import type { ArtStyle } from "@/types/art-style";
 import { createVideoAsset, getAssetWithFullData } from "@/lib/actions/asset";
 import { createJob } from "@/lib/actions/job";
 
@@ -20,10 +19,8 @@ import { createJob } from "@/lib/actions/job";
 async function getProjectStylePrompt(projectId: string): Promise<string | null> {
   const projectData = await db.query.project.findFirst({
     where: eq(project.id, projectId),
-    with: { artStyle: true },
   });
-  const artStyleData = projectData?.artStyle as ArtStyle | null;
-  return artStyleData?.prompt || projectData?.stylePrompt || null;
+  return projectData?.stylePrompt || null;
 }
 
 /**

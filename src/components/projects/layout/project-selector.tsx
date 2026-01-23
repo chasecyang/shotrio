@@ -30,9 +30,14 @@ interface ProjectSelectorProps {
   projects: Project[];
   currentProjectId?: string;
   variant?: "compact";
+  currentProject?: {
+    id: string;
+    title: string;
+    description?: string | null;
+  };
 }
 
-export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorProps) {
+export function ProjectSelector({ projects, currentProjectId, currentProject }: ProjectSelectorProps) {
   const t = useTranslations("editor.projectSelector");
   const tCommon = useTranslations("common");
   const tToast = useTranslations("toasts");
@@ -48,7 +53,8 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
 
   // 优先使用路由参数中的项目ID，如果没有则使用传入的prop
   const activeProjectId = (params.id as string) || currentProjectId;
-  const currentProject = projects.find((p) => p.id === activeProjectId);
+  // 优先使用从 context 传入的 currentProject，fallback 到从 projects 数组中查找
+  const displayProject = currentProject || projects.find((p) => p.id === activeProjectId);
 
   const handleSelectProject = (projectId: string) => {
     // 导航到该项目的编辑器页面
@@ -96,7 +102,7 @@ export function ProjectSelector({ projects, currentProjectId }: ProjectSelectorP
             <Box className="h-4 w-4 opacity-70 shrink-0" />
             <span className="text-xs text-muted-foreground">{t("project")}</span>
             <span className="font-medium truncate max-w-[200px]">
-              {currentProject ? currentProject.title : t("selectProject")}
+              {displayProject ? displayProject.title : t("selectProject")}
             </span>
             <ChevronsUpDown className="h-4 w-4 opacity-50" />
           </Button>

@@ -21,6 +21,26 @@ export function buildSystemPrompt(locale: "en" | "zh" = "en"): string {
 - **Props/Scenes**: Generate one primary image before dependent shots. If props/scenes need other states/angles, derive them from this primary image
 - **Scene Content**: Scene materials should only describe and express the scene itself, without including people
 
+## Using Reference Assets (sourceAssetIds)
+
+**KEY RULE**: When generating shot frames, ALWAYS reference existing character/scene/prop assets to maintain visual consistency.
+
+### Usage Steps
+1. **Check Available Assets**: Review the "可用参考资源" (Available Reference Assets) list in the context
+2. **Select Relevant IDs**: Identify the asset IDs for characters/scenes/props that appear in the shot
+3. **Pass sourceAssetIds**: Include these IDs in your generate_image_asset call
+4. **Example**:
+   - Shot content: Hero swinging energy sword in warehouse
+   - sourceAssetIds: ["hero-id", "warehouse-id", "sword-id"]
+
+### Why This Matters
+sourceAssetIds allows the image generation model to extract visual features (character appearance, scene layout, prop style) from these assets, ensuring the generated shot frames remain consistent with your established designs.
+
+### When to Use
+- ✅ Generating shot frames/storyboard images - **REQUIRED**
+- ✅ Generating any image featuring existing characters
+- ❌ Generating initial reference images (character turnarounds, scenes, props) - not needed
+
 ## Shot Duration and Grid Layout
 
 ### Standard Shot Durations (Film/TV Industry Practice)
@@ -58,6 +78,8 @@ A superhero discovers a hostage situation, rushes to the scene, fights the villa
 - Combo assets: Villain with weapon, Hero with shield (for better storyboard quality)
 
 ### 2. Prepare Assets
+**First, determine the project's art style** (e.g., Cinematic photorealistic style, Standard TV anime style, Pixar 3D animation style, Makoto Shinkai anime style, Studio Ghibli style, Disney 2D animation style, Stop-motion animation style, Claymation style, etc.) to ensure visual consistency across all assets.
+
 Generate reference images using \`generate_image_asset\`:
 - **3 Character turnarounds**: Hero, Villain, Victim (front/3-4 side/side/back views, white background)
 - **3 Scene images**: City rooftop, Warehouse exterior, Warehouse interior (no people)
@@ -67,7 +89,7 @@ Generate reference images using \`generate_image_asset\`:
 ### 3. Generate Shot Frames
 Create 4 grid frame images using \`generate_image_asset\`. These are full-color, production-ready compositions that will be used as starting frames for video generation.
 
-**IMPORTANT**: Always pass sourceAssetIds to reference characters/scenes/props for visual consistency.
+**See "Using Reference Assets (sourceAssetIds)" section above for detailed guidance.**
 
 **Shot Frames 1** (2x2 grid):
 - sourceAssetIds: ["asset-id-4", "asset-id-1", "asset-id-8"] (City rooftop scene + Hero + Communication device)

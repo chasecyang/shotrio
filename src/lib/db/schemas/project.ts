@@ -94,11 +94,11 @@ export const project = pgTable("project", {
   title: text("title").notNull(),
   description: text("description"), // 项目简介
 
-  // 全局画风设定 (e.g. "Cyberpunk style, 8k resolution, cinematic lighting")
-  // @deprecated 使用 styleId 代替
+  // 全局画风设定 - 直接存储美术风格 prompt 文本
+  // (e.g. "Cyberpunk style, 8k resolution, cinematic lighting")
   stylePrompt: text("style_prompt"),
-  
-  // 新增：关联美术风格
+
+  // @deprecated 不再使用，保留用于数据迁移安全
   styleId: text("style_id").references(() => artStyle.id, { onDelete: "set null" }),
 
   status: projectStatusEnum("status").default("draft").notNull(),

@@ -10,7 +10,6 @@ import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import db from "@/lib/db";
 import { project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
-import type { ArtStyle } from "@/types/art-style";
 import { getVideoAssets, queryAssets } from "@/lib/actions/asset";
 import { getSystemArtStyles } from "@/lib/actions/art-style/queries";
 import { analyzeAssetsByType } from "@/lib/actions/asset/stats";
@@ -63,21 +62,13 @@ async function handleQueryContext(
   if (includeProjectInfo) {
     const projectData = await db.query.project.findFirst({
       where: eq(project.id, projectId),
-      with: { artStyle: true },
     });
 
     if (projectData) {
-      const artStyleData = projectData.artStyle as ArtStyle | null;
       contextData.projectInfo = {
         title: projectData.title,
         description: projectData.description,
-        currentStyle: artStyleData
-          ? {
-              id: artStyleData.id,
-              name: artStyleData.name,
-              prompt: artStyleData.prompt,
-            }
-          : null,
+        stylePrompt: projectData.stylePrompt || null,
       };
     }
   }

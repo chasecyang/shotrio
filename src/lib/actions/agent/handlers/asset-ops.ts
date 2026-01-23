@@ -158,25 +158,25 @@ async function handleSetProjectInfo(
   functionCall: FunctionCall,
   projectId: string
 ): Promise<FunctionExecutionResult> {
-  const { title, description, styleId } = functionCall.parameters as {
+  const { title, description, stylePrompt } = functionCall.parameters as {
     title?: string;
     description?: string;
-    styleId?: string;
+    stylePrompt?: string;
   };
 
   // 至少需要一个字段
-  if (!title && !description && !styleId) {
+  if (!title && !description && !stylePrompt) {
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: "至少需要提供 title、description 或 styleId 中的一个字段",
+      error: "至少需要提供 title、description 或 stylePrompt 中的一个字段",
     };
   }
 
   const updateData: Record<string, string> = {};
   if (title !== undefined) updateData.title = title;
   if (description !== undefined) updateData.description = description;
-  if (styleId !== undefined) updateData.styleId = styleId;
+  if (stylePrompt !== undefined) updateData.stylePrompt = stylePrompt;
 
   const updateResult = await updateProject(projectId, updateData);
 
@@ -184,7 +184,7 @@ async function handleSetProjectInfo(
   const updatedFields: string[] = [];
   if (title !== undefined) updatedFields.push("标题");
   if (description !== undefined) updatedFields.push("描述");
-  if (styleId !== undefined) updatedFields.push("美术风格");
+  if (stylePrompt !== undefined) updatedFields.push("美术风格");
 
   return {
     functionCallId: functionCall.id,

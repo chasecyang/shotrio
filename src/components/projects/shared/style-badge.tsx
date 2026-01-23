@@ -16,10 +16,11 @@ export function StyleBadge({ project }: StyleBadgeProps) {
   const t = useTranslations("projects.settings");
   
   // 获取风格名称
-  const styleName = project.artStyle?.name || 
-    (project.stylePrompt ? t("customStyleName") : t("noStyleSet"));
-  
-  const hasStyle = project.artStyle || project.stylePrompt;
+  const styleName = project.stylePrompt
+    ? t("customStyleName")
+    : t("noStyleSet");
+
+  const hasStyle = !!project.stylePrompt;
 
   return (
     <div className="group relative inline-flex items-center gap-2">

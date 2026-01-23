@@ -9,11 +9,11 @@ import { useTranslations } from "next-intl";
 
 interface StyleSelectorProps {
   styles: ArtStyle[];
-  selectedStyleId?: string | null;
-  onSelect: (styleId: string) => void;
+  selectedStylePrompt?: string | null;
+  onSelect: (stylePrompt: string) => void;
 }
 
-export function StyleSelector({ styles, selectedStyleId, onSelect }: StyleSelectorProps) {
+export function StyleSelector({ styles, selectedStylePrompt, onSelect }: StyleSelectorProps) {
   const t = useTranslations("projects.assets");
 
   if (styles.length === 0) {
@@ -30,8 +30,8 @@ export function StyleSelector({ styles, selectedStyleId, onSelect }: StyleSelect
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {styles.map((style) => {
-        const isSelected = selectedStyleId === style.id;
-        
+        const isSelected = selectedStylePrompt === style.prompt;
+
         return (
           <Card
             key={style.id}
@@ -39,7 +39,7 @@ export function StyleSelector({ styles, selectedStyleId, onSelect }: StyleSelect
               "cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg overflow-hidden",
               isSelected && "ring-2 ring-primary border-primary"
             )}
-            onClick={() => onSelect(style.id)}
+            onClick={() => onSelect(style.prompt)}
           >
             {/* 预览图或占位符 */}
             <div className="relative h-32 bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center">

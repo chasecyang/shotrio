@@ -3,8 +3,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { project, artStyle } from "@/lib/db/schemas/project";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { project } from "@/lib/db/schemas/project";
+import { eq, and, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   type NewProject,
@@ -40,14 +40,6 @@ export async function createProject(data: {
     };
 
     const [created] = await db.insert(project).values(newProject).returning();
-
-    // 如果设置了styleId，增加风格的使用计数
-    if (data.styleId) {
-      await db
-        .update(artStyle)
-        .set({ usageCount: sql`${artStyle.usageCount} + 1` })
-        .where(eq(artStyle.id, data.styleId));
-    }
 
     return { success: true, data: created };
   } catch (error) {
@@ -115,7 +107,6 @@ export async function getProjectDetail(
           },
           orderBy: (assets, { desc }) => [desc(assets.createdAt)],
         },
-        artStyle: true, // 关联查询美术风格
       },
     });
 
@@ -141,14 +132,6 @@ export async function updateProject(
   }
 
   try {
-    // 如果更新了styleId，增加新风格的使用计数
-    if (data.styleId) {
-      await db
-        .update(artStyle)
-        .set({ usageCount: sql`${artStyle.usageCount} + 1` })
-        .where(eq(artStyle.id, data.styleId));
-    }
-
     const [updated] = await db
       .update(project)
       .set(data)

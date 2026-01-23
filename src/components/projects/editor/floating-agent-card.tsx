@@ -90,7 +90,13 @@ function isProjectRelatedFunction(functionName: string): boolean {
 
 // 判断是否为消耗积分的操作
 function isCreditConsumingFunction(functionName: string): boolean {
-  return ['generate_video_asset', 'generate_image_asset'].includes(functionName);
+  return [
+    'generate_video_asset',
+    'generate_image_asset',
+    'generate_sound_effect',
+    'generate_bgm',
+    'generate_dialogue'
+  ].includes(functionName);
 }
 
 interface AutoModeBarProps {
@@ -227,7 +233,7 @@ function ChatInputArea({
             </Button>
           ) : (
             <Button
-              onClick={onSend}
+              onClick={() => onSend()}
               disabled={!input.trim()}
               size="icon"
               className="h-8 w-8 rounded-lg"

@@ -1,5 +1,4 @@
 import { project } from "@/lib/db/schemas/project";
-import type { ArtStyle } from "./art-style";
 import type { Asset as AssetType, AssetWithTags } from "./asset";
 
 // 类型推导
@@ -17,5 +16,4 @@ export interface ProjectWithStats extends Project {
 
 export interface ProjectDetail extends Project {
   assets?: AssetWithTags[]; // 包含图片和视频
-  artStyle?: ArtStyle | null;
 }

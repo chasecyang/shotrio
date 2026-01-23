@@ -26,7 +26,7 @@ export function EditorHeader({
   projects,
   user,
 }: EditorHeaderProps) {
-  const { setShowSettings } = useEditor();
+  const { setShowSettings, state } = useEditor();
   const t = useTranslations("editor");
 
   return (
@@ -44,9 +44,14 @@ export function EditorHeader({
           <BetaBadge variant="minimal" />
         </Link>
         <Separator orientation="vertical" className="h-6" />
-        <ProjectSelector 
+        <ProjectSelector
           projects={projects}
           currentProjectId={projectId}
+          currentProject={state.project ? {
+            id: state.project.id,
+            title: state.project.title,
+            description: state.project.description
+          } : undefined}
         />
         
         {/* 项目设置按钮 */}

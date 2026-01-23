@@ -218,7 +218,7 @@ Sora2 Pro 可以理解网格分镜图（2x2、2x3、3x3），每个网格对应�
   },
   {
     name: "set_project_info",
-    description: "设置项目信息，包括标题、描述、美术风格。至少需要提供一个字段。设置美术风格前先用 query_context 获取可用风格列表，然后使用风格对象的 id 字段作为 styleId 参数。",
+    description: "设置项目信息，包括标题、描述、美术风格。至少需要提供一个字段。设置美术风格时，可以直接传入英文风格描述文本（如 'Cinematic photorealistic style'），或者先用 query_context 获取可用预设风格列表，然后复制其中某个风格的 prompt 字段作为 stylePrompt 参数。",
     displayName: "设置项目信息",
     parameters: {
       type: "object",
@@ -231,9 +231,9 @@ Sora2 Pro 可以理解网格分镜图（2x2、2x3、3x3），每个网格对应�
           type: "string",
           description: "项目描述",
         },
-        styleId: {
+        stylePrompt: {
           type: "string",
-          description: "美术风格的唯一标识符。必须使用 query_context 返回的 artStyles 数组中某个风格对象的 id 字段",
+          description: "美术风格 prompt 文本（英文）。可以直接输入风格描述，或使用 query_context 返回的 artStyles 数组中某个风格对象的 prompt 字段",
         },
       },
     },
