@@ -95,10 +95,10 @@ export async function addClipToTimeline(
       timelineId,
       assetId: input.assetId,
       trackIndex,
-      startTime,
-      duration: input.duration ?? 0,
-      trimStart: input.trimStart ?? 0,
-      trimEnd: input.trimEnd,
+      startTime: Math.round(startTime),
+      duration: Math.round(input.duration ?? 0),
+      trimStart: Math.round(input.trimStart ?? 0),
+      trimEnd: input.trimEnd !== undefined ? Math.round(input.trimEnd) : undefined,
       order: input.order ?? nextOrder,
       createdAt: now,
       updatedAt: now,
@@ -163,11 +163,21 @@ export async function updateClip(
       return { success: false, error: "片段不存在或无权限" };
     }
 
+    // 将所有数值字段转换为整数
+    const updateData: Partial<UpdateClipInput> = {};
+    if (input.trackIndex !== undefined) updateData.trackIndex = Math.round(input.trackIndex);
+    if (input.startTime !== undefined) updateData.startTime = Math.round(input.startTime);
+    if (input.duration !== undefined) updateData.duration = Math.round(input.duration);
+    if (input.trimStart !== undefined) updateData.trimStart = Math.round(input.trimStart);
+    if (input.trimEnd !== undefined) updateData.trimEnd = Math.round(input.trimEnd);
+    if (input.order !== undefined) updateData.order = Math.round(input.order);
+    if (input.metadata !== undefined) updateData.metadata = input.metadata;
+
     // 更新片段
     await db
       .update(timelineClip)
       .set({
-        ...input,
+        ...updateData,
         updatedAt: new Date(),
       })
       .where(eq(timelineClip.id, clipId));
@@ -316,12 +326,12 @@ export async function reorderClips(
         updatedAt: Date;
         startTime?: number;
       } = {
-        order: clipOrder.order,
+        order: Math.round(clipOrder.order),
         updatedAt: new Date(),
       };
-      
+
       if (clipOrder.startTime !== undefined) {
-        updateData.startTime = clipOrder.startTime;
+        updateData.startTime = Math.round(clipOrder.startTime);
       }
 
       await db

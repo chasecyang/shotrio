@@ -316,12 +316,9 @@ async function generateVideoWithVeoKie(
     imageUrls = imageUrls.slice(0, 3);
   }
 
-  // 根据图片数量选择生成类型
+  // 始终使用参考图生成模式
   // REFERENCE_2_VIDEO: 支持 1-3 张参考图（仅支持 veo3_fast 和 16:9/9:16）
-  // FIRST_AND_LAST_FRAMES_2_VIDEO: 支持 1-2 张图片（首尾帧过渡）
-  const generationType = imageUrls.length >= 3
-    ? "REFERENCE_2_VIDEO"
-    : "FIRST_AND_LAST_FRAMES_2_VIDEO";
+  const generationType = "REFERENCE_2_VIDEO";
 
   // REFERENCE_2_VIDEO 模式只支持 16:9 和 9:16，不支持 Auto
   const aspectRatio = config.aspect_ratio === "9:16" ? "9:16" : "16:9";

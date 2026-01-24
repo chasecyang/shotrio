@@ -98,10 +98,10 @@ export async function generateVeo3Video(
     );
   }
 
-  // 自动判断生成类型
+  // 自动判断生成类型：默认使用参考图生成模式
   let generationType = input.generationType;
   if (!generationType && processedImageUrls && processedImageUrls.length > 0) {
-    generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
+    generationType = "REFERENCE_2_VIDEO";
   }
 
   const requestBody = {

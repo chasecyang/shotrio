@@ -1,7 +1,7 @@
 "use client";
 
 import { Player } from "@remotion/player";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { TimelineComposition } from "@/lib/remotion/compositions/TimelineComposition";
 import { TimelineCompositionProps } from "@/lib/remotion/types";
@@ -26,6 +26,8 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     handlePlayingChange,
   } = playback;
 
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+
   const renderLoading = useCallback(() => {
     return (
       <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a]">
@@ -44,7 +46,23 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     );
   }, []);
 
+  // Track when player is ready
   useEffect(() => {
+    if (playerRef.current && compositionProps) {
+      // Small delay to ensure Player is fully mounted
+      const timer = setTimeout(() => {
+        setIsPlayerReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsPlayerReady(false);
+    }
+  }, [playerRef, compositionProps]);
+
+  // Attach event listeners when player is ready
+  useEffect(() => {
+    if (!isPlayerReady) return;
+
     const player = playerRef.current;
     if (!player) return;
 
@@ -65,7 +83,7 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
       player.removeEventListener("play", onPlay);
       player.removeEventListener("pause", onPause);
     };
-  }, [playerRef, handleFrameUpdate, handlePlayingChange]);
+  }, [isPlayerReady, playerRef, handleFrameUpdate, handlePlayingChange]);
 
   if (!timeline || timeline.clips.length === 0 || !compositionProps || timeline.duration === 0 || compositionProps.tracks.length === 0) {
     return (

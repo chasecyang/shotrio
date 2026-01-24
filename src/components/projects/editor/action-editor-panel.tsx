@@ -150,11 +150,12 @@ export function ActionEditorPanel() {
   const handleConfirm = async () => {
     setIsConfirming(true);
     try {
-      await onConfirm(functionCall.id, editedParams);
+      // 先清除编辑器界面，让用户立即看到响应（与 approval-action-bar 保持一致）
       clearActionEditor();
+      // 然后在后台执行确认操作
+      await onConfirm(functionCall.id, editedParams);
     } catch (error) {
       console.error("确认操作失败:", error);
-      clearActionEditor();
     } finally {
       setIsConfirming(false);
     }
@@ -164,9 +165,10 @@ export function ActionEditorPanel() {
   const handleCancel = async () => {
     setIsCancelling(true);
     try {
-      await onCancel(functionCall.id);
-      // 取消后自动返回之前的视图
+      // 先清除编辑器界面，让用户立即看到响应（与 approval-action-bar 保持一致）
       clearActionEditor();
+      // 然后在后台执行取消操作
+      await onCancel(functionCall.id);
     } catch (error) {
       console.error("取消操作失败:", error);
     } finally {
