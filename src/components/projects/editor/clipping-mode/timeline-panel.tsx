@@ -118,6 +118,7 @@ function TimelinePanelContent({
 
   const [zoom, setZoom] = useState(1); // Zoom level
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
   const [trimmingClipInfo, setTrimmingClipInfo] = useState<{
@@ -479,6 +480,31 @@ function TimelinePanelContent({
       toast.error(tToasts("error.deleteFailed"));
     }
   };
+
+  // Clip selection - toggle on/off
+  const handleClipSelect = (clipId: string) => {
+    setSelectedClipId(prev => prev === clipId ? null : clipId);
+  };
+
+  // Keyboard event handler for Delete key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete or Backspace key
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedClipId) {
+        // Prevent default browser behavior
+        e.preventDefault();
+        // Delete the selected clip
+        handleDeleteClip(selectedClipId);
+        // Clear selection
+        setSelectedClipId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedClipId]); // Re-attach listener when selectedClipId changes
 
   // Clip drag start
   const handleClipDragStart = (clipId: string) => {
@@ -1130,6 +1156,8 @@ function TimelinePanelContent({
                             pixelsPerMs={pixelsPerMs}
                             temporaryStartTime={temporaryStartTime}
                             onDelete={() => handleDeleteClip(clip.id)}
+                            onSelect={() => handleClipSelect(clip.id)}
+                            isSelected={selectedClipId === clip.id}
                             onDragStart={() => handleClipDragStart(clip.id)}
                             onDragEnd={handleClipDragEnd}
                             onTrimming={handleClipTrimming}
@@ -1206,6 +1234,8 @@ function TimelinePanelContent({
                             pixelsPerMs={pixelsPerMs}
                             temporaryStartTime={temporaryStartTime}
                             onDelete={() => handleDeleteClip(clip.id)}
+                            onSelect={() => handleClipSelect(clip.id)}
+                            isSelected={selectedClipId === clip.id}
                             onDragStart={() => handleClipDragStart(clip.id)}
                             onDragEnd={handleClipDragEnd}
                             onTrimming={handleClipTrimming}

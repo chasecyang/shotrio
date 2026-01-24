@@ -21,6 +21,13 @@ export const assetSourceTypeEnum = pgEnum("asset_source_type", [
   "uploaded",  // 用户上传
 ]);
 
+// 资产筛选状态枚举
+export const assetSelectionStatusEnum = pgEnum("asset_selection_status", [
+  "unrated",   // 未筛选 (default)
+  "selected",  // 精选
+  "rejected",  // 废弃
+]);
+
 // 任务类型
 export const jobTypeEnum = pgEnum("job_type", [
   "asset_image", // 素材图片生成
@@ -129,6 +136,9 @@ export const asset: any = pgTable("asset", {
 
   // 资产来源类型
   sourceType: assetSourceTypeEnum("source_type").notNull(),
+
+  // 资产筛选状态
+  selectionStatus: assetSelectionStatusEnum("selection_status").default("unrated").notNull(),
 
   // 灵活的元数据字段（JSON）
   meta: text("meta"), // JSON字符串，存储类型特定的元数据（CharacterMeta、AudioMeta等）

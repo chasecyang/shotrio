@@ -46,8 +46,7 @@ interface AssetDetailViewProps {
   asset: AssetWithFullData;
   onBack: () => void;
   onRetry?: (jobId: string) => Promise<void>;
-  onEdit?: (asset: AssetWithFullData) => void;
-  onRegenerate?: (asset: AssetWithFullData) => void;
+  onReference?: (asset: AssetWithFullData) => void;
   onAssetUpdated: () => void;
 }
 
@@ -59,8 +58,7 @@ export function AssetDetailView({
   asset,
   onBack,
   onRetry,
-  onEdit,
-  onRegenerate,
+  onReference,
   onAssetUpdated,
 }: AssetDetailViewProps) {
   const t = useTranslations();
@@ -437,28 +435,16 @@ export function AssetDetailView({
           返回
         </Button>
         <div className="flex-1" />
-        {/* 编辑按钮 - 仅对图片显示 */}
-        {!isVideo && !isAudio && !isFailed && onEdit && (
+        {/* 基于此生成新素材按钮 */}
+        {!isFailed && onReference && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onEdit(asset)}
+            onClick={() => onReference(asset)}
             className="gap-2"
           >
-            <Pencil className="h-4 w-4" />
-            编辑
-          </Button>
-        )}
-        {/* 重新生成按钮 - 仅对有 prompt 的 AI 生成素材显示 */}
-        {asset.prompt && !isFailed && onRegenerate && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRegenerate(asset)}
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            重新生成
+            <Sparkles className="h-4 w-4" />
+            基于此生成新素材
           </Button>
         )}
         {/* 下载按钮 */}

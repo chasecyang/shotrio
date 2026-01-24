@@ -1089,6 +1089,12 @@
       "sortUsage": "Usage",
       "searchPlaceholder": "Search assets..."
     },
+    "assetSelectionFilter": {
+      "all": "All",
+      "selected": "Selected",
+      "rejected": "Rejected",
+      "unrated": "Unrated"
+    },
     "assetGallery": {
       "assetsCount": "{count} assets",
       "noAssets": "No assets",
@@ -1115,31 +1121,17 @@
       "downloadFailed": "Download failed, please try again"
     },
     "assetCard": {
-      "aiEdit": "AI Edit Image",
-      "regenerate": "Regenerate",
+      "generateBased": "Generate based on this",
       "delete": "Delete",
-      "generatingNewVersion": "Generating new version"
-    },
-    "assetEdit": {
-      "title": "Edit Asset",
-      "regenerateTitle": "Regenerate",
-      "promptLabel": "Edit Prompt",
-      "promptPlaceholder": "Describe the changes you want...",
-      "promptRequired": "Please enter an edit prompt",
-      "referenceImages": "Reference Images",
-      "optional": "Optional",
-      "selectReference": "Select Reference",
-      "selectReferenceDescription": "Select other images from the library as reference",
-      "aspectRatio": "Aspect Ratio",
-      "autoAspectRatio": "Auto",
-      "resolution": "Resolution",
-      "submit": "Generate New Version",
-      "submitting": "Generating...",
-      "submitSuccess": "Generation task submitted",
-      "submitFailed": "Submission failed",
-      "regenerateSubmit": "Regenerate",
-      "regenerateSubmitting": "Regenerating...",
-      "regenerateSuccess": "Regeneration task submitted"
+      "generatingNewVersion": "Generating new version",
+      "markAsSelected": "Mark as Selected",
+      "markAsRejected": "Mark as Rejected",
+      "markAsUnrated": "Mark as Unrated",
+      "clickToCycleStatus": "Click to cycle status",
+      "currentStatus": "Current status",
+      "selected": "Selected",
+      "rejected": "Rejected",
+      "unrated": "Unrated"
     },
     "projectSettings": "Project Settings",
     "expandAgent": "Expand Agent Chat",

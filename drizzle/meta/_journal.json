@@ -57,6 +57,13 @@
       "when": 1769149337006,
       "tag": "0007_chubby_sharon_carter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769229126290,
+      "tag": "0008_curious_anthem",
+      "breakpoints": true
     }
   ]
 }

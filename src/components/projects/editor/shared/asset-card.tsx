@@ -9,8 +9,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Trash2, Video, Play, FileText, Music, RefreshCw, Pencil, AtSign } from "lucide-react";
+import { Trash2, Video, Play, FileText, Music, AtSign, Star, X, Circle, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { VersionCountBadge } from "./asset-version-panel";
 import Image from "next/image";
@@ -19,6 +25,7 @@ import remarkGfm from "remark-gfm";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssetProgressOverlay } from "./asset-progress-overlay";
 import type { Job } from "@/types/job";
+import type { AssetSelectionStatus } from "@/types/asset";
 import { useTranslations } from "next-intl";
 
 interface AssetCardProps {
@@ -27,9 +34,8 @@ interface AssetCardProps {
   onDelete: (asset: AssetWithFullData) => void;
   onClick: (asset: AssetWithFullData) => void;
   onSelectChange?: (assetId: string, selected: boolean) => void;
-  onRegenerate?: (asset: AssetWithFullData) => void;
-  onEdit?: (asset: AssetWithFullData) => void;
   onReference?: (asset: AssetWithFullData) => void;
+  onSelectionStatusChange?: (asset: AssetWithFullData, status: AssetSelectionStatus) => void;
   job?: Job;
 }
 
@@ -39,23 +45,20 @@ export function AssetCard({
   onDelete,
   onClick,
   onSelectChange,
-  onRegenerate,
-  onEdit,
   onReference,
+  onSelectionStatusChange,
   job,
 }: AssetCardProps) {
   const t = useTranslations("editor.assetCard");
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // 检查资产类型
   const isVideo = asset.assetType === "video";
   const isText = asset.assetType === "text";
   const isAudio = asset.assetType === "audio";
-
-  // 检查是否可以重新生成/编辑（仅 AI 生成的素材且有 prompt）
-  const isGenerated = asset.sourceType === "generated";
 
   // 检查资产是否正在生成中
   const isGenerating = asset.runtimeStatus === "processing" || asset.runtimeStatus === "pending";
@@ -68,12 +71,6 @@ export function AssetCard({
 
   // 获取 job
   const currentJob = job;
-
-  // 是否可以重新生成（仅 AI 生成的素材）
-  const canRegenerate = isGenerated && !isText && !!asset.prompt;
-
-  // 是否可以 AI 编辑（仅图片素材可以）
-  const canEdit = !isVideo && !isText && !isAudio;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -99,7 +96,10 @@ export function AssetCard({
         "group relative rounded-lg border overflow-hidden transition-all cursor-move bg-card",
         "hover:border-primary/40 hover:bg-accent/50",
         isDragging && "opacity-50",
-        isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5 dark:shadow-[var(--safelight-glow)]"
+        isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5 dark:shadow-[var(--safelight-glow)]",
+        // Selection status styling
+        asset.selectionStatus === "selected" && "ring-1 ring-amber-500/20",
+        asset.selectionStatus === "rejected" && "opacity-50 grayscale-[0.4]"
       )}
     >
       {/* 缩略图区域 */}
@@ -315,36 +315,28 @@ export function AssetCard({
           </div>
         )}
 
+        {/* Selection status corner indicator - triangle in top right */}
+        {asset.selectionStatus !== "unrated" && (
+          <div className="absolute top-0 right-0 w-5 h-5 overflow-hidden pointer-events-none z-10">
+            <div
+              className={cn(
+                "absolute top-0 right-0 w-full h-full origin-top-right rotate-45 translate-x-1/2 -translate-y-1/2 transition-colors duration-200",
+                asset.selectionStatus === "selected" && "bg-amber-500/80",
+                asset.selectionStatus === "rejected" && "bg-slate-400/60"
+              )}
+            />
+          </div>
+        )}
+
         {/* 版本数量标记 */}
         {!onSelectChange && <VersionCountBadge count={asset.versionCount} />}
         {onSelectChange && !isBatchSelected && !isHovered && <VersionCountBadge count={asset.versionCount} />}
 
         {/* 底部操作栏 */}
-        {isHovered && !isGenerating && !isFailed && (
+        {(isHovered || isDropdownOpen) && !isGenerating && !isFailed && (
           <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-background/90 via-background/60 to-transparent pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-200">
             <TooltipProvider delayDuration={300}>
               <div className="flex items-center gap-1 pointer-events-auto">
-                {/* AI 编辑按钮 */}
-                {canEdit && onEdit && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(asset);
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">
-                      {t("aiEdit")}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
                 {/* 引用按钮 */}
                 {onReference && (
                   <Tooltip>
@@ -362,30 +354,69 @@ export function AssetCard({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      引用到对话
+                      基于此生成新素材
                     </TooltipContent>
                   </Tooltip>
                 )}
-                {/* 重新生成按钮 */}
-                {canRegenerate && onRegenerate && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                {/* Selection status dropdown */}
+                {onSelectionStatusChange && (
+                  <DropdownMenu onOpenChange={setIsDropdownOpen}>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
+                        className={cn(
+                          "h-7 w-7 backdrop-blur-sm transition-all hover:scale-105",
+                          asset.selectionStatus === "selected" && "bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30",
+                          asset.selectionStatus === "rejected" && "bg-slate-500/20 text-slate-700 dark:text-slate-400 hover:bg-slate-500/30",
+                          asset.selectionStatus === "unrated" && "bg-background/20 hover:bg-background/30 text-foreground"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {asset.selectionStatus === "selected" && <Star className="h-3.5 w-3.5 fill-current" />}
+                        {asset.selectionStatus === "rejected" && <X className="h-3.5 w-3.5" />}
+                        {asset.selectionStatus === "unrated" && <Circle className="h-3.5 w-3.5" />}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem
+                        className={cn(
+                          asset.selectionStatus === "selected" && "bg-amber-500/10"
+                        )}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onRegenerate(asset);
+                          onSelectionStatusChange(asset, "selected");
                         }}
                       >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">
-                      {t("regenerate")}
-                    </TooltipContent>
-                  </Tooltip>
+                        <Star className="h-3.5 w-3.5 mr-2 text-amber-600 fill-current" />
+                        <span>{t("selected")}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className={cn(
+                          asset.selectionStatus === "rejected" && "bg-slate-500/10"
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectionStatusChange(asset, "rejected");
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5 mr-2 text-slate-600" />
+                        <span>{t("rejected")}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className={cn(
+                          asset.selectionStatus === "unrated" && "bg-muted/50"
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectionStatusChange(asset, "unrated");
+                        }}
+                      >
+                        <Circle className="h-3.5 w-3.5 mr-2" />
+                        <span>{t("unrated")}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
                 {/* 删除按钮 - 推到右边 */}
                 <div className="ml-auto">

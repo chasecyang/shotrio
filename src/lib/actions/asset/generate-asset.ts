@@ -362,9 +362,17 @@ export interface EditAssetImageAsVersionInput {
   resolution?: ImageResolution; // 分辨率（默认继承原图）
 }
 
+/**
+ * @deprecated This function is deprecated and will be removed in a future version.
+ * Asset generation parameters are now immutable. Use the Agent conversation to generate new assets instead.
+ */
 export async function editAssetImageAsVersion(
   input: EditAssetImageAsVersionInput
 ): Promise<GenerateAssetImageJobResult> {
+  console.warn(
+    "editAssetImageAsVersion is deprecated. Asset generation parameters are now immutable. Use the Agent conversation to generate new assets instead."
+  );
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });

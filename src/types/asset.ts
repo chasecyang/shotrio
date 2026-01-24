@@ -17,6 +17,11 @@ export type AssetTypeEnum = "image" | "video" | "text" | "audio";
 export type AssetSourceType = "generated" | "uploaded";
 
 /**
+ * 资产筛选状态
+ */
+export type AssetSelectionStatus = "unrated" | "selected" | "rejected";
+
+/**
  * 资产类型值（用于分类/标签）
  */
 export type AssetType = 
@@ -215,6 +220,9 @@ export interface Asset {
 
   // 资产来源类型
   sourceType: AssetSourceType;
+
+  // 资产筛选状态
+  selectionStatus: AssetSelectionStatus;
 
   // 元数据（JSON字符串，存储 CharacterMeta、AudioMeta 等）
   meta: string | null;

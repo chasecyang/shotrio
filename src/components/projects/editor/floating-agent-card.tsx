@@ -31,7 +31,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { AssetWithFullData } from "@/types/asset";
-import { useAssetReferenceCallback } from "./agent-panel/use-asset-reference-callback";
+import { createAssetReference } from "@/lib/utils/asset-reference";
 import { createConversation, saveInterruptMessage, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
 import { isAwaitingApproval, findPendingApproval } from "@/lib/services/agent-engine/approval-utils";
@@ -366,10 +366,16 @@ export function FloatingAgentCard({
   }, [agent.state.messages]);
 
   // 注册素材引用回调（仅在没有待审批操作时注册）
-  const handleAssetReference = useAssetReferenceCallback({
-    value: input,
-    onChange: setInput,
-  });
+  const handleAssetReference = useCallback((asset: AssetWithFullData, presetText?: string) => {
+    const reference = createAssetReference(asset.name, asset.id);
+    // 如果有预设文本，替换占位符；否则只插入引用
+    const textToInsert = presetText
+      ? presetText.replace('{{reference}}', reference)
+      : reference;
+    // 在当前值后添加文本，如果已有内容则添加空格
+    const newValue = input + (input ? " " : "") + textToInsert + " ";
+    setInput(newValue);
+  }, [input, setInput]);
 
   useEffect(() => {
     // 如果有待审批操作，不注册回调，让 approval bar 处理

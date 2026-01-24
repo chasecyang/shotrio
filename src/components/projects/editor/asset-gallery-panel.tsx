@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useEditor, type LoadAssetsOptions } from "./editor-context";
 import { AssetGroup } from "./shared/asset-group";
-import { deleteAsset, deleteAssets } from "@/lib/actions/asset";
-import { AssetWithFullData, AssetTypeEnum } from "@/types/asset";
+import { deleteAsset, deleteAssets, updateAssetSelectionStatus, batchUpdateSelectionStatus } from "@/lib/actions/asset";
+import { AssetWithFullData, AssetTypeEnum, AssetSelectionStatus } from "@/types/asset";
 import { toast } from "sonner";
 import { Images, RefreshCw, Upload, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,21 +28,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AssetDetailView } from "./shared/asset-detail-view";
-import { AssetEditMode } from "./shared/asset-edit-mode";
 import {
   AssetFilterOptions,
   AssetTypeTabs,
   AssetSearch,
 } from "./shared/asset-filter";
+import { AssetSelectionTabs } from "./shared/asset-selection-filter";
 import { UNCATEGORIZED_GROUP } from "@/lib/constants/asset-tags";
 import { useTranslations } from "next-intl";
 
-// localStorage key
+// localStorage keys
 const getAssetTypeFilterKey = (projectId: string) => `editor:project:${projectId}:assetTypeFilter`;
+const getSelectionStatusFilterKey = (projectId: string) => `editor:project:${projectId}:selectionStatusFilter`;
 const VALID_ASSET_TYPES: AssetTypeEnum[] = ["image", "video", "text", "audio"];
 
 const DEFAULT_FILTER: AssetFilterOptions = {
   assetTypes: [],
+  selectionStatus: [],
 };
 
 // 统计所有标签出现次数
@@ -144,12 +146,30 @@ export function AssetGalleryPanel() {
     }
   };
 
+  const getSavedSelectionStatus = (projectId: string | undefined): AssetSelectionStatus[] => {
+    if (!projectId) return [];
+    try {
+      const saved = localStorage.getItem(getSelectionStatusFilterKey(projectId));
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((s): s is AssetSelectionStatus =>
+          s === "unrated" || s === "selected" || s === "rejected"
+        );
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
   const [filterOptions, setFilterOptions] = useState<AssetFilterOptions>(() => ({
     ...DEFAULT_FILTER,
     assetTypes: getSavedAssetTypes(project?.id),
+    selectionStatus: getSavedSelectionStatus(project?.id),
   }));
 
-  // 切换项目时恢复素材类型筛选
+  // 切换项目时恢复素材类型筛选和筛选状态
   const lastProjectIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!project?.id) return;
@@ -158,6 +178,7 @@ export function AssetGalleryPanel() {
     setFilterOptions(prev => ({
       ...prev,
       assetTypes: getSavedAssetTypes(project.id),
+      selectionStatus: getSavedSelectionStatus(project.id),
     }));
   }, [project?.id]);
 
@@ -169,16 +190,18 @@ export function AssetGalleryPanel() {
     } catch {}
   }, [project?.id, filterOptions.assetTypes]);
 
+  // 保存筛选状态到 localStorage
+  useEffect(() => {
+    if (!project?.id) return;
+    try {
+      localStorage.setItem(getSelectionStatusFilterKey(project.id), JSON.stringify(filterOptions.selectionStatus));
+    } catch {}
+  }, [project?.id, filterOptions.selectionStatus]);
+
   // 详情视图状态
   const [selectedAsset, setSelectedAsset] = useState<AssetWithFullData | null>(
     null
   );
-
-  // AI 编辑模式状态
-  const [editingAsset, setEditingAsset] = useState<AssetWithFullData | null>(null);
-
-  // 重新生成模式状态
-  const [regeneratingAsset, setRegeneratingAsset] = useState<AssetWithFullData | null>(null);
 
   // 初始加载或静默刷新
   const refreshAssets = useCallback(
@@ -210,13 +233,24 @@ export function AssetGalleryPanel() {
 
   // 客户端筛选逻辑
   const filteredAssets = useMemo(() => {
-    if (filterOptions.assetTypes.length === 0) {
-      return allAssets;
+    let filtered = allAssets;
+
+    // Filter by asset type
+    if (filterOptions.assetTypes.length > 0) {
+      filtered = filtered.filter((asset) =>
+        filterOptions.assetTypes.includes(asset.assetType)
+      );
     }
-    return allAssets.filter((asset) =>
-      filterOptions.assetTypes.includes(asset.assetType)
-    );
-  }, [allAssets, filterOptions.assetTypes]);
+
+    // Filter by selection status
+    if (filterOptions.selectionStatus && filterOptions.selectionStatus.length > 0) {
+      filtered = filtered.filter((asset) =>
+        filterOptions.selectionStatus!.includes(asset.selectionStatus)
+      );
+    }
+
+    return filtered;
+  }, [allAssets, filterOptions.assetTypes, filterOptions.selectionStatus]);
 
   // 分组后的素材
   const groupedAssets = useMemo(() => {
@@ -386,64 +420,66 @@ export function AssetGalleryPanel() {
     }
   };
 
-  // 处理重新生成 - 进入重新生成编辑模式
-  const handleRegenerate = (asset: AssetWithFullData) => {
-    setRegeneratingAsset(asset);
-    // 关闭详情视图（如果打开的话）
-    setSelectedAsset(null);
-  };
-
-  // 退出重新生成模式
-  const handleExitRegenerateMode = () => {
-    setRegeneratingAsset(null);
-  };
-
-  // 处理 AI 编辑 - 切换到编辑模式
-  const handleEdit = (asset: AssetWithFullData) => {
-    // 设置编辑素材，切换到编辑模式视图
-    setEditingAsset(asset);
-    // 关闭详情视图（如果打开的话）
-    setSelectedAsset(null);
-  };
-
   // 处理引用素材到对话
   const handleReference = (asset: AssetWithFullData) => {
+    const assetTypeText = asset.assetType === 'image' ? '图片' :
+                          asset.assetType === 'video' ? '视频' :
+                          asset.assetType === 'audio' ? '音频' : '素材';
+    const presetText = `请基于 {{reference}} 生成新的${assetTypeText}素材，`;
     // 通过 editor context 触发引用
-    referenceAssetInChat?.(asset);
+    referenceAssetInChat?.(asset, presetText);
     toast.success(`已引用「${asset.name}」到对话框`);
   };
 
-  // 退出编辑模式
-  const handleExitEditMode = () => {
-    setEditingAsset(null);
+  const handleSelectionStatusChange = async (asset: AssetWithFullData, status: AssetSelectionStatus) => {
+    const result = await updateAssetSelectionStatus(asset.id, status);
+    if (result.success) {
+      // Refresh assets to show updated status
+      refreshAssets();
+      const statusText = status === "selected" ? "精选" : status === "rejected" ? "废弃" : "未筛选";
+      toast.success(`已标记为${statusText}`);
+    } else {
+      toast.error(result.error || "更新失败");
+    }
+  };
+
+  const handleBatchMarkSelected = async () => {
+    const assetIds = Array.from(selectedAssetIds);
+    const result = await batchUpdateSelectionStatus(assetIds, "selected");
+    if (result.success) {
+      refreshAssets();
+      toast.success(`已将 ${result.updatedCount} 个素材标记为精选`);
+      setSelectedAssetIds(new Set());
+    } else {
+      toast.error(result.error || "批量更新失败");
+    }
+  };
+
+  const handleBatchMarkRejected = async () => {
+    const assetIds = Array.from(selectedAssetIds);
+    const result = await batchUpdateSelectionStatus(assetIds, "rejected");
+    if (result.success) {
+      refreshAssets();
+      toast.success(`已将 ${result.updatedCount} 个素材标记为废弃`);
+      setSelectedAssetIds(new Set());
+    } else {
+      toast.error(result.error || "批量更新失败");
+    }
+  };
+
+  const handleBatchMarkUnrated = async () => {
+    const assetIds = Array.from(selectedAssetIds);
+    const result = await batchUpdateSelectionStatus(assetIds, "unrated");
+    if (result.success) {
+      refreshAssets();
+      toast.success(`已将 ${result.updatedCount} 个素材标记为未筛选`);
+      setSelectedAssetIds(new Set());
+    } else {
+      toast.error(result.error || "批量更新失败");
+    }
   };
 
   if (!project) return null;
-
-  // 如果在编辑模式，显示编辑视图
-  if (editingAsset) {
-    return (
-      <AssetEditMode
-        asset={editingAsset}
-        projectId={project.id}
-        onBack={handleExitEditMode}
-        onSuccess={handleAssetUpdated}
-      />
-    );
-  }
-
-  // 如果在重新生成模式，显示重新生成视图
-  if (regeneratingAsset) {
-    return (
-      <AssetEditMode
-        asset={regeneratingAsset}
-        projectId={project.id}
-        onBack={handleExitRegenerateMode}
-        onSuccess={handleAssetUpdated}
-        mode="regenerate"
-      />
-    );
-  }
 
   // 如果有选中的素材，显示详情视图
   if (selectedAsset) {
@@ -466,8 +502,7 @@ export function AssetGalleryPanel() {
           asset={selectedAsset}
           onBack={handleBackToGrid}
           onRetry={handleRetry}
-          onEdit={handleEdit}
-          onRegenerate={handleRegenerate}
+          onReference={handleReference}
           onAssetUpdated={handleAssetUpdated}
         />
       </div>
@@ -511,7 +546,16 @@ export function AssetGalleryPanel() {
             </Button>
           </div>
         </div>
-        {/* 第二行：搜索框 + 素材计数 */}
+        {/* 第二行：筛选状态Tab */}
+        <div className="flex items-center gap-2">
+          <AssetSelectionTabs
+            value={filterOptions.selectionStatus || []}
+            onChange={(statuses) =>
+              setFilterOptions({ ...filterOptions, selectionStatus: statuses })
+            }
+          />
+        </div>
+        {/* 第三行：搜索框 + 素材计数 */}
         <div className="flex items-center gap-2">
           <AssetSearch
             search={filterOptions.search}
@@ -590,9 +634,8 @@ export function AssetGalleryPanel() {
                   onAssetClick={handleAssetClick}
                   onAssetDelete={handleDelete}
                   onSelectChange={handleSelectChange}
-                  onRegenerate={handleRegenerate}
-                  onEdit={handleEdit}
                   onReference={handleReference}
+                  onSelectionStatusChange={handleSelectionStatusChange}
                 />
               ))}
             </div>
@@ -642,6 +685,9 @@ export function AssetGalleryPanel() {
           onDeselectAll={handleDeselectAll}
           onDelete={handleBatchDelete}
           onDownload={handleBatchDownload}
+          onMarkSelected={handleBatchMarkSelected}
+          onMarkRejected={handleBatchMarkRejected}
+          onMarkUnrated={handleBatchMarkUnrated}
           isDownloading={isDownloading}
           downloadProgress={downloadProgress}
         />

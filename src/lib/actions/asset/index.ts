@@ -63,6 +63,12 @@ export {
   replaceAssetTags,
 } from "./tags";
 
+// 筛选状态管理
+export {
+  updateAssetSelectionStatus,
+  batchUpdateSelectionStatus,
+} from "./selection-status";
+
 // 上传操作
 export { uploadAsset } from "./upload-asset";
 

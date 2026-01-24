@@ -2,13 +2,14 @@
 
 import React, { useRef, useEffect, useMemo } from "react";
 import { TimelineClipWithAsset } from "@/types/timeline";
-import { Trash2, GripVertical, Scissors, AudioLines } from "lucide-react";
+import { Trash2, GripVertical, Scissors, AudioLines, X } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatTimeDisplay } from "@/lib/utils/timeline-utils";
 import { deserializeWaveform } from "@/lib/utils/waveform-utils";
@@ -19,6 +20,8 @@ interface AudioClipItemProps {
   pixelsPerMs: number;
   temporaryStartTime?: number;
   onDelete: () => void;
+  onSelect: () => void;
+  isSelected: boolean;
   onDragStart: () => void;
   onDragEnd: (clipId: string, newStartTime: number) => void;
   onTrimming?: (clipId: string, newDuration: number) => void;
@@ -101,6 +104,8 @@ export const AudioClipItem = React.memo(function AudioClipItem({
   pixelsPerMs,
   temporaryStartTime,
   onDelete,
+  onSelect,
+  isSelected,
   onDragStart,
   onDragEnd,
   onTrimming,
@@ -152,16 +157,26 @@ export const AudioClipItem = React.memo(function AudioClipItem({
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger>
+      <ContextMenuTrigger asChild>
         <div
           ref={clipRef}
           onMouseDown={handleMouseDownOnClip}
+          onClick={(e) => {
+            // Only trigger selection if not dragging
+            if (!isDraggingClip) {
+              e.stopPropagation();
+              onSelect();
+            }
+          }}
           className={cn(
-            "absolute top-1 bottom-1 rounded-md border overflow-hidden transition-colors",
-            "bg-primary/10 border-primary/30",
+            "group/clip absolute top-1 bottom-1 rounded-md border overflow-hidden transition-colors",
             isDraggingClip || isDragging ? "opacity-50 cursor-grabbing" : "cursor-grab",
-            isTrimmingLeft || isTrimmingRight ? "ring-2 ring-primary dark:shadow-[var(--safelight-glow)]" : "hover:ring-1 hover:ring-primary",
-            disabled && "pointer-events-none opacity-50"
+            isTrimmingLeft || isTrimmingRight
+              ? "ring-2 ring-primary dark:shadow-[var(--safelight-glow)] bg-primary/10 border-primary/30"
+              : isSelected
+                ? "bg-primary/20 border-primary/50 ring-1 ring-primary/40"
+                : "bg-primary/10 border-primary/30 hover:ring-1 hover:ring-primary",
+            disabled && "opacity-50"
           )}
           style={{
             left: `${displayLeft}px`,
@@ -207,6 +222,24 @@ export const AudioClipItem = React.memo(function AudioClipItem({
               ) : null}
             </div>
           </div>
+
+          {/* 移除按钮 - 悬停时显示 */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className={cn(
+              "absolute top-1 right-1",
+              "opacity-0 group-hover/clip:opacity-100 transition-opacity z-30",
+              "pointer-events-auto"
+            )}
+            aria-label="从时间轴移除"
+          >
+            <X className="h-3 w-3" />
+          </Button>
 
           {/* 左边缘：调整入点手柄 */}
           <div
@@ -274,6 +307,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
     prevProps.clip.trimStart === nextProps.clip.trimStart &&
     prevProps.pixelsPerMs === nextProps.pixelsPerMs &&
     prevProps.isDragging === nextProps.isDragging &&
+    prevProps.isSelected === nextProps.isSelected &&
     prevProps.disabled === nextProps.disabled &&
     prevProps.temporaryStartTime === nextProps.temporaryStartTime
   );

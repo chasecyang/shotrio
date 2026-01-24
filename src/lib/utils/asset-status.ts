@@ -233,6 +233,7 @@ export function enrichAssetsWithFullData(
     usageCount: number;
     createdAt: Date;
     updatedAt: Date;
+    selectionStatus: "unrated" | "selected" | "rejected";
     tags: AssetTag[];
     imageDataList: ImageData[];
     videoDataList: VideoData[];

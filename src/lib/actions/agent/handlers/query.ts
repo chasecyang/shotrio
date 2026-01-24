@@ -180,7 +180,6 @@ async function handleQueryAssets(
       type: a.assetType,
       status: a.runtimeStatus,
       tags: a.tags.map((t) => t.tagValue),
-      versionCount: a.versionCount || 1,
     };
 
     if (a.sourceType === "generated") {

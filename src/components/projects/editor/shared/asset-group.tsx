@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssetCard } from "./asset-card";
-import { AssetWithFullData } from "@/types/asset";
+import { AssetWithFullData, AssetSelectionStatus } from "@/types/asset";
 
 interface AssetGroupProps {
   title: string;
@@ -15,9 +15,8 @@ interface AssetGroupProps {
   onAssetClick: (asset: AssetWithFullData) => void;
   onAssetDelete: (asset: AssetWithFullData) => void;
   onSelectChange: (assetId: string, selected: boolean) => void;
-  onRegenerate?: (asset: AssetWithFullData) => void;
-  onEdit?: (asset: AssetWithFullData) => void;
   onReference?: (asset: AssetWithFullData) => void;
+  onSelectionStatusChange?: (asset: AssetWithFullData, status: AssetSelectionStatus) => void;
 }
 
 export function AssetGroup({
@@ -29,9 +28,8 @@ export function AssetGroup({
   onAssetClick,
   onAssetDelete,
   onSelectChange,
-  onRegenerate,
-  onEdit,
   onReference,
+  onSelectionStatusChange,
 }: AssetGroupProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -76,9 +74,8 @@ export function AssetGroup({
               onDelete={onAssetDelete}
               onClick={onAssetClick}
               onSelectChange={onSelectChange}
-              onRegenerate={onRegenerate}
-              onEdit={onEdit}
               onReference={onReference}
+              onSelectionStatusChange={onSelectionStatusChange}
             />
           ))}
         </div>

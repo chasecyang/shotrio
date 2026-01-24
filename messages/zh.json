@@ -1090,6 +1090,12 @@
       "sortUsage": "使用次数",
       "searchPlaceholder": "搜索素材..."
     },
+    "assetSelectionFilter": {
+      "all": "全部",
+      "selected": "精选",
+      "rejected": "废弃",
+      "unrated": "未筛选"
+    },
     "assetGallery": {
       "assetsCount": "{count} 个素材",
       "noAssets": "暂无素材",
@@ -1116,31 +1122,17 @@
       "downloadFailed": "下载失败，请重试"
     },
     "assetCard": {
-      "aiEdit": "AI 编辑图片",
-      "regenerate": "重新生成",
+      "generateBased": "基于此生成新素材",
       "delete": "删除",
-      "generatingNewVersion": "正在生成新版本"
-    },
-    "assetEdit": {
-      "title": "编辑素材",
-      "regenerateTitle": "重新生成",
-      "promptLabel": "编辑提示词",
-      "promptPlaceholder": "描述你想要的修改效果...",
-      "promptRequired": "请输入编辑提示词",
-      "referenceImages": "参考图片",
-      "optional": "可选",
-      "selectReference": "选择参考图",
-      "selectReferenceDescription": "从素材库中选择其他图片作为参考",
-      "aspectRatio": "比例",
-      "autoAspectRatio": "自动",
-      "resolution": "分辨率",
-      "submit": "生成新版本",
-      "submitting": "生成中...",
-      "submitSuccess": "已提交生成任务",
-      "submitFailed": "提交失败",
-      "regenerateSubmit": "重新生成",
-      "regenerateSubmitting": "重新生成中...",
-      "regenerateSuccess": "已提交重新生成任务"
+      "generatingNewVersion": "正在生成新版本",
+      "markAsSelected": "标记为精选",
+      "markAsRejected": "标记为废弃",
+      "markAsUnrated": "标记为未筛选",
+      "clickToCycleStatus": "点击切换状态",
+      "currentStatus": "当前状态",
+      "selected": "精选",
+      "rejected": "废弃",
+      "unrated": "未筛选"
     },
     "projectSettings": "项目设置",
     "expandAgent": "展开 Agent 对话",

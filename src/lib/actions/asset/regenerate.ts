@@ -11,13 +11,18 @@ import { resolveAssetVersionId } from "./utils";
 import type { VideoGenerationConfig } from "@/types/asset";
 
 /**
- * 重新生成视频（创建新版本）
+ * @deprecated This function is deprecated and will be removed in a future version.
+ * Asset generation parameters are now immutable. Use the Agent conversation to generate new assets instead.
  */
 export async function regenerateVideoAsset(assetId: string): Promise<{
   success: boolean;
   jobId?: string;
   error?: string;
 }> {
+  console.warn(
+    "regenerateVideoAsset is deprecated. Asset generation parameters are now immutable. Use the Agent conversation to generate new assets instead."
+  );
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -90,7 +95,8 @@ export async function regenerateVideoAsset(assetId: string): Promise<{
 }
 
 /**
- * 重新生成视频（带参数编辑）
+ * @deprecated This function is deprecated and will be removed in a future version.
+ * Asset generation parameters are now immutable. Use the Agent conversation to generate new assets instead.
  */
 export async function regenerateVideoAssetWithParams(input: {
   assetId: string;
@@ -103,6 +109,10 @@ export async function regenerateVideoAssetWithParams(input: {
   jobId?: string;
   error?: string;
 }> {
+  console.warn(
+    "regenerateVideoAssetWithParams is deprecated. Asset generation parameters are now immutable. Use the Agent conversation to generate new assets instead."
+  );
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });

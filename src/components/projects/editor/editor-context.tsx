@@ -391,8 +391,8 @@ interface EditorContextType {
   // AI 编辑相关方法
   setPendingEditAsset: (asset: AssetWithFullData | null) => void;
   // 素材引用相关方法
-  referenceAssetInChat?: (asset: AssetWithFullData) => void;
-  registerReferenceCallback?: (callback: (asset: AssetWithFullData) => void) => void;
+  referenceAssetInChat?: (asset: AssetWithFullData, presetText?: string) => void;
+  registerReferenceCallback?: (callback: (asset: AssetWithFullData, presetText?: string) => void) => void;
   unregisterReferenceCallback?: () => void;
 }
 
@@ -501,7 +501,7 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   const loadAssetsRef = useRef<((options?: LoadAssetsOptions) => Promise<void>) | null>(null);
 
   // 用于存储素材引用回调的 ref
-  const referenceAssetCallbackRef = useRef<((asset: AssetWithFullData) => void) | null>(null);
+  const referenceAssetCallbackRef = useRef<((asset: AssetWithFullData, presetText?: string) => void) | null>(null);
 
   // 加载素材列表
   const loadAssets = useCallback(async (options?: LoadAssetsOptions) => {
@@ -577,14 +577,14 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
   }, []);
 
   // 引用素材到对话框
-  const referenceAssetInChat = useCallback((asset: AssetWithFullData) => {
+  const referenceAssetInChat = useCallback((asset: AssetWithFullData, presetText?: string) => {
     if (referenceAssetCallbackRef.current) {
-      referenceAssetCallbackRef.current(asset);
+      referenceAssetCallbackRef.current(asset, presetText);
     }
   }, []);
 
   // 注册引用回调
-  const registerReferenceCallback = useCallback((callback: (asset: AssetWithFullData) => void) => {
+  const registerReferenceCallback = useCallback((callback: (asset: AssetWithFullData, presetText?: string) => void) => {
     referenceAssetCallbackRef.current = callback;
   }, []);
 

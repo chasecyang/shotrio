@@ -72,11 +72,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     name: "generate_image_asset",
     description: `生成或编辑图片资产。
 
-**四种模式**：
+**三种模式**：
 1. **文生图**：只提供 prompt，从零生成
 2. **图片编辑**：sourceAssetIds + prompt 描述修改操作
 3. **多图合成**：多个 sourceAssetIds + prompt 描述如何合成
-4. **重新生成**：targetAssetId + prompt，为已有素材生成新版本
 
 **角色一致性**：生成分镜图时，用 sourceAssetIds 引用角色三视图，模型会提取角色特征保持一致
 
@@ -91,10 +90,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         assets: {
           type: "array",
           description: "素材数组，每个素材包含: prompt（必填，中英文均可，系统会自动翻译）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）",
-        },
-        targetAssetId: {
-          type: "string",
-          description: "目标素材ID（重新生成模式）。如果提供，将为该素材生成新版本而非创建新素材。历史版本会保留，用户可在界面切换回滚",
         },
       },
       required: ["assets"],
@@ -125,7 +120,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - start_image_url（必填）：起始帧资产ID或URL
 - end_image_url（可选）：结束帧资产ID或URL
 - duration（可选）：兼容字段，Veo 3.1 可能忽略
-- targetAssetId（可选）：重新生成模式，传入已有视频ID生成新版本
 `,
     displayName: "生成视频资产",
     parameters: {
@@ -166,10 +160,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         order: {
           type: "number",
           description: "排序值（可选），用于在视频库中排序",
-        },
-        targetAssetId: {
-          type: "string",
-          description: "目标素材ID（重新生成模式）。如果提供，将为该视频素材生成新版本而非创建新素材。历史版本会保留，用户可在界面切换回滚",
         },
       },
       required: ["prompt", "start_image_url"],

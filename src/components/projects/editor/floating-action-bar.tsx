@@ -1,9 +1,16 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Square, Trash2, Download, Loader2 } from "lucide-react";
+import { CheckSquare, Square, Trash2, Download, Loader2, Star, X, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DownloadProgress } from "@/lib/utils/batch-download";
+import type { AssetSelectionStatus } from "@/types/asset";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface FloatingActionBarProps {
   selectedCount: number;
@@ -12,6 +19,9 @@ interface FloatingActionBarProps {
   onDeselectAll: () => void;
   onDelete: () => void;
   onDownload: () => void;
+  onMarkSelected?: () => void;
+  onMarkRejected?: () => void;
+  onMarkUnrated?: () => void;
   isDownloading?: boolean;
   downloadProgress?: DownloadProgress;
 }
@@ -27,6 +37,9 @@ export function FloatingActionBar({
   onDeselectAll,
   onDelete,
   onDownload,
+  onMarkSelected,
+  onMarkRejected,
+  onMarkUnrated,
   isDownloading = false,
   downloadProgress,
 }: FloatingActionBarProps) {
@@ -120,6 +133,48 @@ export function FloatingActionBar({
             )}
             <span className="text-xs font-medium">{getDownloadButtonText()}</span>
           </Button>
+
+          {/* Selection status dropdown */}
+          {(onMarkSelected || onMarkRejected || onMarkUnrated) && (
+            <>
+              {/* 分隔线 */}
+              <div className="w-px h-4 bg-border" />
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isDownloading}
+                    className="h-8 gap-1.5"
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">标记为</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  {onMarkSelected && (
+                    <DropdownMenuItem onClick={onMarkSelected}>
+                      <Star className="h-3.5 w-3.5 mr-2 text-amber-600" />
+                      <span>精选</span>
+                    </DropdownMenuItem>
+                  )}
+                  {onMarkRejected && (
+                    <DropdownMenuItem onClick={onMarkRejected}>
+                      <X className="h-3.5 w-3.5 mr-2 text-slate-600" />
+                      <span>废弃</span>
+                    </DropdownMenuItem>
+                  )}
+                  {onMarkUnrated && (
+                    <DropdownMenuItem onClick={onMarkUnrated}>
+                      <Circle className="h-3.5 w-3.5 mr-2" />
+                      <span>未筛选</span>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
 
           {/* 分隔线 */}
           <div className="w-px h-4 bg-border" />

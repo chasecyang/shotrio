@@ -9,6 +9,8 @@ interface UseAssetReferenceCallbackOptions {
   onChange: (value: string) => void;
   /** 可选：插入引用后要聚焦的元素引用 */
   focusRef?: React.RefObject<{ focus: () => void } | HTMLElement | null>;
+  /** 可选：预设文本，使用 {{reference}} 作为占位符 */
+  presetText?: string;
 }
 
 /**
@@ -19,12 +21,17 @@ export function useAssetReferenceCallback({
   value,
   onChange,
   focusRef,
+  presetText,
 }: UseAssetReferenceCallbackOptions) {
   return useCallback(
     (asset: AssetWithFullData) => {
       const reference = createAssetReference(asset.name, asset.id);
-      // 在当前值后添加引用，如果已有内容则添加空格
-      const newValue = value + (value ? " " : "") + reference + " ";
+      // 如果有预设文本，替换占位符；否则只插入引用
+      const textToInsert = presetText
+        ? presetText.replace('{{reference}}', reference)
+        : reference;
+      // 在当前值后添加文本，如果已有内容则添加空格
+      const newValue = value + (value ? " " : "") + textToInsert + " ";
       onChange(newValue);
 
       // 如果提供了 focusRef，则在插入后聚焦
@@ -36,6 +43,6 @@ export function useAssetReferenceCallback({
         }, 0);
       }
     },
-    [value, onChange, focusRef]
+    [value, onChange, focusRef, presetText]
   );
 }

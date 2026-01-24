@@ -13,11 +13,13 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import type { AssetTypeEnum } from "@/types/asset";
+import type { AssetSelectionStatus } from "@/types/asset";
 import { useTranslations } from "next-intl";
 
 export interface AssetFilterOptions {
   search?: string;
   assetTypes: AssetTypeEnum[];
+  selectionStatus?: AssetSelectionStatus[];
 }
 
 type AssetTypeOption = {
