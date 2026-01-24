@@ -178,6 +178,8 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
           prompt: prompt as string,
           tags: tags as string,
           sourceAssetIds: sourceIds,
+          aspectRatio:
+            typeof asset.aspect_ratio === "string" ? asset.aspect_ratio : "16:9",
         };
       });
     } catch (error) {
@@ -634,6 +636,12 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.tags")}:</span>
                           <span className="text-xs text-foreground truncate">{asset.tags}</span>
+                        </div>
+                      )}
+                      {asset.aspectRatio && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.aspectRatio")}:</span>
+                          <span className="text-xs text-foreground">{asset.aspectRatio}</span>
                         </div>
                       )}
                       {asset.sourceAssetIds && asset.sourceAssetIds.length > 0 && (

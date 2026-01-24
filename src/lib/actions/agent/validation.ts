@@ -133,6 +133,18 @@ function validateGenerateImageParams(
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const supportedAspectRatios = [
+    "21:9",
+    "16:9",
+    "3:2",
+    "4:3",
+    "5:4",
+    "1:1",
+    "4:5",
+    "3:4",
+    "2:3",
+    "9:16",
+  ];
 
   if (!params.assets || !Array.isArray(params.assets)) {
     errors.push("缺少必填参数 assets（数组类型）");
@@ -157,6 +169,18 @@ function validateGenerateImageParams(
 
     if (asset.sourceAssetIds && !Array.isArray(asset.sourceAssetIds)) {
       errors.push(`assets[${index}].sourceAssetIds 必须是数组类型`);
+    }
+
+    if (
+      asset.aspect_ratio &&
+      typeof asset.aspect_ratio === "string" &&
+      !supportedAspectRatios.includes(asset.aspect_ratio)
+    ) {
+      errors.push(
+        `assets[${index}].aspect_ratio 必须是 ${supportedAspectRatios
+          .map((ratio) => `'${ratio}'`)
+          .join(" 或 ")}`
+      );
     }
   });
 

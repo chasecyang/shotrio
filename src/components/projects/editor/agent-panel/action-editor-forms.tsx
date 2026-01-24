@@ -400,9 +400,29 @@ interface ImageGenerationFormProps {
   onChange: (params: Record<string, unknown>) => void;
 }
 
+const IMAGE_ASPECT_RATIOS = [
+  { value: "9:16", label: "竖屏" },
+  { value: "16:9", label: "宽屏" },
+  { value: "1:1", label: "正方" },
+  { value: "21:9", label: "超宽" },
+  { value: "3:2", label: "经典" },
+  { value: "4:3", label: "复古" },
+  { value: "5:4", label: "方正" },
+  { value: "4:5", label: "竖幅" },
+  { value: "3:4", label: "竖长" },
+  { value: "2:3", label: "竖版" },
+];
+
 export function ImageGenerationForm({ params, onChange }: ImageGenerationFormProps) {
   const { state } = useEditor();
   const projectId = state.project?.id || "";
+  type GenerationAssetDraft = {
+    name: string;
+    prompt: string;
+    tags: string[];
+    sourceAssetIds: string[];
+    aspectRatio: string;
+  };
 
   // 解析生成素材的assets数组
   const generationAssets = useMemo(() => {
@@ -443,18 +463,29 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
           }
         }
 
-        return {
+        const draft: GenerationAssetDraft = {
           name: name as string,
           prompt: prompt as string,
           tags: tags,
           sourceAssetIds: sourceIds,
+          aspectRatio:
+            typeof asset.aspect_ratio === "string" ? asset.aspect_ratio : "16:9",
         };
+        return draft;
       });
     } catch (error) {
       console.error("解析assets数组失败:", error);
       return null;
     }
   }, [params]);
+  const serializeAssets = (assets: GenerationAssetDraft[]) =>
+    assets.map((item) => ({
+      name: item.name,
+      prompt: item.prompt,
+      tags: item.tags,
+      sourceAssetIds: item.sourceAssetIds,
+      aspect_ratio: item.aspectRatio,
+    }));
 
   if (!generationAssets || generationAssets.length === 0) {
     return <p className="text-muted-foreground text-sm">无法解析图片生成参数</p>;
@@ -476,7 +507,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                 onChange={(e) => {
                   const newAssets = [...generationAssets];
                   newAssets[index] = { ...newAssets[index], name: e.target.value };
-                  onChange({ ...params, assets: newAssets });
+                  onChange({ ...params, assets: serializeAssets(newAssets) });
                 }}
                 placeholder="资产名称"
               />
@@ -488,7 +519,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                 onChange={(e) => {
                   const newAssets = [...generationAssets];
                   newAssets[index] = { ...newAssets[index], prompt: e.target.value };
-                  onChange({ ...params, assets: newAssets });
+                  onChange({ ...params, assets: serializeAssets(newAssets) });
                 }}
                 className="min-h-[100px]"
                 placeholder="描述你想生成的图片"
@@ -501,9 +532,56 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                 onChange={(newTags) => {
                   const newAssets = [...generationAssets];
                   newAssets[index] = { ...newAssets[index], tags: newTags };
-                  onChange({ ...params, assets: newAssets });
+                  onChange({ ...params, assets: serializeAssets(newAssets) });
                 }}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label>宽高比</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {IMAGE_ASPECT_RATIOS.map((ratio) => {
+                  const isSelected = asset.aspectRatio === ratio.value;
+                  const [w, h] = ratio.value.split(":").map(Number);
+                  return (
+                    <button
+                      key={ratio.value}
+                      type="button"
+                      onClick={() => {
+                        const newAssets = [...generationAssets];
+                        newAssets[index] = {
+                          ...newAssets[index],
+                          aspectRatio: ratio.value,
+                        };
+                        onChange({ ...params, assets: serializeAssets(newAssets) });
+                      }}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        "rounded-md border px-1.5 py-1 text-left transition flex-shrink-0",
+                        "hover:border-primary/60 hover:bg-primary/5",
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border/60 bg-muted/30 text-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "inline-block rounded-sm border flex-shrink-0",
+                            isSelected ? "border-primary/60" : "border-border/60"
+                          )}
+                          style={{ aspectRatio: `${w} / ${h}`, height: "10px" }}
+                        />
+                        <div className="leading-tight whitespace-nowrap">
+                          <div className="text-[10px] font-medium">{ratio.label}</div>
+                          <div className="text-[9px] text-muted-foreground">
+                            {ratio.value}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <MultiAssetSelector
               projectId={projectId}
@@ -511,7 +589,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
               onSelect={(assetIds) => {
                 const newAssets = [...generationAssets];
                 newAssets[index] = { ...newAssets[index], sourceAssetIds: assetIds };
-                onChange({ ...params, assets: newAssets });
+                onChange({ ...params, assets: serializeAssets(newAssets) });
               }}
               label="参考图"
               assetType="image"
@@ -825,6 +903,11 @@ interface VideoGenerationFormProps {
   onChange: (params: Record<string, unknown>) => void;
 }
 
+const VIDEO_ASPECT_RATIOS = [
+  { value: "9:16", label: "竖屏" },
+  { value: "16:9", label: "宽屏" },
+];
+
 export function VideoGenerationForm({ params, onChange }: VideoGenerationFormProps) {
   const { state } = useEditor();
   const projectId = state.project?.id || "";
@@ -853,7 +936,7 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
       </div>
 
       {/* 时长和宽高比 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4">
         <div className="grid gap-2">
           <Label>时长</Label>
           <Select
@@ -870,18 +953,43 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
         </div>
         <div className="grid gap-2">
           <Label>宽高比</Label>
-          <Select
-            value={(params.aspect_ratio as string) || "16:9"}
-            onValueChange={(value) => onChange({ ...params, aspect_ratio: value })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="16:9">16:9 (宽屏)</SelectItem>
-              <SelectItem value="9:16">9:16 (竖屏)</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-1.5">
+            {VIDEO_ASPECT_RATIOS.map((ratio) => {
+              const isSelected = (params.aspect_ratio as string || "16:9") === ratio.value;
+              const [w, h] = ratio.value.split(":").map(Number);
+              return (
+                <button
+                  key={ratio.value}
+                  type="button"
+                  onClick={() => onChange({ ...params, aspect_ratio: ratio.value })}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    "rounded-md border px-1.5 py-1 text-left transition flex-shrink-0",
+                    "hover:border-primary/60 hover:bg-primary/5",
+                    isSelected
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/60 bg-muted/30 text-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "inline-block rounded-sm border flex-shrink-0",
+                        isSelected ? "border-primary/60" : "border-border/60"
+                      )}
+                      style={{ aspectRatio: `${w} / ${h}`, height: "10px" }}
+                    />
+                    <div className="leading-tight whitespace-nowrap">
+                      <div className="text-[10px] font-medium">{ratio.label}</div>
+                      <div className="text-[9px] text-muted-foreground">
+                        {ratio.value}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

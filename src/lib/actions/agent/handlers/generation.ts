@@ -12,6 +12,7 @@ import { project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { createVideoAsset } from "@/lib/actions/asset";
 import { createJob } from "@/lib/actions/job";
+import type { AspectRatio } from "@/lib/services/image.service";
 
 /**
  * 获取项目的画风prompt
@@ -61,6 +62,7 @@ async function handleGenerateImage(
     prompt: string;
     tags?: string[];
     sourceAssetIds?: string[];
+    aspect_ratio?: string;
   }>;
 
   // ========== 创建新素材模式 ==========
@@ -74,6 +76,8 @@ async function handleGenerateImage(
   for (const assetData of assets) {
     try {
       const assetName = assetData.name || `AI生成-${Date.now()}`;
+      const aspectRatio =
+        (assetData.aspect_ratio as AspectRatio | undefined) ?? "16:9";
 
       const finalPrompt = stylePrompt
         ? `${stylePrompt}. ${assetData.prompt}`
@@ -91,13 +95,13 @@ async function handleGenerateImage(
           modelUsed: "nano-banana-pro",
           sourceAssetIds: assetData.sourceAssetIds,
           generationConfig: JSON.stringify({
-            aspectRatio: "16:9",
+            aspectRatio,
             numImages: 1,
           }),
         },
         meta: {
           generationParams: {
-            aspectRatio: "16:9" as "16:9" | "1:1" | "9:16",
+            aspectRatio,
             numImages: 1,
           },
         },

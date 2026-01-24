@@ -89,7 +89,35 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         assets: {
           type: "array",
-          description: "素材数组，每个素材包含: prompt（必填，中英文均可，系统会自动翻译）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）",
+          description: "素材数组，每个素材包含: prompt（必填，中英文均可，系统会自动翻译）、name（可选）、tags（可选，字符串数组）、sourceAssetIds（可选，用于图片编辑或多图合成）、aspect_ratio（可选，图片宽高比）",
+          items: {
+            type: "object",
+            properties: {
+              prompt: {
+                type: "string",
+                description: "图片描述（必填），中英文均可，系统会自动翻译",
+              },
+              name: {
+                type: "string",
+                description: "素材名称（可选）",
+              },
+              tags: {
+                type: "array",
+                items: { type: "string" },
+                description: "标签数组（可选）",
+              },
+              sourceAssetIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "参考素材 ID 数组（可选，用于图片编辑或多图合成）",
+              },
+              aspect_ratio: {
+                type: "string",
+                description:
+                  "图片宽高比（可选），可选值：'21:9'、'16:9'、'3:2'、'4:3'、'5:4'、'1:1'、'4:5'、'3:4'、'2:3'、'9:16'，默认 '16:9'",
+              },
+            },
+          },
         },
       },
       required: ["assets"],
