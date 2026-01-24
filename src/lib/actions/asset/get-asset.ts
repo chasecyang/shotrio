@@ -81,7 +81,7 @@ export async function getAssetWithFullData(assetId: string): Promise<{
         imageDataList: true,
         videoDataList: true,
         textData: true,
-        audioData: true,
+        audioDataList: true,
       },
     });
 
@@ -111,7 +111,7 @@ export async function getAssetWithFullData(assetId: string): Promise<{
       assetData.imageDataList,
       assetData.videoDataList,
       assetData.textData,
-      assetData.audioData,
+      assetData.audioDataList,
       latestJob as import("@/types/job").Job | null
     );
 
