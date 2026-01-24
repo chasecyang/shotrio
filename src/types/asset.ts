@@ -288,9 +288,11 @@ export interface TextData {
 }
 
 /**
- * 音频数据表类型
+ * 音频数据表类型（支持版本化）
+ * 一个 asset 可以有多个 audioData 记录，每个代表一个版本
  */
 export interface AudioData {
+  id: string;
   assetId: string;
   audioUrl: string | null;
   duration: number | null;  // 毫秒
@@ -306,6 +308,9 @@ export interface AudioData {
   modelUsed: string | null;
   generationConfig: string | null;
   sourceAssetIds: string[] | null;
+  // 版本控制
+  isActive: boolean;
+  createdAt: Date;
 }
 
 /**
@@ -499,6 +504,7 @@ export interface AssetWithFullData extends Asset {
   // 所有版本列表（用于版本历史 UI）
   imageDataList: ImageData[];
   videoDataList: VideoData[];
+  audioDataList: AudioData[];
 
   // 版本数量
   versionCount: number;

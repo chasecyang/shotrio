@@ -6,7 +6,7 @@
  */
 
 import db from "@/lib/db";
-import { asset, assetTag, job, imageData, videoData } from "@/lib/db/schemas/project";
+import { asset, assetTag, job, imageData, videoData, audioData } from "@/lib/db/schemas/project";
 import { eq, and, inArray, sql, SQL, desc } from "drizzle-orm";
 import { enrichAssetWithFullData, enrichAssetsWithFullData } from "@/lib/utils/asset-status";
 import type { Asset, AssetWithFullData, AssetTag as AssetTagType } from "@/types/asset";
@@ -30,7 +30,9 @@ export async function getAssetWithFullData(
         orderBy: desc(videoData.createdAt),
       },
       textData: true,
-      audioData: true,
+      audioDataList: {
+        orderBy: desc(audioData.createdAt),
+      },
     },
   });
 
@@ -41,11 +43,13 @@ export async function getAssetWithFullData(
   // 找到激活版本
   const activeImageData = assetData.imageDataList?.find((v: any) => v.isActive) ?? null;
   const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive) ?? null;
+  const activeAudioData = assetData.audioDataList?.find((v: any) => v.isActive) ?? null;
 
   // 收集所有版本 ID
   const allVersionIds = [
     ...(assetData.imageDataList?.map((v: any) => v.id) || []),
     ...(assetData.videoDataList?.map((v: any) => v.id) || []),
+    ...(assetData.audioDataList?.map((v: any) => v.id) || []),
   ];
 
   // 查询所有版本的 jobs
@@ -54,13 +58,13 @@ export async function getAssetWithFullData(
   if (allVersionIds.length > 0) {
     // 查询所有版本关联的 jobs
     const versionJobs = await db.query.job.findMany({
-      where: sql`(${job.imageDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}) OR ${job.videoDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}))`,
+      where: sql`(${job.imageDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}) OR ${job.videoDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}) OR ${job.audioDataId} IN (${sql.join(allVersionIds.map(id => sql`${id}`), sql`, `)}))`,
       orderBy: [desc(job.createdAt)],
     });
 
     // 为每个版本保存最新的 job
     for (const versionJob of versionJobs) {
-      const versionId = versionJob.imageDataId || versionJob.videoDataId;
+      const versionId = versionJob.imageDataId || versionJob.videoDataId || versionJob.audioDataId;
       if (versionId && !allJobsMap.has(versionId)) {
         allJobsMap.set(versionId, versionJob as Job);
       }
@@ -73,6 +77,8 @@ export async function getAssetWithFullData(
     latestJob = allJobsMap.get(activeImageData.id)!;
   } else if (activeVideoData?.id && allJobsMap.has(activeVideoData.id)) {
     latestJob = allJobsMap.get(activeVideoData.id)!;
+  } else if (activeAudioData?.id && allJobsMap.has(activeAudioData.id)) {
+    latestJob = allJobsMap.get(activeAudioData.id)!;
   }
 
   // 如果新关联没找到，回退到旧的 assetId 关联（迁移兼容）
@@ -90,7 +96,7 @@ export async function getAssetWithFullData(
   let otherGeneratingJob: Job | null = null;
   for (const versionId of allVersionIds) {
     // 跳过激活版本
-    if (versionId === activeImageData?.id || versionId === activeVideoData?.id) continue;
+    if (versionId === activeImageData?.id || versionId === activeVideoData?.id || versionId === activeAudioData?.id) continue;
 
     const versionJob = allJobsMap.get(versionId);
     if (versionJob && (versionJob.status === 'pending' || versionJob.status === 'processing')) {
@@ -105,7 +111,7 @@ export async function getAssetWithFullData(
     assetData.imageDataList ?? [],
     assetData.videoDataList ?? [],
     assetData.textData,
-    assetData.audioData,
+    assetData.audioDataList ?? [],
     latestJob,
     otherGeneratingJob
   );
@@ -132,7 +138,9 @@ export async function queryAssetsWithFullData(
         orderBy: desc(videoData.createdAt),
       },
       textData: true,
-      audioData: true,
+      audioDataList: {
+        orderBy: desc(audioData.createdAt),
+      },
     },
     orderBy: orderByClause,
     limit,
@@ -146,21 +154,26 @@ export async function queryAssetsWithFullData(
   // 收集所有版本 ID 和激活版本 ID
   const allImageDataIds: string[] = [];
   const allVideoDataIds: string[] = [];
+  const allAudioDataIds: string[] = [];
   const activeImageDataMap = new Map<string, string>(); // assetId -> activeImageDataId
   const activeVideoDataMap = new Map<string, string>(); // assetId -> activeVideoDataId
+  const activeAudioDataMap = new Map<string, string>(); // assetId -> activeAudioDataId
   const assetIds = assetsData.map((a) => a.id);
 
   for (const assetData of assetsData) {
     const activeImageData = assetData.imageDataList?.find((v: any) => v.isActive);
     const activeVideoData = assetData.videoDataList?.find((v: any) => v.isActive);
+    const activeAudioData = assetData.audioDataList?.find((v: any) => v.isActive);
 
     // 记录激活版本
     if (activeImageData?.id) activeImageDataMap.set(assetData.id, activeImageData.id);
     if (activeVideoData?.id) activeVideoDataMap.set(assetData.id, activeVideoData.id);
+    if (activeAudioData?.id) activeAudioDataMap.set(assetData.id, activeAudioData.id);
 
     // 收集所有版本 ID
     assetData.imageDataList?.forEach((v: any) => allImageDataIds.push(v.id));
     assetData.videoDataList?.forEach((v: any) => allVideoDataIds.push(v.id));
+    assetData.audioDataList?.forEach((v: any) => allAudioDataIds.push(v.id));
   }
 
   // 批量查询所有关联的 jobs（所有版本，不仅仅是激活版本）
@@ -204,27 +217,49 @@ export async function queryAssetsWithFullData(
     }
   }
 
+  // 查询所有音频版本关联的 jobs
+  if (allAudioDataIds.length > 0) {
+    const audioJobs = await db
+      .select({
+        audioDataId: job.audioDataId,
+        job: job,
+        rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${job.audioDataId} ORDER BY ${job.createdAt} DESC)`,
+      })
+      .from(job)
+      .where(inArray(job.audioDataId, allAudioDataIds));
+
+    for (const row of audioJobs) {
+      if (Number(row.rn) === 1 && row.audioDataId) {
+        allJobsMap.set(row.audioDataId, row.job as Job);
+      }
+    }
+  }
+
   // 分配 jobs 到激活版本和其他生成中的版本
   for (const assetData of assetsData) {
     const activeImageId = activeImageDataMap.get(assetData.id);
     const activeVideoId = activeVideoDataMap.get(assetData.id);
+    const activeAudioId = activeAudioDataMap.get(assetData.id);
 
     // 获取激活版本的 job
     if (activeImageId && allJobsMap.has(activeImageId)) {
       activeJobsMap.set(assetData.id, allJobsMap.get(activeImageId)!);
     } else if (activeVideoId && allJobsMap.has(activeVideoId)) {
       activeJobsMap.set(assetData.id, allJobsMap.get(activeVideoId)!);
+    } else if (activeAudioId && allJobsMap.has(activeAudioId)) {
+      activeJobsMap.set(assetData.id, allJobsMap.get(activeAudioId)!);
     }
 
     // 检查非激活版本中是否有正在生成的
     const allVersionIds = [
       ...(assetData.imageDataList?.map((v: any) => v.id) || []),
       ...(assetData.videoDataList?.map((v: any) => v.id) || []),
+      ...(assetData.audioDataList?.map((v: any) => v.id) || []),
     ];
 
     for (const versionId of allVersionIds) {
       // 跳过激活版本
-      if (versionId === activeImageId || versionId === activeVideoId) continue;
+      if (versionId === activeImageId || versionId === activeVideoId || versionId === activeAudioId) continue;
 
       const versionJob = allJobsMap.get(versionId);
       if (versionJob && (versionJob.status === 'pending' || versionJob.status === 'processing')) {

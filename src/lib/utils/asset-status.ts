@@ -116,6 +116,7 @@ export function getAssetErrorMessage(
  *
  * @param imageDataList - 图片数据版本列表（新版本化结构）
  * @param videoDataList - 视频数据版本列表（新版本化结构）
+ * @param audioDataList - 音频数据版本列表（新版本化结构）
  * @param otherGeneratingJob - 其他正在生成的版本的 Job（可选）
  */
 export function enrichAssetWithFullData(
@@ -124,16 +125,17 @@ export function enrichAssetWithFullData(
   imageDataList: ImageData[],
   videoDataList: VideoData[],
   textData: TextData | null,
-  audioData: AudioData | null,
+  audioDataList: AudioData[],
   latestJob?: Job | null,
   otherGeneratingJob?: Job | null
 ): AssetWithFullData {
   // 找到激活版本
   const activeImageData = imageDataList.find((v) => v.isActive) ?? imageDataList[0] ?? null;
   const activeVideoData = videoDataList.find((v) => v.isActive) ?? videoDataList[0] ?? null;
+  const activeAudioData = audioDataList.find((v) => v.isActive) ?? audioDataList[0] ?? null;
 
   // 计算版本数
-  const versionCount = imageDataList.length + videoDataList.length;
+  const versionCount = imageDataList.length + videoDataList.length + audioDataList.length;
 
   // 计算 displayUrl：显示用 URL，优先缩略图
   const displayUrl = (() => {
@@ -155,21 +157,21 @@ export function enrichAssetWithFullData(
       case "video":
         return activeVideoData?.videoUrl || null;
       case "audio":
-        return audioData?.audioUrl || null;
+        return activeAudioData?.audioUrl || null;
       default:
         return null;
     }
   })();
 
   // 计算 duration：视频或音频时长
-  const duration = activeVideoData?.duration ?? audioData?.duration ?? null;
+  const duration = activeVideoData?.duration ?? activeAudioData?.duration ?? null;
 
   // 从激活版本获取生成信息
-  const prompt = activeImageData?.prompt ?? activeVideoData?.prompt ?? audioData?.prompt ?? null;
-  const seed = activeImageData?.seed ?? activeVideoData?.seed ?? audioData?.seed ?? null;
-  const modelUsed = activeImageData?.modelUsed ?? activeVideoData?.modelUsed ?? audioData?.modelUsed ?? null;
-  const generationConfig = activeImageData?.generationConfig ?? activeVideoData?.generationConfig ?? audioData?.generationConfig ?? null;
-  const sourceAssetIds = activeImageData?.sourceAssetIds ?? activeVideoData?.sourceAssetIds ?? audioData?.sourceAssetIds ?? null;
+  const prompt = activeImageData?.prompt ?? activeVideoData?.prompt ?? activeAudioData?.prompt ?? null;
+  const seed = activeImageData?.seed ?? activeVideoData?.seed ?? activeAudioData?.seed ?? null;
+  const modelUsed = activeImageData?.modelUsed ?? activeVideoData?.modelUsed ?? activeAudioData?.modelUsed ?? null;
+  const generationConfig = activeImageData?.generationConfig ?? activeVideoData?.generationConfig ?? activeAudioData?.generationConfig ?? null;
+  const sourceAssetIds = activeImageData?.sourceAssetIds ?? activeVideoData?.sourceAssetIds ?? activeAudioData?.sourceAssetIds ?? null;
 
   // 计算其他版本生成状态
   const hasOtherVersionGenerating = !!otherGeneratingJob &&
@@ -185,13 +187,14 @@ export function enrichAssetWithFullData(
     imageData: activeImageData,
     videoData: activeVideoData,
     textData,
-    audioData,
+    audioData: activeAudioData,
     // 所有版本列表
     imageDataList,
     videoDataList,
+    audioDataList,
     versionCount,
     // 运行时状态
-    runtimeStatus: calculateAssetStatus(asset, latestJob, activeImageData, activeVideoData, textData, audioData),
+    runtimeStatus: calculateAssetStatus(asset, latestJob, activeImageData, activeVideoData, textData, activeAudioData),
     errorMessage: getAssetErrorMessage(asset, latestJob),
 
     // 扁平化便捷属性
@@ -200,7 +203,7 @@ export function enrichAssetWithFullData(
     imageUrl: activeImageData?.imageUrl ?? null,
     thumbnailUrl: activeImageData?.thumbnailUrl ?? activeVideoData?.thumbnailUrl ?? null,
     videoUrl: activeVideoData?.videoUrl ?? null,
-    audioUrl: audioData?.audioUrl ?? null,
+    audioUrl: activeAudioData?.audioUrl ?? null,
     textContent: textData?.textContent ?? null,
     duration,
     prompt,
@@ -238,7 +241,7 @@ export function enrichAssetsWithFullData(
     imageDataList: ImageData[];
     videoDataList: VideoData[];
     textData: TextData | null;
-    audioData: AudioData | null;
+    audioDataList: AudioData[];
   }>,
   jobsMap: Map<string, Job>,
   otherGeneratingJobsMap: Map<string, Job> = new Map()
@@ -252,7 +255,7 @@ export function enrichAssetsWithFullData(
       assetData.imageDataList ?? [],
       assetData.videoDataList ?? [],
       assetData.textData,
-      assetData.audioData,
+      assetData.audioDataList ?? [],
       latestJob,
       otherGeneratingJob
     );
