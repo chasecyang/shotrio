@@ -387,11 +387,14 @@ export function AssetGalleryPanel() {
 
   // 处理引用素材到对话
   const handleReference = (asset: AssetWithFullData) => {
-    const assetTypeText = asset.assetType === 'image' ? '图片' :
-                          asset.assetType === 'video' ? '视频' :
-                          asset.assetType === 'audio' ? '音频' : '素材';
-    const presetText = `请基于 {{reference}} 生成新的${assetTypeText}素材，`;
-    // 通过 editor context 触发引用
+    // 直接填充引用标记，不添加额外文本
+    referenceAssetInChat?.(asset, '');
+    toast.success(`已引用「${asset.name}」到对话框`);
+  };
+
+  // 处理编辑素材
+  const handleEdit = (asset: AssetWithFullData) => {
+    const presetText = `请修改{{reference}}，`;
     referenceAssetInChat?.(asset, presetText);
     toast.success(`已引用「${asset.name}」到对话框`);
   };
@@ -468,6 +471,7 @@ export function AssetGalleryPanel() {
           onBack={handleBackToGrid}
           onRetry={handleRetry}
           onReference={handleReference}
+          onEdit={handleEdit}
           onAssetUpdated={handleAssetUpdated}
         />
       </div>
@@ -597,6 +601,7 @@ export function AssetGalleryPanel() {
                     onAssetDelete={handleDelete}
                     onSelectChange={handleSelectChange}
                     onReference={handleReference}
+                    onEdit={handleEdit}
                     onSelectionStatusChange={handleSelectionStatusChange}
                   />
                 );

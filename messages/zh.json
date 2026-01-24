@@ -1124,6 +1124,8 @@
     },
     "assetCard": {
       "generateBased": "基于此生成新素材",
+      "reference": "引用",
+      "edit": "编辑",
       "delete": "删除",
       "generatingNewVersion": "正在生成新版本",
       "markAsSelected": "标记为精选",

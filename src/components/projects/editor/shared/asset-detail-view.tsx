@@ -47,6 +47,7 @@ interface AssetDetailViewProps {
   onBack: () => void;
   onRetry?: (jobId: string) => Promise<void>;
   onReference?: (asset: AssetWithFullData) => void;
+  onEdit?: (asset: AssetWithFullData) => void;
   onAssetUpdated: () => void;
 }
 
@@ -59,6 +60,7 @@ export function AssetDetailView({
   onBack,
   onRetry,
   onReference,
+  onEdit,
   onAssetUpdated,
 }: AssetDetailViewProps) {
   const t = useTranslations();
@@ -435,7 +437,7 @@ export function AssetDetailView({
           返回
         </Button>
         <div className="flex-1" />
-        {/* 基于此生成新素材按钮 */}
+        {/* 引用和编辑按钮 */}
         {!isFailed && onReference && (
           <Button
             variant="ghost"
@@ -444,7 +446,18 @@ export function AssetDetailView({
             className="gap-2"
           >
             <Sparkles className="h-4 w-4" />
-            基于此生成新素材
+            {t("editor.assetCard.reference")}
+          </Button>
+        )}
+        {!isFailed && onEdit && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(asset)}
+            className="gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            {t("editor.assetCard.edit")}
           </Button>
         )}
         {/* 下载按钮 */}

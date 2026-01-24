@@ -1123,6 +1123,8 @@
     },
     "assetCard": {
       "generateBased": "Generate based on this",
+      "reference": "Reference",
+      "edit": "Edit",
       "delete": "Delete",
       "generatingNewVersion": "Generating new version",
       "markAsSelected": "Mark as Selected",

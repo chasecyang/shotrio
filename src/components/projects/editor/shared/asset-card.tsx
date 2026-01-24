@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Trash2, Video, Play, FileText, Music, AtSign, Star, X, Circle, RefreshCw } from "lucide-react";
+import { Trash2, Video, Play, FileText, Music, AtSign, Star, X, Circle, RefreshCw, Edit2 } from "lucide-react";
 import { useState } from "react";
 import { VersionCountBadge } from "./asset-version-panel";
 import Image from "next/image";
@@ -35,6 +35,7 @@ interface AssetCardProps {
   onClick: (asset: AssetWithFullData) => void;
   onSelectChange?: (assetId: string, selected: boolean) => void;
   onReference?: (asset: AssetWithFullData) => void;
+  onEdit?: (asset: AssetWithFullData) => void;
   onSelectionStatusChange?: (asset: AssetWithFullData, status: AssetSelectionStatus) => void;
   job?: Job;
 }
@@ -46,6 +47,7 @@ export function AssetCard({
   onClick,
   onSelectChange,
   onReference,
+  onEdit,
   onSelectionStatusChange,
   job,
 }: AssetCardProps) {
@@ -354,7 +356,28 @@ export function AssetCard({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      基于此生成新素材
+                      {t("reference")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {/* 编辑按钮 */}
+                {onEdit && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(asset);
+                        }}
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {t("edit")}
                     </TooltipContent>
                   </Tooltip>
                 )}

@@ -16,6 +16,7 @@ interface AssetGroupProps {
   onAssetDelete: (asset: AssetWithFullData) => void;
   onSelectChange: (assetId: string, selected: boolean) => void;
   onReference?: (asset: AssetWithFullData) => void;
+  onEdit?: (asset: AssetWithFullData) => void;
   onSelectionStatusChange?: (asset: AssetWithFullData, status: AssetSelectionStatus) => void;
 }
 
@@ -29,6 +30,7 @@ export function AssetGroup({
   onAssetDelete,
   onSelectChange,
   onReference,
+  onEdit,
   onSelectionStatusChange,
 }: AssetGroupProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -75,6 +77,7 @@ export function AssetGroup({
               onClick={onAssetClick}
               onSelectChange={onSelectChange}
               onReference={onReference}
+              onEdit={onEdit}
               onSelectionStatusChange={onSelectionStatusChange}
             />
           ))}
