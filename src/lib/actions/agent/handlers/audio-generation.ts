@@ -9,7 +9,6 @@
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import type { AssetMeta, AudioMeta } from "@/types/asset";
 import { createAudioAsset } from "@/lib/actions/asset";
-import { translatePromptToEnglish } from "@/lib/services/translation.service";
 
 // 音频类型配置
 interface AudioTypeConfig {
@@ -126,11 +125,7 @@ export async function handleAudioGeneration(
     let assetName = parameters.name as string | undefined;
     let successMessage = config.successMessage;
 
-    // 翻译中文提示词为英文（仅对 sound_effect 和 bgm，dialogue 的 text 支持中文）
-    let finalPromptOrText = promptOrText;
-    if (name === "generate_sound_effect" || name === "generate_bgm") {
-      finalPromptOrText = await translatePromptToEnglish(promptOrText);
-    }
+    const finalPromptOrText = promptOrText;
 
     // 特殊处理 generate_dialogue 的音色验证和名称生成
     let voiceDisplayName: string | undefined;

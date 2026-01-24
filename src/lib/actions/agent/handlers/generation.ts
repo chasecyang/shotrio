@@ -12,7 +12,6 @@ import { project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
 import { createVideoAsset } from "@/lib/actions/asset";
 import { createJob } from "@/lib/actions/job";
-import { translatePromptToEnglish } from "@/lib/services/translation.service";
 
 /**
  * 获取项目的画风prompt
@@ -76,12 +75,9 @@ async function handleGenerateImage(
     try {
       const assetName = assetData.name || `AI生成-${Date.now()}`;
 
-      // 翻译中文提示词为英文
-      const translatedPrompt = await translatePromptToEnglish(assetData.prompt);
-
       const finalPrompt = stylePrompt
-        ? `${stylePrompt}. ${translatedPrompt}`
-        : translatedPrompt;
+        ? `${stylePrompt}. ${assetData.prompt}`
+        : assetData.prompt;
 
       const createResult = await createAssetInternal({
         projectId,
@@ -188,21 +184,17 @@ async function handleGenerateVideo(
 
     const normalizedConfig = validationResult.normalizedConfig!;
 
-    // 翻译中文提示词为英文
-    const translatedPrompt = await translatePromptToEnglish(normalizedConfig.prompt as string);
-
     // 获取项目画风
     const stylePrompt = await getProjectStylePrompt(projectId);
     const finalPrompt = stylePrompt
-      ? `${stylePrompt}. ${translatedPrompt}`
-      : translatedPrompt;
+      ? `${stylePrompt}. ${normalizedConfig.prompt}`
+      : (normalizedConfig.prompt as string);
 
     // 构建生成配置
     const generationConfig = {
-      type: "image-to-video",
+      type: "reference-to-video",
       prompt: finalPrompt,
-      start_image_url: normalizedConfig.start_image_url as string,
-      end_image_url: normalizedConfig.end_image_url as string | undefined,
+      reference_image_urls: normalizedConfig.reference_image_urls as string[],
       aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | undefined,
       negative_prompt: normalizedConfig.negative_prompt as string | undefined,
       duration: normalizedConfig.duration as "10" | "15" | undefined,

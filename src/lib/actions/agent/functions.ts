@@ -99,26 +99,19 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "generate_video_asset",
-    description: `生成视频资产（Veo 3.1 Fast 4K，kie.ai）。
+    description: `生成视频资产（Veo 3.1 Fast 4K，默认使用 kie.ai 平台）。
 
 **输入方式**：
-- 起始帧模式：start_image_url（必填），可选 end_image_url 作为收尾帧
-- 自动过渡：不提供 end_image_url 时，模型自动生成过渡
+- 参考图模式：支持 1-3 张参考图（reference_image_urls 数组）
 
 **prompt 结构**：[景别] + [主体动作] + [镜头运动] + [镜头参数] + [氛围]
 
-**镜头技术参数（推荐）**：
-- **焦距**：24mm（广角）、50mm（标准）、85mm（人像特写）、200mm（长焦）
-- **景深**：f/2 shallow depth of field、f/8 deep depth of field
-- **背景**：neutral background bokeh、soft background blur、atmospheric perspective
-
 **时长**：
-- Veo 3.1 默认约 8 秒；duration 参数仅保留兼容，可能不生效
+- Veo 3.1 默认约 8 秒；duration 参数仅保留兼容，不生效
 
 **参数**：
 - prompt（必填）：≥10字符，中英文均可，系统会自动翻译
-- start_image_url（必填）：起始帧资产ID或URL
-- end_image_url（可选）：结束帧资产ID或URL
+- reference_image_urls（必填）：参考图数组，支持 1-3 张图片的资产ID或URL
 - duration（可选）：兼容字段，Veo 3.1 可能忽略
 `,
     displayName: "生成视频资产",
@@ -129,13 +122,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           type: "string",
           description: "视频描述（必填，中英文均可，系统会自动翻译），详细描述视频内容和镜头运动，至少10个字符",
         },
-        start_image_url: {
-          type: "string",
-          description: "起始帧（必填），图片资产的ID或URL",
-        },
-        end_image_url: {
-          type: "string",
-          description: "结束帧（可选），图片资产的ID或URL。不提供则由AI生成过渡",
+        reference_image_urls: {
+          type: "array",
+          items: { type: "string" },
+          description: "参考图数组（必填），支持 1-3 张图片的资产ID或URL",
         },
         duration: {
           type: "string",
@@ -162,7 +152,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
           description: "排序值（可选），用于在视频库中排序",
         },
       },
-      required: ["prompt", "start_image_url"],
+      required: ["prompt", "reference_image_urls"],
     },
     category: "generation",
     needsConfirmation: true,

@@ -2,7 +2,7 @@
 
 ## 概述
 
-云雾 AI (yunwu.ai) 是一个视频生成平台提供商，支持多种 AI 视频生成模型，包括 Sora2、Sora2 Pro 和 Veo3。
+云雾 AI (yunwu.ai) 是一个视频生成平台提供商，支持多种 AI 视频生成模型，包括 Sora2、Sora2 Pro 和 Veo 3.1。
 
 ## 架构设计
 
@@ -50,7 +50,7 @@ VEO_PLATFORM="yunwu"
 
 #### VEO_PLATFORM
 选择 Veo 3.1 模型的平台提供商：
-- `yunwu` (默认) - 使用 yunwu.ai 平台（使用 veo_3_1-fast-4K 模型）
+- `yunwu` (默认) - 使用 yunwu.ai 平台（使用 veo_3_1-fast-components-4K 模型）
 - `kie` - 使用 kie.ai 平台
 
 ## 使用示例
@@ -66,7 +66,7 @@ import { generateVideo } from "@/lib/services/video-service";
 
 const result = await generateVideo({
   prompt: "make animate",
-  start_image_url: "https://example.com/image.jpg",
+  reference_image_urls: ["https://example.com/image1.jpg"],
   aspect_ratio: "9:16",
   duration: "10", // Sora2 标准版支持 10s 和 15s
   type: "image-to-video",
@@ -87,7 +87,7 @@ import { generateVideo } from "@/lib/services/video-service";
 
 const result = await generateVideo({
   prompt: "make animate",
-  start_image_url: "https://example.com/image.jpg",
+  reference_image_urls: ["https://example.com/image1.jpg"],
   aspect_ratio: "9:16",
   duration: "15", // Sora2 Pro 支持 15s 和 25s
   type: "image-to-video",
@@ -107,14 +107,14 @@ console.log("时长:", result.duration);
 
 const result = await generateVideo({
   prompt: "make animate",
-  start_image_url: "https://example.com/image.jpg",
+  reference_image_urls: ["https://example.com/image1.jpg"],
   aspect_ratio: "16:9",
   duration: "10",
   type: "image-to-video",
 });
 ```
 
-### 使用云雾平台的 Veo 3.1
+### 使用云雾平台的 Veo 3.1（支持最多 3 张参考图）
 
 ```typescript
 import { generateVideo } from "@/lib/services/video-service";
@@ -126,9 +126,13 @@ import { generateVideo } from "@/lib/services/video-service";
 
 const result = await generateVideo({
   prompt: "make animate",
-  start_image_url: "https://example.com/image.jpg",
+  reference_image_urls: [
+    "https://example.com/image1.jpg",
+    "https://example.com/image2.jpg",
+    "https://example.com/image3.jpg"
+  ], // Veo 3.1 支持最多 3 张参考图
   aspect_ratio: "16:9",
-  type: "image-to-video",
+  type: "reference-to-video",
 });
 
 console.log("视频URL:", result.videoUrl);
@@ -140,7 +144,7 @@ console.log("视频URL:", result.videoUrl);
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `images` | string[] | 图片URL数组（起始帧和结束帧） |
+| `images` | string[] | 参考图 URL 数组 |
 | `model` | string | 固定为 "sora-2" |
 | `orientation` | string | "portrait" (9:16) 或 "landscape" (16:9) |
 | `prompt` | string | 视频生成提示词 |
@@ -157,7 +161,7 @@ console.log("视频URL:", result.videoUrl);
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `images` | string[] | 图片URL数组（起始帧和结束帧） |
+| `images` | string[] | 参考图 URL 数组 |
 | `model` | string | 固定为 "sora-2-pro-all" |
 | `orientation` | string | "portrait" (9:16) 或 "landscape" (16:9) |
 | `prompt` | string | 视频生成提示词 |
@@ -170,20 +174,21 @@ console.log("视频URL:", result.videoUrl);
 - 15秒视频：支持 1080p (large) 和 720p (medium)，默认使用 1080p
 - 25秒视频：仅支持 720p (medium)
 
-### 云雾 Veo3 API
+### 云雾 Veo 3.1 API
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `model` | string | 固定为 "veo_3_1-fast-4K" |
+| `model` | string | 固定为 "veo_3_1-fast-components-4K" |
 | `prompt` | string | 视频生成提示词 |
 | `enhance_prompt` | boolean | 自动翻译中文提示词为英文（默认 true） |
 | `enable_upsample` | boolean | 启用上采样（默认 true） |
-| `images` | string[] | 图片URL数组（可选，用于帧控制） |
+| `images` | string[] | 参考图 URL 数组（可选，最多 3 张） |
 | `aspect_ratio` | string | "16:9" 或 "9:16"（可选） |
 
 **特性：**
-- 支持文本生成视频和图片生成视频
-- 自动生成音频（Veo3 独有功能）
+- 支持文本生成视频和参考图生成视频
+- **支持最多 3 张参考图**（这些是参考图，不是首尾帧）
+- 自动生成音频（Veo 3.1 独有功能）
 - 支持宽高比控制
 - 支持提示词增强和上采样
 
@@ -195,8 +200,7 @@ console.log("视频URL:", result.videoUrl);
 VideoGenerationConfig → YunwuSora2StandardConfig
 
 prompt              → prompt
-start_image_url     → imageUrls[0]
-end_image_url       → imageUrls[1] (可选)
+reference_image_urls → imageUrls (参考图数组)
 aspect_ratio        → orientation
   "9:16"            → "portrait"
   "16:9"            → "landscape"
@@ -211,8 +215,7 @@ duration            → duration
 VideoGenerationConfig → YunwuSora2Config
 
 prompt              → prompt
-start_image_url     → imageUrls[0]
-end_image_url       → imageUrls[1] (可选)
+reference_image_urls → imageUrls (参考图数组)
 aspect_ratio        → orientation
   "9:16"            → "portrait"
   "16:9"            → "landscape"
@@ -221,14 +224,13 @@ duration            → duration
   "15"              → 15
 ```
 
-#### Veo3
+#### Veo 3.1
 
 ```typescript
 VideoGenerationConfig → YunwuVeo3Config
 
 prompt              → prompt
-start_image_url     → imageUrls[0] (可选)
-end_image_url       → imageUrls[1] (可选)
+reference_image_urls → imageUrls (参考图数组，最多 3 张)
 aspect_ratio        → aspectRatio
   "9:16"            → "9:16"
   "16:9"            → "16:9"

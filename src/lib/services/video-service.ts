@@ -89,15 +89,9 @@ async function generateVideoWithSora2Yunwu(
   const duration = config.duration === "15" ? 15 : 10;
   console.log(`[VideoService] 使用 Sora2 (yunwu.ai) 生成视频 (${duration}s)`);
 
-  // 收集图片URL（起始帧和结束帧）
-  const imageUrls: string[] = [config.start_image_url];
-  if (config.end_image_url) {
-    imageUrls.push(config.end_image_url);
-  }
-
   const result = await generateYunwuSora2StandardVideo({
     prompt: config.prompt,
-    imageUrls,
+    imageUrls: config.reference_image_urls,
     duration,
     orientation: config.aspect_ratio === "9:16" ? "portrait" : "landscape",
     watermark: false,
@@ -144,19 +138,13 @@ async function generateVideoWithSora2ProKie(
   const duration = config.duration === "15" ? "15" : "10";
   console.log(`[VideoService] 使用 Sora2 Pro (kie.ai) 生成视频 (${duration}s)`);
 
-  // 收集图片URL（起始帧和结束帧）
-  const imageUrls: string[] = [config.start_image_url];
-  if (config.end_image_url) {
-    imageUrls.push(config.end_image_url);
-  }
-
-  // 选择模型：如果只有起始帧，使用图生视频；如果有首尾帧，也使用图生视频
+  // 选择模型：使用图生视频
   const model = "sora-2-pro-image-to-video";
 
   const taskResult = await generateSora2Video({
     model,
     prompt: config.prompt,
-    imageUrls,
+    imageUrls: config.reference_image_urls,
     duration,
     aspectRatio: config.aspect_ratio === "9:16" ? "portrait" : "landscape",
     size: "high",
@@ -193,15 +181,9 @@ async function generateVideoWithSora2ProYunwu(
   const duration = config.duration === "15" ? 15 : 15;
   console.log(`[VideoService] 使用 Sora2 Pro (yunwu.ai) 生成视频 (${duration}s)`);
 
-  // 收集图片URL（起始帧和结束帧）
-  const imageUrls: string[] = [config.start_image_url];
-  if (config.end_image_url) {
-    imageUrls.push(config.end_image_url);
-  }
-
   const result = await generateYunwuSora2Video({
     prompt: config.prompt,
-    imageUrls,
+    imageUrls: config.reference_image_urls,
     duration,
     orientation: config.aspect_ratio === "9:16" ? "portrait" : "landscape",
     watermark: false,
@@ -238,15 +220,9 @@ async function generateVideoWithSeedance(
 
   console.log(`[VideoService] 使用 Seedance 1.5 Pro 生成视频 (${duration}s)`);
 
-  // 收集图片URL（起始帧和结束帧）
-  const imageUrls: string[] = [config.start_image_url];
-  if (config.end_image_url) {
-    imageUrls.push(config.end_image_url);
-  }
-
   const taskResult = await generateSeedanceVideo({
     prompt: config.prompt,
-    imageUrls,
+    imageUrls: config.reference_image_urls,
     duration,
     aspectRatio: config.aspect_ratio || "16:9",
     resolution: "720p",
@@ -277,12 +253,19 @@ async function generateVideoWithKling(
     generateKlingO1ImageToVideo,
   } = await import("@/lib/services/fal");
 
-  console.log(`[VideoService] 使用 Kling 首尾帧生成视频`);
+  console.log(`[VideoService] 使用 Kling 参考图生成视频`);
+
+  const start_image_url = config.reference_image_urls[0];
+  const end_image_url = config.reference_image_urls[1];
+
+  if (!start_image_url) {
+    throw new Error("Kling 需要至少一张参考图");
+  }
 
   const videoResult = await generateKlingO1ImageToVideo({
     prompt: config.prompt,
-    start_image_url: config.start_image_url,
-    end_image_url: config.end_image_url,
+    start_image_url,
+    end_image_url,
     negative_prompt: config.negative_prompt,
   });
 
@@ -322,18 +305,34 @@ async function generateVideoWithVeoKie(
     waitForVeo3Video,
   } = await import("@/lib/services/kie");
 
-  console.log(`[VideoService] 使用 Veo 3.1 (kie.ai) 首尾帧生成视频`);
+  console.log(`[VideoService] 使用 Veo 3.1 (kie.ai) 参考图生成视频`);
 
-  const imageUrls: string[] = [config.start_image_url];
-  if (config.end_image_url) {
-    imageUrls.push(config.end_image_url);
+  // Veo 3.1 支持最多 3 张参考图
+  let imageUrls = config.reference_image_urls;
+
+  // 限制最多 3 张参考图
+  if (imageUrls.length > 3) {
+    console.warn(`[VideoService] Veo 3.1 最多支持 3 张参考图，当前有 ${imageUrls.length} 张，将只使用前 3 张`);
+    imageUrls = imageUrls.slice(0, 3);
   }
+
+  // 根据图片数量选择生成类型
+  // REFERENCE_2_VIDEO: 支持 1-3 张参考图（仅支持 veo3_fast 和 16:9/9:16）
+  // FIRST_AND_LAST_FRAMES_2_VIDEO: 支持 1-2 张图片（首尾帧过渡）
+  const generationType = imageUrls.length >= 3
+    ? "REFERENCE_2_VIDEO"
+    : "FIRST_AND_LAST_FRAMES_2_VIDEO";
+
+  // REFERENCE_2_VIDEO 模式只支持 16:9 和 9:16，不支持 Auto
+  const aspectRatio = config.aspect_ratio === "9:16" ? "9:16" : "16:9";
+
+  console.log(`[VideoService] 使用 ${imageUrls.length} 张参考图，生成类型: ${generationType}`);
 
   const taskResult = await generateVeo3Video({
     prompt: config.prompt,
     imageUrls,
-    generationType: "FIRST_AND_LAST_FRAMES_2_VIDEO",
-    aspectRatio: config.aspect_ratio === "9:16" ? "9:16" : config.aspect_ratio === "16:9" ? "16:9" : "Auto",
+    generationType,
+    aspectRatio,
     model: "veo3_fast",
     enableTranslation: true,
   });
@@ -364,14 +363,16 @@ async function generateVideoWithVeoYunwu(
 
   console.log(`[VideoService] 使用 Veo 3.1 (yunwu.ai) 生成视频`);
 
-  // 收集图片URL（起始帧和结束帧）
-  const imageUrls: string[] = [];
-  if (config.start_image_url) {
-    imageUrls.push(config.start_image_url);
+  // Veo 3.1 支持最多 3 张参考图
+  let imageUrls = config.reference_image_urls;
+
+  // 限制最多 3 张参考图
+  if (imageUrls.length > 3) {
+    console.warn(`[VideoService] Veo 3.1 最多支持 3 张参考图，当前有 ${imageUrls.length} 张，将只使用前 3 张`);
+    imageUrls = imageUrls.slice(0, 3);
   }
-  if (config.end_image_url) {
-    imageUrls.push(config.end_image_url);
-  }
+
+  console.log(`[VideoService] 使用 ${imageUrls.length} 张参考图生成视频`);
 
   const result = await generateYunwuVeo3Video({
     prompt: config.prompt,

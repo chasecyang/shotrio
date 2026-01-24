@@ -857,15 +857,14 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
         <div className="grid gap-2">
           <Label>时长</Label>
           <Select
-            value={(params.duration as string) || "10"}
+            value={(params.duration as string) || "8"}
             onValueChange={(value) => onChange({ ...params, duration: value })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="10">10 秒</SelectItem>
-              <SelectItem value="15">15 秒</SelectItem>
+              <SelectItem value="8">8 秒（固定）</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -886,23 +885,24 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
         </div>
       </div>
 
-      {/* 起始帧和结束帧 */}
-      <div className="grid grid-cols-2 gap-4">
-        <SingleAssetSelector
+      {/* 参考图（支持 1-3 张） */}
+      <div>
+        <MultiAssetSelector
           projectId={projectId}
-          selectedAssetId={params.start_image_url as string | undefined}
-          onSelect={(assetId) => onChange({ ...params, start_image_url: assetId })}
-          label="起始帧 *"
+          selectedAssetIds={(params.reference_image_urls as string[]) || []}
+          onSelect={(assetIds) => {
+            // 限制最多 3 张参考图
+            const limitedAssetIds = assetIds.slice(0, 3);
+            onChange({ ...params, reference_image_urls: limitedAssetIds });
+          }}
+          label="参考图（1-3张）*"
           assetType="image"
         />
-        <SingleAssetSelector
-          projectId={projectId}
-          selectedAssetId={params.end_image_url as string | undefined}
-          onSelect={(assetId) => onChange({ ...params, end_image_url: assetId })}
-          label="结束帧（可选）"
-          allowClear
-          assetType="image"
-        />
+        {(params.reference_image_urls as string[])?.length > 3 && (
+          <p className="text-sm text-yellow-600 mt-1">
+            最多支持 3 张参考图，已自动限制
+          </p>
+        )}
       </div>
     </div>
   );

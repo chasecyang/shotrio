@@ -276,7 +276,8 @@
       "resourceNotFound": "Requested resource not found",
       "uploadFailed": "File upload failed, please retry",
       "generationFailed": "Generation failed, please retry",
-      "unknown": "Operation failed, please try again later"
+      "unknown": "Operation failed, please try again later",
+      "prominentPeopleFilter": "⚠️ Content Policy: Your prompt may contain references to real celebrities or public figures\n\n🔧 Suggestions:\n• Avoid using names of real celebrities or political figures\n• Do not describe specific features of famous people\n• Use generic descriptions (e.g., \"blonde singer\" instead of specific names)\n• Describe styles and characteristics rather than specific individuals\n\n💡 Examples:\n❌ \"A famous actor on the red carpet\"\n✅ \"An elegant person walking confidently on the red carpet\""
     },
     "agent": {
       "conversationNotFound": "Conversation not found or not associated with project",

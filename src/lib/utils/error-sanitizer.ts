@@ -12,6 +12,12 @@ const ERROR_PATTERNS: Array<{ pattern: RegExp; messageKey: string }> = [
     messageKey: "errors.generation.contentPolicy"
   },
 
+  // Veo 名人/公众人物过滤错误
+  {
+    pattern: /PROMINENT_PEOPLE_FILTER_FAILED|prominent people/i,
+    messageKey: "errors.generation.prominentPeopleFilter"
+  },
+
   // 超时类错误
   { pattern: /超时（?已尝试.*次）?/i, messageKey: "errors.generation.timeout" },
   { pattern: /timeout/i, messageKey: "errors.generation.timeout" },

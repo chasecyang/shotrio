@@ -78,9 +78,22 @@ export function estimateFunctionCallCredits(
       }
 
       case "generate_video_asset": {
-        // 视频生成：Veo 3.1 默认生成约 8 秒视频
-        const duration = 8;
-        const { credits, seconds } = calculateVideoCredits(duration * 1000);
+        // 视频生成：从参数中读取 duration，如果没有则默认 8 秒（Veo 3.1 固定时长）
+        let durationSeconds = 8; // 默认 8 秒
+
+        if (parameters.duration) {
+          const durationParam = parameters.duration;
+          if (typeof durationParam === "string") {
+            const parsed = parseInt(durationParam, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+              durationSeconds = parsed;
+            }
+          } else if (typeof durationParam === "number" && durationParam > 0) {
+            durationSeconds = durationParam;
+          }
+        }
+
+        const { credits, seconds } = calculateVideoCredits(durationSeconds * 1000);
 
         return {
           functionCallId: id,

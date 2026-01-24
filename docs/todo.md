@@ -11,14 +11,19 @@
 ## Manual Tasks
 
 ### 本地化任务
+[]中断任务的能力？成本怎么控制
 [x]Timeline 面板本地化 (timeline-panel.tsx)
-[]Agent 组件本地化 (floating-agent-card, approval-action-bar, action-editor-forms)
+[x]Agent 组件本地化 (floating-agent-card, approval-action-bar, action-editor-forms)
 []素材管理组件本地化 (asset-detail-view, media-viewer, image-upload)
 []素材生成和预览组件本地化
 []项目设置和验证本地化
 []Console 日志和注释转英文
 []运行本地化检测脚本验证
-[]测试语言切换功能
+
+
+[]现在approve function有一个问题，生成视频的时候，approve function bar中的时长显示的是4s，点击编辑参数中又是10s。怎么彻底解决这个问题？目前veo3.1我们的供应商固定生成的视频就是8s
+
+[]生成视频/图片的时候，支持用户编辑图片
 
 []参数页面accept操作后，不应该一直loading
 [x]agent对话切换时，应该进入skelton，而不是对话中/AI创作中的状态
@@ -54,6 +59,8 @@
 []优化nano banana pro 的 prompt为json
 
 []对话结束，要自动退出自动模式
+
+[]要让agent知晓素材被废弃了/star了
 
 
 []面向中文用户的故事，图片中就不应该出现英文？招牌应该要用中文。需要优化我们的项目描述来完成这一点

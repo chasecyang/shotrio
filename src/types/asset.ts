@@ -166,15 +166,15 @@ export interface ImageGenerationConfig {
 /**
  * 视频配置（用于生成）
  *
- * 统一的首尾帧生成方式：
- * - 基于起始帧（必填）和结束帧（可选）生成视频
+ * 统一的参考图生成方式：
+ * - 基于参考图生成视频（支持 1-3 张参考图）
  * - 系统会自动使用配置的视频服务提供商（Sora2 / Seedance / Veo / Kling）
  * - Sora2 Pro 支持 10/15 秒时长
+ * - Veo 3.1 支持最多 3 张参考图
  */
 export interface VideoGenerationConfig {
   prompt: string;                // 视频描述（必填）
-  start_image_url: string;       // 起始帧（必填）
-  end_image_url?: string;        // 结束帧（可选）
+  reference_image_urls: string[];  // 参考图 URL 数组（1-3张）
   aspect_ratio?: "16:9" | "9:16";  // 宽高比
   negative_prompt?: string;      // 负面提示词
   type: string;                  // 生成类型（image-to-video | reference-to-video）
@@ -182,8 +182,7 @@ export interface VideoGenerationConfig {
 
   // 版本快照（内部使用，Job 创建时记录源资产的版本 ID，Worker 执行时优先使用）
   _versionSnapshot?: {
-    start_image_version_id?: string;  // 起始帧 imageData.id
-    end_image_version_id?: string;    // 结束帧 imageData.id
+    reference_image_version_ids?: string[];  // 参考图 imageData.id 数组
   };
 }
 

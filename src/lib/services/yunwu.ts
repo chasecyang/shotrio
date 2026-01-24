@@ -11,7 +11,7 @@
 /**
  * 云雾支持的模型类型
  */
-export type YunwuModel = "sora-2" | "sora-2-pro-all" | "veo_3_1-fast-4K";
+export type YunwuModel = "sora-2" | "sora-2-pro-all" | "veo_3_1-fast-components-4K";
 
 /**
  * 云雾视频生成请求参数（通用）
@@ -169,7 +169,7 @@ export interface YunwuVeo3QueryResponse {
   status_update_time: number;
   video_url?: string | null;  // 视频URL（完成时返回）
   enhanced_prompt?: string;   // 增强后的提示词
-  error?: string;             // 错误信息（失败时返回）
+  error?: string | Record<string, unknown>;  // 错误信息（失败时返回，可能是字符串或对象）
 }
 
 /**
@@ -495,7 +495,7 @@ export async function createYunwuVeo3Video(
   const apiKey = getYunwuApiKey();
 
   const requestBody: YunwuVeo3CreateRequest = {
-    model: "veo_3_1-fast-4K",
+    model: "veo_3_1-fast-components-4K",
     prompt: config.prompt,
     enhance_prompt: config.enhancePrompt ?? true,
     enable_upsample: config.enableUpsample ?? true,
@@ -616,7 +616,10 @@ export async function waitForYunwuVeo3Video(
       }
 
       if (result.status === "failed") {
-        throw new Error(`Veo3 视频生成失败: ${result.error || "未知错误"}`);
+        const errorMsg = typeof result.error === 'object'
+          ? JSON.stringify(result.error, null, 2)
+          : (result.error || "未知错误");
+        throw new Error(`Veo3 视频生成失败: ${errorMsg}`);
       }
 
       // 状态为 pending 或 processing，继续等待

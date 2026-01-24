@@ -186,7 +186,8 @@
       "resourceNotFound": "请求的资源不存在",
       "uploadFailed": "文件上传失败，请重试",
       "generationFailed": "生成失败，请重试",
-      "unknown": "操作失败，请稍后重试"
+      "unknown": "操作失败，请稍后重试",
+      "prominentPeopleFilter": "⚠️ 内容审核：提示词可能涉及真实名人或公众人物\n\n🔧 修改建议：\n• 避免使用真实名人、政治人物的名字\n• 不要描述特定名人的外貌特征\n• 用通用描述替代（如\"金发女歌手\"代替具体名人）\n• 描述风格和特征而非具体人物\n\n💡 示例：\n❌ \"某位著名演员在红毯上\"\n✅ \"优雅的女性在红毯上自信地走过\""
     },
     "agent": {
       "conversationNotFound": "对话不存在或未关联项目",
@@ -624,8 +625,7 @@
       "cancelled": "已取消"
     }
   },
-  "tools": {
-  },
+  "tools": {},
   "feedback": {
     "chatWithUs": "联系我们",
     "needHelp": "需要帮助？",

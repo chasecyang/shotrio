@@ -24,7 +24,7 @@ import { DependencyNotReadyError } from "../errors/DependencyNotReadyError";
 function getVideoModelUsed(provider: ReturnType<typeof getVideoServiceProvider>): string {
   if (provider === "veo") {
     const platform = process.env.VEO_PLATFORM?.toLowerCase() || "yunwu";
-    return platform === "yunwu" ? "veo_3_1-fast-4K" : "veo3_fast";
+    return platform === "yunwu" ? "veo_3_1-fast-components-4K" : "veo3_fast";
   }
   if (provider === "seedance") {
     return "seedance";
@@ -182,29 +182,23 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       return activeImageData.imageUrl;
     };
 
-    // 解析起始帧和结束帧的真实 URL（传入版本快照）
-    if (config.start_image_url) {
-      const resolvedUrl = await resolveImageUrl(
-        config.start_image_url,
-        versionSnapshot?.start_image_version_id
-      );
+    // 解析参考图的真实 URL（传入版本快照）
+    const resolvedUrls: string[] = [];
+    const versionIds = versionSnapshot?.reference_image_version_ids || [];
+
+    for (let i = 0; i < config.reference_image_urls.length; i++) {
+      const imageIdOrUrl = config.reference_image_urls[i];
+      const versionId = versionIds[i];
+
+      const resolvedUrl = await resolveImageUrl(imageIdOrUrl, versionId);
       if (!resolvedUrl) {
-        throw new Error(`无法找到起始帧图片 URL: ${config.start_image_url}`);
+        throw new Error(`无法找到参考图 ${i + 1} 的 URL: ${imageIdOrUrl}`);
       }
-      config.start_image_url = resolvedUrl;
-      console.log(`[Worker] 起始帧 URL: ${config.start_image_url}`);
+      resolvedUrls.push(resolvedUrl);
+      console.log(`[Worker] 参考图 ${i + 1} URL: ${resolvedUrl}`);
     }
-    if (config.end_image_url) {
-      const resolvedUrl = await resolveImageUrl(
-        config.end_image_url,
-        versionSnapshot?.end_image_version_id
-      );
-      if (!resolvedUrl) {
-        throw new Error(`无法找到结束帧图片 URL: ${config.end_image_url}`);
-      }
-      config.end_image_url = resolvedUrl;
-      console.log(`[Worker] 结束帧 URL: ${config.end_image_url}`);
-    }
+
+    config.reference_image_urls = resolvedUrls;
 
     // 注意：不需要手动更新asset状态为processing
     // 状态从关联的job动态计算，job已经在startJob时被设置为processing

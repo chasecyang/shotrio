@@ -6,19 +6,18 @@
 
 ### 1. Veo 3.1 (默认)
 
-**提供商**: yunwu.ai  
-**模型**: Veo 3.1 Fast 4K  
+**提供商**: kie.ai (默认) / yunwu.ai (可选)
+**模型**: Veo 3.1 Fast 4K
 **特点**:
 - Google 最新的视频生成模型
 - 价格为 Google 官方的 25%
 - 支持纯文本生成视频 (TEXT_2_VIDEO)
-- 支持首尾帧过渡 (FIRST_AND_LAST_FRAMES_2_VIDEO)
-- 支持参考图生成 (REFERENCE_2_VIDEO)
-- 多语言提示词支持（自动翻译）
+- 支持首尾帧过渡 (FIRST_AND_LAST_FRAMES_2_VIDEO，1-2张图)
+- 支持参考图生成 (REFERENCE_2_VIDEO，1-3张图)
 - 原生 16:9 和 9:16 支持
 
 **限制**:
-- REFERENCE_2_VIDEO 模式最多3张图片
+- REFERENCE_2_VIDEO 模式最多3张图片（仅支持 veo3_fast 模型和 16:9/9:16 宽高比）
 - 不支持视频续写 (video-to-video)
 - 视频时长约8秒（固定）
 
@@ -46,9 +45,14 @@
 # 可选值: "veo" (默认) | "kling"
 VIDEO_SERVICE_PROVIDER=veo
 
-# Veo 服务配置 (yunwu.ai) - 默认
-YUNWU_API_KEY=your_yunwu_api_key
-VEO_PLATFORM=yunwu
+# Veo 服务配置
+# 平台选择: "kie" (默认) | "yunwu"
+VEO_PLATFORM=kie
+KIE_API_KEY=your_kie_api_key
+
+# 可选：yunwu.ai 平台
+# YUNWU_API_KEY=your_yunwu_api_key
+# VEO_PLATFORM=yunwu
 
 # Kling 服务配置 (fal.ai) - 备用
 FAL_KEY=your_fal_api_key
@@ -63,17 +67,27 @@ VIDEO_SERVICE_PROVIDER=kling
 FAL_KEY=your_fal_api_key
 ```
 
-### 使用默认 Veo 3.1
+### 使用默认 Veo 3.1 (kie.ai)
 
-Veo 3.1 是默认服务，设置：
+Veo 3.1 是默认服务，使用 kie.ai 平台：
 
 ```bash
 VIDEO_SERVICE_PROVIDER=veo
-YUNWU_API_KEY=your_yunwu_api_key
-VEO_PLATFORM=yunwu
+KIE_API_KEY=your_kie_api_key
+# VEO_PLATFORM=kie  # 默认值，可省略
 ```
 
-或者直接移除 `VIDEO_SERVICE_PROVIDER` 环境变量（默认使用 Veo 3.1）。
+或者直接移除 `VIDEO_SERVICE_PROVIDER` 环境变量（默认使用 Veo 3.1 + kie.ai）。
+
+### 切换到 yunwu.ai 平台
+
+如果要使用 yunwu.ai 平台的 Veo 3.1：
+
+```bash
+VIDEO_SERVICE_PROVIDER=veo
+VEO_PLATFORM=yunwu
+YUNWU_API_KEY=your_yunwu_api_key
+```
 
 ## 使用方法
 
@@ -126,7 +140,6 @@ Agent 的 `generate_video_asset` 功能会自动使用配置的服务：
 | 视频时长 | 5秒或10秒 | 约8秒(固定) |
 | 宽高比 | 16:9, 9:16, 1:1 | 16:9, 9:16, Auto |
 | 音频 | ✅ | ✅ |
-| 多语言 | ⚠️ (英文优先) | ✅ (自动翻译) |
 | 价格 | 标准价格 | Google 官方的 25% |
 
 ## 最佳实践
@@ -141,7 +154,6 @@ Agent 的 `generate_video_asset` 功能会自动使用配置的服务：
 ### 选择 Veo 3.1 的场景
 
 - 追求更高的性价比
-- 需要多语言提示词支持
 - 纯文本生成视频
 - 简单的首尾帧过渡
 - 不超过3张参考图的场景

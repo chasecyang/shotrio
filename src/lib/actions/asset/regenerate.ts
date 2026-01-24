@@ -162,36 +162,38 @@ export async function regenerateVideoAssetWithParams(input: {
       : null;
 
     // 构建新的 VideoGenerationConfig
+    const referenceImageUrls = [startFrame.displayUrl];
+    if (endFrame && endFrame.displayUrl) {
+      referenceImageUrls.push(endFrame.displayUrl);
+    }
+
     const newConfig: VideoGenerationConfig = {
       prompt: input.editPrompt,
-      start_image_url: startFrame.displayUrl,
+      reference_image_urls: referenceImageUrls,
       aspect_ratio: input.aspectRatio,
-      type: "FIRST_AND_LAST_FRAMES_2_VIDEO",
+      type: "reference-to-video",
     };
-
-    if (endFrame && endFrame.displayUrl) {
-      newConfig.end_image_url = endFrame.displayUrl;
-    }
 
     // 记录版本快照
     const versionSnapshot: {
-      start_image_version_id?: string;
-      end_image_version_id?: string;
+      reference_image_version_ids?: string[];
     } = {};
 
+    const referenceVersionIds: string[] = [];
     const startVersionId = await resolveAssetVersionId(input.startImageAssetId);
     if (startVersionId) {
-      versionSnapshot.start_image_version_id = startVersionId;
+      referenceVersionIds.push(startVersionId);
     }
 
     if (input.endImageAssetId) {
       const endVersionId = await resolveAssetVersionId(input.endImageAssetId);
       if (endVersionId) {
-        versionSnapshot.end_image_version_id = endVersionId;
+        referenceVersionIds.push(endVersionId);
       }
     }
 
-    if (Object.keys(versionSnapshot).length > 0) {
+    if (referenceVersionIds.length > 0) {
+      versionSnapshot.reference_image_version_ids = referenceVersionIds;
       newConfig._versionSnapshot = versionSnapshot;
     }
 

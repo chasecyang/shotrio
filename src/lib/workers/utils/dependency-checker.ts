@@ -97,8 +97,7 @@ export async function checkImageDependencies(
  * @returns imageDataId 列表
  */
 export function extractDependenciesFromSnapshot(versionSnapshot?: {
-  start_image_version_id?: string;
-  end_image_version_id?: string;
+  reference_image_version_ids?: string[];
   source_image_version_ids?: string[];
 }): string[] {
   if (!versionSnapshot) {
@@ -107,12 +106,8 @@ export function extractDependenciesFromSnapshot(versionSnapshot?: {
 
   const dependencies: string[] = [];
 
-  if (versionSnapshot.start_image_version_id) {
-    dependencies.push(versionSnapshot.start_image_version_id);
-  }
-
-  if (versionSnapshot.end_image_version_id) {
-    dependencies.push(versionSnapshot.end_image_version_id);
+  if (versionSnapshot.reference_image_version_ids) {
+    dependencies.push(...versionSnapshot.reference_image_version_ids);
   }
 
   if (versionSnapshot.source_image_version_ids) {

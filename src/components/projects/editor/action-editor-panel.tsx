@@ -4,11 +4,14 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Coins, Check, X, ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { AlertCircle, Coins, Check, X, ArrowLeft, Loader2 } from "lucide-react";
 import { useEditor } from "./editor-context";
 import { ImageGenerationForm, VideoGenerationForm, TextAssetForm } from "./agent-panel/action-editor-forms";
 import { PurchaseDialog } from "@/components/credits/purchase-dialog";
 import { getArtStyleById } from "@/lib/actions/art-style/queries";
+import { estimateActionCredits } from "@/lib/actions/credits/estimate";
+import type { FunctionCall } from "@/types/agent";
+import type { CreditCost } from "@/lib/utils/credit-calculator";
 
 export function ActionEditorPanel() {
   const t = useTranslations();
@@ -23,15 +26,50 @@ export function ActionEditorPanel() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
   const [artStyleName, setArtStyleName] = useState<string | null>(null);
+  const [dynamicCreditCost, setDynamicCreditCost] = useState<CreditCost | undefined>(
+    actionEditor?.creditCost
+  );
 
   // 如果没有 actionEditor 数据，不渲染
   if (!actionEditor) {
     return null;
   }
 
-  const { functionCall, creditCost, currentBalance, onConfirm, onCancel } = actionEditor;
-  const totalCost = creditCost?.total || 0;
+  const { functionCall, currentBalance, onConfirm, onCancel } = actionEditor;
+  const totalCost = dynamicCreditCost?.total || 0;
   const insufficientBalance = currentBalance !== undefined && totalCost > currentBalance;
+
+  // 监听参数变化，重新计算积分
+  useEffect(() => {
+    if (!actionEditor) return;
+
+    let isActive = true;
+    const recalculateCredits = async () => {
+      try {
+        const functionCallForEstimate: FunctionCall = {
+          id: functionCall.id,
+          name: functionCall.name,
+          displayName: functionCall.displayName,
+          parameters: editedParams,
+          category: functionCall.category as FunctionCall["category"],
+          needsConfirmation: true,
+        };
+
+        const result = await estimateActionCredits([functionCallForEstimate]);
+        if (isActive && result.success && result.creditCost) {
+          setDynamicCreditCost(result.creditCost);
+        }
+      } catch (error) {
+        console.error("重新计算积分失败:", error);
+      }
+    };
+
+    recalculateCredits();
+
+    return () => {
+      isActive = false;
+    };
+  }, [editedParams, functionCall, actionEditor]);
 
   // 判断操作类型
   const isGenerateAssets = functionCall.name === "generate_image_asset";

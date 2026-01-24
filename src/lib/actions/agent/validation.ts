@@ -94,9 +94,13 @@ function validateGenerateVideoParams(
     errors.push("prompt 必须至少包含 10 个字符");
   }
 
-  // 校验 start_image_url（必填）
-  if (!params.start_image_url || typeof params.start_image_url !== "string") {
-    errors.push("start_image_url 是必填字段");
+  // 校验 reference_image_urls（必填）
+  if (!params.reference_image_urls || !Array.isArray(params.reference_image_urls)) {
+    errors.push("reference_image_urls 是必填字段，必须是数组");
+  } else if (params.reference_image_urls.length === 0) {
+    errors.push("reference_image_urls 至少需要 1 张参考图");
+  } else if (params.reference_image_urls.length > 3) {
+    errors.push("reference_image_urls 最多支持 3 张参考图");
   }
 
   // 校验 aspect_ratio 格式
@@ -114,8 +118,7 @@ function validateGenerateVideoParams(
     warnings,
     normalizedConfig: {
       prompt: typeof params.prompt === "string" ? params.prompt.trim() : "",
-      start_image_url: params.start_image_url as string,
-      end_image_url: params.end_image_url as string | undefined,
+      reference_image_urls: params.reference_image_urls as string[],
       aspect_ratio: params.aspect_ratio as "16:9" | "9:16" | undefined,
       negative_prompt: params.negative_prompt as string | undefined,
     },

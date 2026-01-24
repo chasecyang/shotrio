@@ -192,9 +192,8 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
     return {
       prompt: (parsedArgs.prompt as string) || "",
-      startImageUrl: (parsedArgs.start_image_url as string) || "",
-      endImageUrl: (parsedArgs.end_image_url as string) || undefined,
-      duration: (parsedArgs.duration as string) || "4",
+      referenceImageUrls: (parsedArgs.reference_image_urls as string[]) || [],
+      duration: (parsedArgs.duration as string) || "8",
       aspectRatio: (parsedArgs.aspect_ratio as string) || "16:9",
       title: (parsedArgs.title as string) || undefined,
     };
@@ -674,24 +673,16 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                     <span className="text-xs text-foreground">{videoGenerationParams.aspectRatio}</span>
                   </div>
                 </div>
-                <div className="flex gap-4">
+                {videoGenerationParams.referenceImageUrls && videoGenerationParams.referenceImageUrls.length > 0 && (
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.startFrame")}</span>
+                      <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.referenceImages")}</span>
+                      <span className="text-xs text-foreground">({videoGenerationParams.referenceImageUrls.length})</span>
                     </div>
-                    <AssetPreview assetIds={[videoGenerationParams.startImageUrl]} />
+                    <AssetPreview assetIds={videoGenerationParams.referenceImageUrls} />
                   </div>
-                  {videoGenerationParams.endImageUrl && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.endFrame")}</span>
-                      </div>
-                      <AssetPreview assetIds={[videoGenerationParams.endImageUrl]} />
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             ) : isCreateTextAsset ? (
               /* 创建文本资产 */

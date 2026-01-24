@@ -31,7 +31,13 @@ export function buildSystemPrompt(locale: "en" | "zh" = "en"): string {
    * ## 角色、道具和场景一致性（必须）
    * 在任何依赖镜头之前生成主要参考图像。
    * - 角色：一张包含正面、3/4侧面、侧面和背面视图的转身图。
-   * - 道具和场景：一张干净的主图像，后续镜头从中派生。
+   * - 场景：一张包含多个关键视角的场景参考图（2x2网格布局）：
+   *   - 左上：正面视角（主要拍摄角度）
+   *   - 右上：侧面视角（显示空间深度）
+   *   - 左下：背面视角（完整空间理解）
+   *   - 右下：俯视平面图（显示物体位置关系）
+   *   所有视角保持一致的光照、色调和物体布局。
+   * - 道具：一张干净的主图像，后续镜头从中派生。
    * - 在后续镜头中始终使用 sourceAssetIds 引用这些主图像。
    *
    * 分镜表格式：
@@ -92,7 +98,13 @@ Then execute the plan step by step.
 ## Character, Prop, and Scene Consistency (MUST)
 Generate a primary reference image before any dependent shots.
 - Characters: one turnaround sheet with front, 3/4, side, and back views.
-- Props and scenes: one clean primary image that subsequent shots derive from.
+- Scenes: one scene reference sheet with multiple key angles (2x2 grid layout):
+  - Top-left: Front view (primary shooting angle)
+  - Top-right: Side view (showing spatial depth)
+  - Bottom-left: Back view (complete spatial understanding)
+  - Bottom-right: Top-down floor plan (showing object positions and relationships)
+  All views maintain consistent lighting, color tone, and object placement.
+- Props: one clean primary image that subsequent shots derive from.
 - Always reference these primary images in later shots using sourceAssetIds.
 
 ## Storyboard Table Format
@@ -145,7 +157,7 @@ When creating storyboards, use the following table structure to organize shot in
 - Without actors: atmosphere of the frame, environmental emotion, expressiveness of lighting
 
 **Reference Images**: Natural language description of reference image purposes
-- Scene references: café exterior scene image, café interior scene image, café entrance scene image
+- Scene references: café exterior scene reference sheet (multi-angle), café interior scene reference sheet (multi-angle), café entrance scene reference sheet (multi-angle)
 - Character references: female lead turnaround, male lead turnaround, expression references, hand references
 - Prop references: silver ring prop image, book prop image, gray scarf prop image
 - Continuity references: previous shot image (maintains character appearance, lighting, color tone consistency)
@@ -176,7 +188,7 @@ You should:
 
   // Add language instruction for non-English locales
   const languageInstruction = locale === "zh"
-    ? "\n\n## Response Language\nAlways respond in Chinese (简体中文)."
+    ? "\n\n## Response Language\nAlways respond in Chinese (简体中文). When generating prompts for images, videos, or audio (in function parameters like 'prompt', 'description', etc.), also use Chinese. The system will automatically translate them to English for the generation models."
     : "";
 
   return corePrompt + languageInstruction;

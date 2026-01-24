@@ -52,54 +52,30 @@ export async function createVideoAsset(data: {
     // 2. 查询源资产的激活版本，记录版本快照
     const configWithSnapshot = { ...data.generationConfig };
     const versionSnapshot: {
-      start_image_version_id?: string;
-      end_image_version_id?: string;
+      reference_image_version_ids?: string[];
     } = {};
 
-    // 起始帧版本快照
-    if (
-      configWithSnapshot.start_image_url &&
-      !configWithSnapshot.start_image_url.startsWith("http")
-    ) {
-      const versionId = await resolveAssetVersionId(
-        configWithSnapshot.start_image_url
-      );
-      if (versionId) {
-        versionSnapshot.start_image_version_id = versionId;
-      }
-    }
+    // 参考图版本快照
+    const referenceImageVersionIds: string[] = [];
+    const sourceAssetIds: string[] = [];
 
-    // 结束帧版本快照
-    if (
-      configWithSnapshot.end_image_url &&
-      !configWithSnapshot.end_image_url.startsWith("http")
-    ) {
-      const versionId = await resolveAssetVersionId(
-        configWithSnapshot.end_image_url
-      );
-      if (versionId) {
-        versionSnapshot.end_image_version_id = versionId;
+    if (configWithSnapshot.reference_image_urls && Array.isArray(configWithSnapshot.reference_image_urls)) {
+      for (const imageUrl of configWithSnapshot.reference_image_urls) {
+        if (imageUrl && !imageUrl.startsWith("http")) {
+          const versionId = await resolveAssetVersionId(imageUrl);
+          if (versionId) {
+            referenceImageVersionIds.push(versionId);
+          }
+          // 提取参考图 asset ID（用于重新生成时加载原始图）
+          sourceAssetIds.push(imageUrl);
+        }
       }
     }
 
     // 将版本快照注入 config
-    if (Object.keys(versionSnapshot).length > 0) {
+    if (referenceImageVersionIds.length > 0) {
+      versionSnapshot.reference_image_version_ids = referenceImageVersionIds;
       configWithSnapshot._versionSnapshot = versionSnapshot;
-    }
-
-    // 提取首尾帧 asset ID（用于重新生成时加载原始帧）
-    const sourceAssetIds: string[] = [];
-    if (
-      configWithSnapshot.start_image_url &&
-      !configWithSnapshot.start_image_url.startsWith("http")
-    ) {
-      sourceAssetIds.push(configWithSnapshot.start_image_url);
-    }
-    if (
-      configWithSnapshot.end_image_url &&
-      !configWithSnapshot.end_image_url.startsWith("http")
-    ) {
-      sourceAssetIds.push(configWithSnapshot.end_image_url);
     }
 
     // 3. 创建 videoData 记录（版本化结构，包含生成信息和版本快照）
