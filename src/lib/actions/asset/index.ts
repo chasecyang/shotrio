@@ -77,3 +77,6 @@ export { uploadMediaAsset } from "./upload-media-asset";
 
 // 文本上传操作
 export { uploadTextAsset } from "./upload-text-asset";
+
+// 画面截取
+export { captureVideoFrame } from "./capture-video-frame";

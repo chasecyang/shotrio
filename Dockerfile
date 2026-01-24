@@ -48,16 +48,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# 创建非 root 用户以提高安全性
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# 一次性完成系统配置（减少层数，提升构建速度）
+RUN apk add --no-cache ffmpeg && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    mkdir .next && \
+    chown nextjs:nodejs .next
 
 # 复制 public 文件夹 (静态资源)
 COPY --from=builder /app/public ./public
-
-# 设置 .next 目录权限
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
 
 # 复制 standalone 输出
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -71,9 +70,9 @@ USER nextjs
 # 暴露端口
 EXPOSE 3000
 
-# 设置环境变量
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+# 设置环境变量（合并减少层数）
+ENV PORT=3000 \
+    HOSTNAME=0.0.0.0
 
 # 启动应用
 CMD ["node", "server.js"]

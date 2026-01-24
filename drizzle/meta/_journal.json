@@ -78,6 +78,13 @@
       "when": 1769239942703,
       "tag": "0010_chubby_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1769261541361,
+      "tag": "0011_dry_quicksilver",
+      "breakpoints": true
     }
   ]
 }

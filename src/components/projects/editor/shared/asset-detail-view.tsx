@@ -26,6 +26,7 @@ import {
   Pencil,
   Loader2,
   Music,
+  Camera,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { toast } from "sonner";
 import { updateAsset, getProjectAssets } from "@/lib/actions/asset";
 import { TagEditor } from "./tag-editor";
 import { AssetVersionPanel } from "./asset-version-panel";
+import { FrameCaptureDialog } from "./frame-capture-dialog";
 import { useTranslations } from "next-intl";
 import { getErrorMessageKey } from "@/lib/utils/error-sanitizer";
 
@@ -102,6 +104,9 @@ export function AssetDetailView({
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // 画面截取状态
+  const [showCaptureDialog, setShowCaptureDialog] = useState(false);
 
   // 复制状态
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -545,6 +550,7 @@ export function AssetDetailView({
               <video
                 ref={videoRef}
                 src={asset.mediaUrl || undefined}
+                crossOrigin="anonymous"
                 className="max-w-full max-h-full object-contain"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
@@ -615,6 +621,17 @@ export function AssetDetailView({
                   </div>
 
                   <div className="flex-1" />
+
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-9 gap-1.5 px-3 bg-primary/90 hover:bg-primary text-primary-foreground shadow-sm"
+                    onClick={() => setShowCaptureDialog(true)}
+                    title="截取当前画面并保存为图片素材"
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span className="text-xs font-medium">截取画面</span>
+                  </Button>
 
                   <Button
                     size="sm"
@@ -1045,6 +1062,24 @@ export function AssetDetailView({
           </ScrollArea>
         </div>
       </div>
+
+      {/* 画面截取对话框 */}
+      {isVideo && (
+        <FrameCaptureDialog
+          open={showCaptureDialog}
+          onOpenChange={setShowCaptureDialog}
+          videoRef={videoRef}
+          currentTime={currentTime}
+          videoAssetId={asset.id}
+          videoAssetName={asset.name}
+          videoUrl={asset.mediaUrl || ""}
+          projectId={asset.projectId}
+          onSuccess={() => {
+            toast.success("画面截取成功");
+            setShowCaptureDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 }

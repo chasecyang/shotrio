@@ -14,7 +14,7 @@ export type AssetTypeEnum = "image" | "video" | "text" | "audio";
 /**
  * 资产来源类型
  */
-export type AssetSourceType = "generated" | "uploaded";
+export type AssetSourceType = "generated" | "uploaded" | "extracted";
 
 /**
  * 资产筛选状态
@@ -187,6 +187,16 @@ export interface VideoGenerationConfig {
 }
 
 /**
+ * 提取信息（用于从视频截取的画面）
+ */
+export interface ExtractionInfo {
+  sourceVideoAssetId: string;  // 源视频素材 ID
+  timestamp: number;           // 截取时间戳（秒）
+  extractedAt: string;         // 提取时间（ISO 格式）
+  extractionMethod: "canvas" | "ffmpeg";  // 提取方法
+}
+
+/**
  * 完整的meta数据结构
  */
 export interface AssetMeta {
@@ -197,6 +207,7 @@ export interface AssetMeta {
   audio?: AudioMeta;
   editParams?: EditParams;
   generationParams?: GenerationParams;  // 生成参数
+  extractionInfo?: ExtractionInfo;      // 提取信息
   custom?: Record<string, unknown>;
 }
 

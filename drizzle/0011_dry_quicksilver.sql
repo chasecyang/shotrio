@@ -1,0 +1,1 @@
+ALTER TYPE "public"."asset_source_type" ADD VALUE 'extracted';
