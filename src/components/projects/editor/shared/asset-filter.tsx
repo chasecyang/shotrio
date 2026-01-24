@@ -2,74 +2,16 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   X,
   Search,
-  Image as ImageIcon,
-  Video,
-  FileText,
-  Music,
-  LayoutGrid,
 } from "lucide-react";
-import type { AssetTypeEnum } from "@/types/asset";
 import type { AssetSelectionStatus } from "@/types/asset";
 import { useTranslations } from "next-intl";
 
 export interface AssetFilterOptions {
   search?: string;
-  assetTypes: AssetTypeEnum[];
   selectionStatus?: AssetSelectionStatus[];
-}
-
-type AssetTypeOption = {
-  value: AssetTypeEnum | "all";
-  labelKey: "all" | "image" | "video" | "text" | "audio";
-  icon: typeof ImageIcon;
-};
-
-const assetTypeOptions: AssetTypeOption[] = [
-  { value: "all", labelKey: "all", icon: LayoutGrid },
-  { value: "image", labelKey: "image", icon: ImageIcon },
-  { value: "video", labelKey: "video", icon: Video },
-  { value: "text", labelKey: "text", icon: FileText },
-  { value: "audio", labelKey: "audio", icon: Music },
-];
-
-// 类型 Tab 组件
-interface AssetTypeTabsProps {
-  value: AssetTypeEnum[];
-  onChange: (types: AssetTypeEnum[]) => void;
-}
-
-export function AssetTypeTabs({ value, onChange }: AssetTypeTabsProps) {
-  const t = useTranslations("editor.assetFilter");
-  const currentType: AssetTypeEnum | "all" =
-    value.length === 1 ? value[0] : "all";
-
-  const handleTypeChange = (type: string) => {
-    if (type === "all") {
-      onChange([]);
-    } else {
-      onChange([type as AssetTypeEnum]);
-    }
-  };
-
-  return (
-    <Tabs value={currentType} onValueChange={handleTypeChange}>
-      <TabsList>
-        {assetTypeOptions.map((option) => {
-          const Icon = option.icon;
-          return (
-            <TabsTrigger key={option.value} value={option.value}>
-              <Icon className="h-4 w-4" />
-              {t(option.labelKey)}
-            </TabsTrigger>
-          );
-        })}
-      </TabsList>
-    </Tabs>
-  );
 }
 
 // 搜索组件

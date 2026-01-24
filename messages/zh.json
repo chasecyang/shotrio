@@ -1098,6 +1098,7 @@
     },
     "assetGallery": {
       "assetsCount": "{count} 个素材",
+      "groupDeprecated": "废弃",
       "noAssets": "暂无素材",
       "noMatchingAssets": "没有符合条件的素材",
       "tryAdjustFilter": "尝试调整筛选条件查看更多素材",

@@ -1097,6 +1097,7 @@
     },
     "assetGallery": {
       "assetsCount": "{count} assets",
+      "groupDeprecated": "Deprecated",
       "noAssets": "No assets",
       "noMatchingAssets": "No matching assets",
       "tryAdjustFilter": "Try adjusting your filters to see more assets",

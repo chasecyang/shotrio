@@ -30,82 +30,76 @@ import {
 import { AssetDetailView } from "./shared/asset-detail-view";
 import {
   AssetFilterOptions,
-  AssetTypeTabs,
   AssetSearch,
 } from "./shared/asset-filter";
 import { AssetSelectionTabs } from "./shared/asset-selection-filter";
-import { UNCATEGORIZED_GROUP } from "@/lib/constants/asset-tags";
 import { useTranslations } from "next-intl";
 
 // localStorage keys
-const getAssetTypeFilterKey = (projectId: string) => `editor:project:${projectId}:assetTypeFilter`;
 const getSelectionStatusFilterKey = (projectId: string) => `editor:project:${projectId}:selectionStatusFilter`;
-const VALID_ASSET_TYPES: AssetTypeEnum[] = ["image", "video", "text", "audio"];
 
 const DEFAULT_FILTER: AssetFilterOptions = {
-  assetTypes: [],
   selectionStatus: [],
 };
 
-// 统计所有标签出现次数
-function countTagOccurrences(
-  assets: AssetWithFullData[]
-): Map<string, number> {
-  const tagCounts = new Map<string, number>();
+// 定义分组顺序和标签
+const ASSET_TYPE_GROUPS = [
+  { type: "image" as AssetTypeEnum, labelKey: "image" },
+  { type: "video" as AssetTypeEnum, labelKey: "video" },
+  { type: "text" as AssetTypeEnum, labelKey: "text" },
+  { type: "audio" as AssetTypeEnum, labelKey: "audio" },
+] as const;
 
-  assets.forEach((asset) => {
-    const tags = asset.tags?.map((t) => t.tagValue) || [];
-    tags.forEach((tag) => {
-      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-    });
-  });
+const DEPRECATED_GROUP = { type: "deprecated" as const, labelKey: "deprecated" };
 
-  return tagCounts;
-}
-
-// 按标签分组素材
-function groupAssetsByTag(
+/**
+ * 按素材类型分组
+ * @param assets - 筛选后的素材列表
+ * @param showDeprecated - 是否显示废弃分组（当状态筛选为"全部"时）
+ * @returns 按类型分组的素材数组
+ */
+function groupAssetsByType(
   assets: AssetWithFullData[],
-  tagCounts: Map<string, number>
-): Map<string, AssetWithFullData[]> {
-  const groups = new Map<string, AssetWithFullData[]>();
+  showDeprecated: boolean
+): [string, AssetWithFullData[]][] {
+  // 初始化所有分组为空数组
+  const groupsMap = new Map<string, AssetWithFullData[]>();
 
+  ASSET_TYPE_GROUPS.forEach(({ type }) => {
+    groupsMap.set(type, []);
+  });
+
+  if (showDeprecated) {
+    groupsMap.set(DEPRECATED_GROUP.type, []);
+  }
+
+  // 分配素材到各个分组
   assets.forEach((asset) => {
-    const tags = asset.tags?.map((t) => t.tagValue) || [];
-
-    if (tags.length === 0) {
-      const group = groups.get(UNCATEGORIZED_GROUP) || [];
+    // 如果显示废弃分组且素材状态为废弃，放入废弃分组
+    if (showDeprecated && asset.selectionStatus === "rejected") {
+      const group = groupsMap.get(DEPRECATED_GROUP.type) || [];
       group.push(asset);
-      groups.set(UNCATEGORIZED_GROUP, group);
+      groupsMap.set(DEPRECATED_GROUP.type, group);
     } else {
-      // 按标签出现次数排序，取出现最多的标签作为主标签
-      const sortedTags = [...tags].sort((a, b) => {
-        const countA = tagCounts.get(a) || 0;
-        const countB = tagCounts.get(b) || 0;
-        return countB - countA;
-      });
-      const primaryTag = sortedTags[0];
-
-      const group = groups.get(primaryTag) || [];
+      // 否则按类型分组
+      const group = groupsMap.get(asset.assetType) || [];
       group.push(asset);
-      groups.set(primaryTag, group);
+      groupsMap.set(asset.assetType, group);
     }
   });
 
-  return groups;
-}
+  // 按预定义顺序返回分组
+  const result: [string, AssetWithFullData[]][] = [];
 
-// 对分组按素材数量排序
-function sortGroups(
-  groups: Map<string, AssetWithFullData[]>
-): [string, AssetWithFullData[]][] {
-  return Array.from(groups.entries()).sort(
-    ([tagA, assetsA], [tagB, assetsB]) => {
-      if (tagA === UNCATEGORIZED_GROUP) return 1;
-      if (tagB === UNCATEGORIZED_GROUP) return -1;
-      return assetsB.length - assetsA.length;
-    }
-  );
+  ASSET_TYPE_GROUPS.forEach(({ type }) => {
+    result.push([type, groupsMap.get(type) || []]);
+  });
+
+  if (showDeprecated) {
+    result.push([DEPRECATED_GROUP.type, groupsMap.get(DEPRECATED_GROUP.type) || []]);
+  }
+
+  return result;
 }
 
 export function AssetGalleryPanel() {
@@ -117,6 +111,7 @@ export function AssetGalleryPanel() {
   const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
   const t = useTranslations("editor.assetGallery");
   const tCommon = useTranslations("common");
+  const tAssetFilter = useTranslations("editor.assetFilter");
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -132,19 +127,6 @@ export function AssetGalleryPanel() {
     DownloadProgress | undefined
   >(undefined);
   const [initialLoadStarted, setInitialLoadStarted] = useState(false);
-  const getSavedAssetTypes = (projectId?: string) => {
-    if (!projectId || typeof window === "undefined") return [];
-    try {
-      const saved = localStorage.getItem(getAssetTypeFilterKey(projectId));
-      if (!saved) return [];
-      const parsed = JSON.parse(saved) as string[];
-      return parsed.filter((t): t is AssetTypeEnum =>
-        VALID_ASSET_TYPES.includes(t as AssetTypeEnum)
-      );
-    } catch {
-      return [];
-    }
-  };
 
   const getSavedSelectionStatus = (projectId: string | undefined): AssetSelectionStatus[] => {
     if (!projectId) return [];
@@ -165,11 +147,10 @@ export function AssetGalleryPanel() {
 
   const [filterOptions, setFilterOptions] = useState<AssetFilterOptions>(() => ({
     ...DEFAULT_FILTER,
-    assetTypes: getSavedAssetTypes(project?.id),
     selectionStatus: getSavedSelectionStatus(project?.id),
   }));
 
-  // 切换项目时恢复素材类型筛选和筛选状态
+  // 切换项目时恢复筛选状态
   const lastProjectIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!project?.id) return;
@@ -177,18 +158,9 @@ export function AssetGalleryPanel() {
     lastProjectIdRef.current = project.id;
     setFilterOptions(prev => ({
       ...prev,
-      assetTypes: getSavedAssetTypes(project.id),
       selectionStatus: getSavedSelectionStatus(project.id),
     }));
   }, [project?.id]);
-
-  // 保存素材类型筛选到 localStorage
-  useEffect(() => {
-    if (!project?.id) return;
-    try {
-      localStorage.setItem(getAssetTypeFilterKey(project.id), JSON.stringify(filterOptions.assetTypes));
-    } catch {}
-  }, [project?.id, filterOptions.assetTypes]);
 
   // 保存筛选状态到 localStorage
   useEffect(() => {
@@ -235,14 +207,7 @@ export function AssetGalleryPanel() {
   const filteredAssets = useMemo(() => {
     let filtered = allAssets;
 
-    // Filter by asset type
-    if (filterOptions.assetTypes.length > 0) {
-      filtered = filtered.filter((asset) =>
-        filterOptions.assetTypes.includes(asset.assetType)
-      );
-    }
-
-    // Filter by selection status
+    // 仅按筛选状态过滤（类型筛选已移除）
     if (filterOptions.selectionStatus && filterOptions.selectionStatus.length > 0) {
       filtered = filtered.filter((asset) =>
         filterOptions.selectionStatus!.includes(asset.selectionStatus)
@@ -250,14 +215,14 @@ export function AssetGalleryPanel() {
     }
 
     return filtered;
-  }, [allAssets, filterOptions.assetTypes, filterOptions.selectionStatus]);
+  }, [allAssets, filterOptions.selectionStatus]);
 
-  // 分组后的素材
+  // 按类型分组素材
   const groupedAssets = useMemo(() => {
-    const tagCounts = countTagOccurrences(filteredAssets);
-    const groups = groupAssetsByTag(filteredAssets, tagCounts);
-    return sortGroups(groups);
-  }, [filteredAssets]);
+    // 仅当筛选状态为空（显示"全部"）时显示废弃分组
+    const showDeprecated = !filterOptions.selectionStatus || filterOptions.selectionStatus.length === 0;
+    return groupAssetsByType(filteredAssets, showDeprecated);
+  }, [filteredAssets, filterOptions.selectionStatus]);
 
   // 处理素材点击
   const handleAssetClick = (asset: AssetWithFullData) => {
@@ -513,12 +478,12 @@ export function AssetGalleryPanel() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="shrink-0 px-4 py-3 border-b space-y-2">
-        {/* 第一行：类型Tab + 刷新按钮 */}
+        {/* 第一行：筛选状态Tab + 操作按钮 */}
         <div className="flex items-center justify-between gap-3">
-          <AssetTypeTabs
-            value={filterOptions.assetTypes}
-            onChange={(types) =>
-              setFilterOptions({ ...filterOptions, assetTypes: types })
+          <AssetSelectionTabs
+            value={filterOptions.selectionStatus || []}
+            onChange={(statuses) =>
+              setFilterOptions({ ...filterOptions, selectionStatus: statuses })
             }
           />
           <div className="flex items-center gap-1">
@@ -546,16 +511,7 @@ export function AssetGalleryPanel() {
             </Button>
           </div>
         </div>
-        {/* 第二行：筛选状态Tab */}
-        <div className="flex items-center gap-2">
-          <AssetSelectionTabs
-            value={filterOptions.selectionStatus || []}
-            onChange={(statuses) =>
-              setFilterOptions({ ...filterOptions, selectionStatus: statuses })
-            }
-          />
-        </div>
-        {/* 第三行：搜索框 + 素材计数 */}
+        {/* 第二行：搜索框 + 素材计数 */}
         <div className="flex items-center gap-2">
           <AssetSearch
             search={filterOptions.search}
@@ -624,20 +580,27 @@ export function AssetGalleryPanel() {
           ) : (
             // 分组视图（当前逻辑下始终启用）
             <div className="space-y-2">
-              {groupedAssets.map(([groupName, assets]) => (
-                <AssetGroup
-                  key={groupName}
-                  title={groupName}
-                  count={assets.length}
-                  assets={assets}
-                  selectedAssetIds={selectedAssetIds}
-                  onAssetClick={handleAssetClick}
-                  onAssetDelete={handleDelete}
-                  onSelectChange={handleSelectChange}
-                  onReference={handleReference}
-                  onSelectionStatusChange={handleSelectionStatusChange}
-                />
-              ))}
+              {groupedAssets.map(([groupType, assets]) => {
+                // 获取翻译后的分组名称
+                const groupTitle = groupType === "deprecated"
+                  ? t("groupDeprecated")
+                  : tAssetFilter(groupType);
+
+                return (
+                  <AssetGroup
+                    key={groupType}
+                    title={groupTitle}
+                    count={assets.length}
+                    assets={assets}
+                    selectedAssetIds={selectedAssetIds}
+                    onAssetClick={handleAssetClick}
+                    onAssetDelete={handleDelete}
+                    onSelectChange={handleSelectChange}
+                    onReference={handleReference}
+                    onSelectionStatusChange={handleSelectionStatusChange}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
