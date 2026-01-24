@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AssetDetailView } from "./shared/asset-detail-view";
+import { RegenerateConfirmDialog } from "./shared/regenerate-confirm-dialog";
 import {
   AssetFilterOptions,
   AssetSearch,
@@ -127,6 +128,14 @@ export function AssetGalleryPanel() {
     DownloadProgress | undefined
   >(undefined);
   const [initialLoadStarted, setInitialLoadStarted] = useState(false);
+
+  // 重新生成相关状态
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [assetToRegenerate, setAssetToRegenerate] = useState<AssetWithFullData | null>(null);
+  const [regenerationCost, setRegenerationCost] = useState(0);
+  const [regenerationDetails, setRegenerationDetails] = useState("");
+  const [currentBalance, setCurrentBalance] = useState(0);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const getSavedSelectionStatus = (projectId: string | undefined): AssetSelectionStatus[] => {
     if (!projectId) return [];
@@ -294,6 +303,64 @@ export function AssetGalleryPanel() {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
       setAssetToDelete(null);
+    }
+  };
+
+  // 重新生成素材
+  const handleRegenerate = async (asset: AssetWithFullData) => {
+    try {
+      // 1. 估算成本
+      const { estimateRegenerationCost } = await import("@/lib/actions/credits/estimate-regeneration");
+      const costResult = await estimateRegenerationCost(asset.id);
+
+      if (!costResult.success) {
+        toast.error(costResult.error || "估算成本失败");
+        return;
+      }
+
+      // 2. 获取当前余额
+      const { getCreditBalance } = await import("@/lib/actions/credits/balance");
+      const balanceResult = await getCreditBalance();
+
+      if (!balanceResult.success || !balanceResult.balance) {
+        toast.error(balanceResult.error || "获取余额失败");
+        return;
+      }
+
+      // 3. 显示确认对话框
+      setAssetToRegenerate(asset);
+      setRegenerationCost(costResult.cost || 0);
+      setRegenerationDetails(costResult.details || "");
+      setCurrentBalance(balanceResult.balance.balance);
+      setRegenerateDialogOpen(true);
+    } catch (error) {
+      console.error("准备重新生成失败:", error);
+      toast.error("准备重新生成失败");
+    }
+  };
+
+  // 确认重新生成
+  const handleConfirmRegenerate = async () => {
+    if (!assetToRegenerate) return;
+
+    setIsRegenerating(true);
+    try {
+      const { regenerateAsset } = await import("@/lib/actions/asset/regenerate-asset");
+      const result = await regenerateAsset(assetToRegenerate.id);
+
+      if (result.success) {
+        toast.success("重新生成已开始，请稍候...");
+        setRegenerateDialogOpen(false);
+        setAssetToRegenerate(null);
+        await refreshAssets();
+      } else {
+        toast.error(result.error || "重新生成失败");
+      }
+    } catch (error) {
+      console.error("重新生成失败:", error);
+      toast.error("重新生成失败");
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -472,6 +539,7 @@ export function AssetGalleryPanel() {
           onRetry={handleRetry}
           onReference={handleReference}
           onEdit={handleEdit}
+          onRegenerate={handleRegenerate}
           onAssetUpdated={handleAssetUpdated}
         />
       </div>
@@ -602,6 +670,7 @@ export function AssetGalleryPanel() {
                     onSelectChange={handleSelectChange}
                     onReference={handleReference}
                     onEdit={handleEdit}
+                    onRegenerate={handleRegenerate}
                     onSelectionStatusChange={handleSelectionStatusChange}
                   />
                 );
@@ -643,6 +712,18 @@ export function AssetGalleryPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 重新生成确认对话框 */}
+      <RegenerateConfirmDialog
+        open={regenerateDialogOpen}
+        onOpenChange={setRegenerateDialogOpen}
+        asset={assetToRegenerate}
+        creditCost={regenerationCost}
+        costDetails={regenerationDetails}
+        currentBalance={currentBalance}
+        onConfirm={handleConfirmRegenerate}
+        isRegenerating={isRegenerating}
+      />
 
       {/* 悬浮操作栏 */}
       {selectedAssetIds.size > 0 && (

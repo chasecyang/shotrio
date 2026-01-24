@@ -1,0 +1,2 @@
+ALTER TABLE "job" ADD COLUMN "audio_data_id" text;--> statement-breakpoint
+ALTER TABLE "job" ADD CONSTRAINT "job_audio_data_id_audio_data_id_fk" FOREIGN KEY ("audio_data_id") REFERENCES "public"."audio_data"("id") ON DELETE cascade ON UPDATE no action;

@@ -222,8 +222,9 @@ export const textData = pgTable("text_data", {
 
 // 2.5 音频数据表 (Audio Data)
 export const audioData = pgTable("audio_data", {
+  id: text("id").primaryKey(),
   assetId: text("asset_id")
-    .primaryKey()
+    .notNull()
     .references(() => asset.id, { onDelete: "cascade" }),
 
   audioUrl: text("audio_url"), // 音频 URL
@@ -242,6 +243,10 @@ export const audioData = pgTable("audio_data", {
 
   // 波形数据（用于时间轴显示）
   waveformData: text("waveform_data"), // JSON: 波形采样点数组 number[]
+
+  // 版本控制
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 2.6 资产标签表 (Asset Tag) - 多对多标签系统
@@ -276,6 +281,7 @@ export const job: any = pgTable("job", {
   // 关联的版本ID（新增，用于精确追踪哪个版本的任务）
   imageDataId: text("image_data_id").references(() => imageData.id, { onDelete: "cascade" }),
   videoDataId: text("video_data_id").references(() => videoData.id, { onDelete: "cascade" }),
+  audioDataId: text("audio_data_id").references(() => audioData.id, { onDelete: "cascade" }),
 
   // 进度信息
   progress: integer("progress").default(0).notNull(), // 0-100
@@ -340,8 +346,8 @@ export const assetRelations = relations(asset, ({ one, many }) => ({
   // 扩展表关系 - imageData 和 videoData 改为 many 支持版本化
   imageDataList: many(imageData), // 多版本支持
   videoDataList: many(videoData), // 多版本支持
+  audioDataList: many(audioData), // 多版本支持
   textData: one(textData),
-  audioData: one(audioData),
 }));
 
 export const imageDataRelations = relations(imageData, ({ one, many }) => ({
@@ -402,6 +408,10 @@ export const jobRelations = relations(job, ({ one, many }) => ({
   videoData: one(videoData, {
     fields: [job.videoDataId],
     references: [videoData.id],
+  }),
+  audioData: one(audioData, {
+    fields: [job.audioDataId],
+    references: [audioData.id],
   }),
 }));
 

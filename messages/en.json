@@ -1125,6 +1125,7 @@
       "generateBased": "Generate based on this",
       "reference": "Reference",
       "edit": "Edit",
+      "regenerate": "Regenerate",
       "delete": "Delete",
       "generatingNewVersion": "Generating new version",
       "markAsSelected": "Mark as Selected",
@@ -1135,6 +1136,17 @@
       "selected": "Selected",
       "rejected": "Rejected",
       "unrated": "Unrated"
+    },
+    "regenerateDialog": {
+      "title": "Confirm Regeneration",
+      "description": "This will regenerate the asset with the same parameters, creating a new version",
+      "creditCost": "Credit Cost",
+      "costDetails": "Cost Details",
+      "currentBalance": "Current Balance",
+      "insufficientCredits": "Insufficient Credits",
+      "purchaseCredits": "Purchase Credits",
+      "confirm": "Confirm Generation",
+      "cancel": "Cancel"
     },
     "projectSettings": "Project Settings",
     "expandAgent": "Expand Agent Chat",

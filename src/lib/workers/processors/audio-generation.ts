@@ -59,7 +59,7 @@ async function processAudioGenerationInternal(
     where: eq(asset.id, assetId),
     with: {
       tags: true,
-      audioData: true,
+      audioDataList: true,
     },
   });
 
@@ -76,6 +76,26 @@ async function processAudioGenerationInternal(
     if (!hasAccess) {
       throw new Error("无权访问该项目");
     }
+  }
+
+  // 获取目标 audioData 版本
+  // 如果 job 指定了 audioDataId，使用该版本；否则使用 active 版本
+  let targetAudioData: (typeof assetData.audioDataList)[0] | undefined;
+  const audioDataId = jobData.audioDataId;
+
+  if (audioDataId) {
+    // 使用指定的版本
+    targetAudioData = assetData.audioDataList.find((ad: any) => ad.id === audioDataId);
+    if (!targetAudioData) {
+      throw new Error(`AudioData ${audioDataId} 不存在`);
+    }
+  } else {
+    // 使用 active 版本（向后兼容）
+    targetAudioData = assetData.audioDataList.find((ad: any) => ad.isActive);
+  }
+
+  if (!targetAudioData) {
+    throw new Error("未找到音频数据版本");
   }
 
   // 解析 meta 获取音频配置
@@ -96,8 +116,7 @@ async function processAudioGenerationInternal(
   const purpose: AudioPurpose = audioMeta.purpose;
 
   // 从 audioData 读取 prompt
-  const existingAudioData = assetData.audioData;
-  const prompt = existingAudioData?.prompt || audioMeta.description;
+  const prompt = targetAudioData.prompt || audioMeta.description;
 
   if (!prompt) {
     throw new Error("缺少音频描述（prompt）");
@@ -181,8 +200,8 @@ async function processAudioGenerationInternal(
       const result = await generateSoundEffect({
         text: prompt,
         loop: soundEffectConfig.isLoopable,
-        duration_seconds: existingAudioData?.duration
-          ? existingAudioData.duration / 1000
+        duration_seconds: targetAudioData?.duration
+          ? targetAudioData.duration / 1000
           : undefined,
         prompt_influence: 0.5,
         output_format: "mp3_44100_128",
@@ -326,7 +345,7 @@ async function processAudioGenerationInternal(
       workerToken
     );
 
-    // 步骤5: 更新或创建 audioData 记录
+    // 步骤5: 更新 audioData 记录
     // 根据类型选择模型名称
     let modelUsed: string;
     if (purpose === "sound_effect") {
@@ -337,28 +356,23 @@ async function processAudioGenerationInternal(
       modelUsed = "minimax/speech-2.6-turbo";
     }
 
-    if (existingAudioData) {
-      // 更新现有记录
-      await db
-        .update(audioData)
-        .set({
-          audioUrl: uploadResult.url,
-          duration: duration,
-          format: format,
-          modelUsed: modelUsed,
-        })
-        .where(eq(audioData.assetId, assetId));
-    } else {
-      // 创建新记录
-      await db.insert(audioData).values({
-        assetId: assetId,
+    // 先将所有版本设为非 active
+    await db
+      .update(audioData)
+      .set({ isActive: false })
+      .where(eq(audioData.assetId, assetId));
+
+    // 更新目标版本并设为 active
+    await db
+      .update(audioData)
+      .set({
         audioUrl: uploadResult.url,
         duration: duration,
         format: format,
-        prompt: prompt,
         modelUsed: modelUsed,
-      });
-    }
+        isActive: true,
+      })
+      .where(eq(audioData.id, targetAudioData.id));
 
     // 更新 asset 的 updatedAt
     await db

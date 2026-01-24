@@ -22,6 +22,7 @@ export interface Job {
   assetId: string | null; // 关联的资产ID（保留用于向后兼容）
   imageDataId: string | null; // 关联的图片版本ID
   videoDataId: string | null; // 关联的视频版本ID
+  audioDataId: string | null; // 关联的音频版本ID
   progress: number; // 0-100
   totalSteps: number | null;
   currentStep: number;
@@ -107,6 +108,7 @@ export interface CreateJobParams {
   assetId?: string; // 关联的资产ID（可选，保留用于向后兼容）
   imageDataId?: string; // 关联的图片版本ID
   videoDataId?: string; // 关联的视频版本ID
+  audioDataId?: string; // 关联的音频版本ID
   inputData: unknown;
   totalSteps?: number;
 }

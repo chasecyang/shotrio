@@ -64,6 +64,20 @@
       "when": 1769229126290,
       "tag": "0008_curious_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769237412779,
+      "tag": "0009_large_silhouette",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769239942703,
+      "tag": "0010_chubby_lionheart",
+      "breakpoints": true
     }
   ]
 }

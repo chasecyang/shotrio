@@ -1126,6 +1126,7 @@
       "generateBased": "基于此生成新素材",
       "reference": "引用",
       "edit": "编辑",
+      "regenerate": "重新生成",
       "delete": "删除",
       "generatingNewVersion": "正在生成新版本",
       "markAsSelected": "标记为精选",
@@ -1136,6 +1137,17 @@
       "selected": "精选",
       "rejected": "废弃",
       "unrated": "未筛选"
+    },
+    "regenerateDialog": {
+      "title": "确认重新生成",
+      "description": "将使用相同的参数重新生成此素材，这将创建一个新版本",
+      "creditCost": "积分消耗",
+      "costDetails": "费用明细",
+      "currentBalance": "当前余额",
+      "insufficientCredits": "积分不足",
+      "purchaseCredits": "购买积分",
+      "confirm": "确认生成",
+      "cancel": "取消"
     },
     "projectSettings": "项目设置",
     "expandAgent": "展开 Agent 对话",

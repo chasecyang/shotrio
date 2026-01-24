@@ -48,6 +48,7 @@ interface AssetDetailViewProps {
   onRetry?: (jobId: string) => Promise<void>;
   onReference?: (asset: AssetWithFullData) => void;
   onEdit?: (asset: AssetWithFullData) => void;
+  onRegenerate?: (asset: AssetWithFullData) => void;
   onAssetUpdated: () => void;
 }
 
@@ -61,6 +62,7 @@ export function AssetDetailView({
   onRetry,
   onReference,
   onEdit,
+  onRegenerate,
   onAssetUpdated,
 }: AssetDetailViewProps) {
   const t = useTranslations();
@@ -458,6 +460,18 @@ export function AssetDetailView({
           >
             <Pencil className="h-4 w-4" />
             {t("editor.assetCard.edit")}
+          </Button>
+        )}
+        {/* 重新生成按钮 */}
+        {!isFailed && !isGenerating && onRegenerate && asset.sourceType === "generated" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRegenerate(asset)}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t("editor.assetCard.regenerate")}
           </Button>
         )}
         {/* 下载按钮 */}

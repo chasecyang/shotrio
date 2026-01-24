@@ -36,6 +36,7 @@ interface AssetCardProps {
   onSelectChange?: (assetId: string, selected: boolean) => void;
   onReference?: (asset: AssetWithFullData) => void;
   onEdit?: (asset: AssetWithFullData) => void;
+  onRegenerate?: (asset: AssetWithFullData) => void;
   onSelectionStatusChange?: (asset: AssetWithFullData, status: AssetSelectionStatus) => void;
   job?: Job;
 }
@@ -48,6 +49,7 @@ export function AssetCard({
   onSelectChange,
   onReference,
   onEdit,
+  onRegenerate,
   onSelectionStatusChange,
   job,
 }: AssetCardProps) {
@@ -378,6 +380,27 @@ export function AssetCard({
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
                       {t("edit")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {/* 重新生成按钮 */}
+                {onRegenerate && asset.sourceType === "generated" && !isGenerating && !isFailed && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 bg-background/20 hover:bg-background/30 text-foreground backdrop-blur-sm transition-all hover:scale-105"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRegenerate(asset);
+                        }}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {t("regenerate")}
                     </TooltipContent>
                   </Tooltip>
                 )}

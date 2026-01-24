@@ -98,9 +98,11 @@ export async function createAssetInternal(
           });
         }
         break;
-      case "audio":
+      case "audio": {
         if (input.audioData) {
+          const audioDataId = randomUUID();
           await db.insert(audioData).values({
+            id: audioDataId,
             assetId,
             audioUrl: input.audioData.audioUrl ?? null,
             duration: input.audioData.duration ?? null,
@@ -113,9 +115,11 @@ export async function createAssetInternal(
             modelUsed: input.audioData.modelUsed ?? null,
             generationConfig: input.audioData.generationConfig ?? null,
             sourceAssetIds: input.audioData.sourceAssetIds ?? null,
+            isActive: true,
           });
         }
         break;
+      }
     }
 
     // 4. 插入标签

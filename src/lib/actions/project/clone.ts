@@ -156,7 +156,9 @@ export async function cloneTemplateProject(templateProjectId: string): Promise<{
         }
         case "audio": {
           if (sourceAsset.audioData) {
+            const audioDataId = randomUUID();
             await db.insert(audioData).values({
+              id: audioDataId,
               assetId: newAssetId,
               audioUrl: sourceAsset.audioData.audioUrl,
               duration: sourceAsset.audioData.duration,
@@ -169,6 +171,7 @@ export async function cloneTemplateProject(templateProjectId: string): Promise<{
               modelUsed: sourceAsset.audioData.modelUsed,
               generationConfig: sourceAsset.audioData.generationConfig,
               sourceAssetIds: sourceAsset.audioData.sourceAssetIds,
+              isActive: true,
             });
           }
           break;

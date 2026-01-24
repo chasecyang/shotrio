@@ -34,6 +34,7 @@ export async function createAudioAsset(data: {
 
   try {
     const assetId = randomUUID();
+    const audioDataId = randomUUID();
     const jobId = randomUUID();
 
     // 1. 创建 asset 基表记录
@@ -50,6 +51,7 @@ export async function createAudioAsset(data: {
 
     // 2. 创建 audioData 记录（包含生成信息，初始音频为空，worker 完成后更新）
     await db.insert(audioData).values({
+      id: audioDataId,
       assetId,
       audioUrl: null,
       duration: null,
