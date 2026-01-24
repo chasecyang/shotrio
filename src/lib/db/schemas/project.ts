@@ -19,6 +19,7 @@ export const assetTypeEnum = pgEnum("asset_type", ["image", "video", "text", "au
 export const assetSourceTypeEnum = pgEnum("asset_source_type", [
   "generated", // AI生成
   "uploaded",  // 用户上传
+  "extracted", // 从已有素材提取
 ]);
 
 // 资产筛选状态枚举
@@ -373,11 +374,12 @@ export const textDataRelations = relations(textData, ({ one }) => ({
   }),
 }));
 
-export const audioDataRelations = relations(audioData, ({ one }) => ({
+export const audioDataRelations = relations(audioData, ({ one, many }) => ({
   asset: one(asset, {
     fields: [audioData.assetId],
     references: [asset.id],
   }),
+  jobs: many(job), // 关联的生成任务
 }));
 
 export const assetTagRelations = relations(assetTag, ({ one }) => ({
