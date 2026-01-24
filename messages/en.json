@@ -277,6 +277,12 @@
       "uploadFailed": "File upload failed, please retry",
       "generationFailed": "Generation failed, please retry",
       "unknown": "Operation failed, please try again later"
+    },
+    "agent": {
+      "conversationNotFound": "Conversation not found or not associated with project",
+      "cannotLoadState": "Cannot load conversation state",
+      "noPendingOperation": "No pending operation",
+      "unknownTool": "Unknown tool"
     }
   },
   "sidebar": {
@@ -1253,6 +1259,166 @@
               "prompt": "Help me generate video clips based on the plot"
             }
           ]
+        }
+      },
+      "toolExecution": {
+        "status": {
+          "completed": "Completed",
+          "failed": "Failed",
+          "failedWithError": "Failed: {error}",
+          "rejected": "User rejected this operation",
+          "executing": "Executing...",
+          "awaitingConfirmation": "Awaiting user confirmation"
+        },
+        "displayNames": {
+          "generateImageAsset": "Generate Image Asset",
+          "generateVideoAsset": "Generate Video Asset",
+          "createTextAsset": "Create Text Asset",
+          "setProjectInfo": "Set Project Info"
+        }
+      },
+      "actionBar": {
+        "labels": {
+          "name": "Name",
+          "prompt": "Prompt",
+          "tags": "Tags",
+          "referenceImages": "Reference Images",
+          "title": "Title",
+          "duration": "Duration",
+          "aspectRatio": "Aspect Ratio",
+          "startFrame": "Start Frame",
+          "endFrame": "End Frame",
+          "content": "Content",
+          "description": "Description",
+          "artStyle": "Art Style",
+          "contentPreview": "Content Preview"
+        },
+        "units": {
+          "seconds": "s",
+          "images": "image(s)",
+          "imagesCount": "{count} image(s)"
+        },
+        "placeholders": {
+          "unnamed": "Unnamed",
+          "noContent": "*No content*"
+        },
+        "messages": {
+          "executing": "Executing...",
+          "processing": "Processing...",
+          "calculating": "Calculating credits, please wait...",
+          "loading": "Loading..."
+        },
+        "toasts": {
+          "operationConfirmed": "Operation confirmed, Agent is continuing...",
+          "operationRejected": "Operation rejected",
+          "feedbackSent": "Feedback sent, Agent is responding...",
+          "confirmFailed": "Failed to confirm operation",
+          "rejectFailed": "Failed to reject operation",
+          "feedbackFailed": "Failed to send feedback",
+          "insufficientCreditsAuto": "Insufficient credits, cannot auto-execute"
+        },
+        "errors": {
+          "parseAssetsFailed": "Failed to parse assets array",
+          "fetchStyleFailed": "Failed to fetch art style name",
+          "estimateFailed": "Failed to estimate credits"
+        }
+      },
+      "actionEditor": {
+        "labels": {
+          "loadingAssets": "Loading assets...",
+          "retry": "Retry",
+          "loadTimeout": "Load timeout, please retry",
+          "loadFailed": "Load failed",
+          "noAssets": "No available assets",
+          "addCustomTag": "Add custom tag...",
+          "quickAdd": "Quick add:",
+          "assetName": "Asset name",
+          "describeImage": "Describe the image you want to generate",
+          "describeVideo": "Describe video content and camera movement",
+          "videoTitle": "Video title",
+          "textAssetNameHint": "Text asset name, like 'Character bio', 'Act 1 script'",
+          "markdownSupport": "Supports Markdown syntax...",
+          "edit": "Edit",
+          "preview": "Preview"
+        },
+        "errors": {
+          "loadError": "Failed to load assets",
+          "cannotParseParams": "Cannot parse image generation parameters"
+        },
+        "durations": {
+          "10s": "10 seconds",
+          "15s": "15 seconds"
+        },
+        "aspectRatios": {
+          "16:9": "16:9 (Widescreen)",
+          "9:16": "9:16 (Portrait)"
+        },
+        "required": "*"
+      },
+      "floatingCard": {
+        "messages": {
+          "sendWillInterrupt": "Sending message will interrupt current output",
+          "editAsset": "Please help me edit image \"{name}\"",
+          "confirmDelete": "Confirm Deletion",
+          "confirmDeleteMessage": "Are you sure you want to delete this conversation? This action cannot be undone.",
+          "cancel": "Cancel",
+          "delete": "Delete",
+          "dragToSwitch": "Drag to switch position",
+          "newConversation": "New Conversation",
+          "noHistory": "No conversation history",
+          "collapse": "Collapse"
+        },
+        "toasts": {
+          "sendFailed": "Send failed",
+          "processHomepageFailed": "Failed to process homepage message",
+          "startConversationFailed": "Failed to start conversation",
+          "createConversationFailed": "Failed to create conversation",
+          "sendMessageFailed": "Failed to send message",
+          "generationStopped": "Generation stopped"
+        },
+        "time": {
+          "justNow": "just now",
+          "minutesAgo": "{minutes} min ago",
+          "hoursAgo": "{hours} hr ago",
+          "daysAgo": "{days} d ago"
+        }
+      },
+      "params": {
+        "keys": {
+          "episodeId": "Episode ID",
+          "projectId": "Project ID",
+          "videoId": "Video ID",
+          "videoIds": "Video List",
+          "assetId": "Asset ID",
+          "assetIds": "Asset List",
+          "sourceAssetIds": "Reference Images",
+          "prompt": "Prompt",
+          "name": "Name",
+          "tags": "Tags",
+          "reason": "Reason",
+          "description": "Description",
+          "visualPrompt": "Visual Prompt",
+          "stylePrompt": "Art Style",
+          "numImages": "Generation Count",
+          "mode": "Generation Mode",
+          "assetType": "Asset Type",
+          "autoGenerateImages": "Auto Generate Images",
+          "duration": "Duration",
+          "aspectRatio": "Aspect Ratio",
+          "limit": "Limit"
+        },
+        "values": {
+          "yes": "Yes",
+          "no": "No",
+          "empty": "Empty",
+          "none": "None",
+          "seconds": "{value}s",
+          "items": "{count} item(s)",
+          "videos": "{count} video(s)",
+          "assets": "{count} asset(s)",
+          "properties": "{count} propert(y/ies)",
+          "referenceImages": "{count} reference image(s)",
+          "hasReference": "Has reference"
         }
       }
     },

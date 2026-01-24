@@ -66,6 +66,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   isBottomMode = false,
 }: ApprovalActionBarProps) {
   const t = useTranslations();
+  const tAgent = useTranslations("editor.agent");
   const agent = useAgent();
   const editor = useEditor();
 
@@ -153,7 +154,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
       return assetsArray.map((asset: Record<string, unknown>) => {
         const prompt = asset.prompt || "-";
-        const name = asset.name || "未命名";
+        const name = asset.name || tAgent("actionBar.placeholders.unnamed");
         const tags = Array.isArray(asset.tags)
           ? asset.tags.join(", ")
           : (typeof asset.tags === "string" ? asset.tags : "-");
@@ -180,7 +181,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
         };
       });
     } catch (error) {
-      console.error("解析assets数组失败:", error);
+      console.error(tAgent("actionBar.errors.parseAssetsFailed"), error);
       return null;
     }
   }, [isGenerateAssets, parsedArgs.assets]);
@@ -226,7 +227,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       }
     }).catch((error) => {
       if (isActive) {
-        console.error("获取美术风格名称失败:", error);
+        console.error(tAgent("actionBar.errors.fetchStyleFailed"), error);
       }
     });
 
@@ -265,7 +266,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
           setCreditCost(result.creditCost);
         }
       } catch (error) {
-        console.error("估算积分失败:", error);
+        console.error(tAgent("actionBar.errors.estimateFailed"), error);
       } finally {
         if (isActive) {
           setIsEstimatingCredits(false);
@@ -325,7 +326,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       if (totalCost > 0) {
         if (currentBalance !== undefined) {
           if (totalCost > currentBalance) {
-            toast.warning("积分不足，无法自动执行");
+            toast.warning(tAgent("actionBar.toasts.insufficientCreditsAuto"));
             agent.setAutoAccept(false);
             return;
           }
@@ -340,7 +341,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
           autoBalanceCheckRef.current = { toolCallId, inFlight: false };
 
           if (!creditCheck.success || !creditCheck.hasEnough) {
-            toast.warning("积分不足，无法自动执行");
+            toast.warning(tAgent("actionBar.toasts.insufficientCreditsAuto"));
             agent.setAutoAccept(false);
             return;
           }
@@ -378,7 +379,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     if (!agent.state.currentConversationId || isConfirming) return;
 
     if (isEstimatingCredits || !creditCost) {
-      toast.info("正在计算积分，请稍候...");
+      toast.info(tAgent("actionBar.messages.calculating"));
       return;
     }
 
@@ -398,14 +399,14 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     setIsConfirming(true);
 
     try {
-      toast.success("操作已确认，Agent 正在继续...");
+      toast.success(tAgent("actionBar.toasts.operationConfirmed"));
       agent.setLoading(true);
       editor.clearActionEditor();
       await resumeConversation(agent.state.currentConversationId, true);
       setFeedbackText("");
     } catch (error) {
       console.error("确认操作失败:", error);
-      toast.error("确认操作失败");
+      toast.error(tAgent("actionBar.toasts.confirmFailed"));
       agent.setLoading(false);
     } finally {
       setIsConfirming(false);
@@ -430,12 +431,12 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       // 立即创建拒绝的 tool message（用于 UI 及时展示）
       addRejectionToolMessage(toolCallId);
 
-      toast.info("操作已拒绝");
+      toast.info(tAgent("actionBar.toasts.operationRejected"));
       editor.clearActionEditor();
       await resumeConversation(agent.state.currentConversationId, false);
     } catch (error) {
       console.error("拒绝操作失败:", error);
-      toast.error("拒绝操作失败");
+      toast.error(tAgent("actionBar.toasts.rejectFailed"));
     } finally {
       setFeedbackText("");
       setIsRejecting(false);
@@ -462,7 +463,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
         content: trimmedFeedback,
       });
 
-      toast.info("已发送反馈，Agent 正在回应...");
+      toast.info(tAgent("actionBar.toasts.feedbackSent"));
       agent.setLoading(true);
       editor.clearActionEditor();
       await resumeConversation(
@@ -476,7 +477,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       setFeedbackText("");
     } catch (error) {
       console.error("发送反馈失败:", error);
-      toast.error("发送反馈失败");
+      toast.error(tAgent("actionBar.toasts.feedbackFailed"));
       agent.setLoading(false);
     } finally {
       setIsRejecting(false);
@@ -500,13 +501,13 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
 
         setIsConfirming(true);
         try {
-          toast.success("操作已确认，Agent 正在继续...");
+          toast.success(tAgent("actionBar.toasts.operationConfirmed"));
           agent.setLoading(true);
           await resumeConversation(agent.state.currentConversationId, true, modifiedParams);
           setFeedbackText("");
         } catch (error) {
           console.error("确认操作失败:", error);
-          toast.error("确认操作失败");
+          toast.error(tAgent("actionBar.toasts.confirmFailed"));
           agent.setLoading(false);
         } finally {
           setIsConfirming(false);
@@ -550,13 +551,13 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     const name = approvalInfo.toolCall.function.name;
     switch (name) {
       case "generate_image_asset":
-        return "生成图片素材";
+        return tAgent("toolExecution.displayNames.generateImageAsset");
       case "generate_video_asset":
-        return "生成视频素材";
+        return tAgent("toolExecution.displayNames.generateVideoAsset");
       case "create_text_asset":
-        return "创建文本资产";
+        return tAgent("toolExecution.displayNames.createTextAsset");
       case "set_project_info":
-        return "设置项目信息";
+        return tAgent("toolExecution.displayNames.setProjectInfo");
       default:
         return approvalInfo.funcDef.displayName || name;
     }
@@ -620,19 +621,19 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                     <div className="space-y-1.5">
                       {asset.name && asset.name !== "-" && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">名称:</span>
+                          <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.name")}:</span>
                           <span className="text-xs text-foreground truncate">{asset.name}</span>
                         </div>
                       )}
                       {asset.prompt && asset.prompt !== "-" && (
                         <div className="flex items-start gap-2">
-                          <span className="text-xs font-medium text-muted-foreground shrink-0">提示词:</span>
+                          <span className="text-xs font-medium text-muted-foreground shrink-0">{tAgent("actionBar.labels.prompt")}:</span>
                           <span className="text-xs text-foreground break-words line-clamp-2">{asset.prompt}</span>
                         </div>
                       )}
                       {asset.tags && asset.tags !== "-" && (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">标签:</span>
+                          <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.tags")}:</span>
                           <span className="text-xs text-foreground truncate">{asset.tags}</span>
                         </div>
                       )}
@@ -640,8 +641,8 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs font-medium text-muted-foreground">参考图:</span>
-                            <span className="text-xs text-foreground">{asset.sourceAssetIds.length}张</span>
+                            <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.referenceImages")}:</span>
+                            <span className="text-xs text-foreground">{tAgent("actionBar.units.imagesCount", { count: asset.sourceAssetIds.length })}</span>
                           </div>
                           <AssetPreview assetIds={asset.sourceAssetIds} />
                         </div>
@@ -654,22 +655,22 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
               /* 生成视频：显示核心参数 */
               <div className="space-y-2">
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground">提示词:</span>
+                  <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.prompt")}:</span>
                   <p className="text-xs text-foreground break-words line-clamp-2">{videoGenerationParams.prompt}</p>
                 </div>
                 {videoGenerationParams.title && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">标题:</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.title")}:</span>
                     <span className="text-xs text-foreground">{videoGenerationParams.title}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">时长:</span>
-                    <span className="text-xs text-foreground">{videoGenerationParams.duration}秒</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.duration")}:</span>
+                    <span className="text-xs text-foreground">{videoGenerationParams.duration}{tAgent("actionBar.units.seconds")}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">宽高比:</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.aspectRatio")}:</span>
                     <span className="text-xs text-foreground">{videoGenerationParams.aspectRatio}</span>
                   </div>
                 </div>
@@ -677,7 +678,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">起始帧</span>
+                      <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.startFrame")}</span>
                     </div>
                     <AssetPreview assetIds={[videoGenerationParams.startImageUrl]} />
                   </div>
@@ -685,7 +686,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground">结束帧</span>
+                        <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.endFrame")}</span>
                       </div>
                       <AssetPreview assetIds={[videoGenerationParams.endImageUrl]} />
                     </div>
@@ -697,10 +698,10 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-muted-foreground">名称:</span>
-                  <span className="text-xs text-foreground">{parsedArgs.name as string || "未命名"}</span>
+                  <span className="text-xs text-foreground">{parsedArgs.name as string || tAgent("actionBar.placeholders.unnamed")}</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground">内容预览:</span>
+                  <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.contentPreview")}:</span>
                   <div className="max-h-24 overflow-y-auto border rounded-md p-2 bg-muted/20 text-xs text-foreground/80">
                     <MarkdownRenderer content={parsedArgs.content as string || "*暂无内容*"} />
                   </div>
@@ -721,19 +722,19 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
               <div className="space-y-1.5">
                 {parsedArgs.title && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">标题:</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.title")}:</span>
                     <span className="text-xs text-foreground">{parsedArgs.title}</span>
                   </div>
                 )}
                 {parsedArgs.description && (
                   <div className="flex items-start gap-2">
-                    <span className="text-xs font-medium text-muted-foreground shrink-0">描述:</span>
+                    <span className="text-xs font-medium text-muted-foreground shrink-0">{tAgent("actionBar.labels.description")}:</span>
                     <span className="text-xs text-foreground break-words">{parsedArgs.description}</span>
                   </div>
                 )}
                 {hasStylePrompt && (
                   <div className="flex items-start gap-2">
-                    <span className="text-xs font-medium text-muted-foreground shrink-0">美术风格:</span>
+                    <span className="text-xs font-medium text-muted-foreground shrink-0">{tAgent("actionBar.labels.artStyle")}:</span>
                     <span className="text-xs text-foreground break-words">{stylePrompt}</span>
                   </div>
                 )}
@@ -745,7 +746,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">加载中...</span>
+                        <span className="text-xs text-muted-foreground">{tAgent("actionBar.messages.loading")}</span>
                       </div>
                     )}
                   </div>
@@ -888,7 +889,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                   {isConfirming ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      执行中...
+                      {tAgent("actionBar.messages.executing")}
                     </>
                   ) : (
                     <>
@@ -926,7 +927,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                   {isRejecting && !feedbackText.trim() ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      处理中...
+                      {tAgent("actionBar.messages.processing")}
                     </>
                   ) : (
                     <>

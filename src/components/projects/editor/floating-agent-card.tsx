@@ -213,6 +213,7 @@ function ChatInputArea({
   enterToSendLabel,
   assets,
 }: ChatInputAreaProps) {
+  const tAgent = useTranslations("editor.agent.floatingCard");
   const inputRef = useRef<AssetReferenceInputHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -291,7 +292,7 @@ function ChatInputArea({
       {showHint && (
         <p className="mt-2 text-xs text-center text-muted-foreground/60">
           {isLoading
-            ? (input.trim() ? "发送消息将中断当前输出" : stopToInterruptLabel)
+            ? (input.trim() ? tAgent("messages.sendWillInterrupt") : stopToInterruptLabel)
             : enterToSendLabel}
         </p>
       )}
@@ -312,6 +313,7 @@ export function FloatingAgentCard({
   const agent = useAgent();
   const editorContext = useEditor();
   const t = useTranslations();
+  const tAgent = useTranslations("editor.agent.floatingCard");
   const { balance } = useCreditsInfo();
   const creditBalance = balance ?? undefined;
 
@@ -332,7 +334,7 @@ export function FloatingAgentCard({
   useEffect(() => {
     if (editorContext.state.pendingEditAsset) {
       const asset = editorContext.state.pendingEditAsset;
-      const prefillText = `请帮我编辑图片「${asset.name}」`;
+      const prefillText = tAgent("messages.editAsset", { name: asset.name });
       setInput(prefillText);
       // 清除 pendingEditAsset 避免重复触发
       editorContext.setPendingEditAsset(null);
@@ -453,7 +455,7 @@ export function FloatingAgentCard({
     onError: (error) => {
       agent.setLoading(false);
       if (error !== "用户中断") {
-        toast.error("发送失败");
+        toast.error(tAgent("toasts.sendFailed"));
       }
     },
   });
@@ -502,8 +504,8 @@ export function FloatingAgentCard({
         // 刷新对话列表
         agent.refreshConversations(true);
       } catch (error) {
-        console.error("处理首页消息失败:", error);
-        toast.error("启动对话失败");
+        console.error(tAgent("toasts.processHomepageFailed"), error);
+        toast.error(tAgent("toasts.startConversationFailed"));
       } finally {
         onPendingMessageHandled?.();
       }
@@ -573,7 +575,7 @@ export function FloatingAgentCard({
         });
 
         if (!result.success || !result.conversationId) {
-          toast.error(result.error || "创建对话失败");
+          toast.error(result.error || tAgent("toasts.createConversationFailed"));
           agent.setLoading(false);
           return;
         }
@@ -593,7 +595,7 @@ export function FloatingAgentCard({
       await sendMessage(userMessage, agent.currentContext, conversationId);
     } catch (error) {
       agent.setLoading(false);
-      console.error("发送消息失败:", error);
+      console.error(tAgent("toasts.sendMessageFailed"), error);
       toast.error("发送失败");
     }
   }, [input, agent, projectId, sendMessage, resumeConversation, t, updateConversationTitleFromMessage, abort]);
@@ -602,7 +604,7 @@ export function FloatingAgentCard({
   const handleStop = useCallback(() => {
     abort();
     agent.setLoading(false);
-    toast.info("已停止生成");
+    toast.info(tAgent("toasts.generationStopped"));
   }, [abort, agent]);
 
   // 键盘快捷键
@@ -716,10 +718,10 @@ export function FloatingAgentCard({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return "刚刚";
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
+    if (minutes < 1) return tAgent("time.justNow");
+    if (minutes < 60) return tAgent("time.minutesAgo", { minutes });
+    if (hours < 24) return tAgent("time.hoursAgo", { hours });
+    if (days < 7) return tAgent("time.daysAgo", { days });
     return new Date(date).toLocaleDateString();
   };
 
@@ -742,15 +744,15 @@ export function FloatingAgentCard({
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogTitle>{tAgent("messages.confirmDelete")}</AlertDialogTitle>
           <AlertDialogDescription>
-            确定要删除这个对话吗？此操作无法撤销。
+            {tAgent("messages.confirmDeleteMessage")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogCancel>{tAgent("messages.cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirmDelete}>
-            删除
+            {tAgent("messages.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -767,7 +769,7 @@ export function FloatingAgentCard({
             "p-1 rounded cursor-grab hover:bg-muted/50 transition-colors",
             isDragging && "cursor-grabbing"
           )}
-          title="拖拽切换位置"
+          title={tAgent("messages.dragToSwitch")}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
@@ -792,13 +794,13 @@ export function FloatingAgentCard({
           <DropdownMenuContent align="start" className="w-[300px]">
             <DropdownMenuItem onClick={handleCreateNewConversation} className="font-medium">
               <MessageSquarePlus className="h-4 w-4 mr-2" />
-              新建对话
+              {tAgent("messages.newConversation")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <div className="max-h-[300px] overflow-y-auto">
               {agent.state.conversations.length === 0 ? (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  暂无对话历史
+                  {tAgent("messages.noHistory")}
                 </div>
               ) : (
                 agent.state.conversations.map((conv) => {
@@ -870,7 +872,7 @@ export function FloatingAgentCard({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>收起</p>
+              <p>{tAgent("messages.collapse")}</p>
             </TooltipContent>
           </Tooltip>
         )}

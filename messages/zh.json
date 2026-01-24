@@ -187,6 +187,12 @@
       "uploadFailed": "文件上传失败，请重试",
       "generationFailed": "生成失败，请重试",
       "unknown": "操作失败，请稍后重试"
+    },
+    "agent": {
+      "conversationNotFound": "对话不存在或未关联项目",
+      "cannotLoadState": "无法加载对话状态",
+      "noPendingOperation": "没有待执行的操作",
+      "unknownTool": "未知的工具"
     }
   },
   "sidebar": {
@@ -1256,6 +1262,166 @@
               "prompt": "帮我根据剧情生成视频片段"
             }
           ]
+        }
+      },
+      "toolExecution": {
+        "status": {
+          "completed": "完成",
+          "failed": "失败",
+          "failedWithError": "失败：{error}",
+          "rejected": "用户拒绝了此操作",
+          "executing": "执行中...",
+          "awaitingConfirmation": "等待用户确认"
+        },
+        "displayNames": {
+          "generateImageAsset": "生成图片素材",
+          "generateVideoAsset": "生成视频素材",
+          "createTextAsset": "创建文本资产",
+          "setProjectInfo": "设置项目信息"
+        }
+      },
+      "actionBar": {
+        "labels": {
+          "name": "名称",
+          "prompt": "提示词",
+          "tags": "标签",
+          "referenceImages": "参考图",
+          "title": "标题",
+          "duration": "时长",
+          "aspectRatio": "宽高比",
+          "startFrame": "起始帧",
+          "endFrame": "结束帧",
+          "content": "内容",
+          "description": "描述",
+          "artStyle": "美术风格",
+          "contentPreview": "内容预览"
+        },
+        "units": {
+          "seconds": "秒",
+          "images": "张",
+          "imagesCount": "{count}张"
+        },
+        "placeholders": {
+          "unnamed": "未命名",
+          "noContent": "*暂无内容*"
+        },
+        "messages": {
+          "executing": "执行中...",
+          "processing": "处理中...",
+          "calculating": "正在计算积分，请稍候...",
+          "loading": "加载中..."
+        },
+        "toasts": {
+          "operationConfirmed": "操作已确认，Agent 正在继续...",
+          "operationRejected": "操作已拒绝",
+          "feedbackSent": "已发送反馈，Agent 正在回应...",
+          "confirmFailed": "确认操作失败",
+          "rejectFailed": "拒绝操作失败",
+          "feedbackFailed": "发送反馈失败",
+          "insufficientCreditsAuto": "积分不足，无法自动执行"
+        },
+        "errors": {
+          "parseAssetsFailed": "解析assets数组失败",
+          "fetchStyleFailed": "获取美术风格名称失败",
+          "estimateFailed": "估算积分失败"
+        }
+      },
+      "actionEditor": {
+        "labels": {
+          "loadingAssets": "加载素材...",
+          "retry": "重试",
+          "loadTimeout": "加载超时，请重试",
+          "loadFailed": "加载失败",
+          "noAssets": "暂无可用素材",
+          "addCustomTag": "添加自定义标签...",
+          "quickAdd": "快捷添加:",
+          "assetName": "资产名称",
+          "describeImage": "描述你想生成的图片",
+          "describeVideo": "描述视频内容和镜头运动",
+          "videoTitle": "视频标题",
+          "textAssetNameHint": "文本资产名称，如'主角小传'、'第一幕剧本'",
+          "markdownSupport": "支持 Markdown 语法...",
+          "edit": "编辑",
+          "preview": "预览"
+        },
+        "errors": {
+          "loadError": "加载素材失败",
+          "cannotParseParams": "无法解析图片生成参数"
+        },
+        "durations": {
+          "10s": "10 秒",
+          "15s": "15 秒"
+        },
+        "aspectRatios": {
+          "16:9": "16:9 (宽屏)",
+          "9:16": "9:16 (竖屏)"
+        },
+        "required": "*"
+      },
+      "floatingCard": {
+        "messages": {
+          "sendWillInterrupt": "发送消息将中断当前输出",
+          "editAsset": "请帮我编辑图片「{name}」",
+          "confirmDelete": "确认删除",
+          "confirmDeleteMessage": "确定要删除这个对话吗？此操作无法撤销。",
+          "cancel": "取消",
+          "delete": "删除",
+          "dragToSwitch": "拖拽切换位置",
+          "newConversation": "新建对话",
+          "noHistory": "暂无对话历史",
+          "collapse": "收起"
+        },
+        "toasts": {
+          "sendFailed": "发送失败",
+          "processHomepageFailed": "处理首页消息失败",
+          "startConversationFailed": "启动对话失败",
+          "createConversationFailed": "创建对话失败",
+          "sendMessageFailed": "发送消息失败",
+          "generationStopped": "已停止生成"
+        },
+        "time": {
+          "justNow": "刚刚",
+          "minutesAgo": "{minutes}分钟前",
+          "hoursAgo": "{hours}小时前",
+          "daysAgo": "{days}天前"
+        }
+      },
+      "params": {
+        "keys": {
+          "episodeId": "剧集ID",
+          "projectId": "项目ID",
+          "videoId": "视频ID",
+          "videoIds": "视频列表",
+          "assetId": "素材ID",
+          "assetIds": "素材列表",
+          "sourceAssetIds": "参考图",
+          "prompt": "提示词",
+          "name": "名称",
+          "tags": "标签",
+          "reason": "原因",
+          "description": "描述",
+          "visualPrompt": "视觉提示词",
+          "stylePrompt": "美术风格",
+          "numImages": "生成数量",
+          "mode": "生成模式",
+          "assetType": "素材类型",
+          "autoGenerateImages": "自动生成图片",
+          "duration": "时长",
+          "aspectRatio": "宽高比",
+          "limit": "数量限制"
+        },
+        "values": {
+          "yes": "是",
+          "no": "否",
+          "empty": "空",
+          "none": "无",
+          "seconds": "{value}秒",
+          "items": "{count}项",
+          "videos": "{count}个视频",
+          "assets": "{count}个素材",
+          "properties": "{count}个属性",
+          "referenceImages": "{count}张参考图",
+          "hasReference": "有参考图"
         }
       }
     },

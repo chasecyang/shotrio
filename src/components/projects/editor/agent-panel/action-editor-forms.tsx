@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,8 +56,82 @@ export function PromptWithHighlights({
   );
 }
 
+function useAssetList({
+  projectId,
+  assetType,
+  isOpen,
+}: {
+  projectId: string;
+  assetType: "image" | "video";
+  isOpen: boolean;
+}) {
+  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || assets.length > 0) return;
+
+    async function loadAssets() {
+      setIsLoading(true);
+      try {
+        const result = await queryAssets({
+          projectId,
+          assetType,
+          limit: 50,
+        });
+        setAssets(result.assets);
+      } catch (error) {
+        console.error("加载素材失败:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadAssets();
+  }, [isOpen, projectId, assetType, assets.length]);
+
+  return { assets, isLoading };
+}
+
+function AssetGrid({
+  assets,
+  isLoading,
+  renderItem,
+  emptyLabel,
+}: {
+  assets: AssetWithFullData[];
+  isLoading: boolean;
+  renderItem: (asset: AssetWithFullData) => React.ReactNode;
+  emptyLabel: string;
+}) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (assets.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground text-sm">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {assets.map((asset) => renderItem(asset))}
+    </div>
+  );
+}
+
 // 素材预览组件（支持自动刷新）
 export function AssetPreview({ assetIds }: { assetIds: string[] }) {
+  const tAgent = useTranslations("editor.agent.actionEditor");
   const [assets, setAssets] = useState<Array<{
     id: string;
     name: string;
@@ -66,8 +141,7 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
   const [error, setError] = useState<string | null>(null);
   // 使用 ref 跟踪当前请求的 assetIds，防止竞态条件
   const currentRequestRef = useRef<string>("");
-  // 使用 ref 存储上一次的 assetIds 内容，避免引用变化导致重复加载
-  const prevAssetIdsRef = useRef<string>("");
+  const assetIdKey = useMemo(() => JSON.stringify([...assetIds].sort()), [assetIds]);
   // 获取 Editor Context 中的 jobs 状态
   const { jobs } = useEditor();
 
@@ -84,7 +158,7 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
     try {
       // 添加超时控制（10秒）
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("加载超时，请重试")), 10000);
+        setTimeout(() => reject(new Error(tAgent("labels.loadTimeout"))), 10000);
       });
 
       const result = await Promise.race([
@@ -99,8 +173,8 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
           setError(null);
         } else {
           // 加载失败或没有数据时，清空assets并记录错误
-          const errorMsg = result.error || "加载失败";
-          console.error("加载素材失败:", errorMsg);
+          const errorMsg = result.error || tAgent("labels.loadFailed");
+          console.error(tAgent("errors.loadError"), errorMsg);
           setAssets([]);
           setError(errorMsg);
         }
@@ -109,8 +183,8 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
     } catch (error) {
       // 只有在当前请求仍然有效时才更新状态
       if (currentRequestRef.current === requestId) {
-        const errorMsg = error instanceof Error ? error.message : "加载素材失败";
-        console.error("加载素材失败:", error);
+        const errorMsg = error instanceof Error ? error.message : tAgent("errors.loadError");
+        console.error(tAgent("errors.loadError"), error);
         setAssets([]);
         setError(errorMsg);
         setIsLoading(false);
@@ -120,28 +194,22 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
 
   // 初始加载
   useEffect(() => {
-    const requestId = JSON.stringify(assetIds.sort());
-
-    // 如果内容没变，不重新加载（避免引用变化导致的抽搐）
-    if (prevAssetIdsRef.current === requestId) {
-      return;
-    }
-
-    prevAssetIdsRef.current = requestId;
-    currentRequestRef.current = requestId;
+    currentRequestRef.current = assetIdKey;
 
     // 只有内容变化时才重置状态
     setAssets([]);
     setIsLoading(true);
 
-    loadAssets(requestId);
+    loadAssets(assetIdKey);
 
     // 清理函数：标记请求已取消
     return () => {
-      currentRequestRef.current = "";
+      if (currentRequestRef.current === assetIdKey) {
+        currentRequestRef.current = "";
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assetIds]); // loadAssets 故意省略，使用 requestId 控制
+  }, [assetIdKey]); // loadAssets 故意省略，使用 requestId 控制
 
   // 监听 jobs 变化，自动刷新相关素材
   useEffect(() => {
@@ -174,7 +242,7 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
-        <span>加载素材...</span>
+        <span>{tAgent("labels.loadingAssets")}</span>
       </div>
     );
   }
@@ -196,7 +264,7 @@ export function AssetPreview({ assetIds }: { assetIds: string[] }) {
           }}
           className="text-primary hover:underline"
         >
-          重试
+          {tAgent("labels.retry")}
         </button>
       </div>
     );
@@ -245,6 +313,7 @@ interface TagInputProps {
 }
 
 function TagInput({ tags, onChange }: TagInputProps) {
+  const tAgent = useTranslations("editor.agent.actionEditor");
   const [inputValue, setInputValue] = useState("");
 
   const existingTags = new Set(tags);
@@ -291,7 +360,7 @@ function TagInput({ tags, onChange }: TagInputProps) {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="添加自定义标签..."
+          placeholder={tAgent("labels.addCustomTag")}
           className="h-8 text-sm"
         />
         <Button
@@ -306,7 +375,7 @@ function TagInput({ tags, onChange }: TagInputProps) {
       </div>
       {availablePresetTags.length > 0 && (
         <div className="space-y-1.5">
-          <span className="text-xs text-muted-foreground">快捷添加:</span>
+          <span className="text-xs text-muted-foreground">{tAgent("labels.quickAdd")}</span>
           <div className="flex flex-wrap gap-1.5">
             {availablePresetTags.map((tag) => (
               <button
@@ -472,8 +541,7 @@ function SingleAssetSelector({
   allowClear = false,
   assetType = "image",
 }: SingleAssetSelectorProps) {
-  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const tAgent = useTranslations("editor.agent.actionEditor");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<{
     id: string;
@@ -495,28 +563,13 @@ function SingleAssetSelector({
     });
   }, [selectedAssetId]);
 
-  // 打开选择器时加载素材列表
-  useEffect(() => {
-    if (!isOpen || assets.length > 0) return;
+  const { assets, isLoading } = useAssetList({
+    projectId,
+    assetType,
+    isOpen,
+  });
 
-    async function loadAssets() {
-      setIsLoading(true);
-      try {
-        const result = await queryAssets({
-          projectId,
-          assetType,
-          limit: 50,
-        });
-        setAssets(result.assets);
-      } catch (error) {
-        console.error("加载素材失败:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadAssets();
-  }, [isOpen, projectId, assetType, assets.length]);
+  const readyAssets = useMemo(() => assets.filter(isAssetReady), [assets]);
 
   return (
     <div className="space-y-2">
@@ -547,51 +600,42 @@ function SingleAssetSelector({
           </PopoverTrigger>
           <PopoverContent className="w-80 p-3" align="start">
             <ScrollArea className="h-[280px]">
-              {isLoading ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
-                  ))}
-                </div>
-              ) : assets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  暂无可用素材
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {assets.filter(isAssetReady).map((asset) => (
-                    <button
-                      key={asset.id}
-                      type="button"
-                      onClick={() => {
-                        onSelect(asset.id);
-                        setIsOpen(false);
-                      }}
-                      className={cn(
-                        "relative aspect-square rounded-lg overflow-hidden",
-                        "border-2 transition-all",
-                        selectedAssetId === asset.id
-                          ? "border-primary ring-2 ring-primary/20"
-                          : "border-transparent hover:border-muted-foreground/30"
-                      )}
-                    >
-                      {asset.displayUrl ? (
-                        <Image
-                          src={asset.displayUrl}
-                          alt={asset.name}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-muted" />
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-                        <p className="text-[10px] text-white truncate">{asset.name}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AssetGrid
+                assets={readyAssets}
+                isLoading={isLoading}
+                emptyLabel={tAgent("labels.noAssets")}
+                renderItem={(asset) => (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(asset.id);
+                      setIsOpen(false);
+                    }}
+                    className={cn(
+                      "relative aspect-square rounded-lg overflow-hidden",
+                      "border-2 transition-all",
+                      selectedAssetId === asset.id
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-transparent hover:border-muted-foreground/30"
+                    )}
+                  >
+                    {asset.displayUrl ? (
+                      <Image
+                        src={asset.displayUrl}
+                        alt={asset.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-muted" />
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                      <p className="text-[10px] text-white truncate">{asset.name}</p>
+                    </div>
+                  </button>
+                )}
+              />
             </ScrollArea>
           </PopoverContent>
         </Popover>
@@ -632,8 +676,7 @@ function MultiAssetSelector({
   label,
   assetType = "image",
 }: MultiAssetSelectorProps) {
-  const [assets, setAssets] = useState<AssetWithFullData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const tAgent = useTranslations("editor.agent.actionEditor");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<Array<{
     id: string;
@@ -655,28 +698,13 @@ function MultiAssetSelector({
     });
   }, [selectedAssetIds]);
 
-  // 打开选择器时加载素材列表
-  useEffect(() => {
-    if (!isOpen || assets.length > 0) return;
+  const { assets, isLoading } = useAssetList({
+    projectId,
+    assetType,
+    isOpen,
+  });
 
-    async function loadAssets() {
-      setIsLoading(true);
-      try {
-        const result = await queryAssets({
-          projectId,
-          assetType,
-          limit: 50,
-        });
-        setAssets(result.assets);
-      } catch (error) {
-        console.error("加载素材失败:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadAssets();
-  }, [isOpen, projectId, assetType, assets.length]);
+  const readyAssets = useMemo(() => assets.filter(isAssetReady), [assets]);
 
   const handleToggleAsset = (assetId: string) => {
     if (selectedAssetIds.includes(assetId)) {
@@ -742,56 +770,47 @@ function MultiAssetSelector({
           </PopoverTrigger>
           <PopoverContent className="w-80 p-3" align="start">
             <ScrollArea className="h-[280px]">
-              {isLoading ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
-                  ))}
-                </div>
-              ) : assets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  暂无可用素材
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {assets.filter(isAssetReady).map((asset) => {
-                    const isSelected = selectedAssetIds.includes(asset.id);
-                    return (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        onClick={() => handleToggleAsset(asset.id)}
-                        className={cn(
-                          "relative aspect-square rounded-lg overflow-hidden",
-                          "border-2 transition-all",
-                          isSelected
-                            ? "border-primary ring-2 ring-primary/20"
-                            : "border-transparent hover:border-muted-foreground/30"
-                        )}
-                      >
-                        {asset.displayUrl ? (
-                          <Image
-                            src={asset.displayUrl}
-                            alt={asset.name}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-muted" />
-                        )}
-                        {isSelected && (
-                          <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                            <span className="text-primary-foreground text-xs">✓</span>
-                          </div>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-                          <p className="text-[10px] text-white truncate">{asset.name}</p>
+              <AssetGrid
+                assets={readyAssets}
+                isLoading={isLoading}
+                emptyLabel={tAgent("labels.noAssets")}
+                renderItem={(asset) => {
+                  const isSelected = selectedAssetIds.includes(asset.id);
+                  return (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => handleToggleAsset(asset.id)}
+                      className={cn(
+                        "relative aspect-square rounded-lg overflow-hidden",
+                        "border-2 transition-all",
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-transparent hover:border-muted-foreground/30"
+                      )}
+                    >
+                      {asset.displayUrl ? (
+                        <Image
+                          src={asset.displayUrl}
+                          alt={asset.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-muted" />
+                      )}
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                          <span className="text-primary-foreground text-xs">✓</span>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                        <p className="text-[10px] text-white truncate">{asset.name}</p>
+                      </div>
+                    </button>
+                  );
+                }}
+              />
             </ScrollArea>
           </PopoverContent>
         </Popover>
@@ -944,5 +963,3 @@ export function TextAssetForm({ params, onChange }: TextAssetFormProps) {
     </div>
   );
 }
-
-

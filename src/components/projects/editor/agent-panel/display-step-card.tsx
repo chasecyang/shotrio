@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { useTranslations } from "next-intl";
 import type { DisplayStep } from "./use-message-display";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { CheckCircle2, XCircle, Loader2, Clock, Ban } from "lucide-react";
@@ -15,6 +16,8 @@ export const DisplayStepCard = memo(function DisplayStepCard({
   step,
   isStreaming,
 }: DisplayStepCardProps) {
+  const t = useTranslations("editor.agent.toolExecution");
+
   if (step.type === "thinking") {
     // 思考内容
     return (
@@ -27,7 +30,7 @@ export const DisplayStepCard = memo(function DisplayStepCard({
   if (step.type === "tool_call" && step.toolCall) {
     // Tool 调用
     const { toolCall } = step;
-    
+
     const getStatusIcon = () => {
       switch (toolCall.status) {
         case "completed":
@@ -52,15 +55,15 @@ export const DisplayStepCard = memo(function DisplayStepCard({
     const getStatusText = () => {
       switch (toolCall.status) {
         case "completed":
-          return toolCall.result || "完成";
+          return toolCall.result || t("status.completed");
         case "failed":
-          return toolCall.error ? `失败：${toolCall.error}` : "失败";
+          return toolCall.error ? t("status.failedWithError", { error: toolCall.error }) : t("status.failed");
         case "rejected":
-          return toolCall.error || "用户拒绝了此操作";
+          return toolCall.error || t("status.rejected");
         case "executing":
-          return "执行中...";
+          return t("status.executing");
         case "awaiting_confirmation":
-          return "等待用户确认";
+          return t("status.awaitingConfirmation");
         default:
           return "";
       }
