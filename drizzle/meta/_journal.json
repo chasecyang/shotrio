@@ -85,6 +85,13 @@
       "when": 1769261541361,
       "tag": "0011_dry_quicksilver",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1769319337254,
+      "tag": "0012_slippery_meltdown",
+      "breakpoints": true
     }
   ]
 }

@@ -41,7 +41,7 @@ import { updateAsset, getProjectAssets } from "@/lib/actions/asset";
 import { TagEditor } from "./tag-editor";
 import { AssetVersionPanel } from "./asset-version-panel";
 import { FrameCaptureDialog } from "./frame-capture-dialog";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { getErrorMessageKey } from "@/lib/utils/error-sanitizer";
 
 interface AssetDetailViewProps {
@@ -68,6 +68,7 @@ export function AssetDetailView({
   onAssetUpdated,
 }: AssetDetailViewProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const isVideo = asset.assetType === "video";
   const isAudio = asset.assetType === "audio";
   const isFailed = asset.runtimeStatus === "failed";
@@ -127,7 +128,7 @@ export function AssetDetailView({
 
   // 格式化日期
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("zh-CN", {
+    return new Date(date).toLocaleString(locale, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -142,10 +143,10 @@ export function AssetDetailView({
       await navigator.clipboard.writeText(text);
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
-      toast.success("已复制到剪贴板");
+      toast.success(t("toasts.success.copied"));
     } catch (error) {
       console.error("复制失败:", error);
-      toast.error("复制失败");
+      toast.error(t("toasts.error.copyFailed"));
     }
   };
 
@@ -197,16 +198,16 @@ export function AssetDetailView({
     try {
       const result = await updateAsset(asset.id, { name: editedName.trim() });
       if (result.success) {
-        toast.success("名称已更新");
+        toast.success(t("toasts.success.nameUpdated"));
         setIsEditingName(false);
         onAssetUpdated();
       } else {
-        toast.error(result.error || "更新失败");
+        toast.error(result.error || t("toasts.error.updateFailed"));
         setEditedName(asset.name);
       }
     } catch (error) {
       console.error("更新名称失败:", error);
-      toast.error("更新失败");
+      toast.error(t("toasts.error.updateFailed"));
       setEditedName(asset.name);
     } finally {
       setIsSavingName(false);
@@ -406,10 +407,10 @@ export function AssetDetailView({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("下载成功");
+      toast.success(t("toasts.success.downloaded"));
     } catch (error) {
       console.error("下载失败:", error);
-      toast.error("下载失败");
+      toast.error(t("toasts.error.downloadFailed"));
       if (downloadUrl) {
         window.open(downloadUrl, "_blank");
       }
@@ -418,12 +419,12 @@ export function AssetDetailView({
 
   const handleRetry = async () => {
     if (!onRetry) {
-      toast.error("重试功能不可用");
+      toast.error(t("toasts.error.retryUnavailable"));
       return;
     }
 
     if (!asset.latestJobId) {
-      toast.error("无法找到相关任务信息");
+      toast.error(t("toasts.error.taskNotFound"));
       return;
     }
 
@@ -441,7 +442,7 @@ export function AssetDetailView({
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          返回
+          {t("common.back")}
         </Button>
         <div className="flex-1" />
         {/* 引用和编辑按钮 */}
@@ -488,7 +489,7 @@ export function AssetDetailView({
             className="gap-2"
           >
             <Download className="h-4 w-4" />
-            下载
+            {t("common.download")}
           </Button>
         )}
       </div>
@@ -516,9 +517,9 @@ export function AssetDetailView({
                 </div>
               </div>
               <div className="flex flex-col items-center gap-3 max-w-md text-center">
-                <h3 className="text-2xl font-bold">正在生成</h3>
+                <h3 className="text-2xl font-bold">{t("common.generating")}</h3>
                 <p className="text-base text-muted-foreground leading-relaxed">
-                  素材正在生成中，请稍候...
+                  {t("editor.assetGeneration.processing")}
                 </p>
               </div>
             </div>
@@ -532,14 +533,14 @@ export function AssetDetailView({
                 </div>
               </div>
               <div className="flex flex-col items-center gap-3 max-w-md text-center">
-                <h3 className="text-2xl font-bold">生成失败</h3>
+                <h3 className="text-2xl font-bold">{t("common.generationFailed")}</h3>
                 <p className="text-base text-muted-foreground leading-relaxed">
                   {errorMessage}
                 </p>
                 {onRetry && (
                   <Button size="lg" onClick={handleRetry} className="mt-4 gap-2">
                     <RefreshCw className="h-4 w-4" />
-                    重试生成
+                    {t("common.retryGeneration")}
                   </Button>
                 )}
               </div>
@@ -630,7 +631,7 @@ export function AssetDetailView({
                     title="截取当前画面并保存为图片素材"
                   >
                     <Camera className="h-4 w-4" />
-                    <span className="text-xs font-medium">截取画面</span>
+                    <span className="text-xs font-medium">{t("editor.captureFrame")}</span>
                   </Button>
 
                   <Button
@@ -876,7 +877,7 @@ export function AssetDetailView({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <TagIcon className="h-4 w-4" />
-                  <span>标签</span>
+                  <span>{t("common.tags")}</span>
                 </div>
                 <TagEditor
                   assetId={asset.id}
@@ -933,18 +934,18 @@ export function AssetDetailView({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Sparkles className="h-4 w-4" />
-                      <span>生成参数</span>
+                      <span>{t("editor.generationParams")}</span>
                     </div>
                     <div className="space-y-2">
                       {asset.modelUsed && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">模型</span>
+                          <span className="text-muted-foreground">{t("editor.model")}</span>
                           <span className="font-mono">{asset.modelUsed}</span>
                         </div>
                       )}
                       {asset.seed !== null && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">种子</span>
+                          <span className="text-muted-foreground">{t("editor.seed")}</span>
                           <div className="flex items-center gap-2">
                             <span className="font-mono">{asset.seed}</span>
                             <Button
@@ -976,7 +977,7 @@ export function AssetDetailView({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Settings className="h-4 w-4" />
-                      <span>详细配置</span>
+                      <span>{t("editor.detailedConfig")}</span>
                     </div>
                     <div className="space-y-2">
                       {Object.entries(generationConfig).map(([key, value]) => (
@@ -1006,11 +1007,11 @@ export function AssetDetailView({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <ImageIcon className="h-4 w-4" />
-                      <span>源素材</span>
+                      <span>{t("editor.sourceAssets")}</span>
                     </div>
                     {loadingSourceAssets ? (
                       <div className="text-sm text-muted-foreground">
-                        加载中...
+                        {t("common.loading")}
                       </div>
                     ) : sourceAssets.length > 0 ? (
                       <div className="grid grid-cols-3 gap-2">
@@ -1041,7 +1042,7 @@ export function AssetDetailView({
                       </div>
                     ) : (
                       <div className="text-sm text-muted-foreground">
-                        无法加载源素材
+                        {t("editor.cannotLoadSourceAssets")}
                       </div>
                     )}
                   </div>
@@ -1054,7 +1055,7 @@ export function AssetDetailView({
                   <Separator />
                   <Button onClick={handleRetry} className="w-full gap-2">
                     <RefreshCw className="h-4 w-4" />
-                    重试生成
+                    {t("common.retryGeneration")}
                   </Button>
                 </>
               )}
@@ -1075,7 +1076,7 @@ export function AssetDetailView({
           videoUrl={asset.mediaUrl || ""}
           projectId={asset.projectId}
           onSuccess={() => {
-            toast.success("画面截取成功");
+            toast.success(t("toasts.success.frameCaptured"));
             setShowCaptureDialog(false);
           }}
         />

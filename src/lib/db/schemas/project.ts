@@ -349,6 +349,7 @@ export const assetRelations = relations(asset, ({ one, many }) => ({
   videoDataList: many(videoData), // 多版本支持
   audioDataList: many(audioData), // 多版本支持
   textData: one(textData),
+  exampleAsset: one(exampleAsset), // 示例资产信息（如果是示例）
 }));
 
 export const imageDataRelations = relations(imageData, ({ one, many }) => ({
@@ -588,5 +589,32 @@ export const projectTemplateRelations = relations(projectTemplate, ({ one }) => 
   project: one(project, {
     fields: [projectTemplate.projectId],
     references: [project.id],
+  }),
+}));
+
+// 示例资产表 (Example Asset) - 用于首页展示的精选资产
+export const exampleAsset = pgTable("example_asset", {
+  assetId: text("asset_id")
+    .primaryKey()
+    .references(() => asset.id, { onDelete: "cascade" }),
+
+  // 排序权重（越大越靠前）
+  order: integer("order").default(0).notNull(),
+
+  // 可选的展示覆盖
+  displayName: text("display_name"), // 覆盖原始 asset.name
+  description: text("description"), // 展示描述
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const exampleAssetRelations = relations(exampleAsset, ({ one }) => ({
+  asset: one(asset, {
+    fields: [exampleAsset.assetId],
+    references: [asset.id],
   }),
 }));

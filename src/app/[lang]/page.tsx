@@ -6,8 +6,10 @@ import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wr
 import { HeroQuickStart } from "@/components/home/hero-quick-start";
 import { HomeLoginButton } from "@/components/home/login-button";
 import { TemplateGallery } from "@/components/home/template-gallery";
+import { ExampleWaterfall } from "@/components/home/example-waterfall";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
 import { getPublicTemplates } from "@/lib/actions/project/template";
+import { getPublicExampleAssets } from "@/lib/actions/example/public";
 import {
   Sparkles,
   FileText,
@@ -23,6 +25,9 @@ export default async function Home() {
   const t = await getTranslations("home");
   const user = await getCurrentUser();
   const templates = await getPublicTemplates({ limit: 6 });
+
+  // 获取示例资产
+  const exampleAssets = await getPublicExampleAssets({ limit: 12 });
 
   const features = [
     {
@@ -101,14 +106,14 @@ export default async function Home() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative py-24 md:py-32 overflow-hidden">
+        <section className="relative py-12 md:py-20 overflow-hidden">
           {/* Background Elements */}
           <div className="absolute inset-0 bg-noise opacity-[0.03] z-10 pointer-events-none"></div>
           
           <div className="container px-4 mx-auto relative z-20">
             <div className="max-w-5xl mx-auto text-center">
               <FadeIn delay={0}>
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-4 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium">
                   <Sparkles className="w-4 h-4" />
                   <span className="tracking-wide uppercase text-xs font-bold">{t("subtitle")}</span>
                 </div>
@@ -116,8 +121,7 @@ export default async function Home() {
               
               <FadeIn delay={0.1}>
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold font-heading tracking-tight mb-8 leading-[1.1]">
-                  {t("hero.title")}
-                  <br />
+                  {t("hero.title")}{" "}
                   <span className="text-primary italic">
                     {t("hero.titleHighlight")}
                   </span>
@@ -136,6 +140,14 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {/* Example Assets Waterfall - 示例资产展示 */}
+        {exampleAssets.examples.length > 0 && (
+          <ExampleWaterfall
+            initialExamples={exampleAssets.examples}
+            total={exampleAssets.total}
+          />
+        )}
 
         {/* Template Gallery - 示例项目展示 */}
         {templates.length > 0 && <TemplateGallery templates={templates} />}

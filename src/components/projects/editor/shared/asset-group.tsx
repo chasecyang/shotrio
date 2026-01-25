@@ -62,13 +62,11 @@ export function AssetGroup({
         </span>
       </button>
 
-      {/* 素材网格 */}
+      {/* 素材网格 - 使用更多列数以实现更灵活的布局 */}
       {expanded && (
         <div
-          className="grid gap-3 mt-2 pl-2"
-          style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(192px, 1fr))",
-          }}
+          className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 mt-2 pl-2 items-start"
+          style={{ gridAutoFlow: 'dense', gridAutoRows: 'min-content' }}
         >
           {assets.map((asset) => (
             <AssetCard

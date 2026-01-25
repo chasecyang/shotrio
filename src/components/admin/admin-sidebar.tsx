@@ -7,6 +7,7 @@ import {
   Home,
   Ticket,
   FileVideo,
+  Image,
   // Users,
   // Settings,
   // FileText,
@@ -49,6 +50,11 @@ const navItems: NavItem[] = [
     titleKey: "templates.sidebarTitle",
     href: "/admin/templates",
     icon: FileVideo,
+  },
+  {
+    titleKey: "examples.sidebarTitle",
+    href: "/admin/examples",
+    icon: Image,
   },
   {
     titleKey: "redeemCodes.title",

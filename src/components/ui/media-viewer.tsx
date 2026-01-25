@@ -35,6 +35,7 @@ import { AssetWithFullData } from "@/types/asset";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
 
 interface MediaViewerProps {
   open: boolean;
@@ -53,9 +54,11 @@ export function MediaViewer({
   asset,
   onRetry,
 }: MediaViewerProps) {
+  const t = useTranslations();
+  const locale = useLocale();
   const isVideo = asset.assetType === "video";
   const isFailed = asset.runtimeStatus === "failed";
-  const errorMessage = asset.errorMessage || "生成失败，请重试";
+  const errorMessage = asset.errorMessage || t("common.generationFailed");
 
   // 调试信息
   React.useEffect(() => {
@@ -109,7 +112,7 @@ export function MediaViewer({
 
   // 格式化日期
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString('zh-CN', {
+    return new Date(date).toLocaleString(locale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -124,10 +127,10 @@ export function MediaViewer({
       await navigator.clipboard.writeText(text);
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
-      toast.success("已复制到剪贴板");
+      toast.success(t("toasts.success.copied"));
     } catch (error) {
       console.error("复制失败:", error);
-      toast.error("复制失败");
+      toast.error(t("toasts.error.copyFailed"));
     }
   };
 
@@ -347,22 +350,22 @@ export function MediaViewer({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("下载成功");
+      toast.success(t("toasts.success.downloaded"));
     } catch (error) {
       console.error("下载失败:", error);
-      toast.error("下载失败");
+      toast.error(t("toasts.error.downloadFailed"));
       window.open(asset.mediaUrl, "_blank");
     }
   };
 
   const handleRetry = async () => {
     if (!onRetry) {
-      toast.error("重试功能不可用");
+      toast.error(t("toasts.error.retryUnavailable"));
       return;
     }
 
     if (!asset.latestJobId) {
-      toast.error("无法找到相关任务信息");
+      toast.error(t("toasts.error.taskNotFound"));
       return;
     }
 
@@ -409,7 +412,7 @@ export function MediaViewer({
                   
                   {/* 错误信息 */}
                   <div className="flex flex-col items-center gap-3 max-w-md text-center">
-                    <h3 className="text-2xl font-bold text-white">生成失败</h3>
+                    <h3 className="text-2xl font-bold text-white">{t("common.generationFailed")}</h3>
                     <p className="text-base text-white/70 leading-relaxed">
                       {errorMessage}
                     </p>
@@ -420,7 +423,7 @@ export function MediaViewer({
                         className="mt-4 gap-2"
                       >
                         <RefreshCw className="h-4 w-4" />
-                        重试生成
+                        {t("common.retryGeneration")}
                       </Button>
                     )}
                   </div>
@@ -589,7 +592,7 @@ export function MediaViewer({
                         onClick={handleRetry}
                       >
                         <RefreshCw className="h-4 w-4" />
-                        重试
+                        {t("common.retry")}
                       </Button>
                     )}
                     {/* 下载按钮 - 有媒体URL时显示 */}
@@ -645,18 +648,18 @@ export function MediaViewer({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-white/90">
                           <Sparkles className="h-4 w-4" />
-                          <span>生成参数</span>
+                          <span>{t("editor.generationParams")}</span>
                         </div>
                         <div className="space-y-2">
                           {asset.modelUsed && (
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-white/60">模型</span>
+                              <span className="text-white/60">{t("editor.model")}</span>
                               <span className="text-white/90 font-mono">{asset.modelUsed}</span>
                             </div>
                           )}
                           {asset.seed !== null && (
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-white/60">种子</span>
+                              <span className="text-white/60">{t("editor.seed")}</span>
                               <div className="flex items-center gap-2">
                                 <span className="text-white/90 font-mono">{asset.seed}</span>
                                 <Button
@@ -686,7 +689,7 @@ export function MediaViewer({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-white/90">
                           <Settings className="h-4 w-4" />
-                          <span>详细配置</span>
+                          <span>{t("editor.detailedConfig")}</span>
                         </div>
                         <div className="space-y-2">
                           {Object.entries(generationConfig).map(([key, value]) => (
@@ -709,10 +712,10 @@ export function MediaViewer({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-white/90">
                           <ImageIcon className="h-4 w-4" />
-                          <span>源素材</span>
+                          <span>{t("editor.sourceAssets")}</span>
                         </div>
                         {loadingSourceAssets ? (
-                          <div className="text-sm text-white/60">加载中...</div>
+                          <div className="text-sm text-white/60">{t("common.loading")}</div>
                         ) : sourceAssets.length > 0 ? (
                           <div className="grid grid-cols-3 gap-2">
                             {sourceAssets.map((source) => (
@@ -741,7 +744,7 @@ export function MediaViewer({
                             ))}
                           </div>
                         ) : (
-                          <div className="text-sm text-white/60">无法加载源素材</div>
+                          <div className="text-sm text-white/60">{t("editor.cannotLoadSourceAssets")}</div>
                         )}
                       </div>
                     </>
@@ -754,7 +757,7 @@ export function MediaViewer({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-white/90">
                           <TagIcon className="h-4 w-4" />
-                          <span>标签</span>
+                          <span>{t("common.tags")}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {asset.tags.map((tag) => (
@@ -786,7 +789,7 @@ export function MediaViewer({
               )}
             >
               <X className="h-5 w-5" />
-              <span className="sr-only">关闭</span>
+              <span className="sr-only">{t("common.close")}</span>
             </DialogPrimitive.Close>
           </div>
         </DialogPrimitive.Content>

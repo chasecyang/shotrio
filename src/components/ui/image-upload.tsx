@@ -13,6 +13,7 @@ import { cn, getImageSrc } from "@/lib/utils";
 import { uploadImage, deleteImage } from "@/lib/actions/upload-actions";
 import { AssetCategory } from "@/lib/storage";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 interface ImageUploadProps {
   /**
@@ -55,11 +56,12 @@ export function ImageUpload({
   value,
   onChange,
   category = AssetCategory.OTHER,
-  placeholder = "点击或拖拽上传图片",
+  placeholder,
   disabled = false,
   className,
   previewSize = "md",
 }: ImageUploadProps) {
+  const t = useTranslations();
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string>();
@@ -79,10 +81,10 @@ export function ImageUpload({
       if (result.success && result.url) {
         onChange?.(result.url);
       } else {
-        setError(result.error || "上传失败");
+        setError(result.error || t("toasts.error.uploadFailed"));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "上传失败");
+      setError(err instanceof Error ? err.message : t("toasts.error.uploadFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -141,7 +143,7 @@ export function ImageUpload({
       await deleteImage(value);
       onChange?.(undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "删除失败");
+      setError(err instanceof Error ? err.message : t("toasts.error.deleteFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -197,10 +199,10 @@ export function ImageUpload({
             <>
               <Upload className="h-8 w-8 text-neutral-400 mb-2" />
               <p className="text-sm text-neutral-500 text-center px-2">
-                {placeholder}
+                {placeholder || t("common.uploadImagePlaceholder")}
               </p>
               <p className="text-xs text-neutral-400 mt-1">
-                支持 JPG, PNG, WEBP, GIF
+                {t("common.supportedImageFormats")}
               </p>
             </>
           )}
@@ -212,7 +214,7 @@ export function ImageUpload({
         <div className={cn("relative group", sizeClasses[previewSize])}>
           <Image
             src={getImageSrc(value)}
-            alt="预览"
+            alt={t("common.preview")}
             fill
             className="object-cover rounded-lg border border-neutral-200"
           />
@@ -260,11 +262,12 @@ interface ImagePreviewProps {
 
 export function ImagePreview({
   src,
-  alt = "图片",
+  alt,
   fallback,
   className,
   size = "md",
 }: ImagePreviewProps) {
+  const t = useTranslations();
   const sizeClasses = {
     sm: "h-24 w-24",
     md: "h-40 w-40",
@@ -289,7 +292,7 @@ export function ImagePreview({
     <div className={cn("relative", sizeClasses[size], className)}>
       <Image
         src={getImageSrc(src)}
-        alt={alt}
+        alt={alt || t("common.image")}
         fill
         className="object-cover rounded-lg border border-neutral-200"
       />

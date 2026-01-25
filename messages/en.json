@@ -32,7 +32,16 @@
     "aiGenerateOptimize": "AI Generate/Optimize",
     "generationFailed": "Generation failed, please retry",
     "viewerHint": "Double-click to zoom · Scroll to scale · Drag to pan",
-    "preview": "Preview"
+    "preview": "Preview",
+    "copied": "Copied to clipboard",
+    "download": "Download",
+    "downloaded": "Downloaded successfully",
+    "generating": "Generating",
+    "retryGeneration": "Retry Generation",
+    "tags": "Tags",
+    "image": "Image",
+    "uploadImagePlaceholder": "Click or drag to upload image",
+    "supportedImageFormats": "Supports JPG, PNG, WEBP, GIF"
   },
   "beta": {
     "label": "BETA",
@@ -157,6 +166,12 @@
       "sidebarTitle": "Templates",
       "description": "Mark existing projects as example templates to display on homepage",
       "detail": "Manage example project templates, set showcase videos and categories to attract users"
+    },
+    "examples": {
+      "title": "Example Assets Management",
+      "subtitle": "Manage example images and videos displayed on homepage",
+      "sidebarTitle": "Example Assets",
+      "description": "Select outstanding works from user assets to showcase as examples"
     }
   },
   "auth": {
@@ -181,7 +196,7 @@
     "learnMore": "Learn More",
     "hero": {
       "title": "Create Great",
-      "titleHighlight": "Micro-Dramas",
+      "titleHighlight": "Stories",
       "subtitle": "Powerful Control × AI Assistance — Master Every Detail of Your Creation",
       "inputPlaceholder": "Tell me what you want to create...",
       "inputHint": "Press Enter to start creating",
@@ -990,7 +1005,10 @@
       "taskCreatedAiProcessing": "Task created, AI is processing...",
       "timelineClipAdded": "Added to timeline",
       "audioTrackAdded": "Audio track added",
-      "trackDeleted": "Track deleted"
+      "trackDeleted": "Track deleted",
+      "copied": "Copied to clipboard",
+      "downloaded": "Downloaded successfully",
+      "frameCaptured": "Frame captured successfully"
     },
     "error": {
       "parseResultFailed": "Failed to parse result",
@@ -1037,7 +1055,12 @@
       "reorderFailed": "Failed to reorder",
       "trimFailed": "Failed to trim",
       "addTrackFailed": "Failed to add track",
-      "deleteTrackFailed": "Failed to delete track"
+      "deleteTrackFailed": "Failed to delete track",
+      "copyFailed": "Copy failed",
+      "downloadFailed": "Download failed",
+      "uploadFailed": "Upload failed",
+      "retryUnavailable": "Retry function unavailable",
+      "taskNotFound": "Cannot find related task information"
     },
     "info": {
       "derivationInDevelopment": "Derivation feature in development, stay tuned",
@@ -1189,6 +1212,13 @@
         "withoutReference": "Describe what you want to create, e.g.: A 30-year-old Asian woman, short hair, professional attire..."
       }
     },
+    "generationParams": "Generation Parameters",
+    "model": "Model",
+    "seed": "Seed",
+    "detailedConfig": "Detailed Configuration",
+    "sourceAssets": "Source Assets",
+    "cannotLoadSourceAssets": "Cannot load source assets",
+    "captureFrame": "Capture Frame",
     "agent": {
       "chatStatus": {
         "awaitingApproval": "Awaiting Approval",

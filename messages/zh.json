@@ -32,7 +32,16 @@
     "aiGenerateOptimize": "AI 生成/优化",
     "generationFailed": "生成失败，请重试",
     "viewerHint": "双击放大 · 滚轮缩放 · 拖拽平移",
-    "preview": "预览"
+    "preview": "预览",
+    "copied": "已复制到剪贴板",
+    "download": "下载",
+    "downloaded": "下载成功",
+    "generating": "正在生成",
+    "retryGeneration": "重试生成",
+    "tags": "标签",
+    "image": "图片",
+    "uploadImagePlaceholder": "点击或拖拽上传图片",
+    "supportedImageFormats": "支持 JPG, PNG, WEBP, GIF"
   },
   "beta": {
     "label": "BETA",
@@ -90,7 +99,7 @@
     "learnMore": "了解更多",
     "hero": {
       "title": "用心创作",
-      "titleHighlight": "好漫剧",
+      "titleHighlight": "好故事",
       "subtitle": "强大的可控性 × AI智能辅助，掌控创作的每个细节",
       "inputPlaceholder": "告诉我你想创作什么...",
       "inputHint": "按 Enter 开始创作",
@@ -925,6 +934,12 @@
       "sidebarTitle": "示例模板",
       "description": "将现有项目标记为示例模板，展示在首页",
       "detail": "管理示例项目模板，设置展示视频和分类，吸引用户体验产品"
+    },
+    "examples": {
+      "title": "示例资产管理",
+      "subtitle": "管理首页展示的示例图片和视频",
+      "sidebarTitle": "示例资产",
+      "description": "从用户资产中挑选精彩作品作为示例展示"
     }
   },
   "agent": {
@@ -990,7 +1005,10 @@
       "taskCreatedAiProcessing": "任务已创建，AI正在处理中...",
       "timelineClipAdded": "已添加到时间轴",
       "audioTrackAdded": "已添加音频轨道",
-      "trackDeleted": "已删除轨道"
+      "trackDeleted": "已删除轨道",
+      "copied": "已复制到剪贴板",
+      "downloaded": "下载成功",
+      "frameCaptured": "画面截取成功"
     },
     "error": {
       "parseResultFailed": "解析结果失败",
@@ -1037,7 +1055,12 @@
       "reorderFailed": "重排序失败",
       "trimFailed": "裁剪失败",
       "addTrackFailed": "添加轨道失败",
-      "deleteTrackFailed": "删除轨道失败"
+      "deleteTrackFailed": "删除轨道失败",
+      "copyFailed": "复制失败",
+      "downloadFailed": "下载失败",
+      "uploadFailed": "上传失败",
+      "retryUnavailable": "重试功能不可用",
+      "taskNotFound": "无法找到相关任务信息"
     },
     "info": {
       "derivationInDevelopment": "派生功能开发中，敬请期待",
@@ -1189,6 +1212,13 @@
         "withoutReference": "详细描述你想要创作的内容，例如：一位30岁的亚洲女性，短发，现代职业装，自信的微笑..."
       }
     },
+    "generationParams": "生成参数",
+    "model": "模型",
+    "seed": "种子",
+    "detailedConfig": "详细配置",
+    "sourceAssets": "源素材",
+    "cannotLoadSourceAssets": "无法加载源素材",
+    "captureFrame": "截取画面",
     "agent": {
       "chatStatus": {
         "awaitingApproval": "待批准",

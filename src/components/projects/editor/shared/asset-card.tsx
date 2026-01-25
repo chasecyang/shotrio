@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Trash2, Video, Play, FileText, Music, AtSign, Star, X, Circle, RefreshCw, Edit2 } from "lucide-react";
 import { useState } from "react";
+import { getAssetAspectRatioWithFallback, getAspectRatioPadding, getGridColumnSpan } from "@/lib/utils/aspect-ratio";
 import { VersionCountBadge } from "./asset-version-panel";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -64,6 +65,11 @@ export function AssetCard({
   const isText = asset.assetType === "text";
   const isAudio = asset.assetType === "audio";
 
+  // 获取素材的实际比例
+  const aspectRatio = getAssetAspectRatioWithFallback(asset);
+  const aspectRatioPadding = getAspectRatioPadding(aspectRatio);
+  const gridColumnSpan = getGridColumnSpan(aspectRatio);
+
   // 检查资产是否正在生成中
   const isGenerating = asset.runtimeStatus === "processing" || asset.runtimeStatus === "pending";
 
@@ -99,6 +105,7 @@ export function AssetCard({
       className={cn(
         "group relative rounded-lg border overflow-hidden transition-all cursor-move bg-card",
         "hover:border-primary/40 hover:bg-accent/50",
+        gridColumnSpan,
         isDragging && "opacity-50",
         isBatchSelected && "border-primary/60 ring-1 ring-primary/30 bg-primary/5 dark:shadow-[var(--safelight-glow)]",
         // Selection status styling
@@ -108,7 +115,8 @@ export function AssetCard({
     >
       {/* 缩略图区域 */}
       <div
-        className="relative aspect-video bg-muted/30 overflow-hidden cursor-pointer"
+        className="relative w-full bg-muted/30 overflow-hidden cursor-pointer"
+        style={{ paddingBottom: aspectRatioPadding }}
         onClick={() => onClick(asset)}
       >
         {isText ? (
