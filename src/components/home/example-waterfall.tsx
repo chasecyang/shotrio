@@ -38,12 +38,12 @@ export function ExampleWaterfall({ initialExamples, total }: ExampleWaterfallPro
   }
 
   return (
-    <section className="py-8 md:py-12 bg-secondary/30">
+    <section className="py-6 md:py-8 bg-secondary/30">
       <div className="container px-4 mx-auto">
         {/* Waterfall Grid using CSS columns */}
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 mb-8">
+        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 mb-6">
           {examples.map((example) => (
-            <div key={example.assetId} className="break-inside-avoid mb-6">
+            <div key={example.assetId} className="break-inside-avoid mb-4">
               <ExampleCard example={example} />
             </div>
           ))}
@@ -113,7 +113,7 @@ function ExampleCard({ example }: { example: ExampleAssetPreview }) {
       onMouseLeave={handleMouseLeave}
     >
       {/* Media Container */}
-      <div className="relative bg-black overflow-hidden" style={{ paddingBottom }}>
+      <div className="relative bg-muted overflow-hidden" style={{ paddingBottom }}>
         {isVideo && example.videoUrl ? (
           <>
             {/* Thumbnail (default) */}
@@ -132,9 +132,9 @@ function ExampleCard({ example }: { example: ExampleAssetPreview }) {
             <video
               ref={videoRef}
               src={example.videoUrl}
-              muted
               loop
               playsInline
+              preload="metadata"
               onLoadedData={() => setIsVideoLoaded(true)}
               className={cn(
                 "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",

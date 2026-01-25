@@ -106,7 +106,7 @@ export default async function Home() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative py-12 md:py-20 overflow-hidden">
+        <section className="relative py-8 md:py-12 overflow-hidden">
           {/* Background Elements */}
           <div className="absolute inset-0 bg-noise opacity-[0.03] z-10 pointer-events-none"></div>
           

@@ -11,7 +11,6 @@ import { requireAdmin } from "@/lib/auth/auth-utils";
 export async function markAssetAsExample(
   assetId: string,
   options: {
-    order?: number;
     displayName?: string;
     description?: string;
   }
@@ -45,16 +44,21 @@ export async function markAssetAsExample(
       await db
         .update(exampleAsset)
         .set({
-          order: options.order ?? existing.order,
           displayName: options.displayName ?? existing.displayName,
           description: options.description ?? existing.description,
         })
         .where(eq(exampleAsset.assetId, assetId));
     } else {
+      // 计算下一个 order 值（新添加的排在最后）
+      const minOrderResult = await db
+        .select({ minOrder: sql<number>`COALESCE(MIN(${exampleAsset.order}), 1)` })
+        .from(exampleAsset);
+      const nextOrder = (minOrderResult[0]?.minOrder ?? 1) - 1;
+
       // 创建
       await db.insert(exampleAsset).values({
         assetId,
-        order: options.order ?? 0,
+        order: nextOrder,
         displayName: options.displayName ?? null,
         description: options.description ?? null,
       });
@@ -130,6 +134,35 @@ export async function updateExampleAssetInfo(
     return {
       success: false,
       error: error instanceof Error ? error.message : "更新失败",
+    };
+  }
+}
+
+/**
+ * 批量更新示例资产排序
+ */
+export async function reorderExampleAssets(
+  orders: Array<{ assetId: string; order: number }>
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    await requireAdmin();
+
+    for (const item of orders) {
+      await db
+        .update(exampleAsset)
+        .set({ order: item.order })
+        .where(eq(exampleAsset.assetId, item.assetId));
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("重排序示例失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "重排序失败",
     };
   }
 }

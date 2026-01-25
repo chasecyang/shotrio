@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
@@ -22,6 +22,66 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
   const { openLoginDialog } = useLoginDialog();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [placeholder, setPlaceholder] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const typewriterRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get examples from translations
+  const examples = t.raw("hero.examples") as string[];
+
+  // 打字机效果
+  useEffect(() => {
+    // 如果用户已经输入内容或聚焦，停止打字机效果
+    if (input || isFocused) {
+      if (typewriterRef.current) {
+        clearTimeout(typewriterRef.current);
+      }
+      return;
+    }
+
+    let currentExampleIndex = 0;
+    let currentCharIndex = 0;
+    let isDeleting = false;
+
+    const typeWriter = () => {
+      const currentExample = examples[currentExampleIndex];
+
+      if (!isDeleting) {
+        // 打字阶段
+        if (currentCharIndex < currentExample.length) {
+          setPlaceholder(currentExample.substring(0, currentCharIndex + 1));
+          currentCharIndex++;
+          typewriterRef.current = setTimeout(typeWriter, 100);
+        } else {
+          // 打完后暂停
+          typewriterRef.current = setTimeout(() => {
+            isDeleting = true;
+            typeWriter();
+          }, 2000);
+        }
+      } else {
+        // 删除阶段
+        if (currentCharIndex > 0) {
+          setPlaceholder(currentExample.substring(0, currentCharIndex - 1));
+          currentCharIndex--;
+          typewriterRef.current = setTimeout(typeWriter, 50);
+        } else {
+          // 删完后切换到下一个示例
+          isDeleting = false;
+          currentExampleIndex = (currentExampleIndex + 1) % examples.length;
+          typewriterRef.current = setTimeout(typeWriter, 500);
+        }
+      }
+    };
+
+    typeWriter();
+
+    return () => {
+      if (typewriterRef.current) {
+        clearTimeout(typewriterRef.current);
+      }
+    };
+  }, [input, isFocused]);
 
   // 组件挂载时恢复保存的输入
   useEffect(() => {
@@ -130,21 +190,23 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
   );
 
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto">
       <div className="relative flex items-center">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t("hero.inputPlaceholder") || "告诉我你想创作什么..."}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={placeholder}
           disabled={isLoading}
-          className="h-14 pl-5 pr-14 text-base rounded-full border-border/60 bg-background/80 backdrop-blur-sm shadow-lg dark:border-border/80 dark:shadow-2xl focus-visible:ring-primary/30 dark:focus-visible:ring-primary/50"
+          className="h-16 pl-6 pr-16 text-lg rounded-full border-border/60 bg-background/80 backdrop-blur-sm shadow-lg dark:border-border/80 dark:shadow-2xl focus-visible:ring-primary/30 dark:focus-visible:ring-primary/50"
         />
         <Button
           size="icon"
           onClick={handleSubmit}
           disabled={isLoading}
-          className="absolute right-2 h-10 w-10 rounded-full"
+          className="absolute right-2 h-12 w-12 rounded-full"
         >
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -153,8 +215,8 @@ export function HeroQuickStart({ isAuthenticated = false }: HeroQuickStartProps)
           )}
         </Button>
       </div>
-      <p className="mt-3 text-sm text-muted-foreground/60 text-center">
-        {t("hero.inputHint") || "按 Enter 开始创作"}
+      <p className="mt-4 text-sm text-muted-foreground/60 text-center">
+        {t("hero.inputHint")}
       </p>
     </div>
   );

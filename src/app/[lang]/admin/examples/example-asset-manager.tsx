@@ -25,12 +25,30 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Play, Plus, Trash2, Edit, Search } from "lucide-react";
+import { Play, Plus, Trash2, Edit, Search, GripVertical } from "lucide-react";
 import {
   markAssetAsExample,
   unmarkAssetAsExample,
   updateExampleAssetInfo,
+  reorderExampleAssets,
 } from "@/lib/actions/admin/example-admin";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Asset {
   id: string;
@@ -67,6 +85,99 @@ interface ExampleAssetManagerProps {
   assets: Asset[];
 }
 
+// 可拖拽的表格行组件
+function SortableTableRow({
+  example,
+  onEdit,
+  onRemove,
+}: {
+  example: Example;
+  onEdit: (example: Example) => void;
+  onRemove: (assetId: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: example.assetId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      <TableCell>
+        <div className="relative w-16 h-16 rounded overflow-hidden bg-muted">
+          {example.thumbnailUrl && (
+            <Image
+              src={example.thumbnailUrl}
+              alt={example.assetName}
+              fill
+              className="object-cover"
+            />
+          )}
+          {example.assetType === "video" && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Play className="w-4 h-4 text-white" />
+            </div>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div>
+          <div className="font-medium">{example.displayName || example.assetName}</div>
+          {example.description && (
+            <div className="text-sm text-muted-foreground line-clamp-1">
+              {example.description}
+            </div>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">{example.assetType}</Badge>
+      </TableCell>
+      <TableCell>
+        <div className="text-sm">
+          {example.creatorName || example.creatorEmail || "-"}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onEdit(example)}
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onRemove(example.assetId)}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function ExampleAssetManager({ examples: initialExamples, assets: initialAssets }: ExampleAssetManagerProps) {
   const [examples, setExamples] = useState(initialExamples);
   const [assets] = useState(initialAssets);
@@ -76,7 +187,7 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // 表单状态
+  // 表单状态（添加时不需要 order，编辑时需要）
   const [formData, setFormData] = useState({
     order: 0,
     displayName: "",
@@ -87,11 +198,42 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
     asset.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 拖拽排序
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = examples.findIndex((ex) => ex.assetId === active.id);
+      const newIndex = examples.findIndex((ex) => ex.assetId === over.id);
+
+      const newExamples = arrayMove(examples, oldIndex, newIndex);
+      setExamples(newExamples);
+
+      // 计算新的 order 值（第一个 order 最大）
+      const orders = newExamples.map((ex, index) => ({
+        assetId: ex.assetId,
+        order: newExamples.length - index,
+      }));
+
+      const result = await reorderExampleAssets(orders);
+      if (!result.success) {
+        toast.error(result.error || "重排序失败");
+        setExamples(examples); // 回滚
+      }
+    }
+  };
+
   const handleAddExample = async () => {
     if (!selectedAsset) return;
 
     const result = await markAssetAsExample(selectedAsset.id, {
-      order: formData.order,
       displayName: formData.displayName || undefined,
       description: formData.description || undefined,
     });
@@ -113,7 +255,6 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
     if (!editingExample) return;
 
     const result = await updateExampleAssetInfo(editingExample.assetId, {
-      order: formData.order,
       displayName: formData.displayName || undefined,
       description: formData.description || undefined,
     });
@@ -170,88 +311,47 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
       <Card className="p-6">
         <h2 className="text-2xl font-bold mb-4">当前示例资产 ({examples.length})</h2>
         <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">预览</TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead className="w-[100px]">排序</TableHead>
-                <TableHead>创建者</TableHead>
-                <TableHead className="w-[150px]">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {examples.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    暂无示例资产
-                  </TableCell>
-                </TableRow>
-              ) : (
-                examples.map((example) => (
-                  <TableRow key={example.assetId}>
-                    <TableCell>
-                      <div className="relative w-16 h-16 rounded overflow-hidden bg-muted">
-                        {example.thumbnailUrl && (
-                          <Image
-                            src={example.thumbnailUrl}
-                            alt={example.assetName}
-                            fill
-                            className="object-cover"
-                          />
-                        )}
-                        {example.assetType === "video" && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Play className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{example.displayName || example.assetName}</div>
-                        {example.description && (
-                          <div className="text-sm text-muted-foreground line-clamp-1">
-                            {example.description}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{example.assetType}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge>{example.order}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {example.creatorName || example.creatorEmail || "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditDialog(example)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveExample(example.assetId)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={examples.map((ex) => ex.assetId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[100px]">预览</TableHead>
+                    <TableHead>名称</TableHead>
+                    <TableHead>类型</TableHead>
+                    <TableHead>创建者</TableHead>
+                    <TableHead className="w-[150px]">操作</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {examples.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        暂无示例资产
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    examples.map((example) => (
+                      <SortableTableRow
+                        key={example.assetId}
+                        example={example}
+                        onEdit={openEditDialog}
+                        onRemove={handleRemoveExample}
+                      />
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </SortableContext>
+          </DndContext>
         </div>
       </Card>
 
@@ -329,16 +429,6 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="order">排序权重</Label>
-              <Input
-                id="order"
-                type="number"
-                value={formData.order}
-                onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                placeholder="数字越大越靠前"
-              />
-            </div>
-            <div>
               <Label htmlFor="displayName">展示名称（可选）</Label>
               <Input
                 id="displayName"
@@ -379,16 +469,6 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-order">排序权重</Label>
-              <Input
-                id="edit-order"
-                type="number"
-                value={formData.order}
-                onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                placeholder="数字越大越靠前"
-              />
-            </div>
             <div>
               <Label htmlFor="edit-displayName">展示名称（可选）</Label>
               <Input

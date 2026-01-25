@@ -195,14 +195,22 @@
     "getStarted": "Start Creating",
     "learnMore": "Learn More",
     "hero": {
-      "title": "Create Great",
-      "titleHighlight": "Stories",
-      "subtitle": "Powerful Control × AI Assistance — Master Every Detail of Your Creation",
+      "title": "Great Stories",
+      "titleHighlight": "Deserve Craft",
+      "subtitle": "Beyond rough generation, AI helps you refine every shot",
       "inputPlaceholder": "Tell me what you want to create...",
       "inputHint": "Press Enter to start creating",
       "createProjectFailed": "Failed to create project",
       "createChatFailed": "Failed to create chat",
-      "startFailed": "Start failed, please try again"
+      "startFailed": "Start failed, please try again",
+      "examples": [
+        "A funny story about a cat chasing a mouse",
+        "A romantic confession story",
+        "Detective solving a mysterious case",
+        "A heartwarming story of a puppy making friends in the park",
+        "Chef competing in a cooking competition",
+        "A brave rabbit exploring the forest"
+      ]
     },
     "features": {
       "title": "Complete Creation Toolchain",

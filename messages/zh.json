@@ -98,14 +98,22 @@
     "getStarted": "开始创作",
     "learnMore": "了解更多",
     "hero": {
-      "title": "用心创作",
-      "titleHighlight": "好故事",
-      "subtitle": "强大的可控性 × AI智能辅助，掌控创作的每个细节",
+      "title": "好故事",
+      "titleHighlight": "值得打磨",
+      "subtitle": "告别粗糙生成，AI陪你打磨每个镜头",
       "inputPlaceholder": "告诉我你想创作什么...",
-      "inputHint": "按 Enter 开始创作",
+      "inputHint": "告诉我你想创作什么",
       "createProjectFailed": "创建项目失败",
       "createChatFailed": "创建对话失败",
-      "startFailed": "启动失败，请重试"
+      "startFailed": "启动失败，请重试",
+      "examples": [
+        "一只猫追逐老鼠的搞笑故事",
+        "一个浪漫的表白故事",
+        "侦探破解神秘案件",
+        "小狗在公园里交朋友的温馨故事",
+        "厨师参加烹饪大赛",
+        "勇敢的兔子探险森林"
+      ]
     },
     "features": {
       "title": "完整的创作工具链",
