@@ -132,8 +132,6 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 **输入方式**：
 - 参考图模式：支持 1-3 张参考图（reference_image_urls 数组）
 
-**prompt 结构**：[景别] + [主体动作] + [镜头运动] + [镜头参数] + [氛围]
-
 **时长**：
 - Veo 3.1 默认约 8 秒；duration 参数仅保留兼容，不生效
 

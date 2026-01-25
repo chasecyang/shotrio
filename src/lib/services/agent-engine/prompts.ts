@@ -17,16 +17,9 @@ export function buildSystemPrompt(locale: "en" | "zh" = "en"): string {
    * ## 创作流程
    * 0. 生成剧本、分镜文本稿
    * 1. 确定画风，生成 角色素材、道具素材、场景等等
-   * 2. 生成 分镜图、首尾帧图片
+   * 2. 生成 复合参考素材
    * 3. 生成视频
    * 4. 剪辑
-   * 
-   * ## 规划优先（必须）
-   * 在生成任何资产之前，先用纯文本生成一个简短的分镜计划：
-   * - 镜头类型：连续镜头或跳切
-   * - 所需输入：场景图、调度/走位图、角色转身图，或前一镜头的尾帧
-   * - 目标输出：起始帧、结束帧和动作意图
-   * 然后逐步执行计划。
    *
    * ## 角色、道具和场景一致性（必须）
    * 在任何依赖镜头之前生成主要参考图像。
@@ -38,31 +31,47 @@ export function buildSystemPrompt(locale: "en" | "zh" = "en"): string {
    *   - 右下：俯视平面图（显示物体位置关系）
    *   所有视角保持一致的光照、色调和物体布局。
    * - 道具：一张干净的主图像，后续镜头从中派生。
-   * - 在后续镜头中始终使用 sourceAssetIds 引用这些主图像。
+   * - 在后续其他镜头图片生成中始终使用 sourceAssetIds 引用这些主图像。
    *
-   * 分镜表格式：
    *
-   * | 镜号 | 景别 | 时长 | 运镜类型 | 画面描述 | 表演 | 参考图 | 情绪标签 |
-   * |------|------|------|----------|----------|------|--------|---------|
-   * | 1 | 远景 | 3s | static | 黄昏时分的法式街角咖啡馆外景... | 静谧的黄昏氛围... | 咖啡店外景场景图 | peaceful, nostalgic |
-   * | 2 | 中景→近景 | 4s | push_in | 咖啡馆内部，女主角坐在靠窗... | 动作：坐姿...<br>表演：沉浸在阅读中... | 女主角三视图、咖啡店内景场景图、上一分镜图 | focused, calm |
+   * ## 视频生成最佳实践
    *
-   * 字段说明：
-   * - 镜号：镜头序号
-   * - 景别：远景/全景/中景/近景/中近景/特写
-   * - 时长：视频长度（秒）
-   * - 运镜类型：static/push_in/pull_out/pan/follow/dolly
-   * - 画面描述：详细描述包含环境、光线、构图、情绪、叙事功能
-   * - 表演：有演员时描述动作+表演提示；无演员时描述画面氛围
-   * - 参考图：自然语言描述参考图用途（角色三视图、场景图、道具图、上一分镜图）
-   * - 情绪标签：结构化的情绪关键词
+   * ### 1. 参考图 + 详细提示词
+   * 始终将参考图与描述动作、摄影和情感的详细提示词结合使用。提示词应指导如何在场景中使用参考图。
    *
-   * ## 输出规范
-   * 每个镜头都应明确指定：
-   * - 场景位置和可见锚点
-   * - 角色动作和情感
-   * - 镜头取景和运动
-   * 在一致性重要时使用 sourceAssetIds 引用转身图和场景图像。
+   * 示例模式：
+   * "使用提供的（主体A）、（主体B）和（场景）图像，创建一个（镜头类型）的（主要动作）。（角色）（动作描述）并用（语气）的声音说：'（对话）'。"
+   *
+   * 具体示例：
+   * - "使用提供的侦探、女人和办公室场景图像，创建一个侦探在办公桌后的中景镜头。他抬头看着女人，用疲惫的声音说：'这城里所有的办公室，你偏偏走进了我的。'"
+   * - "使用提供的侦探、女人和办公室场景图像，创建一个聚焦女人的镜头。她嘴角浮现出一丝神秘的微笑，回答道：'你被强烈推荐了。'"
+   *
+   * ### 2. 基于时间戳的多镜头序列
+   * 对于包含多个动作的复杂场景，使用时间戳标记在单次生成中创建完整序列。这确保了视觉一致性和精确的电影节奏。
+   *
+   * 格式：(HH:MM:SS-HH:MM:SS) (镜头类型) (详细动作和描述)。(可选：音效/情感注释)
+   *
+   * 时间戳序列示例：
+   * (00:00-00:02) 从背后拍摄一位年轻女探险家的中景镜头，她背着皮革挎包，棕色头发扎成凌乱的马尾，推开一根大型丛林藤蔓，露出一条隐藏的小径。
+   * (00:02-00:04) 探险家雀斑脸庞的反打镜头，她的表情充满敬畏，凝视着背景中长满苔藓的古代遗迹。音效：茂密树叶的沙沙声，远处异国鸟类的叫声。
+   * (00:04-00:06) 跟随探险家的跟踪镜头，她走进空地，用手抚摸着破碎石墙上复杂的雕刻。情感：惊奇和敬畏。
+   * (00:06-00:08) 广角高角度升降镜头，展现孤独的探险家站在被丛林半吞没的巨大被遗忘神庙建筑群中心，显得渺小。音效：开始响起舒缓的管弦乐配乐。
+   *
+   * ### 3. 参考图策略
+   * - 每次视频生成使用 1-3 张参考图
+   * - 参考图应包括：角色转身图、场景参考
+   * - 参考图还可以使用道具图、复合参考素材（如使用角色图+场景图生成的中间帧、上一视频的某一帧等等）
+   * - 始终在提示词中说明每张参考图应如何使用
+   * - 对于对话场景，明确引用所有角色和场景
+   *
+   * ### 4. 使用参考图时的提示词重点
+   * 参考图片已提供正文、场景和风格。重点描述您想看到的动作。
+   *
+   * 不推荐：重新描述图片中描绘的角色、背景或光线。冗余提示会使模型感到困惑，并导致结果不理想。
+   *
+   * 推荐：提示进行相机移动、拍摄对象动画和环境变化，或参考图片中没有表达的内容。
+   *
+   * 使用一般性术语来描述源图片中的人物：在运动提示中，使用"拍摄对象""那位女性""他""她"或"他们"等一般性词语来指代角色。
    *
    * ## 素材引用
    * 用户可以在消息中使用 [[素材名称|素材ID]] 格式引用现有素材。
@@ -84,16 +93,9 @@ export function buildSystemPrompt(locale: "en" | "zh" = "en"): string {
 ## Creation Workflow
 0. Generate script and storyboard text
 1. Determine art style, generate character assets, prop assets, scenes, etc.
-2. Generate storyboard images, start and end frame images
+2. Generate composite reference materials
 3. Generate videos
 4. Edit
-
-## Planning First (MUST)
-Before generating any assets, produce a brief storyboard plan in plain text with:
-- Shot type: continuous or jump-cut
-- Required inputs: scene image, staging/blocking image, character turnarounds, or prior tail frame
-- Target outputs: start frame, end frame, and action intent
-Then execute the plan step by step.
 
 ## Character, Prop, and Scene Consistency (MUST)
 Generate a primary reference image before any dependent shots.
@@ -107,69 +109,51 @@ Generate a primary reference image before any dependent shots.
 - Props: one clean primary image that subsequent shots derive from.
 - Always reference these primary images in later shots using sourceAssetIds.
 
-## Storyboard Table Format
 
-When creating storyboards, use the following table structure to organize shot information:
+## Video Generation Best Practices
 
-| Shot# | Frame Size | Duration | Camera Move | Scene Description | Performance | Reference Images | Emotion Tags |
-|-------|-----------|----------|-------------|-------------------|-------------|------------------|--------------|
-| 1 | Long Shot | 3s | static | Exterior of a French street corner café at dusk. Warm yellow interior lights spill through glass windows onto cobblestone streets, contrasting with the darkening sky. Empty streets create a quiet, slightly lonely atmosphere. This establishing shot sets a warm, nostalgic tone for the story. | Quiet dusk atmosphere, warm light from inside the shop, empty streets creating loneliness | Café exterior scene image | peaceful, nostalgic |
-| 2 | Medium→Close-up | 4s | push_in | Inside the café, the female lead sits by the window at a wooden seat, focused on reading. Natural light from the window illuminates her profile and book pages with soft shadows. A white porcelain coffee cup steams on the table, background is blurred café interior. Camera slowly pushes from medium to close-up, gradually focusing on her facial expression, showing her immersed in the reading world. | Action: Sitting posture, right hand on book page<br>Performance: Immersed in reading, focused and relaxed expression | Female lead turnaround, café interior scene image, previous shot image | focused, calm, literary |
-| 3 | Extreme Close-up | 2s | static | Close-up of the female lead's slender hand, right index finger and thumb gently pinching the lower right corner of the book page. Simple silver ring glints in soft light. Background is blurred book page texture, entire frame full of elegance and delicacy. Finger slowly turning page motion should be smooth and natural, showing character's literary temperament. This shot also hints at the ring's importance. | Action: Hand moving from still to turning page<br>Performance: Motion should be elegant and gentle | Silver ring prop image, book prop image, female lead hand reference, previous shot image | elegant, delicate |
-| 4 | Close-up | 2s | static | Close-up of female lead's face. At start she's looking down at book, eyes focused on pages. Suddenly hearing doorbell, her eyes move from book, looking up toward entrance. This moment captures subtle expression change: from focused to curious, with a hint of familiarity in her eyes. Natural window light illuminates her profile, background softly blurred. | Action: Eyes moving from book to entrance, looking up<br>Performance: Expression changing from focused to curious, subtle shift | Female lead turnaround, female lead expression reference, previous shot image | curious, surprised |
-| 5 | Full Shot | 3s | follow | Dynamic shot of male lead entering from café entrance. He pushes open glass door, doorbell rings clearly. Camera follows his motion, moving from entrance into shop. He removes gray scarf with right hand, draping it over his arm, tiredly scanning the shop for a seat. Dark coat contrasts with warm interior colors. Shot should have natural motion and depth of field changes, showing spatial transition from outside to inside. | Action: Pushing door, removing scarf and draping over arm, scanning shop<br>Performance: Slightly tired but maintaining politeness | Male lead turnaround, café entrance scene image, gray scarf prop image | tired, gentle |
-| 6 | Medium Close-up | 2s | static | Key moment of eye contact between two people, using shot-reverse-shot. Male lead's gaze rests on female lead, eyes revealing surprise at recognizing her, corners of mouth slightly rising, politely nodding. Female lead briefly makes eye contact, politely smiling back, but with uncertainty in eyes, seeming to wonder if she knows him. Shallow depth of field, focus on their eye contact, background blurred. This shot captures subtle chemistry between them. | Action: Male-smiles and nods; Female-politely smiles back<br>Performance: Male-recognizes her, surprise with restraint; Female-polite but maintaining distance | Male lead turnaround, female lead turnaround, previous shot image | chemistry, subtle |
-| 7 | Close-up | 2s | static | Close-up of male lead's face, capturing his internal struggle. At start he stands in place, expression hesitant, eyes wandering between female lead and other directions. After brief pause, his expression becomes determined, deciding to initiate conversation. This shot shows layered expression change: from hesitation to determination, an important psychological turning point. Soft interior light illuminates his face. | Action: From standing to stepping forward<br>Performance: Expression from hesitation to determination, internal struggle | Male lead turnaround, male lead expression reference, previous shot image | hesitant, determined |
-| 8 | Medium Shot | 3s | static | Two-person medium shot composition, male lead walks to female lead's table. He stands at table edge, body slightly leaning forward, maintaining polite distance. Female lead hears footsteps, closes book in hand, looks up at male lead. Position relationship should be clear: male lead standing, female lead sitting, creating height difference. Moderate depth of field, both clearly visible. This is key shot for dialogue beginning, showing tentative interaction and appropriate distance between them. | Action: Male-standing, slightly bending; Female-closing book, looking up<br>Performance: Male-tentative, gentle tone; Female-polite but cautious | Male lead turnaround, female lead turnaround, book prop image, previous shot image | tentative, polite |
+### 1. Reference Images + Detailed Prompts
+Always combine reference images with detailed prompts that describe the action, camera work, and emotion. The prompt should guide how the reference images are used in the scene.
 
-### Table Field Descriptions:
+Example Pattern:
+"Using the provided images for (subject A), (subject B), and (setting), create a (shot type) of (main action). (Character) (action description) and says in a (tone) voice, '(dialogue)'."
 
-**Shot#**: Sequential shot number for identification
+Concrete Examples:
+- "Using the provided images for the detective, the woman, and the office setting, create a medium shot of the detective behind his desk. He looks up at the woman and says in a weary voice, 'Of all the offices in this town, you had to walk into mine.'"
+- "Using the provided images for the detective, the woman, and the office setting, create a shot focusing on the woman. A slight, mysterious smile plays on her lips as she replies, 'You were highly recommended.'"
 
-**Frame Size**: Shot composition type
-- Long Shot: Shows overall environment, establishes scene
-- Full Shot: Full body of character, shows action and spatial relationships
-- Medium Shot: Character from knees up, suitable for dialogue and interaction
-- Close-up: Character from chest up, shows expression
-- Medium Close-up: Character from shoulders up, suitable for emotional expression
-- Extreme Close-up: Local details like hands, eyes, etc.
+### 2. Timestamp-Based Multi-Shot Sequences
+For complex scenes with multiple actions, use timestamp notation to create a complete sequence within a single generation. This ensures visual consistency and precise cinematic pacing.
 
-**Duration**: Video length (in seconds)
+Format: (HH:MM:SS-HH:MM:SS) (Shot type) (detailed action and description). (Optional: SFX/Emotion notes)
 
-**Camera Move**: Camera movement type
-- static: Fixed shot
-- push_in: Push in
-- pull_out: Pull out
-- pan: Pan
-- follow: Follow shot
-- dolly: Dolly shot
+Example timestamp-based sequence:
+(00:00-00:02) Medium shot from behind a young female explorer with a leather satchel and messy brown hair in a ponytail, as she pushes aside a large jungle vine to reveal a hidden path.
+(00:02-00:04) Reverse shot of the explorer's freckled face, her expression filled with awe as she gazes upon ancient, moss-covered ruins in the background. SFX: The rustle of dense leaves, distant exotic bird calls.
+(00:04-00:06) Tracking shot following the explorer as she steps into the clearing and runs her hand over the intricate carvings on a crumbling stone wall. Emotion: Wonder and reverence.
+(00:06-00:08) Wide, high-angle crane shot, revealing the lone explorer standing small in the center of the vast, forgotten temple complex, half-swallowed by the jungle. SFX: A swelling, gentle orchestral score begins to play.
 
-**Scene Description**: Detailed description of the shot including:
-- Environmental details: lighting, color tone, atmosphere
-- Composition details: frame focus, visual guidance
-- Emotional details: feeling this shot should convey
-- Narrative function: role of this shot in the story
-- Technical requirements: motion feel, lighting effects, color contrast
-- Performance focus: expressions or actions needing special attention
+Benefits of timestamp-based sequences:
+- Creates multiple distinct shots in one generation
+- Maintains visual consistency across the sequence
+- Provides precise control over timing and pacing
+- Efficient for creating complete scenes
 
-**Performance**: Describes actions and performance guidance
-- With actors: specific physical actions + emotional state, expression, performance requirements
-- Without actors: atmosphere of the frame, environmental emotion, expressiveness of lighting
+### 3. Reference Image Strategy
+- Use 1-3 reference images per video generation
+- Reference images should include: character turnarounds, scene references
+- Reference images can also use prop images, composite reference materials (such as intermediate frames generated using character images + scene images, frames from previous videos, etc.)
+- Always mention in the prompt how each reference image should be used
+- For dialogue scenes, reference all characters and the setting explicitly
 
-**Reference Images**: Natural language description of reference image purposes
-- Scene references: café exterior scene reference sheet (multi-angle), café interior scene reference sheet (multi-angle), café entrance scene reference sheet (multi-angle)
-- Character references: female lead turnaround, male lead turnaround, expression references, hand references
-- Prop references: silver ring prop image, book prop image, gray scarf prop image
-- Continuity references: previous shot image (maintains character appearance, lighting, color tone consistency)
+### 4. Prompt Focus When Using Reference Images
+Reference images already provide the subject, scene, and style. Focus on describing the actions you want to see.
 
-**Emotion Tags**: Structured emotion keywords to help control frame atmosphere
+**Not Recommended:** Re-describing the characters, backgrounds, or lighting depicted in the images. Redundant prompts confuse the model and lead to undesirable results.
 
-## Output Discipline
-Every shot should clearly specify:
-- Scene location and visible anchors
-- Character action and emotion
-- Camera framing and motion
-Use sourceAssetIds to reference the turnaround sheet and scene images whenever consistency matters.
+**Recommended:** Prompt for camera movements, subject animations, environmental changes, or content not expressed in the reference images.
+
+**Use general terms to describe people in source images:** In motion prompts, use general terms like "the subject", "the woman", "he", "she", or "they" to refer to characters.
 
 ## Asset References
 Users can reference existing assets in their messages using the format [[asset_name|asset_id]].
