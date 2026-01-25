@@ -126,6 +126,8 @@ function ExampleCard({ example }: { example: ExampleAssetPreview }) {
                   "object-cover transition-opacity duration-300",
                   isHovering && isVideoLoaded ? "opacity-0" : "opacity-100"
                 )}
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                quality={90}
               />
             )}
             {/* Video (hover) */}

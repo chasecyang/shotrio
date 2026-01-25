@@ -215,6 +215,11 @@
     "features": {
       "title": "Complete Creation Toolchain",
       "subtitle": "Precise control over every step, AI-enhanced efficiency",
+      "script": {
+        "title": "Script Writing",
+        "description": "AI-assisted screenplay creation to quickly generate story outlines and shot scripts for efficient ideation.",
+        "badge": "Coming Soon"
+      },
       "assetManagement": {
         "title": "Asset Management",
         "description": "Manage scenes, characters, and effects in one place. Support AI generation and uploads for your asset library.",
@@ -254,6 +259,10 @@
       "step3": {
         "title": "Smart Editing",
         "description": "Edit clips into high-quality final videos under your control"
+      },
+      "step4": {
+        "title": "Export & Publish",
+        "description": "Export high-quality videos with one click and share your work"
       }
     },
     "cta": {

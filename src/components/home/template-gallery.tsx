@@ -112,6 +112,8 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
                 className={`object-cover transition-opacity duration-300 ${
                   isHovering ? "opacity-0" : "opacity-100"
                 }`}
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                quality={90}
               />
             )}
             {/* 视频（悬停播放） */}

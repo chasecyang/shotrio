@@ -118,6 +118,11 @@
     "features": {
       "title": "完整的创作工具链",
       "subtitle": "精准把控每个环节，AI辅助提升创作效率",
+      "script": {
+        "title": "剧本创作",
+        "description": "AI辅助剧本创作，快速生成故事大纲和分镜脚本，让创意落地更高效。",
+        "badge": "即将推出"
+      },
       "assetManagement": {
         "title": "素材管理",
         "description": "统一管理场景、角色、特效等创作素材。支持AI生成和上传，打造专属素材库。",
@@ -126,7 +131,7 @@
       "videoGeneration": {
         "title": "AI 视频生成",
         "description": "AI智能生成视频片段，轻松剪辑成片。",
-        "badge": "已上线"
+        "badge": "已上��"
       },
       "agent": {
         "title": "AI Agent 辅助",
@@ -157,6 +162,10 @@
       "step3": {
         "title": "智能剪辑",
         "description": "在你的把控下剪辑成高质量成片"
+      },
+      "step4": {
+        "title": "导出发布",
+        "description": "一键导出高质量视频，分享你的作品"
       }
     },
     "cta": {

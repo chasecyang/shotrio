@@ -1026,6 +1026,8 @@ export function AssetDetailView({
                                 alt={source.name}
                                 fill
                                 className="object-cover"
+                                sizes="100px"
+                                quality={85}
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">

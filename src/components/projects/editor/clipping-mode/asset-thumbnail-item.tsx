@@ -100,6 +100,8 @@ export function AssetThumbnailItem({ asset, onPreviewAsset }: AssetThumbnailItem
             alt={asset.name}
             fill
             className="object-cover"
+            sizes="56px"
+            quality={80}
             loading="lazy"
             draggable={false}
           />

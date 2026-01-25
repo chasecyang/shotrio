@@ -108,6 +108,7 @@ export function AssetVersionPanel({
                         fill
                         className="object-cover"
                         sizes="64px"
+                        quality={80}
                       />
                     ) : (
                       <div className="relative w-full h-full">

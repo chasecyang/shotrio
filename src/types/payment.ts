@@ -84,7 +84,7 @@ export interface CreditPackage {
   popular?: boolean;
 }
 
-// 积分包配置常量 (1美金 = 10积分)
+// 积分包配置常量 (1美金 = 100积分)
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     type: "starter" as PackageType,
@@ -129,7 +129,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
 ];
 
-// 积分消费配置 (1美金 = 10积分)
+// 积分消费配置 (1美金 = 100积分)
 export const CREDIT_COSTS = {
   IMAGE_GENERATION: 6, // Nano Banana 图片生成：6积分/张 ($0.06, 成本$0.03, 利润率50%)
   VIDEO_GENERATION_PER_SECOND: 6, // Seedance 1.5 Pro 视频生成：6积分/秒 ($0.06, 成本$0.0175, 利润率70.8%)

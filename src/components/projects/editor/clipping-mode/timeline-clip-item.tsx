@@ -119,6 +119,8 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
                 alt={clip.asset.name}
                 fill
                 className="object-cover"
+                sizes="200px"
+                quality={75}
               />
             </div>
           ) : null}
