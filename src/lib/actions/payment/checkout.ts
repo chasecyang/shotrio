@@ -6,16 +6,15 @@ import db from "@/lib/db";
 import { orders, OrderStatus } from "@/lib/db/schemas/payment";
 import { eq, and, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { createCreem } from "creem_io";
 import {
-  creemConfig,
-  creemProductIds,
-  validateCreemConfig,
-} from "@/lib/payment/creem.config";
+  getStripe,
+  stripeConfig,
+  validateStripeConfig,
+} from "@/lib/payment/stripe.config";
 import { CREDIT_PACKAGES, type PackageType } from "@/types/payment";
 
 /**
- * 创建Creem支付会话
+ * 创建Stripe支付会话
  */
 export async function createCheckoutSession(params: {
   packageType: PackageType;
@@ -57,7 +56,7 @@ export async function createCheckoutSession(params: {
       amount: pkg.price.toString(),
       credits: baseCredits,
       bonusCredits,
-      isFirstPurchase: false, // 保留字段用于历史兼容性
+      isFirstPurchase: false,
       status: OrderStatus.PENDING,
       metadata: JSON.stringify({
         packageName: pkg.name,
@@ -67,21 +66,34 @@ export async function createCheckoutSession(params: {
       updatedAt: new Date(),
     });
 
-    validateCreemConfig();
-    const productId = creemProductIds[packageType];
-    if (!productId) {
-      return { success: false, error: "缺少Creem产品ID配置" };
-    }
+    validateStripeConfig();
 
-    const creem = createCreem({
-      apiKey: creemConfig.apiKey,
-      webhookSecret: creemConfig.webhookSecret,
-      testMode: creemConfig.testMode,
-    });
+    // 计算总积分用于显示
+    const totalCredits = baseCredits + bonusCredits;
 
-    const checkout = await creem.checkouts.create({
-      productId,
-      successUrl: creemConfig.successUrl,
+    // 创建 Stripe Checkout Session（使用动态价格，无需预先创建产品）
+    const stripe = getStripe();
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${pkg.name} - ${totalCredits} Credits`,
+              description: pkg.bonusPercent > 0
+                ? `${baseCredits} credits + ${bonusCredits} bonus (${pkg.bonusPercent}% extra)`
+                : `${baseCredits} credits`,
+            },
+            unit_amount: pkg.price * 100, // Stripe 使用分为单位
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: stripeConfig.successUrl,
+      cancel_url: stripeConfig.cancelUrl,
+      customer_email: session.user.email || undefined,
       metadata: {
         orderId,
         userId,
@@ -90,21 +102,21 @@ export async function createCheckoutSession(params: {
       },
     });
 
-    if (!checkout.checkoutUrl) {
-      return { success: false, error: "Creem checkout URL缺失" };
+    if (!checkoutSession.url) {
+      return { success: false, error: "Stripe checkout URL缺失" };
     }
 
     await db
       .update(orders)
       .set({
-        creemSessionId: checkout.id,
+        stripeSessionId: checkoutSession.id,
         updatedAt: new Date(),
       })
       .where(eq(orders.id, orderId));
 
     return {
       success: true,
-      checkoutUrl: checkout.checkoutUrl,
+      checkoutUrl: checkoutSession.url,
       orderId,
     };
   } catch (error) {

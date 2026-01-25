@@ -96,8 +96,8 @@ export const orders = pgTable("orders", {
   bonusCredits: integer("bonus_credits").default(0).notNull(), // 奖励积分数
   isFirstPurchase: boolean("is_first_purchase").default(false).notNull(),
   status: orderStatusEnum("status").default(OrderStatus.PENDING).notNull(),
-  creemPaymentId: text("creem_payment_id"),
-  creemSessionId: text("creem_session_id"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeSessionId: text("stripe_session_id"),
   metadata: text("metadata"), // JSON元数据
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),

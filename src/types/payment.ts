@@ -41,8 +41,8 @@ export interface Order {
   bonusCredits: number;
   isFirstPurchase: boolean;
   status: OrderStatus;
-  creemPaymentId?: string | null;
-  creemSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeSessionId?: string | null;
   metadata?: string | null;
   createdAt: Date;
   completedAt?: Date | null;
