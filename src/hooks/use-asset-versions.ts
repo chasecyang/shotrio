@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { setActiveVersion, deleteAssetVersion } from "@/lib/actions/asset";
+import { useTranslations } from "next-intl";
 import type { ImageData, VideoData, AssetWithFullData } from "@/types/asset";
 
 type Version = ImageData | VideoData;
@@ -11,12 +12,7 @@ interface UseAssetVersionsOptions {
 }
 
 /**
- * Asset 版本管理 Hook
- *
- * 功能：
- * - 获取当前资产的所有版本
- * - 切换激活版本
- * - 删除版本
+ * Asset version management Hook
  */
 export function useAssetVersions(
   asset: AssetWithFullData,
@@ -24,8 +20,9 @@ export function useAssetVersions(
 ) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("toasts");
 
-  // 获取版本列表
+  // Get version list
   const versions: Version[] =
     asset.assetType === "image"
       ? asset.imageDataList || []
@@ -33,7 +30,7 @@ export function useAssetVersions(
         ? asset.videoDataList || []
         : [];
 
-  // 当前激活版本
+  // Current active version
   const activeVersion =
     asset.assetType === "image"
       ? asset.imageData
@@ -41,7 +38,7 @@ export function useAssetVersions(
         ? asset.videoData
         : null;
 
-  // 切换激活版本
+  // Switch active version
   const switchVersion = useCallback(
     async (versionId: string) => {
       if (!versionId || versionId === activeVersion?.id) return;
@@ -50,23 +47,23 @@ export function useAssetVersions(
       startTransition(async () => {
         const result = await setActiveVersion(asset.id, versionId);
         if (!result.success) {
-          setError(result.error || "切换版本失败");
+          setError(result.error || t("error.operationFailed"));
           return;
         }
         options?.onVersionChange?.();
       });
     },
-    [asset.id, activeVersion?.id, options]
+    [asset.id, activeVersion?.id, options, t]
   );
 
-  // 删除版本
+  // Delete version
   const removeVersion = useCallback(
     async (versionId: string) => {
       if (!versionId) return;
 
-      // 不能删除唯一的版本
+      // Cannot delete the only version
       if (versions.length <= 1) {
-        setError("无法删除唯一的版本");
+        setError(t("error.operationFailed"));
         return;
       }
 
@@ -74,13 +71,13 @@ export function useAssetVersions(
       startTransition(async () => {
         const result = await deleteAssetVersion(versionId);
         if (!result.success) {
-          setError(result.error || "删除版本失败");
+          setError(result.error || t("error.deleteFailed"));
           return;
         }
         options?.onVersionChange?.();
       });
     },
-    [versions.length, options]
+    [versions.length, options, t]
   );
 
   return {

@@ -22,14 +22,14 @@ export async function useRedeemCode(code: string): Promise<{
     });
 
     if (!session?.user) {
-      return { success: false, error: "未登录" };
+      return { success: false, error: "NOT_LOGGED_IN" };
     }
 
     const userId = session.user.id;
     const trimmedCode = code.trim().toUpperCase();
 
     if (!trimmedCode) {
-      return { success: false, error: "请输入兑换码" };
+      return { success: false, error: "EMPTY_CODE" };
     }
 
     // 使用事务确保原子性
@@ -42,25 +42,25 @@ export async function useRedeemCode(code: string): Promise<{
         .limit(1);
 
       if (!redeemCode) {
-        throw new Error("兑换码不存在");
+        throw new Error("CODE_NOT_FOUND");
       }
 
-      // 2. 检查兑换码是否有效
+      // 2. Check if code is valid
       if (!redeemCode.isActive) {
-        throw new Error("兑换码已被禁用");
+        throw new Error("CODE_DISABLED");
       }
 
-      // 3. 检查是否过期
+      // 3. Check if expired
       if (redeemCode.expiresAt && new Date() > redeemCode.expiresAt) {
-        throw new Error("兑换码已过期");
+        throw new Error("CODE_EXPIRED");
       }
 
-      // 4. 检查使用次数
+      // 4. Check usage count
       if (redeemCode.usedCount >= redeemCode.maxUses) {
-        throw new Error("兑换码已达到最大使用次数");
+        throw new Error("CODE_MAX_USES_REACHED");
       }
 
-      // 5. 检查用户是否已经使用过
+      // 5. Check if user has already used this code
       const [existingRecord] = await tx
         .select()
         .from(redeemRecords)
@@ -73,7 +73,7 @@ export async function useRedeemCode(code: string): Promise<{
         .limit(1);
 
       if (existingRecord) {
-        throw new Error("您已经使用过该兑换码");
+        throw new Error("CODE_ALREADY_USED");
       }
 
       // 6. 增加积分
@@ -90,7 +90,7 @@ export async function useRedeemCode(code: string): Promise<{
       });
 
       if (!creditsResult.success) {
-        throw new Error(creditsResult.error || "增加积分失败");
+        throw new Error(creditsResult.error || "ADD_CREDITS_FAILED");
       }
 
       // 7. 记录兑换
@@ -119,10 +119,10 @@ export async function useRedeemCode(code: string): Promise<{
       credits: result.credits,
     };
   } catch (error) {
-    console.error("使用兑换码失败:", error);
+    console.error("Failed to use redeem code:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "使用兑换码失败",
+      error: error instanceof Error ? error.message : "USE_CODE_FAILED",
     };
   }
 }
@@ -147,7 +147,7 @@ export async function getUserRedeemRecords(): Promise<{
     });
 
     if (!session?.user) {
-      return { success: false, error: "未登录" };
+      return { success: false, error: "NOT_LOGGED_IN" };
     }
 
     // 联查兑换记录和兑换码信息
@@ -169,10 +169,10 @@ export async function getUserRedeemRecords(): Promise<{
       records,
     };
   } catch (error) {
-    console.error("获取兑换记录失败:", error);
+    console.error("Failed to get redeem records:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "获取兑换记录失败",
+      error: error instanceof Error ? error.message : "GET_RECORDS_FAILED",
     };
   }
 }

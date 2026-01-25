@@ -9,6 +9,7 @@ import { PRESET_TAGS } from "@/lib/constants/asset-tags";
 import { addAssetTag, removeAssetTagsByValue } from "@/lib/actions/asset";
 import { toast } from "sonner";
 import { AssetTag } from "@/types/asset";
+import { useTranslations } from "next-intl";
 
 interface TagEditorProps {
   assetId: string;
@@ -26,6 +27,8 @@ export function TagEditor({
   const [inputValue, setInputValue] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [removingTag, setRemovingTag] = useState<string | null>(null);
+  const t = useTranslations("toasts");
+  const tTags = useTranslations("tagEditor");
 
   const existingTagValues = new Set(tags.map((t) => t.tagValue));
   const availablePresetTags = PRESET_TAGS.filter(
@@ -48,13 +51,13 @@ export function TagEditor({
         };
         onTagsChange([...tags, newTag]);
         setInputValue("");
-        toast.success("标签已添加");
+        toast.success(t("success.tagAdded"));
       } else {
-        toast.error(result.error || "添加标签失败");
+        toast.error(result.error || t("error.addTagFailed"));
       }
     } catch (error) {
-      console.error("添加标签失败:", error);
-      toast.error("添加标签失败");
+      console.error("Failed to add tag:", error);
+      toast.error(t("error.addTagFailed"));
     } finally {
       setIsAdding(false);
     }
@@ -66,13 +69,13 @@ export function TagEditor({
       const result = await removeAssetTagsByValue(assetId, tagValue);
       if (result.success) {
         onTagsChange(tags.filter((t) => t.tagValue !== tagValue));
-        toast.success("标签已删除");
+        toast.success(t("success.tagRemoved"));
       } else {
-        toast.error(result.error || "删除标签失败");
+        toast.error(result.error || t("error.removeTagFailed"));
       }
     } catch (error) {
-      console.error("删除标签失败:", error);
-      toast.error("删除标签失败");
+      console.error("Failed to remove tag:", error);
+      toast.error(t("error.removeTagFailed"));
     } finally {
       setRemovingTag(null);
     }
@@ -116,7 +119,7 @@ export function TagEditor({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="添加自定义标签..."
+          placeholder={tTags("addCustomTag")}
           disabled={disabled || isAdding}
           className="h-8 text-sm"
         />
@@ -134,7 +137,7 @@ export function TagEditor({
       {/* 预设标签建议 */}
       {availablePresetTags.length > 0 && (
         <div className="space-y-1.5">
-          <span className="text-xs text-muted-foreground">快捷添加:</span>
+          <span className="text-xs text-muted-foreground">{tTags("quickAdd")}:</span>
           <div className="flex flex-wrap gap-1.5">
             {availablePresetTags.map((tag) => (
               <button

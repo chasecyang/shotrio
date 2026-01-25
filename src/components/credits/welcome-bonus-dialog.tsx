@@ -43,6 +43,8 @@ export function WelcomeBonusDialog() {
       const result = await claimWelcomeBonus();
       if (result.success) {
         setOpen(false);
+        // 触发积分变化事件，更新 header 中的积分显示
+        window.dispatchEvent(new CustomEvent("credits-changed"));
         router.refresh();
       }
     } finally {

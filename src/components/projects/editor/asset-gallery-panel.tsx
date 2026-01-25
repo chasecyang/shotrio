@@ -314,7 +314,7 @@ export function AssetGalleryPanel() {
       const costResult = await estimateRegenerationCost(asset.id);
 
       if (!costResult.success) {
-        toast.error(costResult.error || "估算成本失败");
+        toast.error(costResult.error || t("estimateCostFailed"));
         return;
       }
 
@@ -323,7 +323,7 @@ export function AssetGalleryPanel() {
       const balanceResult = await getCreditBalance();
 
       if (!balanceResult.success || !balanceResult.balance) {
-        toast.error(balanceResult.error || "获取余额失败");
+        toast.error(balanceResult.error || t("getBalanceFailed"));
         return;
       }
 
@@ -334,8 +334,8 @@ export function AssetGalleryPanel() {
       setCurrentBalance(balanceResult.balance.balance);
       setRegenerateDialogOpen(true);
     } catch (error) {
-      console.error("准备重新生成失败:", error);
-      toast.error("准备重新生成失败");
+      console.error("Failed to prepare regeneration:", error);
+      toast.error(t("prepareRegenerateFailed"));
     }
   };
 
@@ -349,16 +349,16 @@ export function AssetGalleryPanel() {
       const result = await regenerateAsset(assetToRegenerate.id);
 
       if (result.success) {
-        toast.success("重新生成已开始，请稍候...");
+        toast.success(t("regenerateStarted"));
         setRegenerateDialogOpen(false);
         setAssetToRegenerate(null);
         await refreshAssets();
       } else {
-        toast.error(result.error || "重新生成失败");
+        toast.error(result.error || t("regenerateFailed"));
       }
     } catch (error) {
-      console.error("重新生成失败:", error);
-      toast.error("重新生成失败");
+      console.error("Failed to regenerate:", error);
+      toast.error(t("regenerateFailed"));
     } finally {
       setIsRegenerating(false);
     }
@@ -456,14 +456,14 @@ export function AssetGalleryPanel() {
   const handleReference = (asset: AssetWithFullData) => {
     // 直接填充引用标记，不添加额外文本
     referenceAssetInChat?.(asset, '');
-    toast.success(`已引用「${asset.name}」到对话框`);
+    toast.success(t("assetReferenced", { name: asset.name }));
   };
 
   // 处理编辑素材
   const handleEdit = (asset: AssetWithFullData) => {
     const presetText = `请修改{{reference}}，`;
     referenceAssetInChat?.(asset, presetText);
-    toast.success(`已引用「${asset.name}」到对话框`);
+    toast.success(t("assetReferenced", { name: asset.name }));
   };
 
   const handleSelectionStatusChange = async (asset: AssetWithFullData, status: AssetSelectionStatus) => {
@@ -471,10 +471,9 @@ export function AssetGalleryPanel() {
     if (result.success) {
       // Refresh assets to show updated status
       refreshAssets();
-      const statusText = status === "selected" ? "精选" : status === "rejected" ? "废弃" : "未筛选";
-      toast.success(`已标记为${statusText}`);
+      toast.success(t("markedAs", { status: tAssetFilter(status) }));
     } else {
-      toast.error(result.error || "更新失败");
+      toast.error(result.error || t("updateFailed"));
     }
   };
 
@@ -483,10 +482,10 @@ export function AssetGalleryPanel() {
     const result = await batchUpdateSelectionStatus(assetIds, "selected");
     if (result.success) {
       refreshAssets();
-      toast.success(`已将 ${result.updatedCount} 个素材标记为精选`);
+      toast.success(t("batchMarkedAs", { count: result.updatedCount ?? 0, status: tAssetFilter("selected") }));
       setSelectedAssetIds(new Set());
     } else {
-      toast.error(result.error || "批量更新失败");
+      toast.error(result.error || t("batchUpdateFailed"));
     }
   };
 
@@ -495,10 +494,10 @@ export function AssetGalleryPanel() {
     const result = await batchUpdateSelectionStatus(assetIds, "rejected");
     if (result.success) {
       refreshAssets();
-      toast.success(`已将 ${result.updatedCount} 个素材标记为废弃`);
+      toast.success(t("batchMarkedAs", { count: result.updatedCount ?? 0, status: tAssetFilter("rejected") }));
       setSelectedAssetIds(new Set());
     } else {
-      toast.error(result.error || "批量更新失败");
+      toast.error(result.error || t("batchUpdateFailed"));
     }
   };
 
@@ -507,10 +506,10 @@ export function AssetGalleryPanel() {
     const result = await batchUpdateSelectionStatus(assetIds, "unrated");
     if (result.success) {
       refreshAssets();
-      toast.success(`已将 ${result.updatedCount} 个素材标记为未筛选`);
+      toast.success(t("batchMarkedAs", { count: result.updatedCount ?? 0, status: tAssetFilter("unrated") }));
       setSelectedAssetIds(new Set());
     } else {
-      toast.error(result.error || "批量更新失败");
+      toast.error(result.error || t("batchUpdateFailed"));
     }
   };
 

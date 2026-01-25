@@ -139,10 +139,10 @@ export function AdminSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="返回主站">
+            <SidebarMenuButton asChild tooltip={t("backToMain")}>
               <Link href="/">
                 <Home />
-                <span>返回主站</span>
+                <span>{t("backToMain")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

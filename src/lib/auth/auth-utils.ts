@@ -57,7 +57,7 @@ export async function requireUserAccess(targetUserId: string) {
   });
 
   if (!session?.user?.id) {
-    throw new Error("未登录");
+    throw new Error("NOT_LOGGED_IN");
   }
 
   // 管理员可以访问所有用户数据
@@ -65,9 +65,9 @@ export async function requireUserAccess(targetUserId: string) {
     return session.user;
   }
 
-  // 普通用户只能访问自己的数据
+  // Normal users can only access their own data
   if (session.user.id !== targetUserId) {
-    throw new Error("无权访问此用户数据");
+    throw new Error("NO_ACCESS_TO_USER_DATA");
   }
 
   return session.user;

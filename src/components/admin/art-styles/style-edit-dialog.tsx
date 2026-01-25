@@ -18,6 +18,7 @@ import { createSystemArtStyle, updateArtStyleAdmin } from "@/lib/actions/admin/a
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 interface StyleEditDialogProps {
   open: boolean;
@@ -27,6 +28,9 @@ interface StyleEditDialogProps {
 
 export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogProps) {
   const router = useRouter();
+  const t = useTranslations("admin.artStyles.editor");
+  const tCommon = useTranslations("common");
+  const tToast = useTranslations("toasts");
   const [loading, setLoading] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -61,12 +65,12 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      toast.error("请输入风格名称");
+      toast.error(t("nameRequired"));
       return;
     }
 
     if (!formData.prompt.trim()) {
-      toast.error("请输入Prompt");
+      toast.error(t("promptRequired"));
       return;
     }
 
@@ -88,11 +92,11 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
         });
 
         if (result.success) {
-          toast.success("更新成功");
+          toast.success(tToast("success.styleUpdated"));
           router.refresh();
           onOpenChange(false);
         } else {
-          toast.error(result.error || "更新失败");
+          toast.error(result.error || tToast("error.updateFailed"));
         }
       } else {
         // 创建新风格
@@ -105,15 +109,15 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
         });
 
         if (result.success) {
-          toast.success("创建成功");
+          toast.success(tToast("success.styleCreated"));
           router.refresh();
           onOpenChange(false);
         } else {
-          toast.error(result.error || "创建失败");
+          toast.error(result.error || tToast("error.creationFailed"));
         }
       }
     } catch (error) {
-      toast.error("操作失败");
+      toast.error(tToast("error.operationFailed"));
       console.error(error);
     } finally {
       setLoading(false);
@@ -125,14 +129,14 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{style ? "编辑风格" : "创建风格"}</DialogTitle>
+            <DialogTitle>{style ? t("editTitle") : t("createTitle")}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* 显示现有预览图 */}
             {style?.previewImage && (
               <div className="space-y-2">
-                <Label>当前预览图</Label>
+                <Label>{t("currentPreview")}</Label>
                 <div 
                   className="relative w-full aspect-video cursor-pointer group"
                   onClick={() => setViewingImage(style.previewImage!)}
@@ -151,34 +155,34 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">风格名称（中文）*</Label>
+              <Label htmlFor="name">{t("nameZh")} *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="例如：现代动漫"
+                placeholder={t("nameZhPlaceholder")}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nameEn">风格名称（英文）</Label>
+              <Label htmlFor="nameEn">{t("nameEn")}</Label>
               <Input
                 id="nameEn"
                 value={formData.nameEn}
                 onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                placeholder="例如：Modern Anime"
+                placeholder={t("nameEnPlaceholder")}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">描述</Label>
+              <Label htmlFor="description">{t("description")}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="简要描述这个风格的特点..."
+                placeholder={t("descriptionPlaceholder")}
                 rows={2}
                 disabled={loading}
               />
@@ -190,23 +194,23 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
                 id="prompt"
                 value={formData.prompt}
                 onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
-                placeholder="例如：modern anime style, vibrant colors, cel shading, high quality, 8k"
+                placeholder={t("promptPlaceholder")}
                 rows={4}
                 disabled={loading}
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                用于 AI 生成图像的英文提示词
+                {t("promptHint")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tags">标签</Label>
+              <Label htmlFor="tags">{t("tags")}</Label>
               <Input
                 id="tags"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="用逗号分隔，例如：动漫, 日系, 二次元"
+                placeholder={t("tagsPlaceholder")}
                 disabled={loading}
               />
             </div>
@@ -214,11 +218,11 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
 
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              取消
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {style ? "保存" : "创建"}
+              {style ? tCommon("save") : t("create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -228,7 +232,7 @@ export function StyleEditDialog({ open, onOpenChange, style }: StyleEditDialogPr
       <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>预览图</DialogTitle>
+            <DialogTitle>{t("previewImage")}</DialogTitle>
           </DialogHeader>
           {viewingImage && (
             <div className="relative w-full aspect-video">

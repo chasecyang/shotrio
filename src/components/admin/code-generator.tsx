@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 
 export function CodeGenerator() {
   const tToast = useTranslations("toasts");
+  const t = useTranslations("admin.redeemCodes.generator");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,10 +75,10 @@ export function CodeGenerator() {
 
         if (result.success && result.codes) {
           setGeneratedCodes(result.codes);
-          toast.success(`成功生成 ${result.codes.length} 个兑换码`);
+          toast.success(t("batchSuccess", { count: result.codes.length }));
           router.refresh();
         } else {
-          toast.error(result.error || "生成失败");
+          toast.error(result.error || tToast("error.codeGenerationFailed"));
         }
       } else {
         const result = await generateRedeemCode({
@@ -100,7 +101,7 @@ export function CodeGenerator() {
       }
     } catch (error) {
       toast.error(tToast("error.codeGenerationFailed"));
-      console.error("生成兑换码失败:", error);
+      console.error("[CodeGenerator] Generate failed:", error);
     } finally {
       setLoading(false);
     }
@@ -132,14 +133,14 @@ export function CodeGenerator() {
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
-          生成兑换码
+          {t("generate")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>生成兑换码</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            创建新的积分兑换码
+            {t("subtitle")}
           </DialogDescription>
         </DialogHeader>
 
@@ -147,7 +148,7 @@ export function CodeGenerator() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>生成的兑换码</Label>
+                <Label>{t("generated")}</Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -157,12 +158,12 @@ export function CodeGenerator() {
                   {copied ? (
                     <>
                       <Check className="h-4 w-4" />
-                      已复制
+                      {t("copied")}
                     </>
                   ) : (
                     <>
                       <Copy className="h-4 w-4" />
-                      复制全部
+                      {t("copyAll")}
                     </>
                   )}
                 </Button>
@@ -177,21 +178,21 @@ export function CodeGenerator() {
 
             <div className="flex gap-2">
               <Button onClick={handleClose} className="flex-1">
-                完成
+                {t("done")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setGeneratedCodes([])}
                 className="flex-1"
               >
-                继续生成
+                {t("continueGenerate")}
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="batch">批量生成</Label>
+              <Label htmlFor="batch">{t("batchMode")}</Label>
               <Switch
                 id="batch"
                 checked={isBatch}
@@ -201,7 +202,7 @@ export function CodeGenerator() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="credits">积分数量 *</Label>
+                <Label htmlFor="credits">{t("credits")}</Label>
                 <Input
                   id="credits"
                   type="number"
@@ -214,7 +215,7 @@ export function CodeGenerator() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="maxUses">最大使用次数 *</Label>
+                <Label htmlFor="maxUses">{t("maxUses")}</Label>
                 <Input
                   id="maxUses"
                   type="number"
@@ -229,7 +230,7 @@ export function CodeGenerator() {
 
             {isBatch && (
               <div className="space-y-2">
-                <Label htmlFor="count">生成数量 (1-1000)</Label>
+                <Label htmlFor="count">{t("count")}</Label>
                 <Input
                   id="count"
                   type="number"
@@ -244,10 +245,10 @@ export function CodeGenerator() {
 
             {!isBatch && (
               <div className="space-y-2">
-                <Label htmlFor="customCode">自定义兑换码（可选）</Label>
+                <Label htmlFor="customCode">{t("customCode")}</Label>
                 <Input
                   id="customCode"
-                  placeholder="留空自动生成"
+                  placeholder={t("customCodeHint")}
                   value={formData.customCode}
                   onChange={(e) =>
                     setFormData({
@@ -260,11 +261,11 @@ export function CodeGenerator() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="expiresInDays">有效期（天数，可选）</Label>
+              <Label htmlFor="expiresInDays">{t("expiresInDays")}</Label>
               <Input
                 id="expiresInDays"
                 type="number"
-                placeholder="留空为永久有效"
+                placeholder={t("expiresInDaysHint")}
                 value={formData.expiresInDays}
                 onChange={(e) =>
                   setFormData({ ...formData, expiresInDays: e.target.value })
@@ -273,10 +274,10 @@ export function CodeGenerator() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">备注（可选）</Label>
+              <Label htmlFor="description">{t("description")}</Label>
               <Textarea
                 id="description"
-                placeholder="添加备注信息..."
+                placeholder={t("descriptionPlaceholder")}
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
@@ -292,10 +293,10 @@ export function CodeGenerator() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  生成中...
+                  {t("generating")}
                 </>
               ) : (
-                "生成兑换码"
+                t("generate")
               )}
             </Button>
           </div>

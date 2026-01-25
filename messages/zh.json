@@ -43,6 +43,45 @@
     "uploadImagePlaceholder": "点击或拖拽上传图片",
     "supportedImageFormats": "支持 JPG, PNG, WEBP, GIF"
   },
+  "tagEditor": {
+    "addCustomTag": "添加自定义标签...",
+    "quickAdd": "快捷添加"
+  },
+  "backgroundTasks": {
+    "title": "后台任务",
+    "inProgress": "个进行中",
+    "noTasks": "暂无任务",
+    "taskNotFound": "任务不存在",
+    "downloadStarted": "开始下载导出视频",
+    "exportUrlNotFound": "导出视频URL不存在",
+    "viewNotSupported": "该任务暂不支持查看结果",
+    "parseDataFailed": "无法解析任务数据",
+    "viewResult": "查看结果",
+    "retry": "重试",
+    "cancel": "取消"
+  },
+  "textAsset": {
+    "contentSaved": "内容已保存",
+    "markdownPlaceholder": "支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项",
+    "noContent": "暂无内容",
+    "characterCount": "{count} 字符",
+    "unsavedChanges": "有未保存的更改",
+    "content": "内容",
+    "copyHint": "点击复制按钮复制全部内容"
+  },
+  "frameCapture": {
+    "title": "截取画面",
+    "screenshot": "截图",
+    "videoNotLoaded": "视频尚未加载完成",
+    "canvasError": "无法创建画布",
+    "captureFailed": "捕获画面失败",
+    "nameRequired": "请输入画面名称",
+    "captureFailedRetry": "画面截取失败，请重试",
+    "timestamp": "时间戳",
+    "frameName": "画面名称",
+    "frameNamePlaceholder": "输入画面名称",
+    "confirmCapture": "确认截取"
+  },
   "beta": {
     "label": "BETA",
     "title": "测试版本",
@@ -874,6 +913,7 @@
     "title": "管理中心",
     "subtitle": "管理面板",
     "settings": "设置",
+    "backToMain": "返回主站",
     "dashboard": {
       "title": "概览",
       "artStyles": {
@@ -937,6 +977,8 @@
         "batchSuccess": "成功生成 {count} 个兑换码"
       },
       "empty": "暂无兑换码",
+      "loadFailed": "无法加载兑换码",
+      "permanent": "永久",
       "actions": {
         "enable": "已启用",
         "disable": "已禁用"
@@ -951,7 +993,54 @@
       "batchDelete": "批量删除",
       "selectForPreview": "请先选择要生成预览图的风格",
       "selectForDelete": "请先选择要删除的风格",
-      "sidebarTitle": "美术风格"
+      "sidebarTitle": "美术风格",
+      "confirmDelete": "确定要删除风格「{name}」吗？",
+      "confirmInitialize": "确定要初始化预设风格吗？这将添加系统默认风格。",
+      "initializeSuccess": "初始化完成：创建 {created} 个，跳过 {skipped} 个",
+      "confirmBatchGenerate": "确定要为选中的 {count} 个风格生成预览图吗？",
+      "batchGenerateSuccess": "批量生成完成：成功 {success} 个，失败 {failed} 个",
+      "confirmBatchDelete": "确定要删除选中的 {count} 个风格吗？此操作不可撤销。",
+      "batchDeleteSuccess": "批量删除完成：成功 {success} 个，失败 {failed} 个",
+      "selectedCount": "已选择 {count} 项",
+      "initializeStyles": "初始化预设风格",
+      "createStyle": "创建风格",
+      "selectAll": "全选",
+      "noStyles": "暂无风格数据",
+      "selectStyle": "选择风格「{name}」",
+      "noPreview": "无预览",
+      "viewDetails": "查看详情",
+      "styleDetails": "风格详情",
+      "styleType": "风格类型",
+      "systemPreset": "系统预设",
+      "userCustom": "用户自定义",
+      "table": {
+        "preview": "预览图",
+        "styleName": "风格名称",
+        "prompt": "Prompt",
+        "description": "描述",
+        "tags": "标签",
+        "usageCount": "使用次数",
+        "actions": "操作"
+      },
+      "editor": {
+        "editTitle": "编辑风格",
+        "createTitle": "创建风格",
+        "currentPreview": "当前预览图",
+        "nameZh": "风格名称（中文）",
+        "nameZhPlaceholder": "例如：现代动漫",
+        "nameEn": "风格名称（英文）",
+        "nameEnPlaceholder": "例如：Modern Anime",
+        "description": "描述",
+        "descriptionPlaceholder": "简要描述这个风格的特点...",
+        "promptPlaceholder": "例如：modern anime style, vibrant colors, cel shading, high quality, 8k",
+        "promptHint": "用于 AI 生成图像的英文提示词",
+        "tags": "标签",
+        "tagsPlaceholder": "用逗号分隔，例如：动漫, 日系, 二次元",
+        "create": "创建",
+        "previewImage": "预览图",
+        "nameRequired": "请输入风格名称",
+        "promptRequired": "请输入Prompt"
+      }
     },
     "templates": {
       "title": "示例模板管理",
@@ -1085,7 +1174,8 @@
       "downloadFailed": "下载失败",
       "uploadFailed": "上传失败",
       "retryUnavailable": "重试功能不可用",
-      "taskNotFound": "无法找到相关任务信息"
+      "taskNotFound": "无法找到相关任务信息",
+      "operationFailed": "操作失败"
     },
     "info": {
       "derivationInDevelopment": "派生功能开发中，敬请期待",
@@ -1156,6 +1246,15 @@
       "retryFailed": "重试失败",
       "regenerating": "正在重新生成...",
       "regenerateFailed": "重新生成失败",
+      "regenerateStarted": "重新生成已开始，请稍候...",
+      "prepareRegenerateFailed": "准备重新生成失败",
+      "estimateCostFailed": "估算成本失败",
+      "getBalanceFailed": "获取余额失败",
+      "assetReferenced": "已引用「{name}」到对话框",
+      "markedAs": "已标记为{status}",
+      "updateFailed": "更新失败",
+      "batchMarkedAs": "已将 {count} 个素材标记为{status}",
+      "batchUpdateFailed": "批量更新失败",
       "confirmRegenerate": "确认重新生成",
       "confirmRegenerateImage": "重新生成素材「{name}」将消耗 {credits} 积分，确定继续吗？",
       "confirmRegenerateVideo": "重新生成视频「{name}」将消耗约 {credits} 积分，确定继续吗？",

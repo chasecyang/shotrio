@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { captureVideoFrame } from "@/lib/actions/asset/capture-video-frame";
 import type { AssetWithFullData } from "@/types/asset";
+import { useTranslations } from "next-intl";
 
 interface FrameCaptureDialogProps {
   open: boolean;
@@ -37,61 +38,64 @@ export function FrameCaptureDialog({
   const [frameName, setFrameName] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const t = useTranslations("toasts");
+  const tFrame = useTranslations("frameCapture");
+  const tCommon = useTranslations("common");
 
-  // 格式化时间戳
+  // Format timestamp
   const formatTimestamp = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // 当对话框打开时，捕获当前帧
+  // When dialog opens, capture current frame
   useEffect(() => {
     if (open && videoRef.current) {
       const video = videoRef.current;
 
-      // 确保视频已加载
+      // Ensure video is loaded
       if (video.readyState < 2) {
-        toast.error("视频尚未加载完成");
+        toast.error(tFrame("videoNotLoaded"));
         onOpenChange(false);
         return;
       }
 
       try {
-        // 创建 canvas 并捕获当前帧
+        // Create canvas and capture current frame
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");
 
         if (!ctx) {
-          toast.error("无法创建画布");
+          toast.error(tFrame("canvasError"));
           onOpenChange(false);
           return;
         }
 
-        // 绘制当前视频帧到 canvas
+        // Draw current video frame to canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // 转换为 data URL 用于预览
+        // Convert to data URL for preview
         const dataUrl = canvas.toDataURL("image/png");
         setPreviewDataUrl(dataUrl);
 
-        // 设置默认名称（包含视频名称）
-        const defaultName = `${videoAssetName} - 截图 - ${formatTimestamp(currentTime)}`;
+        // Set default name (including video name)
+        const defaultName = `${videoAssetName} - ${tFrame("screenshot")} - ${formatTimestamp(currentTime)}`;
         setFrameName(defaultName);
       } catch (error) {
-        console.error("捕获帧失败:", error);
-        toast.error("捕获画面失败");
+        console.error("Failed to capture frame:", error);
+        toast.error(tFrame("captureFailed"));
         onOpenChange(false);
       }
     }
-  }, [open, videoRef, currentTime, videoAssetName, onOpenChange]);
+  }, [open, videoRef, currentTime, videoAssetName, onOpenChange, tFrame]);
 
-  // 处理确认捕获
+  // Handle confirm capture
   const handleConfirm = async () => {
     if (!frameName.trim()) {
-      toast.error("请输入画面名称");
+      toast.error(tFrame("nameRequired"));
       return;
     }
 
@@ -107,21 +111,21 @@ export function FrameCaptureDialog({
       });
 
       if (result.success) {
-        toast.success("画面截取成功");
+        toast.success(t("success.frameCaptured"));
         onSuccess(result.asset);
         onOpenChange(false);
       } else {
-        toast.error(result.error || "画面截取失败");
+        toast.error(result.error || tFrame("captureFailed"));
       }
     } catch (error) {
-      console.error("截取画面失败:", error);
-      toast.error("画面截取失败，请重试");
+      console.error("Failed to capture frame:", error);
+      toast.error(tFrame("captureFailedRetry"));
     } finally {
       setIsCapturing(false);
     }
   };
 
-  // 处理取消
+  // Handle cancel
   const handleCancel = () => {
     onOpenChange(false);
   };
@@ -130,16 +134,16 @@ export function FrameCaptureDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>截取画面</DialogTitle>
+          <DialogTitle>{tFrame("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 预览画面 */}
+          {/* Preview frame */}
           <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
             {previewDataUrl ? (
               <img
                 src={previewDataUrl}
-                alt="预览"
+                alt={tCommon("preview")}
                 className="w-full h-full object-contain"
               />
             ) : (
@@ -149,19 +153,19 @@ export function FrameCaptureDialog({
             )}
           </div>
 
-          {/* 时间戳显示 */}
+          {/* Timestamp display */}
           <div className="text-sm text-muted-foreground">
-            时间戳: {formatTimestamp(currentTime)}
+            {tFrame("timestamp")}: {formatTimestamp(currentTime)}
           </div>
 
-          {/* 名称输入 */}
+          {/* Name input */}
           <div className="space-y-2">
-            <Label htmlFor="frame-name">画面名称</Label>
+            <Label htmlFor="frame-name">{tFrame("frameName")}</Label>
             <Input
               id="frame-name"
               value={frameName}
               onChange={(e) => setFrameName(e.target.value)}
-              placeholder="输入画面名称"
+              placeholder={tFrame("frameNamePlaceholder")}
               disabled={isCapturing}
             />
           </div>
@@ -173,14 +177,14 @@ export function FrameCaptureDialog({
             onClick={handleCancel}
             disabled={isCapturing}
           >
-            取消
+            {tCommon("cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={isCapturing || !frameName.trim()}
           >
             {isCapturing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            确认截取
+            {tFrame("confirmCapture")}
           </Button>
         </DialogFooter>
       </DialogContent>

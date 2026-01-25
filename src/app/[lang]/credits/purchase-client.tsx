@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PackageCard } from "@/components/credits/package-card";
 import { createCheckoutSession } from "@/lib/actions/payment/checkout";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { CreditPackage } from "@/types/payment";
 
 interface CreditsPurchaseClientProps {
@@ -14,6 +15,7 @@ export function CreditsPurchaseClient({
   package: pkg,
 }: CreditsPurchaseClientProps) {
   const [loading, setLoading] = useState(false);
+  const t = useTranslations("credits");
 
   const handlePurchase = async () => {
     setLoading(true);
@@ -23,15 +25,14 @@ export function CreditsPurchaseClient({
       });
 
       if (result.success && result.checkoutUrl) {
-        // 跳转到支付页面
         window.location.href = result.checkoutUrl;
       } else {
-        toast.error(result.error || "创建支付会话失败");
+        toast.error(result.error || t("errors.checkoutFailed"));
         setLoading(false);
       }
     } catch (error) {
-      toast.error("创建支付会话失败，请稍后重试");
-      console.error("创建支付会话失败:", error);
+      toast.error(t("errors.checkoutFailed"));
+      console.error("Failed to create checkout session:", error);
       setLoading(false);
     }
   };

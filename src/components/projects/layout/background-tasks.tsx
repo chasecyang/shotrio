@@ -42,8 +42,10 @@ export function BackgroundTasks() {
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [jobDetails, setJobDetails] = useState<Map<string, JobDetails>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations("toasts");
+  const tTasks = useTranslations("backgroundTasks");
 
-  // 加载最近的任务（包括已完成和失败的）
+  // Load recent tasks (including completed and failed)
   const loadRecentJobs = async () => {
     setIsLoading(true);
     try {
@@ -52,26 +54,26 @@ export function BackgroundTasks() {
         const jobs = result.jobs as Job[];
         setRecentJobs(jobs);
 
-        // 获取所有任务的详细信息
+        // Get details for all tasks
         const allJobs = [...activeJobs, ...jobs];
         const details = await getJobsDetails(allJobs);
         setJobDetails(details);
       }
     } catch (error) {
-      console.error("加载任务失败:", error);
+      console.error("Failed to load tasks:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 当活动任务变化时，更新它们的详细信息
+  // Update details when active tasks change
   useEffect(() => {
     if (activeJobs.length > 0) {
       getJobsDetails(activeJobs).then(setJobDetails);
     }
   }, [activeJobs]);
 
-  // 合并活动任务和历史任务，活动任务置顶
+  // Merge active tasks and history tasks, active tasks on top
   const allJobs = [
     ...activeJobs,
     ...recentJobs.filter(
@@ -79,49 +81,49 @@ export function BackgroundTasks() {
     ),
   ];
 
-  // 只显示前10个任务
+  // Only show first 10 tasks
   const displayedJobs = allJobs.slice(0, 10);
 
-  // 统计活跃任务数量
+  // Count active tasks
   const activeCount = allJobs.filter(
     (job) => job.status === "pending" || job.status === "processing"
   ).length;
 
-  // 取消任务
+  // Cancel task
   const handleCancel = async (jobId: string) => {
     const result = await cancelJob(jobId);
     if (result.success) {
-      toast.success("任务已取消");
+      toast.success(t("success.taskCancelled"));
     } else {
-      toast.error(result.error || "取消失败");
+      toast.error(result.error || t("error.cancelFailed"));
     }
   };
 
-  // 重试任务
+  // Retry task
   const handleRetry = async (jobId: string) => {
     const result = await retryJob(jobId);
     if (result.success) {
-      toast.success("任务已重新提交");
+      toast.success(t("success.taskResubmitted"));
     } else {
-      toast.error(result.error || "重试失败");
+      toast.error(result.error || t("error.retryFailed"));
     }
   };
 
-  // 查看结果（根据任务类型）
+  // View result (based on task type)
   const handleView = async (jobId: string) => {
     const job = allJobs.find((j) => j.id === jobId);
     if (!job) {
-      toast.error("任务不存在");
+      toast.error(tTasks("taskNotFound"));
       return;
     }
 
-    // 根据任务类型处理
+    // Handle based on task type
     try {
       switch (job.type) {
         case "final_video_export": {
           const result = job.resultData as FinalVideoExportResult | null;
           if (result?.videoUrl) {
-            // 触发下载
+            // Trigger download
             const link = document.createElement("a");
             link.href = result.videoUrl;
             link.download = `export-${Date.now()}.mp4`;
@@ -129,19 +131,19 @@ export function BackgroundTasks() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast.success("开始下载导出视频");
+            toast.success(tTasks("downloadStarted"));
           } else {
-            toast.error("导出视频URL不存在");
+            toast.error(tTasks("exportUrlNotFound"));
           }
           break;
         }
         default:
-          toast.info("该任务暂不支持查看结果");
+          toast.info(tTasks("viewNotSupported"));
           break;
       }
     } catch (error) {
-      console.error("解析任务数据失败:", error);
-      toast.error("无法解析任务数据");
+      console.error("Failed to parse task data:", error);
+      toast.error(tTasks("parseDataFailed"));
     }
   };
 
@@ -173,8 +175,8 @@ export function BackgroundTasks() {
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              后台任务
-              {activeCount > 0 && ` (${activeCount} 个进行中)`}
+              {tTasks("title")}
+              {activeCount > 0 && ` (${activeCount} ${tTasks("inProgress")})`}
             </p>
           </TooltipContent>
         </Tooltip>
@@ -182,10 +184,10 @@ export function BackgroundTasks() {
       <DropdownMenuContent align="end" className="w-[380px]">
         <div className="px-3 py-2">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold">后台任务</h4>
+            <h4 className="text-sm font-semibold">{tTasks("title")}</h4>
             {activeCount > 0 && (
               <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
-                {activeCount} 个进行中
+                {activeCount} {tTasks("inProgress")}
               </Badge>
             )}
           </div>
@@ -201,7 +203,7 @@ export function BackgroundTasks() {
           ) : displayedJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Activity className="w-8 h-8 mb-2 opacity-20" />
-              <p className="text-sm">暂无任务</p>
+              <p className="text-sm">{tTasks("noTasks")}</p>
             </div>
           ) : (
             <div className="p-2 space-y-2">
@@ -240,13 +242,14 @@ function TaskItem({
   onView,
 }: TaskItemProps) {
   const t = useTranslations();
+  const tTasks = useTranslations("backgroundTasks");
   const taskType = getTaskTypeLabel(job.type || "", t, "sm");
   const status = getTaskStatusConfig(job.status || "pending", t, "sm");
 
   const canCancel = job.status === "pending" || job.status === "processing";
   const canRetry = job.status === "failed" || job.status === "cancelled";
 
-  // 只有已完成且支持查看的任务类型才显示"查看结果"按钮
+  // Only show "View Result" button for completed tasks with viewable types
   const canView = job.status === "completed" &&
                   job.type &&
                   VIEWABLE_TASK_TYPES.includes(job.type) &&
@@ -254,11 +257,11 @@ function TaskItem({
 
   const isCompleted = job.status === "completed" || job.status === "failed" || job.status === "cancelled";
 
-  // 使用详细信息或回退到默认标签
+  // Use details or fallback to default label
   const displayTitle = details?.displayTitle || taskType.label;
   const displaySubtitle = details?.displaySubtitle;
 
-  // 如果有详细信息，显示任务类型作为标签
+  // Show task type as label if there are details
   const showTypeLabel = details && details.displayTitle !== taskType.label;
 
   return (
@@ -334,7 +337,7 @@ function TaskItem({
               className="h-6 text-[10px] px-2"
               onClick={() => onView(job.id!)}
             >
-              查看结果
+              {tTasks("viewResult")}
             </Button>
           )}
 
@@ -346,7 +349,7 @@ function TaskItem({
               onClick={() => onRetry(job.id!)}
             >
               <RotateCcw className="w-3 h-3 mr-1" />
-              重试
+              {tTasks("retry")}
             </Button>
           )}
 
@@ -358,7 +361,7 @@ function TaskItem({
               onClick={() => onCancel(job.id!)}
             >
               <XIcon className="w-3 h-3 mr-1" />
-              取消
+              {tTasks("cancel")}
             </Button>
           )}
         </div>

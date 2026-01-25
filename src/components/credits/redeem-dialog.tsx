@@ -45,7 +45,8 @@ export function RedeemDialog({ onSuccess }: RedeemDialogProps) {
         toast.success(t("success", { credits: result.credits }));
         setCode("");
         setOpen(false);
-        // 使用 Next.js router 刷新数据
+        // 触发积分变化事件，更新 header 中的积分显示
+        window.dispatchEvent(new CustomEvent("credits-changed"));
         if (onSuccess) {
           onSuccess();
         } else {

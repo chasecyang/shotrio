@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { updateAsset } from "@/lib/actions/asset";
 import { updateTextAssetContent } from "@/lib/actions/asset/text-asset";
 import { TagEditor } from "./tag-editor";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 
 interface TextAssetDetailViewProps {
   asset: AssetWithFullData;
@@ -35,27 +37,32 @@ export function TextAssetDetailView({
   onBack,
   onAssetUpdated,
 }: TextAssetDetailViewProps) {
-  // 编辑/预览模式
+  const t = useTranslations("toasts");
+  const tText = useTranslations("textAsset");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
+  // Edit/preview mode
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(asset.textContent || "");
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [hasContentChanges, setHasContentChanges] = useState(false);
 
-  // 名称编辑状态
+  // Name editing state
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(asset.name);
   const [isSavingName, setIsSavingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // 标签状态
+  // Tags state
   const [tags, setTags] = useState<AssetTag[]>(asset.tags || []);
 
-  // 复制状态
+  // Copy state
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // 格式化日期
+  // Format date
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("zh-CN", {
+    return new Date(date).toLocaleString(locale === "zh" ? "zh-CN" : "en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -64,20 +71,20 @@ export function TextAssetDetailView({
     });
   };
 
-  // 复制到剪贴板
+  // Copy to clipboard
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
-      toast.success("已复制到剪贴板");
+      toast.success(t("success.copied"));
     } catch (error) {
-      console.error("复制失败:", error);
-      toast.error("复制失败");
+      console.error("Failed to copy:", error);
+      toast.error(t("error.copyFailed"));
     }
   };
 
-  // 同步 asset 变化到本地状态
+  // Sync asset changes to local state
   useEffect(() => {
     setEditedName(asset.name);
     setTags(asset.tags || []);
@@ -85,7 +92,7 @@ export function TextAssetDetailView({
     setHasContentChanges(false);
   }, [asset]);
 
-  // 名称编辑聚焦
+  // Name editing focus
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
       nameInputRef.current.focus();
@@ -93,12 +100,12 @@ export function TextAssetDetailView({
     }
   }, [isEditingName]);
 
-  // 内容变化检测
+  // Content change detection
   useEffect(() => {
     setHasContentChanges(content !== (asset.textContent || ""));
   }, [content, asset.textContent]);
 
-  // 保存名称
+  // Save name
   const handleSaveName = async () => {
     if (!editedName.trim() || editedName === asset.name) {
       setIsEditingName(false);
@@ -110,23 +117,23 @@ export function TextAssetDetailView({
     try {
       const result = await updateAsset(asset.id, { name: editedName.trim() });
       if (result.success) {
-        toast.success("名称已更新");
+        toast.success(t("success.nameUpdated"));
         setIsEditingName(false);
         onAssetUpdated();
       } else {
-        toast.error(result.error || "更新失败");
+        toast.error(result.error || t("error.updateFailed"));
         setEditedName(asset.name);
       }
     } catch (error) {
-      console.error("更新名称失败:", error);
-      toast.error("更新失败");
+      console.error("Failed to update name:", error);
+      toast.error(t("error.updateFailed"));
       setEditedName(asset.name);
     } finally {
       setIsSavingName(false);
     }
   };
 
-  // 名称编辑键盘事件
+  // Name editing keyboard events
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSaveName();
@@ -136,7 +143,7 @@ export function TextAssetDetailView({
     }
   };
 
-  // 保存内容
+  // Save content
   const handleSaveContent = async () => {
     if (!hasContentChanges) return;
 
@@ -144,21 +151,21 @@ export function TextAssetDetailView({
     try {
       const result = await updateTextAssetContent(asset.id, content);
       if (result.success) {
-        toast.success("内容已保存");
+        toast.success(tText("contentSaved"));
         setHasContentChanges(false);
         onAssetUpdated();
       } else {
-        toast.error(result.error || "保存失败");
+        toast.error(result.error || t("error.saveFailed"));
       }
     } catch (error) {
-      console.error("保存内容失败:", error);
-      toast.error("保存失败");
+      console.error("Failed to save content:", error);
+      toast.error(t("error.saveFailed"));
     } finally {
       setIsSavingContent(false);
     }
   };
 
-  // 标签变化处理
+  // Tags change handler
   const handleTagsChange = (newTags: AssetTag[]) => {
     setTags(newTags);
     onAssetUpdated();
@@ -166,7 +173,7 @@ export function TextAssetDetailView({
 
   return (
     <div className="h-full flex flex-col">
-      {/* 头部 - 返回按钮 */}
+      {/* Header - Back button */}
       <div className="shrink-0 px-4 py-3 border-b flex items-center gap-3">
         <Button
           variant="ghost"
@@ -175,17 +182,17 @@ export function TextAssetDetailView({
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          返回
+          {tCommon("back")}
         </Button>
       </div>
 
-      {/* 主内容区 */}
+      {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 左侧：文本内容区 */}
+        {/* Left: Text content area */}
         <div className="flex-1 relative flex flex-col overflow-hidden bg-muted/30 min-h-0">
-          {/* 控制栏 - 预览/编辑切换 */}
+          {/* Control bar - Preview/Edit toggle */}
           <div className="shrink-0 px-4 py-2.5 border-b bg-background/80 flex items-center gap-3">
-            {/* 编辑/预览切换 */}
+            {/* Edit/Preview toggle */}
             <div className="flex items-center gap-1 p-1 rounded-lg bg-muted">
               <Button
                 variant={isEditing ? "ghost" : "secondary"}
@@ -194,7 +201,7 @@ export function TextAssetDetailView({
                 onClick={() => setIsEditing(false)}
               >
                 <Eye className="h-3.5 w-3.5" />
-                预览
+                {tCommon("preview")}
               </Button>
               <Button
                 variant={isEditing ? "secondary" : "ghost"}
@@ -203,10 +210,10 @@ export function TextAssetDetailView({
                 onClick={() => setIsEditing(true)}
               >
                 <Edit3 className="h-3.5 w-3.5" />
-                编辑
+                {tCommon("edit")}
               </Button>
             </div>
-            {/* 保存按钮 */}
+            {/* Save button */}
             {isEditing && hasContentChanges && (
               <Button
                 size="sm"
@@ -215,23 +222,23 @@ export function TextAssetDetailView({
                 className="gap-1.5"
               >
                 <Check className="h-3.5 w-3.5" />
-                {isSavingContent ? "保存中..." : "保存"}
+                {isSavingContent ? tCommon("saving") : tCommon("save")}
               </Button>
             )}
           </div>
 
           {isEditing ? (
-            /* 编辑模式 */
+            /* Edit mode */
             <div className="flex-1 flex flex-col p-4">
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项"
+                placeholder={tText("markdownPlaceholder")}
                 className="h-full resize-none font-mono text-sm bg-background"
               />
             </div>
           ) : (
-            /* 预览模式 */
+            /* Preview mode */
             <ScrollArea className="flex-1 min-h-0">
               <div className="p-6">
                 {content ? (
@@ -239,27 +246,27 @@ export function TextAssetDetailView({
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <FileText className="h-12 w-12 mb-4 opacity-50" />
-                    <p>暂无内容</p>
+                    <p>{tText("noContent")}</p>
                   </div>
                 )}
               </div>
             </ScrollArea>
           )}
 
-          {/* 底部状态栏 */}
+          {/* Bottom status bar */}
           <div className="shrink-0 px-4 py-2 border-t bg-background/80 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{content.length} 字符</span>
+            <span>{tText("characterCount", { count: content.length })}</span>
             {hasContentChanges && (
-              <span className="text-amber-500">有未保存的更改</span>
+              <span className="text-amber-500">{tText("unsavedChanges")}</span>
             )}
           </div>
         </div>
 
-        {/* 右侧：信息面板 */}
+        {/* Right: Info panel */}
         <div className="w-[360px] border-l flex flex-col bg-background min-h-0">
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-4 space-y-4">
-              {/* 名称和日期 */}
+              {/* Name and date */}
               <div className="space-y-2">
                 {isEditingName ? (
                   <div className="flex items-center gap-2">
@@ -292,11 +299,11 @@ export function TextAssetDetailView({
 
               <Separator />
 
-              {/* 标签编辑 */}
+              {/* Tag editing */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <TagIcon className="h-4 w-4" />
-                  <span>标签</span>
+                  <span>{tCommon("tags")}</span>
                 </div>
                 <TagEditor
                   assetId={asset.id}
@@ -307,12 +314,12 @@ export function TextAssetDetailView({
 
               <Separator />
 
-              {/* 复制内容 */}
+              {/* Copy content */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <FileText className="h-4 w-4" />
-                    <span>内容</span>
+                    <span>{tText("content")}</span>
                   </div>
                   <Button
                     variant="ghost"
@@ -329,7 +336,7 @@ export function TextAssetDetailView({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  点击复制按钮复制全部内容
+                  {tText("copyHint")}
                 </p>
               </div>
             </div>

@@ -21,11 +21,10 @@ import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Note: We can't use getTranslations in generateMetadata with full i18n
-  // so we'll use static values that match the default locale
+  const t = await getTranslations("credits");
   return {
-    title: "Credit Center | 积分中心",
-    description: "Purchase credits, check balance and transaction history",
+    title: t("title"),
+    description: t("description"),
   };
 }
 
@@ -135,7 +134,7 @@ export default async function CreditsPage() {
   
   // Check user login status
   const balanceResult = await getCreditBalance();
-  if (!balanceResult.success && balanceResult.error === "未登录") {
+  if (!balanceResult.success && balanceResult.error === "NOT_LOGGED_IN") {
     redirect("/?login=true&redirect=/credits");
   }
 

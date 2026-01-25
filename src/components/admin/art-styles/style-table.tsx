@@ -26,22 +26,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  MoreHorizontal, 
-  Sparkles, 
-  Edit, 
-  Trash, 
-  Loader2, 
-  Plus, 
-  Database, 
-  Eye, 
+import {
+  MoreHorizontal,
+  Sparkles,
+  Edit,
+  Trash,
+  Loader2,
+  Plus,
+  Database,
+  Eye,
   ZoomIn,
   Trash2,
   Wand2
 } from "lucide-react";
-import { 
-  generateStylePreview, 
-  deleteArtStyleAdmin, 
+import {
+  generateStylePreview,
+  deleteArtStyleAdmin,
   initializeArtStyles,
   batchGenerateStylePreviews,
   batchDeleteArtStyles
@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { StyleEditDialog } from "./style-edit-dialog";
+import { useTranslations } from "next-intl";
 
 interface StyleTableProps {
   styles: ArtStyle[];
@@ -57,6 +58,9 @@ interface StyleTableProps {
 
 export function StyleTable({ styles }: StyleTableProps) {
   const router = useRouter();
+  const t = useTranslations("admin.artStyles");
+  const tToasts = useTranslations("toasts");
+  const tCommon = useTranslations("common");
   const [generating, setGenerating] = useState<string | null>(null);
   const [editingStyle, setEditingStyle] = useState<ArtStyle | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -72,13 +76,13 @@ export function StyleTable({ styles }: StyleTableProps) {
     try {
       const result = await generateStylePreview(styleId);
       if (result.success) {
-        toast.success("预览图生成成功");
+        toast.success(tToasts("success.previewGenerated"));
         router.refresh();
       } else {
-        toast.error(result.error || "生成失败");
+        toast.error(result.error || tToasts("error.generationFailed"));
       }
     } catch (error) {
-      toast.error("生成失败");
+      toast.error(tToasts("error.generationFailed"));
       console.error(error);
     } finally {
       setGenerating(null);
@@ -86,26 +90,26 @@ export function StyleTable({ styles }: StyleTableProps) {
   };
 
   const handleDelete = async (styleId: string, styleName: string) => {
-    if (!confirm(`确定要删除风格"${styleName}"吗？`)) {
+    if (!confirm(t("confirmDelete", { name: styleName }))) {
       return;
     }
 
     try {
       const result = await deleteArtStyleAdmin(styleId);
       if (result.success) {
-        toast.success("删除成功");
+        toast.success(tToasts("success.styleDeleted"));
         router.refresh();
       } else {
-        toast.error(result.error || "删除失败");
+        toast.error(result.error || tToasts("error.deleteFailed"));
       }
     } catch (error) {
-      toast.error("删除失败");
+      toast.error(tToasts("error.deleteFailed"));
       console.error(error);
     }
   };
 
   const handleInitialize = async () => {
-    if (!confirm("确定要初始化美术风格吗？这将导入所有预设的系统风格。")) {
+    if (!confirm(t("confirmInitialize"))) {
       return;
     }
 
@@ -113,13 +117,13 @@ export function StyleTable({ styles }: StyleTableProps) {
     try {
       const result = await initializeArtStyles();
       if (result.success) {
-        toast.success(`初始化完成！新创建: ${result.created} 个，已跳过: ${result.skipped} 个`);
+        toast.success(t("initializeSuccess", { created: result.created, skipped: result.skipped }));
         router.refresh();
       } else {
-        toast.error(result.error || "初始化失败");
+        toast.error(result.error || tToasts("error.operationFailed"));
       }
     } catch (error) {
-      toast.error("初始化失败");
+      toast.error(tToasts("error.operationFailed"));
       console.error(error);
     } finally {
       setInitializing(false);
@@ -146,11 +150,11 @@ export function StyleTable({ styles }: StyleTableProps) {
 
   const handleBatchGenerate = async () => {
     if (selectedIds.size === 0) {
-      toast.error("请先选择要生成预览图的风格");
+      toast.error(t("selectForPreview"));
       return;
     }
 
-    if (!confirm(`确定要为选中的 ${selectedIds.size} 个风格生成预览图吗？这可能需要一些时间。`)) {
+    if (!confirm(t("confirmBatchGenerate", { count: selectedIds.size }))) {
       return;
     }
 
@@ -158,14 +162,14 @@ export function StyleTable({ styles }: StyleTableProps) {
     try {
       const result = await batchGenerateStylePreviews(Array.from(selectedIds));
       if (result.success) {
-        toast.success(`批量生成完成！成功: ${result.successCount} 个，失败: ${result.failedCount} 个`);
+        toast.success(t("batchGenerateSuccess", { success: result.successCount, failed: result.failedCount }));
         setSelectedIds(new Set());
         router.refresh();
       } else {
-        toast.error(result.errors?.[0] || "批量生成失败");
+        toast.error(result.errors?.[0] || tToasts("error.batchGenerationFailed"));
       }
     } catch (error) {
-      toast.error("批量生成失败");
+      toast.error(tToasts("error.batchGenerationFailed"));
       console.error(error);
     } finally {
       setBatchGenerating(false);
@@ -174,11 +178,11 @@ export function StyleTable({ styles }: StyleTableProps) {
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) {
-      toast.error("请先选择要删除的风格");
+      toast.error(t("selectForDelete"));
       return;
     }
 
-    if (!confirm(`确定要删除选中的 ${selectedIds.size} 个风格吗？此操作无法撤销。`)) {
+    if (!confirm(t("confirmBatchDelete", { count: selectedIds.size }))) {
       return;
     }
 
@@ -186,14 +190,14 @@ export function StyleTable({ styles }: StyleTableProps) {
     try {
       const result = await batchDeleteArtStyles(Array.from(selectedIds));
       if (result.success) {
-        toast.success(`批量删除完成！成功: ${result.successCount} 个，失败: ${result.failedCount} 个`);
+        toast.success(t("batchDeleteSuccess", { success: result.successCount, failed: result.failedCount }));
         setSelectedIds(new Set());
         router.refresh();
       } else {
-        toast.error(result.errors?.[0] || "批量删除失败");
+        toast.error(result.errors?.[0] || tToasts("error.batchDeletionFailed"));
       }
     } catch (error) {
-      toast.error("批量删除失败");
+      toast.error(tToasts("error.batchDeletionFailed"));
       console.error(error);
     } finally {
       setBatchDeleting(false);
@@ -202,13 +206,13 @@ export function StyleTable({ styles }: StyleTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* 工具栏 */}
+      {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {selectedIds.size > 0 && (
             <>
               <span className="text-sm text-muted-foreground">
-                已选择 {selectedIds.size} 项
+                {t("selectedCount", { count: selectedIds.size })}
               </span>
               <Button
                 variant="outline"
@@ -221,7 +225,7 @@ export function StyleTable({ styles }: StyleTableProps) {
                 ) : (
                   <Wand2 className="w-4 h-4 mr-2" />
                 )}
-                批量生成预览图
+                {t("batchGenerate")}
               </Button>
               <Button
                 variant="outline"
@@ -235,14 +239,14 @@ export function StyleTable({ styles }: StyleTableProps) {
                 ) : (
                   <Trash2 className="w-4 h-4 mr-2" />
                 )}
-                批量删除
+                {t("batchDelete")}
               </Button>
             </>
           )}
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleInitialize}
             disabled={initializing}
           >
@@ -251,16 +255,16 @@ export function StyleTable({ styles }: StyleTableProps) {
             ) : (
               <Database className="w-4 h-4 mr-2" />
             )}
-            初始化美术风格
+            {t("initializeStyles")}
           </Button>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            创建风格
+            {t("createStyle")}
           </Button>
         </div>
       </div>
 
-      {/* 表格容器 - 使用 ScrollArea 确保表格可以完整显示 */}
+      {/* Table container */}
       <div className="border rounded-lg">
         <ScrollArea className="w-full">
           <div className="min-w-[1200px]">
@@ -271,23 +275,23 @@ export function StyleTable({ styles }: StyleTableProps) {
                     <Checkbox
                       checked={selectedIds.size === styles.length && styles.length > 0}
                       onCheckedChange={handleToggleAll}
-                      aria-label="全选"
+                      aria-label={t("selectAll")}
                     />
                   </TableHead>
-                  <TableHead className="w-28">预览图</TableHead>
-                  <TableHead className="w-40">风格名称</TableHead>
-                  <TableHead className="w-80">Prompt</TableHead>
-                  <TableHead className="w-60">描述</TableHead>
-                  <TableHead className="w-48">标签</TableHead>
-                  <TableHead className="w-24 text-center">使用次数</TableHead>
-                  <TableHead className="w-32 text-right">操作</TableHead>
+                  <TableHead className="w-28">{t("table.preview")}</TableHead>
+                  <TableHead className="w-40">{t("table.styleName")}</TableHead>
+                  <TableHead className="w-80">{t("table.prompt")}</TableHead>
+                  <TableHead className="w-60">{t("table.description")}</TableHead>
+                  <TableHead className="w-48">{t("table.tags")}</TableHead>
+                  <TableHead className="w-24 text-center">{t("table.usageCount")}</TableHead>
+                  <TableHead className="w-32 text-right">{t("table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {styles.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                      暂无风格数据
+                      {t("noStyles")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -297,7 +301,7 @@ export function StyleTable({ styles }: StyleTableProps) {
                         <Checkbox
                           checked={selectedIds.has(style.id)}
                           onCheckedChange={() => handleToggleItem(style.id)}
-                          aria-label={`选择 ${style.name}`}
+                          aria-label={t("selectStyle", { name: style.name })}
                         />
                       </TableCell>
                       <TableCell>
@@ -318,7 +322,7 @@ export function StyleTable({ styles }: StyleTableProps) {
                           </div>
                         ) : (
                           <div className="w-20 h-14 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-                            无
+                            {t("noPreview")}
                           </div>
                         )}
                       </TableCell>
@@ -370,7 +374,7 @@ export function StyleTable({ styles }: StyleTableProps) {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setViewingStyle(style)}>
                               <Eye className="w-4 h-4 mr-2" />
-                              查看详情
+                              {t("viewDetails")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleGeneratePreview(style.id)}
@@ -381,18 +385,18 @@ export function StyleTable({ styles }: StyleTableProps) {
                               ) : (
                                 <Sparkles className="w-4 h-4 mr-2" />
                               )}
-                              生成预览图
+                              {t("generate")}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setEditingStyle(style)}>
                               <Edit className="w-4 h-4 mr-2" />
-                              编辑
+                              {tCommon("edit")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDelete(style.id, style.name)}
                               className="text-destructive"
                             >
                               <Trash className="w-4 h-4 mr-2" />
-                              删除
+                              {tCommon("delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -406,21 +410,21 @@ export function StyleTable({ styles }: StyleTableProps) {
         </ScrollArea>
       </div>
 
-      {/* 编辑对话框 */}
+      {/* Edit dialog */}
       <StyleEditDialog
         open={!!editingStyle}
         onOpenChange={(open) => !open && setEditingStyle(null)}
         style={editingStyle}
       />
 
-      {/* 创建对话框 */}
+      {/* Create dialog */}
       <StyleEditDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         style={null}
       />
 
-      {/* 查看大图对话框 */}
+      {/* View image dialog */}
       <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -439,23 +443,23 @@ export function StyleTable({ styles }: StyleTableProps) {
         </DialogContent>
       </Dialog>
 
-      {/* 查看详情对话框 */}
+      {/* View details dialog */}
       <Dialog open={!!viewingStyle} onOpenChange={(open) => !open && setViewingStyle(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>风格详情</DialogTitle>
+            <DialogTitle>{t("styleDetails")}</DialogTitle>
           </DialogHeader>
           {viewingStyle && (
             <div className="space-y-6 py-4">
-              {/* 预览图 */}
+              {/* Preview image */}
               {viewingStyle.previewImage && (
                 <div className="space-y-2">
-                  <h3 className="font-medium text-sm">预览图</h3>
-                  <div 
+                  <h3 className="font-medium text-sm">{t("table.preview")}</h3>
+                  <div
                     className="relative w-full aspect-video cursor-pointer group"
-                    onClick={() => setViewingImage({ 
-                      url: viewingStyle.previewImage!, 
-                      name: viewingStyle.name 
+                    onClick={() => setViewingImage({
+                      url: viewingStyle.previewImage!,
+                      name: viewingStyle.name
                     })}
                   >
                     <Image
@@ -471,31 +475,31 @@ export function StyleTable({ styles }: StyleTableProps) {
                 </div>
               )}
 
-              {/* 基本信息 */}
+              {/* Basic info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <h3 className="font-medium text-sm">中文名称</h3>
+                  <h3 className="font-medium text-sm">{t("editor.nameZh")}</h3>
                   <p className="text-sm text-muted-foreground">{viewingStyle.name}</p>
                 </div>
                 {viewingStyle.nameEn && (
                   <div className="space-y-2">
-                    <h3 className="font-medium text-sm">英文名称</h3>
+                    <h3 className="font-medium text-sm">{t("editor.nameEn")}</h3>
                     <p className="text-sm text-muted-foreground">{viewingStyle.nameEn}</p>
                   </div>
                 )}
               </div>
 
-              {/* 描述 */}
+              {/* Description */}
               {viewingStyle.description && (
                 <div className="space-y-2">
-                  <h3 className="font-medium text-sm">描述</h3>
+                  <h3 className="font-medium text-sm">{t("editor.description")}</h3>
                   <p className="text-sm text-muted-foreground">{viewingStyle.description}</p>
                 </div>
               )}
 
               {/* Prompt */}
               <div className="space-y-2">
-                <h3 className="font-medium text-sm">Prompt</h3>
+                <h3 className="font-medium text-sm">{t("table.prompt")}</h3>
                 <div className="p-3 bg-muted rounded-lg">
                   <p className="text-sm font-mono text-foreground whitespace-pre-wrap break-words">
                     {viewingStyle.prompt}
@@ -503,10 +507,10 @@ export function StyleTable({ styles }: StyleTableProps) {
                 </div>
               </div>
 
-              {/* 标签 */}
+              {/* Tags */}
               {viewingStyle.tags && viewingStyle.tags.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-medium text-sm">标签</h3>
+                  <h3 className="font-medium text-sm">{t("editor.tags")}</h3>
                   <div className="flex flex-wrap gap-2">
                     {viewingStyle.tags.map((tag) => (
                       <Badge key={tag} variant="secondary">
@@ -517,17 +521,17 @@ export function StyleTable({ styles }: StyleTableProps) {
                 </div>
               )}
 
-              {/* 使用统计 */}
+              {/* Usage stats */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div className="space-y-1">
-                  <h3 className="font-medium text-sm">类型</h3>
+                  <h3 className="font-medium text-sm">{t("styleType")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {viewingStyle.userId === null ? "系统预设" : "用户自定义"}
+                    {viewingStyle.userId === null ? t("systemPreset") : t("userCustom")}
                   </p>
                 </div>
                 {viewingStyle.userId === null && (
                   <div className="space-y-1">
-                    <h3 className="font-medium text-sm">使用次数</h3>
+                    <h3 className="font-medium text-sm">{t("table.usageCount")}</h3>
                     <p className="text-sm text-muted-foreground">{viewingStyle.usageCount}</p>
                   </div>
                 )}

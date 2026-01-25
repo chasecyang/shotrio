@@ -174,7 +174,36 @@ export class AgentEngine {
     if (approved) {
       // 用户同意：执行 tool
       console.log("[AgentEngine] 用户同意，执行 tool");
-      
+
+      // 🆕 积分检查：在执行消耗积分的操作前验证余额
+      const { calculateTotalCredits } = await import("@/lib/utils/credit-calculator");
+      const toolCallArgs = JSON.parse(modifiedParams ? JSON.stringify(modifiedParams) : pendingToolCall.function.arguments);
+      const creditCost = calculateTotalCredits([{
+        id: pendingToolCall.id,
+        name: pendingToolCall.function.name,
+        displayName: funcDef.displayName,
+        parameters: toolCallArgs,
+        category: funcDef.category,
+        needsConfirmation: funcDef.needsConfirmation,
+      }]);
+
+      if (creditCost.total > 0) {
+        const { hasEnoughCreditsForUser } = await import("@/lib/actions/credits/balance");
+        const { auth } = await import("@/lib/auth");
+        const { headers } = await import("next/headers");
+
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (session?.user?.id) {
+          const creditCheck = await hasEnoughCreditsForUser(session.user.id, creditCost.total);
+          if (!creditCheck.success || !creditCheck.hasEnough) {
+            console.log("[AgentEngine] 积分不足，拒绝执行");
+            yield { type: "error", data: `积分不足，需要 ${creditCost.total} 积分，当前余额 ${creditCheck.currentBalance || 0} 积分` };
+            await updateConversationStatus(conversationId, "awaiting_approval");
+            return;
+          }
+        }
+      }
+
       // 🆕 如果用户修改了参数，更新 tool call 的参数
       let finalToolCall = pendingToolCall;
       if (modifiedParams) {

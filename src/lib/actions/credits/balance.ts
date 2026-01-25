@@ -100,3 +100,42 @@ export async function hasEnoughCredits(amount: number): Promise<{
   }
 }
 
+/**
+ * 检查指定用户的积分是否充足（用于后端服务）
+ */
+export async function hasEnoughCreditsForUser(userId: string, amount: number): Promise<{
+  success: boolean;
+  hasEnough: boolean;
+  currentBalance?: number;
+  error?: string;
+}> {
+  try {
+    const [account] = await db
+      .select()
+      .from(credits)
+      .where(eq(credits.userId, userId))
+      .limit(1);
+
+    if (!account) {
+      return {
+        success: true,
+        hasEnough: false,
+        currentBalance: 0,
+      };
+    }
+
+    return {
+      success: true,
+      hasEnough: account.balance >= amount,
+      currentBalance: account.balance,
+    };
+  } catch (error) {
+    console.error("检查积分余额失败:", error);
+    return {
+      success: false,
+      hasEnough: false,
+      error: error instanceof Error ? error.message : "检查积分余额失败",
+    };
+  }
+}
+

@@ -460,6 +460,11 @@ export function FloatingAgentCard({
     },
     onError: (error) => {
       agent.setLoading(false);
+      // 如果是积分不足错误，关闭自动模式（错误消息已由 use-agent-stream 显示）
+      if (error.includes("积分不足")) {
+        agent.setAutoAccept(false);
+        return; // 不再显示通用错误消息
+      }
       if (error !== "用户中断") {
         toast.error(tAgent("toasts.sendFailed"));
       }

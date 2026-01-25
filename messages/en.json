@@ -43,6 +43,45 @@
     "uploadImagePlaceholder": "Click or drag to upload image",
     "supportedImageFormats": "Supports JPG, PNG, WEBP, GIF"
   },
+  "tagEditor": {
+    "addCustomTag": "Add custom tag...",
+    "quickAdd": "Quick add"
+  },
+  "backgroundTasks": {
+    "title": "Background Tasks",
+    "inProgress": "in progress",
+    "noTasks": "No tasks",
+    "taskNotFound": "Task not found",
+    "downloadStarted": "Starting export video download",
+    "exportUrlNotFound": "Export video URL not found",
+    "viewNotSupported": "This task does not support viewing results",
+    "parseDataFailed": "Unable to parse task data",
+    "viewResult": "View Result",
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "textAsset": {
+    "contentSaved": "Content saved",
+    "markdownPlaceholder": "Supports Markdown syntax...\n\n# Heading\n\n**Bold** *Italic*\n\n- List item",
+    "noContent": "No content",
+    "characterCount": "{count} characters",
+    "unsavedChanges": "Unsaved changes",
+    "content": "Content",
+    "copyHint": "Click copy button to copy all content"
+  },
+  "frameCapture": {
+    "title": "Capture Frame",
+    "screenshot": "Screenshot",
+    "videoNotLoaded": "Video not loaded yet",
+    "canvasError": "Unable to create canvas",
+    "captureFailed": "Failed to capture frame",
+    "nameRequired": "Please enter frame name",
+    "captureFailedRetry": "Frame capture failed, please retry",
+    "timestamp": "Timestamp",
+    "frameName": "Frame Name",
+    "frameNamePlaceholder": "Enter frame name",
+    "confirmCapture": "Confirm Capture"
+  },
   "beta": {
     "label": "BETA",
     "title": "Beta Version",
@@ -81,6 +120,7 @@
     "title": "Admin Center",
     "subtitle": "Management Panel",
     "settings": "Settings",
+    "backToMain": "Back to Main Site",
     "dashboard": {
       "title": "Overview",
       "artStyles": {
@@ -144,6 +184,8 @@
         "batchSuccess": "Successfully generated {count} codes"
       },
       "empty": "No redeem codes yet",
+      "loadFailed": "Failed to load redeem codes",
+      "permanent": "Permanent",
       "actions": {
         "enable": "Enabled",
         "disable": "Disabled"
@@ -158,14 +200,95 @@
       "batchDelete": "Batch Delete",
       "selectForPreview": "Please select styles to generate preview",
       "selectForDelete": "Please select styles to delete",
-      "sidebarTitle": "Art Styles"
+      "sidebarTitle": "Art Styles",
+      "confirmDelete": "Are you sure you want to delete style \"{name}\"?",
+      "confirmInitialize": "Are you sure you want to initialize preset styles? This will add system default styles.",
+      "initializeSuccess": "Initialization complete: {created} created, {skipped} skipped",
+      "confirmBatchGenerate": "Are you sure you want to generate previews for {count} selected styles?",
+      "batchGenerateSuccess": "Batch generation complete: {success} succeeded, {failed} failed",
+      "confirmBatchDelete": "Are you sure you want to delete {count} selected styles? This action cannot be undone.",
+      "batchDeleteSuccess": "Batch deletion complete: {success} succeeded, {failed} failed",
+      "selectedCount": "{count} selected",
+      "initializeStyles": "Initialize Preset Styles",
+      "createStyle": "Create Style",
+      "selectAll": "Select All",
+      "noStyles": "No styles available",
+      "selectStyle": "Select style \"{name}\"",
+      "noPreview": "No Preview",
+      "viewDetails": "View Details",
+      "styleDetails": "Style Details",
+      "styleType": "Style Type",
+      "systemPreset": "System Preset",
+      "userCustom": "User Custom",
+      "table": {
+        "preview": "Preview",
+        "styleName": "Style Name",
+        "prompt": "Prompt",
+        "description": "Description",
+        "tags": "Tags",
+        "usageCount": "Usage Count",
+        "actions": "Actions"
+      },
+      "editor": {
+        "editTitle": "Edit Style",
+        "createTitle": "Create Style",
+        "currentPreview": "Current Preview",
+        "nameZh": "Style Name (Chinese)",
+        "nameZhPlaceholder": "e.g., Modern Anime",
+        "nameEn": "Style Name (English)",
+        "nameEnPlaceholder": "e.g., Modern Anime",
+        "description": "Description",
+        "descriptionPlaceholder": "Briefly describe this style...",
+        "promptPlaceholder": "e.g., modern anime style, vibrant colors, cel shading, high quality, 8k",
+        "promptHint": "English prompt for AI image generation",
+        "tags": "Tags",
+        "tagsPlaceholder": "Comma separated, e.g., anime, japanese, 2D",
+        "create": "Create",
+        "previewImage": "Preview Image",
+        "nameRequired": "Please enter style name",
+        "promptRequired": "Please enter prompt"
+      }
     },
     "templates": {
       "title": "Template Management",
       "subtitle": "Manage example project templates displayed on homepage",
       "sidebarTitle": "Templates",
       "description": "Mark existing projects as example templates to display on homepage",
-      "detail": "Manage example project templates, set showcase videos and categories to attract users"
+      "detail": "Manage example project templates, set showcase videos and categories to attract users",
+      "manager": {
+        "totalCount": "{count} template projects",
+        "addTemplate": "Add Template",
+        "templateList": "Template Project List",
+        "emptyState": "No template projects yet, click \"Add Template\" to mark a project as template",
+        "projectName": "Project Name",
+        "category": "Category",
+        "assetCount": "Assets",
+        "video": "Video",
+        "order": "Order",
+        "actions": "Actions",
+        "addDialogTitle": "Add Template Project",
+        "editDialogTitle": "Edit Template Info",
+        "selectProject": "Select Project",
+        "selectProjectPlaceholder": "Select a project",
+        "noAvailableProjects": "No available projects",
+        "projectWithAssets": "{title} ({count} assets)",
+        "unknownUser": "Unknown user",
+        "videoUrl": "Video URL",
+        "thumbnailUrl": "Thumbnail URL",
+        "selectCategory": "Select category",
+        "orderWeight": "Order Weight (higher = first)",
+        "confirmRemove": "Are you sure you want to remove this project from templates?",
+        "addSuccess": "Template added successfully",
+        "updateSuccess": "Template updated successfully",
+        "removeSuccess": "Template removed",
+        "categories": {
+          "romance": "Romance",
+          "suspense": "Suspense",
+          "comedy": "Comedy",
+          "action": "Action",
+          "fantasy": "Fantasy"
+        }
+      }
     },
     "examples": {
       "title": "Example Assets Management",
@@ -1085,7 +1208,8 @@
       "downloadFailed": "Download failed",
       "uploadFailed": "Upload failed",
       "retryUnavailable": "Retry function unavailable",
-      "taskNotFound": "Cannot find related task information"
+      "taskNotFound": "Cannot find related task information",
+      "operationFailed": "Operation failed"
     },
     "info": {
       "derivationInDevelopment": "Derivation feature in development, stay tuned",
@@ -1156,6 +1280,15 @@
       "retryFailed": "Retry failed",
       "regenerating": "Regenerating...",
       "regenerateFailed": "Regenerate failed",
+      "regenerateStarted": "Regeneration started, please wait...",
+      "prepareRegenerateFailed": "Failed to prepare regeneration",
+      "estimateCostFailed": "Failed to estimate cost",
+      "getBalanceFailed": "Failed to get balance",
+      "assetReferenced": "Referenced \"{name}\" to chat",
+      "markedAs": "Marked as {status}",
+      "updateFailed": "Update failed",
+      "batchMarkedAs": "Marked {count} asset(s) as {status}",
+      "batchUpdateFailed": "Batch update failed",
       "confirmRegenerate": "Confirm Regenerate",
       "confirmRegenerateImage": "Regenerating \"{name}\" will cost {credits} credits. Continue?",
       "confirmRegenerateVideo": "Regenerating video \"{name}\" will cost approximately {credits} credits. Continue?",
