@@ -18,6 +18,12 @@ const ERROR_PATTERNS: Array<{ pattern: RegExp; messageKey: string }> = [
     messageKey: "errors.generation.prominentPeopleFilter"
   },
 
+  // Veo 危险内容过滤错误
+  {
+    pattern: /DANGER_FILTER|dangerous content/i,
+    messageKey: "errors.generation.dangerFilter"
+  },
+
   // 超时类错误
   { pattern: /超时（?已尝试.*次）?/i, messageKey: "errors.generation.timeout" },
   { pattern: /timeout/i, messageKey: "errors.generation.timeout" },

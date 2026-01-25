@@ -91,7 +91,7 @@
     "and": "和"
   },
   "home": {
-    "title": "Shotrio",
+    "title": "ShotRio",
     "subtitle": "精心创作，AI提效",
     "slogan": "让创作更简单，让故事更精彩",
     "description": "AI 辅助微短剧创作，助力内容创作者高效产出优质微短剧作品。",
@@ -170,7 +170,7 @@
     },
     "cta": {
       "title": "开始你的精心创作之旅",
-      "description": "加入 Shotrio，用强大的工具和 AI 辅助，创作出打动人心的微短剧作品",
+      "description": "加入 ShotRio，用强大的工具和 AI 辅助，创作出打动人心的微短剧作品",
       "button": "免费开始创作"
     },
     "pricing": {
@@ -213,6 +213,7 @@
       "uploadFailed": "文件上传失败，请重试",
       "generationFailed": "生成失败，请重试",
       "unknown": "操作失败，请稍后重试",
+      "dangerFilter": "⚠️ 内容审核：提示词可能包含危险或有害内容\n\n🔧 修改建议：\n• 避免描述暴力、武器或危险活动\n• 不要包含可能造成伤害的内容\n• 使用安全、中性的描述方式\n• 专注于积极、创意的内容\n\n💡 示例：\n❌ 涉及暴力或危险场景的描述\n✅ 和平、创意的场景，带有积极主题",
       "prominentPeopleFilter": "⚠️ 内容审核：提示词可能涉及真实名人或公众人物\n\n🔧 修改建议：\n• 避免使用真实名人、政治人物的名字\n• 不要描述特定名人的外貌特征\n• 用通用描述替代（如\"金发女歌手\"代替具体名人）\n• 描述风格和特征而非具体人物\n\n💡 示例：\n❌ \"某位著名演员在红毯上\"\n✅ \"优雅的女性在红毯上自信地走过\""
     },
     "agent": {
@@ -481,7 +482,7 @@
   "changelog": {
     "badge": "更新动态",
     "title": "最新更新",
-    "description": "了解 Shotrio 的最新功能更新与改进",
+    "description": "了解 ShotRio 的最新功能更新与改进",
     "entries": {
       "0121": {
         "item1": "Agent 回复支持多语言，根据界面语言自动切换",
@@ -593,7 +594,7 @@
       "lastUpdated": "最后更新：2024年12月",
       "section1": {
         "title": "服务条款",
-        "content": "欢迎使用 Shotrio。通过访问或使用我们的服务，您同意遵守本协议的条款。"
+        "content": "欢迎使用 ShotRio。通过访问或使用我们的服务，您同意遵守本协议的条款。"
       },
       "section2": {
         "title": "账户责任",
@@ -721,6 +722,13 @@
     "currency": "美元",
     "creditsUnit": "积分",
     "bonusLabel": "额外赠送 {percent}%",
+    "welcome": {
+      "title": "新手礼包",
+      "description": "感谢加入 ShotRio！领取你的专属新手奖励",
+      "credits": "积分",
+      "claim": "领取礼包",
+      "claiming": "领取中..."
+    },
     "guide": {
       "title": "你可以创作：",
       "character": "角色 - 为故事中的人物设计形象",

@@ -188,7 +188,7 @@
     "and": "and"
   },
   "home": {
-    "title": "Shotrio",
+    "title": "ShotRio",
     "subtitle": "Craft with Care, Enhance with AI",
     "slogan": "Make creation easier, make stories better",
     "description": "AI-assisted micro-drama creation platform to help content creators efficiently produce high-quality micro-drama works.",
@@ -267,7 +267,7 @@
     },
     "cta": {
       "title": "Begin Your Thoughtful Creation Journey",
-      "description": "Join Shotrio and create compelling micro-dramas with powerful tools and AI assistance",
+      "description": "Join ShotRio and create compelling micro-dramas with powerful tools and AI assistance",
       "button": "Start Creating for Free"
     },
     "pricing": {
@@ -309,6 +309,7 @@
       "uploadFailed": "File upload failed, please retry",
       "generationFailed": "Generation failed, please retry",
       "unknown": "Operation failed, please try again later",
+      "dangerFilter": "Content Review: Your prompt may contain potentially dangerous or harmful content\n\nSuggestions:\n- Avoid descriptions of violence, weapons, or dangerous activities\n- Do not include content that could cause harm\n- Use safe, neutral descriptions\n- Focus on positive, creative content\n\nExample:\nBad: Descriptions involving violence or dangerous scenarios\nGood: Peaceful, creative scenes with positive themes",
       "prominentPeopleFilter": "⚠️ Content Policy: Your prompt may contain references to real celebrities or public figures\n\n🔧 Suggestions:\n• Avoid using names of real celebrities or political figures\n• Do not describe specific features of famous people\n• Use generic descriptions (e.g., \"blonde singer\" instead of specific names)\n• Describe styles and characteristics rather than specific individuals\n\n💡 Examples:\n❌ \"A famous actor on the red carpet\"\n✅ \"An elegant person walking confidently on the red carpet\""
     },
     "agent": {
@@ -577,7 +578,7 @@
   "changelog": {
     "badge": "Updates",
     "title": "What's New",
-    "description": "Track the latest updates and improvements to Shotrio",
+    "description": "Track the latest updates and improvements to ShotRio",
     "entries": {
       "0121": {
         "item1": "Agent responses adapt to your interface language",
@@ -689,7 +690,7 @@
       "lastUpdated": "Last updated: December 2024",
       "section1": {
         "title": "Service Terms",
-        "content": "Welcome to Shotrio. By accessing or using our services, you agree to comply with the terms of this agreement."
+        "content": "Welcome to ShotRio. By accessing or using our services, you agree to comply with the terms of this agreement."
       },
       "section2": {
         "title": "Account Responsibility",
@@ -794,6 +795,13 @@
     "currency": "USD",
     "creditsUnit": "Credits",
     "bonusLabel": "{percent}% extra bonus",
+    "welcome": {
+      "title": "Welcome Gift",
+      "description": "Thanks for joining ShotRio! Claim your exclusive welcome bonus",
+      "credits": "Credits",
+      "claim": "Claim My Gift",
+      "claiming": "Claiming..."
+    },
     "guide": {
       "title": "You can create:",
       "character": "Character - Design character appearances for your story",

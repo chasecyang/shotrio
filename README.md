@@ -1,4 +1,4 @@
-# Shotrio - AI 微短剧创作平台
+# ShotRio - AI 微短剧创作平台
 
 一个基于 Next.js 的 AI 驱动的微短剧创作平台，支持小说自动拆分、角色提取、分镜生成等功能。
 
@@ -167,7 +167,7 @@ shotrio/
 
 ### 异步任务系统
 
-Shotrio 使用 PostgreSQL 作为任务队列，通过独立的 Worker 进程处理耗时任务。
+ShotRio 使用 PostgreSQL 作为任务队列，通过独立的 Worker 进程处理耗时任务。
 
 **架构**：
 - Web 应用创建任务 → 写入数据库

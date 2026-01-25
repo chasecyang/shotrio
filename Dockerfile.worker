@@ -1,13 +1,29 @@
 # Worker Dockerfile - 用于独立部署任务处理器
 # 无需构建，直接运行 TypeScript 源码
 
-FROM node:24-alpine
+# 使用 Debian-based 镜像（Alpine 不支持 Remotion Chrome Headless Shell）
+FROM node:24-bookworm-slim
 
-# 安装必要的系统依赖
-RUN apk add --no-cache \
+# 安装必要的系统依赖（包括 Chrome 依赖）
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
-    ffmpeg
+    ffmpeg \
+    # Chrome 依赖
+    libnss3 \
+    libdbus-1-3 \
+    libatk1.0-0 \
+    libgbm-dev \
+    libasound2t64 \
+    libxrandr2 \
+    libxkbcommon-dev \
+    libxfixes3 \
+    libxcomposite1 \
+    libxdamage1 \
+    libatk-bridge2.0-0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app
@@ -16,8 +32,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # 安装所有依赖（包括 devDependencies，因为需要 tsx）
-# 必须在设置 NODE_ENV 之前安装，或使用 --include=dev
 RUN npm ci --include=dev
+
+# 确保 Remotion 浏览器已下载
+RUN npx remotion browser ensure
 
 # 设置环境变量（在安装依赖之后）
 ENV NODE_ENV=production

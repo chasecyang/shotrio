@@ -9,7 +9,7 @@ export function generateWebSiteSchema(lang: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Shotrio',
+    name: 'ShotRio',
     url: baseUrl,
     description: lang === 'zh' 
       ? '用心创作好漫剧 - 强大的可控性与AI智能辅助，完整的微短剧创作工具链' 
@@ -35,7 +35,7 @@ export function generateOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Shotrio',
+    name: 'ShotRio',
     url: baseUrl,
     logo: `${baseUrl}/logo.png`,
     description: 'Professional micro-drama creation platform providing powerful control and AI assistance for quality-focused content creators',
@@ -56,7 +56,7 @@ export function generateWebApplicationSchema(lang: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Shotrio',
+    name: 'ShotRio',
     url: baseUrl,
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web',

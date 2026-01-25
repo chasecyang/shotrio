@@ -149,7 +149,7 @@ async function processJobAsync(job: Job): Promise<void> {
  */
 async function startWorker() {
   console.log("=================================");
-  console.log("🚀 Shotrio Task Worker 启动中...");
+  console.log("🚀 ShotRio Task Worker 启动中...");
   console.log("=================================");
   console.log(`活跃轮询间隔: ${POLL_INTERVAL / 1000} 秒`);
   console.log(`空闲轮询间隔: ${IDLE_POLL_INTERVAL / 1000} 秒`);

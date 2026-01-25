@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/auth-utils";
+import { WelcomeBonusDialog } from "@/components/credits/welcome-bonus-dialog";
 
 interface ProjectsLayoutProps {
   children: ReactNode;
@@ -14,6 +15,11 @@ export default async function ProjectsLayout({ children }: ProjectsLayoutProps) 
     redirect("/?login=true&redirect=/projects");
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <WelcomeBonusDialog />
+    </>
+  );
 }
 
