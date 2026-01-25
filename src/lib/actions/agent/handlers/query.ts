@@ -179,6 +179,7 @@ async function handleQueryAssets(
       name: a.name,
       type: a.assetType,
       status: a.runtimeStatus,
+      selectionStatus: a.selectionStatus,
       tags: a.tags.map((t) => t.tagValue),
     };
 

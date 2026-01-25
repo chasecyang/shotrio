@@ -42,7 +42,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "query_assets",
-    description: "查询项目资产库（包括图片素材和视频素材）。支持按类型（image/video）和标签筛选。返回资产的详细信息，包括ID、名称、状态、URL、prompt、标签等。适合在需要引用现有素材、查看生成结果、或了解资产库内容时使用。",
+    description: "查询项目资产库（包括图片素材和视频素材）。支持按类型（image/video）和标签筛选。返回资产的详细信息，包括ID、名称、状态、selectionStatus（用户筛选状态：selected=精选采纳、rejected=废弃、unrated=未评价）、prompt、标签等。生成新内容时应优先引用 selected 的素材，避免使用 rejected 的素材。适合在需要引用现有素材、查看生成结果、或了解资产库内容时使用。",
     displayName: "查询资产库",
     parameters: {
       type: "object",
