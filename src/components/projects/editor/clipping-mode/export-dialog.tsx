@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,7 @@ export function ExportDialog({
   timeline,
   projectId,
 }: ExportDialogProps) {
+  const t = useTranslations();
   const [quality, setQuality] = useState<ExportQuality>("high");
   const [includeAudio, setIncludeAudio] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -55,7 +57,7 @@ export function ExportDialog({
 
   const handleExport = async () => {
     if (totalClipCount === 0) {
-      toast.error("时间轴为空，无法导出");
+      toast.error(t('exportDialog.emptyTimeline'));
       return;
     }
 
@@ -69,14 +71,14 @@ export function ExportDialog({
       });
 
       if (result.success) {
-        toast.success("导出任务已创建，请在后台任务中查看进度");
+        toast.success(t('exportDialog.exportTaskCreated'));
         onOpenChange(false);
       } else {
-        toast.error(result.error || "创建导出任务失败");
+        toast.error(result.error || t('exportDialog.createTaskFailed'));
       }
     } catch (error) {
-      console.error("导出失败:", error);
-      toast.error("导出失败，请重试");
+      console.error("Export failed:", error);
+      toast.error(t('exportDialog.exportFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -88,10 +90,10 @@ export function ExportDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="h-5 w-5" />
-            导出视频
+            {t('exportDialog.title')}
           </DialogTitle>
           <DialogDescription>
-            将时间轴渲染为视频文件
+            {t('exportDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -103,18 +105,18 @@ export function ExportDialog({
               <span className="text-sm font-medium">
                 {formatTimeDisplay(timeline.duration)}
               </span>
-              <span className="text-xs text-muted-foreground">时长</span>
+              <span className="text-xs text-muted-foreground">{t('exportDialog.duration')}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <MonitorPlay className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{timeline.resolution}</span>
-              <span className="text-xs text-muted-foreground">分辨率</span>
+              <span className="text-xs text-muted-foreground">{t('exportDialog.resolution')}</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <Layers className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{totalClipCount}</span>
               <span className="text-xs text-muted-foreground">
-                片段 ({videoClipCount}V/{audioClipCount}A)
+                {t('exportDialog.clipsDetail', { video: videoClipCount, audio: audioClipCount })}
               </span>
             </div>
           </div>
@@ -124,9 +126,9 @@ export function ExportDialog({
             {/* 质量选择 */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>导出质量</Label>
+                <Label>{t('exportDialog.exportQuality')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  {quality === "draft" ? "快速预览，较低质量" : "完整渲染，最佳质量"}
+                  {quality === "draft" ? t('exportDialog.qualityDraft') : t('exportDialog.qualityHigh')}
                 </p>
               </div>
               <Select value={quality} onValueChange={(v) => setQuality(v as ExportQuality)}>
@@ -134,8 +136,8 @@ export function ExportDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">草稿</SelectItem>
-                  <SelectItem value="high">高清</SelectItem>
+                  <SelectItem value="draft">{t('exportDialog.draft')}</SelectItem>
+                  <SelectItem value="high">{t('exportDialog.high')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -143,11 +145,11 @@ export function ExportDialog({
             {/* 包含音频 */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>包含音频</Label>
+                <Label>{t('exportDialog.includeAudio')}</Label>
                 <p className="text-xs text-muted-foreground">
                   {audioClipCount > 0
-                    ? `包含 ${audioClipCount} 个音频片段`
-                    : "时间轴中没有音频"}
+                    ? t('exportDialog.audioClipsCount', { count: audioClipCount })
+                    : t('exportDialog.noAudioInTimeline')}
                 </p>
               </div>
               <Switch
@@ -165,7 +167,7 @@ export function ExportDialog({
             onClick={() => onOpenChange(false)}
             disabled={isExporting}
           >
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleExport}
@@ -174,10 +176,10 @@ export function ExportDialog({
             {isExporting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                创建任务...
+                {t('exportDialog.creatingTask')}
               </>
             ) : (
-              "开始导出"
+              t('exportDialog.startExport')
             )}
           </Button>
         </DialogFooter>

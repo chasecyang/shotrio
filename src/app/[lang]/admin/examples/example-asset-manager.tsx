@@ -49,6 +49,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslations } from "next-intl";
 
 interface Asset {
   id: string;
@@ -181,6 +182,8 @@ function SortableTableRow({
 export function ExampleAssetManager({ examples: initialExamples, assets: initialAssets }: ExampleAssetManagerProps) {
   const [examples, setExamples] = useState(initialExamples);
   const [assets] = useState(initialAssets);
+  const t = useTranslations("admin.examples.manager");
+  const tCommon = useTranslations("common");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [editingExample, setEditingExample] = useState<Example | null>(null);
@@ -224,7 +227,7 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
 
       const result = await reorderExampleAssets(orders);
       if (!result.success) {
-        toast.error(result.error || "重排序失败");
+        toast.error(result.error || t("reorderFailed"));
         setExamples(examples); // 回滚
       }
     }
@@ -239,11 +242,11 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
     });
 
     if (result.success) {
-      toast.success("已添加为示例资产");
+      toast.success(t("addedSuccess"));
       // 刷新页面
       window.location.reload();
     } else {
-      toast.error(result.error || "添加失败");
+      toast.error(result.error || t("addFailed"));
     }
 
     setIsAddDialogOpen(false);
@@ -260,11 +263,11 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
     });
 
     if (result.success) {
-      toast.success("已更新示例信息");
+      toast.success(t("updatedSuccess"));
       // 刷新页面
       window.location.reload();
     } else {
-      toast.error(result.error || "更新失败");
+      toast.error(result.error || t("updateFailed"));
     }
 
     setIsEditDialogOpen(false);
@@ -273,15 +276,15 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
   };
 
   const handleRemoveExample = async (assetId: string) => {
-    if (!confirm("确定要移除这个示例吗？")) return;
+    if (!confirm(t("confirmRemove"))) return;
 
     const result = await unmarkAssetAsExample(assetId);
 
     if (result.success) {
-      toast.success("已移除示例");
+      toast.success(t("removedSuccess"));
       setExamples(examples.filter((ex) => ex.assetId !== assetId));
     } else {
-      toast.error(result.error || "移除失败");
+      toast.error(result.error || t("removeFailed"));
     }
   };
 
@@ -309,7 +312,7 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
     <div className="space-y-8">
       {/* Current Examples Section */}
       <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-4">当前示例资产 ({examples.length})</h2>
+        <h2 className="text-2xl font-bold mb-4">{t("currentExamples")} ({examples.length})</h2>
         <div className="rounded-md border">
           <DndContext
             sensors={sensors}
@@ -324,18 +327,18 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]"></TableHead>
-                    <TableHead className="w-[100px]">预览</TableHead>
-                    <TableHead>名称</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>创建者</TableHead>
-                    <TableHead className="w-[150px]">操作</TableHead>
+                    <TableHead className="w-[100px]">{t("tablePreview")}</TableHead>
+                    <TableHead>{t("tableName")}</TableHead>
+                    <TableHead>{t("tableType")}</TableHead>
+                    <TableHead>{t("tableCreator")}</TableHead>
+                    <TableHead className="w-[150px]">{t("tableActions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {examples.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        暂无示例资产
+                        {t("noExamples")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -357,14 +360,14 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
 
       {/* Asset Browser Section */}
       <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-4">浏览资产</h2>
+        <h2 className="text-2xl font-bold mb-4">{t("browseAssets")}</h2>
 
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="搜索资产名称..."
+              placeholder={t("searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -394,7 +397,7 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
                 )}
                 {asset.isExample && (
                   <Badge className="absolute top-2 right-2" variant="secondary">
-                    已添加
+                    {t("added")}
                   </Badge>
                 )}
               </div>
@@ -422,38 +425,38 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加为示例资产</DialogTitle>
+            <DialogTitle>{t("addAsExample")}</DialogTitle>
             <DialogDescription>
-              设置示例资产的展示信息
+              {t("setDisplayInfo")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="displayName">展示名称（可选）</Label>
+              <Label htmlFor="displayName">{t("displayNameOptional")}</Label>
               <Input
                 id="displayName"
                 value={formData.displayName}
                 onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                placeholder="留空使用原始名称"
+                placeholder={t("leaveBlankForOriginal")}
               />
             </div>
             <div>
-              <Label htmlFor="description">描述（可选）</Label>
+              <Label htmlFor="description">{t("descriptionOptional")}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="添加描述信息"
+                placeholder={t("addDescription")}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              取消
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleAddExample}>
-              添加
+              {tCommon("add")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -463,38 +466,38 @@ export function ExampleAssetManager({ examples: initialExamples, assets: initial
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>编辑示例信息</DialogTitle>
+            <DialogTitle>{t("editExampleInfo")}</DialogTitle>
             <DialogDescription>
-              修改示例资产的展示信息
+              {t("modifyDisplayInfo")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-displayName">展示名称（可选）</Label>
+              <Label htmlFor="edit-displayName">{t("displayNameOptional")}</Label>
               <Input
                 id="edit-displayName"
                 value={formData.displayName}
                 onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                placeholder="留空使用原始名称"
+                placeholder={t("leaveBlankForOriginal")}
               />
             </div>
             <div>
-              <Label htmlFor="edit-description">描述（可选）</Label>
+              <Label htmlFor="edit-description">{t("descriptionOptional")}</Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="添加描述信息"
+                placeholder={t("addDescription")}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              取消
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleUpdateExample}>
-              保存
+              {tCommon("save")}
             </Button>
           </DialogFooter>
         </DialogContent>

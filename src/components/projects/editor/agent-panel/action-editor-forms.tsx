@@ -23,7 +23,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, ImageIcon, X, Plus, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PRESET_TAGS } from "@/lib/constants/asset-tags";
+import { PRESET_TAGS, isPresetTag } from "@/lib/constants/asset-tags";
 import { Button } from "@/components/ui/button";
 import { queryAssets } from "@/lib/actions/asset";
 import { AssetWithFullData } from "@/types/asset";
@@ -314,7 +314,16 @@ interface TagInputProps {
 
 function TagInput({ tags, onChange }: TagInputProps) {
   const tAgent = useTranslations("editor.agent.actionEditor");
+  const tTags = useTranslations("tagEditor");
   const [inputValue, setInputValue] = useState("");
+
+  // Helper to get display name for a tag
+  const getTagDisplayName = (tagValue: string) => {
+    if (isPresetTag(tagValue)) {
+      return tTags(`presetTags.${tagValue}`);
+    }
+    return tagValue;
+  };
 
   const existingTags = new Set(tags);
   const availablePresetTags = PRESET_TAGS.filter(tag => !existingTags.has(tag));
@@ -343,7 +352,7 @@ function TagInput({ tags, onChange }: TagInputProps) {
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="bg-secondary/50 text-foreground gap-1 pr-1">
-              {tag}
+              {getTagDisplayName(tag)}
               <button
                 type="button"
                 onClick={() => handleRemoveTag(tag)}
@@ -384,7 +393,7 @@ function TagInput({ tags, onChange }: TagInputProps) {
                 onClick={() => handleAddTag(tag)}
                 className="px-2 py-0.5 text-xs rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
               >
-                + {tag}
+                + {getTagDisplayName(tag)}
               </button>
             ))}
           </div>
@@ -401,21 +410,24 @@ interface ImageGenerationFormProps {
 }
 
 const IMAGE_ASPECT_RATIOS = [
-  { value: "9:16", label: "竖屏" },
-  { value: "16:9", label: "宽屏" },
-  { value: "1:1", label: "正方" },
-  { value: "21:9", label: "超宽" },
-  { value: "3:2", label: "经典" },
-  { value: "4:3", label: "复古" },
-  { value: "5:4", label: "方正" },
-  { value: "4:5", label: "竖幅" },
-  { value: "3:4", label: "竖长" },
-  { value: "2:3", label: "竖版" },
+  { value: "9:16", labelKey: "portrait" },
+  { value: "16:9", labelKey: "widescreen" },
+  { value: "1:1", labelKey: "square" },
+  { value: "21:9", labelKey: "ultrawide" },
+  { value: "3:2", labelKey: "classic" },
+  { value: "4:3", labelKey: "retro" },
+  { value: "5:4", labelKey: "standard" },
+  { value: "4:5", labelKey: "tallPortrait" },
+  { value: "3:4", labelKey: "tallLong" },
+  { value: "2:3", labelKey: "verticalStandard" },
 ];
 
 export function ImageGenerationForm({ params, onChange }: ImageGenerationFormProps) {
   const { state } = useEditor();
   const projectId = state.project?.id || "";
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("editor.actionEditorForms");
+  const tRatios = useTranslations("editor.aspectRatios");
   type GenerationAssetDraft = {
     name: string;
     prompt: string;
@@ -443,7 +455,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
 
       return assetsArray.map((asset: Record<string, unknown>) => {
         const prompt = asset.prompt || "-";
-        const name = asset.name || "未命名";
+        const name = asset.name || "";
         const tags = Array.isArray(asset.tags)
           ? asset.tags as string[]
           : (typeof asset.tags === "string" ? asset.tags.split(",").map(t => t.trim()).filter(Boolean) : []);
@@ -488,7 +500,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
     }));
 
   if (!generationAssets || generationAssets.length === 0) {
-    return <p className="text-muted-foreground text-sm">无法解析图片生成参数</p>;
+    return <p className="text-muted-foreground text-sm">{tForms("cannotParseParams")}</p>;
   }
 
   return (
@@ -497,11 +509,11 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
         <div key={index} className="rounded-md border p-4 space-y-4">
           <div className="font-medium text-sm flex items-center gap-2">
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">#{index + 1}</span>
-            {asset.name}
+            {asset.name || tCommon("unnamed")}
           </div>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label>名称</Label>
+              <Label>{tForms("name")}</Label>
               <Input
                 value={asset.name}
                 onChange={(e) => {
@@ -509,11 +521,11 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                   newAssets[index] = { ...newAssets[index], name: e.target.value };
                   onChange({ ...params, assets: serializeAssets(newAssets) });
                 }}
-                placeholder="资产名称"
+                placeholder={tForms("assetName")}
               />
             </div>
             <div className="grid gap-2">
-              <Label>提示词 *</Label>
+              <Label>{tForms("promptRequired")}</Label>
               <Textarea
                 value={asset.prompt}
                 onChange={(e) => {
@@ -522,11 +534,11 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                   onChange({ ...params, assets: serializeAssets(newAssets) });
                 }}
                 className="min-h-[100px]"
-                placeholder="描述你想生成的图片"
+                placeholder={tForms("describeImage")}
               />
             </div>
             <div className="grid gap-2">
-              <Label>标签</Label>
+              <Label>{tForms("tags")}</Label>
               <TagInput
                 tags={asset.tags}
                 onChange={(newTags) => {
@@ -537,7 +549,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
               />
             </div>
             <div className="grid gap-2">
-              <Label>宽高比</Label>
+              <Label>{tForms("aspectRatio")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {IMAGE_ASPECT_RATIOS.map((ratio) => {
                   const isSelected = asset.aspectRatio === ratio.value;
@@ -572,7 +584,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                           style={{ aspectRatio: `${w} / ${h}`, height: "10px" }}
                         />
                         <div className="leading-tight whitespace-nowrap">
-                          <div className="text-[10px] font-medium">{ratio.label}</div>
+                          <div className="text-[10px] font-medium">{tRatios(ratio.labelKey)}</div>
                           <div className="text-[9px] text-muted-foreground">
                             {ratio.value}
                           </div>
@@ -591,7 +603,7 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
                 newAssets[index] = { ...newAssets[index], sourceAssetIds: assetIds };
                 onChange({ ...params, assets: serializeAssets(newAssets) });
               }}
-              label="参考图"
+              label={tForms("referenceImages")}
               assetType="image"
             />
           </div>
@@ -904,41 +916,43 @@ interface VideoGenerationFormProps {
 }
 
 const VIDEO_ASPECT_RATIOS = [
-  { value: "9:16", label: "竖屏" },
-  { value: "16:9", label: "宽屏" },
+  { value: "9:16", labelKey: "portrait" },
+  { value: "16:9", labelKey: "widescreen" },
 ];
 
 export function VideoGenerationForm({ params, onChange }: VideoGenerationFormProps) {
   const { state } = useEditor();
   const projectId = state.project?.id || "";
+  const tForms = useTranslations("editor.actionEditorForms");
+  const tRatios = useTranslations("editor.aspectRatios");
 
   return (
     <div className="space-y-4">
       {/* 提示词 */}
       <div className="grid gap-2">
-        <Label>提示词 *</Label>
+        <Label>{tForms("promptRequired")}</Label>
         <Textarea
           value={(params.prompt as string) || ""}
           onChange={(e) => onChange({ ...params, prompt: e.target.value })}
           className="min-h-[100px]"
-          placeholder="描述视频内容和镜头运动"
+          placeholder={tForms("describeVideo")}
         />
       </div>
 
       {/* 标题 */}
       <div className="grid gap-2">
-        <Label>标题</Label>
+        <Label>{tForms("title")}</Label>
         <Input
           value={(params.title as string) || ""}
           onChange={(e) => onChange({ ...params, title: e.target.value })}
-          placeholder="视频标题"
+          placeholder={tForms("videoTitle")}
         />
       </div>
 
       {/* 时长和宽高比 */}
       <div className="grid gap-4">
         <div className="grid gap-2">
-          <Label>时长</Label>
+          <Label>{tForms("duration")}</Label>
           <Select
             value={(params.duration as string) || "8"}
             onValueChange={(value) => onChange({ ...params, duration: value })}
@@ -947,12 +961,12 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="8">8 秒（固定）</SelectItem>
+              <SelectItem value="8">{tRatios("8sFixed")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label>宽高比</Label>
+          <Label>{tForms("aspectRatio")}</Label>
           <div className="flex flex-wrap gap-1.5">
             {VIDEO_ASPECT_RATIOS.map((ratio) => {
               const isSelected = (params.aspect_ratio as string || "16:9") === ratio.value;
@@ -980,7 +994,7 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
                       style={{ aspectRatio: `${w} / ${h}`, height: "10px" }}
                     />
                     <div className="leading-tight whitespace-nowrap">
-                      <div className="text-[10px] font-medium">{ratio.label}</div>
+                      <div className="text-[10px] font-medium">{tRatios(ratio.labelKey)}</div>
                       <div className="text-[9px] text-muted-foreground">
                         {ratio.value}
                       </div>
@@ -1003,12 +1017,12 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
             const limitedAssetIds = assetIds.slice(0, 3);
             onChange({ ...params, reference_image_urls: limitedAssetIds });
           }}
-          label="参考图（1-3张）*"
+          label={tForms("referenceImagesLimit")}
           assetType="image"
         />
         {(params.reference_image_urls as string[])?.length > 3 && (
           <p className="text-sm text-yellow-600 mt-1">
-            最多支持 3 张参考图，已自动限制
+            {tForms("maxReferenceWarning")}
           </p>
         )}
       </div>
@@ -1023,42 +1037,44 @@ interface TextAssetFormProps {
 }
 
 export function TextAssetForm({ params, onChange }: TextAssetFormProps) {
+  const tForms = useTranslations("editor.actionEditorForms");
+
   return (
     <div className="space-y-4">
       <div className="grid gap-2">
-        <Label>名称 *</Label>
+        <Label>{tForms("nameRequired")}</Label>
         <Input
           value={params.name as string || ""}
           onChange={(e) => onChange({ ...params, name: e.target.value })}
-          placeholder="文本资产名称，如'主角小传'、'第一幕剧本'"
+          placeholder={tForms("textAssetNameHint")}
         />
       </div>
-      
+
       <div className="space-y-2">
-        <Label>内容 *</Label>
+        <Label>{tForms("contentRequired")}</Label>
         <Tabs defaultValue="edit" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="edit">编辑</TabsTrigger>
-            <TabsTrigger value="preview">预览</TabsTrigger>
+            <TabsTrigger value="edit">{tForms("edit")}</TabsTrigger>
+            <TabsTrigger value="preview">{tForms("preview")}</TabsTrigger>
           </TabsList>
           <TabsContent value="edit" className="mt-2">
             <Textarea
               value={params.content as string || ""}
               onChange={(e) => onChange({ ...params, content: e.target.value })}
               className="min-h-[300px] font-mono text-sm"
-              placeholder="支持 Markdown 语法..."
+              placeholder={tForms("markdownPlaceholder")}
             />
           </TabsContent>
           <TabsContent value="preview" className="mt-2">
             <div className="min-h-[300px] max-h-[400px] border rounded-md p-4 bg-muted/30 overflow-auto">
-              <MarkdownRenderer content={params.content as string || "*暂无内容*"} />
+              <MarkdownRenderer content={params.content as string || tForms("noContent")} />
             </div>
           </TabsContent>
         </Tabs>
       </div>
-      
+
       <div className="grid gap-2">
-        <Label>标签</Label>
+        <Label>{tForms("tags")}</Label>
         <TagInput
           tags={
             Array.isArray(params.tags)

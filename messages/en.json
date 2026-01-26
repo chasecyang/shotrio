@@ -1,6 +1,16 @@
 {
   "common": {
     "loading": "Loading...",
+    "image": "Image",
+    "video": "Video",
+    "audio": "Audio",
+    "text": "Text",
+    "asset": "Asset",
+    "unnamed": "Unnamed",
+    "processing": "Processing...",
+    "noPreviewAvailable": "No Preview",
+    "loadMore": "Load More",
+    "noPreview": "No preview",
     "error": "Error",
     "success": "Success",
     "cancel": "Cancel",
@@ -45,11 +55,24 @@
   },
   "tagEditor": {
     "addCustomTag": "Add custom tag...",
-    "quickAdd": "Quick add"
+    "quickAdd": "Quick add",
+    "presetTags": {
+      "character": "Character",
+      "scene": "Scene",
+      "prop": "Prop",
+      "effect": "Effect",
+      "reference": "Reference",
+      "voiceover": "Voiceover",
+      "soundEffect": "Sound Effect",
+      "bgm": "BGM",
+      "uncategorized": "Uncategorized"
+    }
   },
   "backgroundTasks": {
     "title": "Background Tasks",
     "inProgress": "in progress",
+    "completed": "completed",
+    "failed": "failed",
     "noTasks": "No tasks",
     "taskNotFound": "Task not found",
     "downloadStarted": "Starting export video download",
@@ -59,6 +82,72 @@
     "viewResult": "View Result",
     "retry": "Retry",
     "cancel": "Cancel"
+  },
+  "generationHistory": {
+    "title": "Generation History",
+    "empty": "No generation history",
+    "emptyHint": "Your generation records will appear here",
+    "clear": "Clear",
+    "textToImage": "Text to Image",
+    "imageToImage": "Image to Image",
+    "imagesCount": "{count} images",
+    "createdAssets": "Created {count} assets",
+    "reuse": "Reuse"
+  },
+  "floatingActionBar": {
+    "selectedAssets": "{count} assets selected",
+    "deselectAll": "Deselect All",
+    "selectAll": "Select All",
+    "download": "Download",
+    "preparing": "Preparing...",
+    "zipping": "Zipping...",
+    "downloading": "Downloading...",
+    "markAs": "Mark as",
+    "selected": "Selected",
+    "rejected": "Rejected",
+    "unrated": "Unrated",
+    "delete": "Delete"
+  },
+  "actionEditorPanel": {
+    "generateImage": "Generate Image Asset",
+    "generateVideo": "Generate Video Asset",
+    "createTextAsset": "Create Text Asset",
+    "setProjectTitle": "Title",
+    "setProjectDescription": "Description",
+    "setProjectArtStyle": "Art Style",
+    "setProjectInfo": "Set Project Info",
+    "setProject": "Set Project",
+    "generateImageDesc": "Review and modify image generation parameters, AI will generate image assets after confirmation",
+    "generateVideoDesc": "Review and modify video generation parameters, AI will generate video assets after confirmation",
+    "createTextAssetDesc": "Review and modify text asset content and tags",
+    "defaultDesc": "Review parameters and confirm execution",
+    "noEditableParams": "No editable parameters for this action",
+    "credits": "credits",
+    "insufficientBalance": "Insufficient balance ({balance})",
+    "processing": "Processing...",
+    "executing": "Executing..."
+  },
+  "exportDialog": {
+    "title": "Export Video",
+    "description": "Render timeline to video file",
+    "duration": "Duration",
+    "resolution": "Resolution",
+    "clips": "Clips",
+    "clipsDetail": "Clips ({video}V/{audio}A)",
+    "exportQuality": "Export Quality",
+    "qualityDraft": "Quick preview, lower quality",
+    "qualityHigh": "Full render, best quality",
+    "draft": "Draft",
+    "high": "High",
+    "includeAudio": "Include Audio",
+    "audioClipsCount": "Includes {count} audio clips",
+    "noAudioInTimeline": "No audio in timeline",
+    "emptyTimeline": "Timeline is empty, cannot export",
+    "exportTaskCreated": "Export task created, check progress in background tasks",
+    "createTaskFailed": "Failed to create export task",
+    "exportFailed": "Export failed, please retry",
+    "creatingTask": "Creating task...",
+    "startExport": "Start Export"
   },
   "textAsset": {
     "contentSaved": "Content saved",
@@ -294,7 +383,35 @@
       "title": "Example Assets Management",
       "subtitle": "Manage example images and videos displayed on homepage",
       "sidebarTitle": "Example Assets",
-      "description": "Select outstanding works from user assets to showcase as examples"
+      "description": "Select outstanding works from user assets to showcase as examples",
+      "manager": {
+        "currentExamples": "Current Example Assets",
+        "browseAssets": "Browse Assets",
+        "searchPlaceholder": "Search asset name...",
+        "noExamples": "No example assets",
+        "added": "Added",
+        "addAsExample": "Add as Example Asset",
+        "setDisplayInfo": "Set display info for example asset",
+        "displayNameOptional": "Display Name (Optional)",
+        "leaveBlankForOriginal": "Leave blank to use original name",
+        "descriptionOptional": "Description (Optional)",
+        "addDescription": "Add description",
+        "editExampleInfo": "Edit Example Info",
+        "modifyDisplayInfo": "Modify display info for example asset",
+        "tablePreview": "Preview",
+        "tableName": "Name",
+        "tableType": "Type",
+        "tableCreator": "Creator",
+        "tableActions": "Actions",
+        "confirmRemove": "Are you sure you want to remove this example?",
+        "reorderFailed": "Reorder failed",
+        "addedSuccess": "Added as example asset",
+        "addFailed": "Add failed",
+        "updatedSuccess": "Example info updated",
+        "updateFailed": "Update failed",
+        "removedSuccess": "Example removed",
+        "removeFailed": "Remove failed"
+      }
     }
   },
   "auth": {
@@ -395,6 +512,38 @@
     },
     "pricing": {
       "viewPricing": "View Pricing"
+    },
+    "templates": {
+      "title": "Start from Examples",
+      "description": "Check out these carefully crafted example projects, clone with one click to start your creation",
+      "cloneSuccess": "Project cloned successfully!",
+      "cloneFailed": "Clone failed",
+      "cloneFailedRetry": "Clone failed, please try again",
+      "noPreview": "No preview",
+      "viewProject": "View Project",
+      "cloneAndCreate": "Clone & Create",
+      "style": "Style",
+      "assetsCount": "{count} assets",
+      "categories": {
+        "romance": "Romance",
+        "suspense": "Suspense",
+        "comedy": "Comedy",
+        "action": "Action",
+        "fantasy": "Fantasy"
+      },
+      "viewer": {
+        "readOnlyMode": "Read-only mode - This is an example template project",
+        "cloneAndEdit": "Clone this project and start editing",
+        "backToHome": "Back to Home",
+        "artStyle": "Art Style",
+        "projectAssets": "Project Assets",
+        "total": "Total",
+        "totalAssets": "{count} assets",
+        "assetList": "Asset List",
+        "moreAssets": "{count} more assets...",
+        "cloneAndStart": "Clone this project and start creating",
+        "itemCount": "{count}"
+      }
     }
   },
   "dashboard": {
@@ -439,7 +588,71 @@
       "conversationNotFound": "Conversation not found or not associated with project",
       "cannotLoadState": "Cannot load conversation state",
       "noPendingOperation": "No pending operation",
-      "unknownTool": "Unknown tool"
+      "unknownTool": "Unknown tool",
+      "invalidRequestParams": "Invalid request parameters",
+      "processingFailed": "Processing failed"
+    },
+    "actions": {
+      "conversation": {
+        "createFailed": "Failed to create conversation",
+        "listFailed": "Failed to get conversation list",
+        "notFound": "Conversation not found",
+        "getFailed": "Failed to get conversation details",
+        "databaseError": "Database connection failed, please try again later",
+        "timeoutError": "Request timeout, please check your network",
+        "updateStatusFailed": "Failed to update conversation status",
+        "updateTitleFailed": "Failed to update conversation title",
+        "deleteFailed": "Failed to delete conversation",
+        "saveMessageFailed": "Failed to save message",
+        "updateMessageFailed": "Failed to update message",
+        "messageNotFound": "Message not found",
+        "getMessageFailed": "Failed to get message"
+      },
+      "upload": {
+        "noFile": "No file selected",
+        "failed": "Upload failed",
+        "invalidUrl": "Invalid image URL",
+        "deleteFailed": "Delete failed"
+      },
+      "payment": {
+        "invalidPackage": "Invalid credit package type",
+        "createSessionFailed": "Failed to create payment session",
+        "getOrdersFailed": "Failed to get order list",
+        "orderNotFound": "Order not found",
+        "getOrderFailed": "Failed to get order details",
+        "webhookFailed": "Failed to process webhook",
+        "missingOrderId": "Missing order ID"
+      },
+      "artStyle": {
+        "createFailed": "Failed to create style",
+        "notFound": "Style not found",
+        "noPermission": "No permission to modify this style",
+        "updateFailed": "Failed to update style",
+        "noDeletePermission": "No permission to delete this style",
+        "deleteFailed": "Failed to delete style"
+      },
+      "timeline": {
+        "getFailed": "Failed to get timeline",
+        "createFailed": "Failed to create timeline",
+        "createGetFailed": "Cannot get timeline after creation",
+        "notFoundOrNoPermission": "Timeline not found or no permission",
+        "updateFailed": "Failed to update timeline",
+        "updateGetFailed": "Cannot get timeline after update",
+        "deleteFailed": "Failed to delete timeline",
+        "getOrCreateFailed": "Failed to get or create timeline",
+        "updateTracksFailed": "Failed to update track configuration",
+        "untitledClip": "Untitled Clip"
+      },
+      "project": {
+        "notFoundOrNoPermission": "Project not found or no permission"
+      },
+      "task": {
+        "createFailed": "Failed to create task"
+      },
+      "storage": {
+        "r2NotConfigured": "R2_PUBLIC_DOMAIN not configured, cannot generate access link",
+        "envNotSet": "{name} environment variable not set"
+      }
     }
   },
   "sidebar": {
@@ -469,6 +682,7 @@
       "collapseTemplates": "Collapse",
       "characterCount": "{count} characters",
       "noStyleSet": "No Style Set",
+      "noTemplates": "No preset templates available",
       "settingsButton": "Settings",
       "saveButton": "Save Settings",
       "dangerZone": "Danger Zone",
@@ -477,7 +691,10 @@
       "deleteConfirm": "Confirm Delete",
       "deleteConfirmTitle": "Confirm Project Deletion?",
       "deleteConfirmDescription": "This action cannot be undone. Project \"{title}\" and all its data (including assets, videos, etc.) will be permanently deleted.",
-      "deleteCancel": "Cancel"
+      "deleteCancel": "Cancel",
+      "errors": {
+        "titleRequired": "Please enter a project name"
+      }
     },
     "assets": {
       "title": "Assets",
@@ -1084,6 +1301,60 @@
   },
   "tools": {
   },
+  "voices": {
+    "male-qn-qingse": {
+      "name": "Young Man - Fresh",
+      "style": "Fresh, youthful, boy-next-door vibe"
+    },
+    "male-qn-jingying": {
+      "name": "Young Man - Elite",
+      "style": "Confident, capable, professional elite"
+    },
+    "male-qn-badao": {
+      "name": "Young Man - Dominant",
+      "style": "Deep, commanding, authoritative"
+    },
+    "male-qn-daxuesheng": {
+      "name": "College Student",
+      "style": "Sunny, energetic, positive"
+    },
+    "presenter_male": {
+      "name": "Male Presenter",
+      "style": "Magnetic, professional, great for narration"
+    },
+    "audiobook_male_1": {
+      "name": "Mature Uncle",
+      "style": "Weathered, steady, storytelling quality"
+    },
+    "female-shaonv": {
+      "name": "Gentle Girl",
+      "style": "Gentle, sweet, healing"
+    },
+    "female-yujie": {
+      "name": "Elegant Lady",
+      "style": "Intellectual, mature, charming"
+    },
+    "female-chengshu": {
+      "name": "Mature Woman",
+      "style": "Steady, reliable, professional"
+    },
+    "female-tianmei": {
+      "name": "Sweet Loli",
+      "style": "Sweet, cute, full of energy"
+    },
+    "presenter_female": {
+      "name": "Female Presenter",
+      "style": "Professional, clear, great for commentary"
+    },
+    "audiobook_female_1": {
+      "name": "Gentle Narrator",
+      "style": "Gentle, literary, perfect for audiobooks"
+    },
+    "genderLabels": {
+      "male": "Male Voices",
+      "female": "Female Voices"
+    }
+  },
   "feedback": {
     "chatWithUs": "Chat with us",
     "needHelp": "Need help?",
@@ -1236,6 +1507,65 @@
       "description": "The Editor requires a larger screen. Please visit on a desktop device for the best experience.",
       "backToProjects": "Back to Projects"
     },
+    "versionPanel": {
+      "title": "Version History",
+      "versionCount": "{count} versions",
+      "version": "Version {number}",
+      "current": "Current",
+      "noPreview": "No Preview",
+      "deleteVersion": "Delete this version",
+      "confirmDeleteTitle": "Confirm Delete Version",
+      "confirmDeleteDescription": "Are you sure you want to delete version {number}? This action cannot be undone."
+    },
+    "resolutionSelector": {
+      "landscape": "Landscape 16:9",
+      "portrait": "Portrait 9:16",
+      "square": "Square 1:1",
+      "4k": "4K 16:9"
+    },
+    "aspectRatios": {
+      "auto": "Auto",
+      "portrait": "Portrait",
+      "widescreen": "Widescreen",
+      "square": "Square",
+      "ultrawide": "Ultra-wide",
+      "classic": "Classic",
+      "retro": "Retro",
+      "standard": "Standard",
+      "tallPortrait": "Tall Portrait",
+      "tallLong": "Tall Long",
+      "verticalStandard": "Vertical",
+      "8sFixed": "8 seconds (fixed)"
+    },
+    "actionEditorForms": {
+      "name": "Name",
+      "assetName": "Asset Name",
+      "promptRequired": "Prompt *",
+      "describeImage": "Describe the image you want to generate",
+      "tags": "Tags",
+      "aspectRatio": "Aspect Ratio",
+      "referenceImages": "Reference Images",
+      "cannotParseParams": "Cannot parse image generation parameters",
+      "title": "Title",
+      "videoTitle": "Video Title",
+      "duration": "Duration",
+      "describeVideo": "Describe video content and camera movement",
+      "referenceImagesLimit": "Reference Images (1-3) *",
+      "maxReferenceWarning": "Maximum 3 reference images, automatically limited",
+      "nameRequired": "Name *",
+      "textAssetNameHint": "Text asset name, e.g. 'Character Bio', 'Act 1 Script'",
+      "contentRequired": "Content *",
+      "edit": "Edit",
+      "preview": "Preview",
+      "markdownPlaceholder": "Supports Markdown syntax...",
+      "noContent": "*No content*"
+    },
+    "assetMention": {
+      "noMatch": "No matching assets found",
+      "navigate": "Navigate",
+      "select": "Select",
+      "close": "Close"
+    },
     "projectSelector": {
       "project": "Project",
       "selectProject": "Select Project",
@@ -1338,6 +1668,12 @@
     "versions": "{count} versions",
     "seconds": "{count}s",
     "times": "{count} times",
+    "assetProgress": {
+      "generationFailed": "Generation Failed",
+      "generating": "Generating...",
+      "preparingGeneration": "Preparing to generate",
+      "generatingStatus": "Generating"
+    },
     "assetGeneration": {
       "title": "AI Creative Assets",
       "advancedParams": "Advanced Parameters",
@@ -1355,6 +1691,8 @@
       "multipleReference": "Select multiple images as reference",
       "selectedImages": "Selected {count} reference images",
       "successGenerated": "Successfully generated {count} images",
+      "editing": "Editing",
+      "cancelEdit": "Cancel Edit",
       "aspectRatios": {
         "ultrawide": "21:9 (Ultra-wide)",
         "widescreen": "16:9 (Widescreen)",
@@ -1572,6 +1910,16 @@
           "sendMessageFailed": "Failed to send message",
           "generationStopped": "Generation stopped"
         },
+        "stream": {
+          "responseTimeout": "Response timeout",
+          "cannotReadStream": "Cannot read response stream",
+          "userInterrupted": "User interrupted",
+          "sendFailed": "Send failed",
+          "resumeFailed": "Resume failed",
+          "loadConversationFailed": "Failed to load conversation",
+          "deleteConversationFailed": "Failed to delete conversation",
+          "conversationDeleted": "Conversation deleted"
+        },
         "time": {
           "justNow": "just now",
           "minutesAgo": "{minutes} min ago",
@@ -1748,6 +2096,36 @@
       "export": "Export",
       "dragToAddVideo": "Drag or click to add video",
       "dragToAddAudio": "Drag or click to add audio",
+      "videoLoadFailed": "Video load failed",
+      "dragToStart": "Drag assets to timeline to start editing",
+      "tracks": {
+        "video": "Video",
+        "audio": "Audio"
+      },
+      "assetStrip": {
+        "assets": "Assets",
+        "assetLibrary": "Asset Library",
+        "loadFailed": "Failed to load assets",
+        "noAssets": "No assets, please add in asset management first",
+        "trimmed": "Trimmed",
+        "removeFromTimeline": "Remove from timeline"
+      },
+      "audioClip": {
+        "removeFromTimeline": "Remove from timeline",
+        "inPoint": "In",
+        "outPoint": "Out",
+        "duration": "Duration",
+        "deleteClip": "Delete clip"
+      },
+      "assetPreview": {
+        "cannotPreview": "Asset cannot be previewed",
+        "videoPreview": "Video Preview",
+        "audioPreview": "Audio Preview"
+      },
+      "trackName": {
+        "video": "Video {number}",
+        "audio": "Audio {number}"
+      },
       "errors": {
         "videoTrackVideoOnly": "Video tracks can only contain video assets",
         "audioTrackAudioOnly": "Audio tracks can only contain audio assets",

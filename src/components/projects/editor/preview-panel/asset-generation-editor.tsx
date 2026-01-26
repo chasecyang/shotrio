@@ -80,6 +80,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
   const tEditor = useTranslations("editor.assetGeneration");
   const tCommon = useTranslations("common");
   const tToast = useTranslations("toasts");
+  const tEditorCommon = useTranslations("editor");
 
   // 使用任务轮询
   const { jobs, refresh: refreshJobs } = useTaskPolling();
@@ -270,14 +271,14 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
       if (result.success && result.jobId) {
         setCurrentJobId(result.jobId);
         toast.success(tToast("success.taskCreatedAiProcessing"));
-        
+
         // 立即刷新任务列表
         refreshJobs();
       } else {
-        toast.error(result.error || "创建任务失败");
+        toast.error(result.error || tToast("error.createTaskFailed"));
       }
     } catch (error) {
-      console.error("创建任务失败:", error);
+      console.error("Create task failed:", error);
       toast.error(tToast("error.createTaskFailed"));
     }
   }, [
@@ -310,7 +311,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Pencil className="w-4 h-4 text-primary shrink-0" />
               <span className="text-sm truncate">
-                正在编辑: <span className="font-medium">{editingAsset.name}</span>
+                {tEditorCommon("assetGeneration.editing")}: <span className="font-medium">{editingAsset.name}</span>
               </span>
             </div>
             <Button
@@ -326,7 +327,7 @@ export function AssetGenerationEditor({ projectId }: AssetGenerationEditorProps)
                 setSelectedSourceAssets([]);
               }}
             >
-              取消编辑
+              {tEditorCommon("assetGeneration.cancelEdit")}
             </Button>
           </div>
         )}

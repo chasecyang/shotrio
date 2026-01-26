@@ -9,22 +9,16 @@ import { Play, Copy, Eye, Loader2 } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { cloneTemplateProject } from "@/lib/actions/project/clone";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { TemplatePreview } from "@/lib/actions/project/template";
 
 interface TemplateGalleryProps {
   templates: TemplatePreview[];
 }
 
-// 分类标签映射
-const categoryLabels: Record<string, string> = {
-  romance: "爱情",
-  suspense: "悬疑",
-  comedy: "喜剧",
-  action: "动作",
-  fantasy: "奇幻",
-};
-
 export function TemplateGallery({ templates }: TemplateGalleryProps) {
+  const t = useTranslations("home.templates");
+
   if (templates.length === 0) {
     return null;
   }
@@ -34,10 +28,10 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
       <div className="container px-4 mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-2xl md:text-4xl font-bold font-heading mb-4">
-            从示例开始
+            {t("title")}
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            查看这些精心制作的示例项目，一键复制即可开始你的创作
+            {t("description")}
           </p>
         </div>
 
@@ -52,6 +46,7 @@ export function TemplateGallery({ templates }: TemplateGalleryProps) {
 }
 
 function TemplateCard({ template }: { template: TemplatePreview }) {
+  const t = useTranslations("home.templates");
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -81,16 +76,21 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
     try {
       const result = await cloneTemplateProject(template.projectId);
       if (result.success && result.projectId) {
-        toast.success("项目复制成功！");
+        toast.success(t("cloneSuccess"));
         router.push(`/projects/${result.projectId}/editor`);
       } else {
-        toast.error(result.error || "复制失败");
+        toast.error(result.error || t("cloneFailed"));
       }
     } catch {
-      toast.error("复制失败，请重试");
+      toast.error(t("cloneFailedRetry"));
     } finally {
       setIsCloning(false);
     }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const key = `categories.${category}` as const;
+    return t.has(key) ? t(key) : category;
   };
 
   return (
@@ -145,7 +145,7 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            暂无预览
+            {t("noPreview")}
           </div>
         )}
 
@@ -162,7 +162,7 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
             className="gap-2"
           >
             <Eye className="w-4 h-4" />
-            查看项目
+            {t("viewProject")}
           </Button>
           <Button
             size="sm"
@@ -175,7 +175,7 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
             ) : (
               <Copy className="w-4 h-4" />
             )}
-            复制并创建
+            {t("cloneAndCreate")}
           </Button>
         </div>
       </div>
@@ -186,7 +186,7 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
           <h3 className="font-bold text-lg line-clamp-1">{template.title}</h3>
           {template.category && (
             <Badge variant="secondary" className="shrink-0">
-              {categoryLabels[template.category] || template.category}
+              {getCategoryLabel(template.category)}
             </Badge>
           )}
         </div>
@@ -198,10 +198,10 @@ function TemplateCard({ template }: { template: TemplatePreview }) {
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           {template.styleName && (
             <span className="flex items-center gap-1">
-              风格: {template.styleName}
+              {t("style")}: {template.styleName}
             </span>
           )}
-          <span>{template.assetCount} 个素材</span>
+          <span>{t("assetsCount", { count: template.assetCount })}</span>
         </div>
       </div>
     </Card>

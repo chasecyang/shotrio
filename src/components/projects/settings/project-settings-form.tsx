@@ -56,7 +56,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
   // 自动保存处理
   const handleAutoSave = useCallback(async (data: typeof formData) => {
     if (!data.title.trim()) {
-      return { success: false, error: "请输入项目名称" };
+      return { success: false, error: t("errors.titleRequired") };
     }
     const result = await updateProject(project.id, {
       title: data.title,
@@ -64,7 +64,7 @@ export function ProjectSettingsForm({ project, userId }: ProjectSettingsFormProp
       stylePrompt: data.stylePrompt || null,
     });
     return result;
-  }, [project.id]);
+  }, [project.id, t]);
 
   const { saveStatus } = useAutoSave({
     data: formData,

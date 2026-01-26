@@ -696,18 +696,18 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
               /* 创建文本资产 */
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">名称:</span>
+                  <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.name")}:</span>
                   <span className="text-xs text-foreground">{parsedArgs.name as string || tAgent("actionBar.placeholders.unnamed")}</span>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.contentPreview")}:</span>
                   <div className="max-h-24 overflow-y-auto border rounded-md p-2 bg-muted/20 text-xs text-foreground/80">
-                    <MarkdownRenderer content={parsedArgs.content as string || "*暂无内容*"} />
+                    <MarkdownRenderer content={parsedArgs.content as string || tAgent("actionBar.placeholders.noContent")} />
                   </div>
                 </div>
                 {parsedArgs.tags && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">标签:</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.tags")}:</span>
                     <span className="text-xs text-foreground">
                       {Array.isArray(parsedArgs.tags)
                         ? parsedArgs.tags.join(", ")
@@ -739,7 +739,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
                 )}
                 {!hasStylePrompt && styleId && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">美术风格:</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tAgent("actionBar.labels.artStyle")}:</span>
                     {artStyleName ? (
                       <span className="text-xs text-foreground font-medium">{artStyleName}</span>
                     ) : (

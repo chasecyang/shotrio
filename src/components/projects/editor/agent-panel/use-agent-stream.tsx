@@ -1,13 +1,14 @@
 /**
  * Agent Stream Hook
- * 
+ *
  * 简化版的 Agent 流式处理 hook，连接新的 /api/agent/stream
- * 
+ *
  * 修复：使用 ref 替代闭包中的 state 查找，避免 React 闭包陷阱
  */
 
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { AgentContext, AgentMessage } from "@/types/agent";
 import { useAgent } from "./agent-context";
 import type { AgentStreamEvent } from "@/lib/services/agent-engine";
@@ -38,6 +39,7 @@ interface StreamState {
 
 export function useAgentStream(options: UseAgentStreamOptions = {}) {
   const agent = useAgent();
+  const t = useTranslations("editor.agent.floatingCard.stream");
   const abortControllerRef = useRef<AbortController | null>(null);
   
   // 使用 ref 存储当前流式消息的状态，避免闭包陷阱
@@ -75,7 +77,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
         agent.updateMessage(streamStateRef.current.messageId, { isStreaming: false });
       }
       agent.setLoading(false);
-      options.onError?.("响应超时");
+      options.onError?.(t("responseTimeout"));
     }, 5 * 60 * 1000);
 
     try {
@@ -328,24 +330,24 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
 
         const reader = response.body?.getReader();
         if (!reader) {
-          throw new Error("无法读取响应流");
+          throw new Error(t("cannotReadStream"));
         }
 
         await processStream(reader);
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           console.log("[Agent Stream] 用户中断");
-          options.onError?.("用户中断");
+          options.onError?.(t("userInterrupted"));
         } else {
           console.error("[Agent Stream] 发送消息失败:", error);
-          options.onError?.(error instanceof Error ? error.message : "发送失败");
-          toast.error("发送失败");
+          options.onError?.(error instanceof Error ? error.message : t("sendFailed"));
+          toast.error(t("sendFailed"));
         }
       } finally {
         abortControllerRef.current = null;
       }
     },
-    [processStream, options]
+    [processStream, options, t]
   );
 
   /**
@@ -384,24 +386,24 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
 
         const reader = response.body?.getReader();
         if (!reader) {
-          throw new Error("无法读取响应流");
+          throw new Error(t("cannotReadStream"));
         }
 
         await processStream(reader);
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           console.log("[Agent Stream] 用户中断");
-          options.onError?.("用户中断");
+          options.onError?.(t("userInterrupted"));
         } else {
           console.error("[Agent Stream] 恢复对话失败:", error);
-          options.onError?.(error instanceof Error ? error.message : "恢复失败");
-          toast.error("恢复失败");
+          options.onError?.(error instanceof Error ? error.message : t("resumeFailed"));
+          toast.error(t("resumeFailed"));
         }
       } finally {
         abortControllerRef.current = null;
       }
     },
-    [processStream, options]
+    [processStream, options, t]
   );
 
   /**

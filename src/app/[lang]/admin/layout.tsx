@@ -9,15 +9,17 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
+import { getTranslations } from "next-intl/server";
 
-export default async function AdminLayout({ 
+export default async function AdminLayout({
   children,
-}: { 
+}: {
   children: ReactNode;
   params: Promise<{ lang: string }>;
 }) {
   // 验证管理员权限，如果不是管理员会自动重定向
   await requireAdmin();
+  const t = await getTranslations("admin");
 
   return (
     <SidebarProvider>
@@ -29,7 +31,7 @@ export default async function AdminLayout({
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">管理中心</BreadcrumbLink>
+                <BreadcrumbLink href="/admin">{t("title")}</BreadcrumbLink>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>

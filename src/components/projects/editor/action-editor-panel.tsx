@@ -115,9 +115,9 @@ export function ActionEditorPanel() {
 
   // 获取标题
   const getTitle = () => {
-    if (isGenerateAssets) return "生成图片素材";
-    if (isGenerateVideo) return "生成视频素材";
-    if (isCreateTextAsset) return "创建文本资产";
+    if (isGenerateAssets) return t('actionEditorPanel.generateImage');
+    if (isGenerateVideo) return t('actionEditorPanel.generateVideo');
+    if (isCreateTextAsset) return t('actionEditorPanel.createTextAsset');
     if (isSetProjectInfo) {
       const args = functionCall.arguments as {
         title?: string;
@@ -126,24 +126,24 @@ export function ActionEditorPanel() {
         styleId?: string;
       };
       const fields: string[] = [];
-      if (args.title) fields.push("标题");
-      if (args.description) fields.push("描述");
+      if (args.title) fields.push(t('actionEditorPanel.setProjectTitle'));
+      if (args.description) fields.push(t('actionEditorPanel.setProjectDescription'));
       if (args.stylePrompt) {
-        fields.push("美术风格");
+        fields.push(t('actionEditorPanel.setProjectArtStyle'));
       } else if (args.styleId) {
-        fields.push(artStyleName ? `美术风格(${artStyleName})` : "美术风格");
+        fields.push(artStyleName ? `${t('actionEditorPanel.setProjectArtStyle')}(${artStyleName})` : t('actionEditorPanel.setProjectArtStyle'));
       }
-      return fields.length > 0 ? `设置项目${fields.join("、")}` : "设置项目信息";
+      return fields.length > 0 ? `${t('actionEditorPanel.setProject')}${fields.join("、")}` : t('actionEditorPanel.setProjectInfo');
     }
     return functionCall.displayName || functionCall.name;
   };
 
   // 获取描述
   const getDescription = () => {
-    if (isGenerateAssets) return "检查并修改图片生成参数，确认后将使用AI生成图片素材";
-    if (isGenerateVideo) return "检查并修改视频生成参数，确认后将使用AI生成视频素材";
-    if (isCreateTextAsset) return "检查并修改文本资产的内容和标签信息";
-    return "检查参数并确认执行";
+    if (isGenerateAssets) return t('actionEditorPanel.generateImageDesc');
+    if (isGenerateVideo) return t('actionEditorPanel.generateVideoDesc');
+    if (isCreateTextAsset) return t('actionEditorPanel.createTextAssetDesc');
+    return t('actionEditorPanel.defaultDesc');
   };
 
   // 处理确认
@@ -238,7 +238,7 @@ export function ActionEditorPanel() {
           )}
           {!isGenerateAssets && !isGenerateVideo && !isCreateTextAsset && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">此操作暂无可编辑参数</p>
+              <p className="text-muted-foreground">{t('actionEditorPanel.noEditableParams')}</p>
             </div>
           )}
         </div>
@@ -252,12 +252,12 @@ export function ActionEditorPanel() {
             <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted border border-border">
               <Coins className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold text-foreground">{totalCost}</span>
-              <span className="text-xs text-muted-foreground">积分</span>
+              <span className="text-xs text-muted-foreground">{t('actionEditorPanel.credits')}</span>
             </div>
             {insufficientBalance && (
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">余额不足 ({currentBalance})</span>
+                <span className="text-sm">{t('actionEditorPanel.insufficientBalance', { balance: currentBalance })}</span>
               </div>
             )}
           </div>
@@ -272,7 +272,7 @@ export function ActionEditorPanel() {
               {isCancelling ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  处理中...
+                  {t('actionEditorPanel.processing')}
                 </>
               ) : (
                 <>
@@ -294,7 +294,7 @@ export function ActionEditorPanel() {
               {isConfirming ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  执行中...
+                  {t('actionEditorPanel.executing')}
                 </>
               ) : (
                 <>

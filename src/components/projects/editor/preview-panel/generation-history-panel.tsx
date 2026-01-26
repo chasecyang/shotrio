@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trash2, Copy, Clock } from "lucide-react";
 import type { GenerationHistoryItem } from "@/types/asset";
 import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { zhCN, enUS } from "date-fns/locale";
 
 interface GenerationHistoryPanelProps {
   history: GenerationHistoryItem[];
@@ -20,12 +22,16 @@ export function GenerationHistoryPanel({
   onReusePrompt,
   onClearHistory,
 }: GenerationHistoryPanelProps) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const dateLocale = locale === "zh" ? zhCN : enUS;
+
   if (history.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-        <p>暂无创作历史</p>
-        <p className="text-xs mt-1">创作的记录将显示在这里</p>
+        <p>{t('generationHistory.empty')}</p>
+        <p className="text-xs mt-1">{t('generationHistory.emptyHint')}</p>
       </div>
     );
   }
@@ -34,7 +40,7 @@ export function GenerationHistoryPanel({
     <div className="space-y-3">
       {/* 顶部操作栏 */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">创作历史</h3>
+        <h3 className="text-sm font-medium">{t('generationHistory.title')}</h3>
         <Button
           variant="ghost"
           size="sm"
@@ -42,7 +48,7 @@ export function GenerationHistoryPanel({
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-4 w-4 mr-1" />
-          清空
+          {t('generationHistory.clear')}
         </Button>
       </div>
 
@@ -56,7 +62,7 @@ export function GenerationHistoryPanel({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">
-                      {item.mode === "text-to-image" ? "文字创作" : "图片创作"}
+                      {item.mode === "text-to-image" ? t('generationHistory.textToImage') : t('generationHistory.imageToImage')}
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
                       {item.assetType}
@@ -65,7 +71,7 @@ export function GenerationHistoryPanel({
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(item.timestamp), {
                       addSuffix: true,
-                      locale: zhCN,
+                      locale: dateLocale,
                     })}
                   </span>
                 </div>
@@ -86,14 +92,14 @@ export function GenerationHistoryPanel({
                     </Badge>
                   )}
                   <Badge variant="outline" className="text-xs">
-                    {item.parameters.numImages || 1} 张
+                    {t('generationHistory.imagesCount', { count: item.parameters.numImages || 1 })}
                   </Badge>
                 </div>
 
                 {/* 结果统计 */}
                 <div className="flex items-center justify-between pt-1 border-t">
                   <span className="text-xs text-muted-foreground">
-                    创作了 {item.resultAssetIds.length} 个素材
+                    {t('generationHistory.createdAssets', { count: item.resultAssetIds.length })}
                   </span>
                   <Button
                     variant="ghost"
@@ -102,7 +108,7 @@ export function GenerationHistoryPanel({
                     className="h-7 px-2 text-xs"
                   >
                     <Copy className="h-3 w-3 mr-1" />
-                    复用
+                    {t('generationHistory.reuse')}
                   </Button>
                 </div>
               </CardContent>

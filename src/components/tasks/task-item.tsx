@@ -98,17 +98,17 @@ export function TaskItem({
                   <div className="flex items-center gap-1">
                     {childStats.active > 0 && (
                       <Badge variant="secondary" className="text-xs">
-                        {childStats.active} 进行中
+                        {childStats.active} {t('backgroundTasks.inProgress')}
                       </Badge>
                     )}
                     {childStats.completed > 0 && (
                       <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400">
-                        {childStats.completed} 完成
+                        {childStats.completed} {t('backgroundTasks.completed')}
                       </Badge>
                     )}
                     {childStats.failed > 0 && (
                       <Badge variant="outline" className="text-xs text-red-600 dark:text-red-400">
-                        {childStats.failed} 失败
+                        {childStats.failed} {t('backgroundTasks.failed')}
                       </Badge>
                     )}
                   </div>
@@ -163,10 +163,10 @@ export function TaskItem({
                 className="h-7 text-xs"
                 onClick={() => onView(job.id!)}
               >
-                查看结果
+                {t('backgroundTasks.viewResult')}
               </Button>
             )}
-            
+
             {canRetry && onRetry && (
               <Button
                 size="sm"
@@ -175,7 +175,7 @@ export function TaskItem({
                 onClick={() => onRetry(job.id!)}
               >
                 <RotateCcw className="w-3 h-3 mr-1" />
-                重试
+                {t('backgroundTasks.retry')}
               </Button>
             )}
 
@@ -187,7 +187,7 @@ export function TaskItem({
                 onClick={() => onCancel(job.id!)}
               >
                 <XIcon className="w-3 h-3 mr-1" />
-                取消
+                {t('backgroundTasks.cancel')}
               </Button>
             )}
           </div>

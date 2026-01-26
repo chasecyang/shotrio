@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import { useTranslations } from "next-intl";
 import { TimelineClipWithAsset } from "@/types/timeline";
 import { Trash2, GripVertical, Scissors, X } from "lucide-react";
 import Image from "next/image";
@@ -48,6 +49,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
   isDragging,
   disabled = false,
 }: TimelineClipItemProps) {
+  const t = useTranslations("editor.clippingMode");
   const clipRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -143,7 +145,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
               {clip.trimStart > 0 || clip.trimEnd ? (
                 <div className="flex items-center gap-1">
                   <Scissors className="h-3 w-3 text-primary" />
-                  <span className="text-xs text-primary">已裁剪</span>
+                  <span className="text-xs text-primary">{t("assetStrip.trimmed")}</span>
                 </div>
               ) : null}
             </div>

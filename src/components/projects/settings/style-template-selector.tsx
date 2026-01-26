@@ -28,7 +28,7 @@ export function StyleTemplateSelector({
       <div className="flex items-center justify-center p-8 text-center border-2 border-dashed rounded-lg">
         <div>
           <Palette className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">暂无预设模板</p>
+          <p className="text-sm text-muted-foreground">{t("noTemplates")}</p>
         </div>
       </div>
     );

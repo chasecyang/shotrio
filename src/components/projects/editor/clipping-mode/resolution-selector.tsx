@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -17,10 +18,10 @@ interface ResolutionSelectorProps {
 
 // 预设分辨率选项
 const RESOLUTION_PRESETS = [
-  { value: "1920x1080", label: "横屏 16:9", description: "1920×1080" },
-  { value: "1080x1920", label: "竖屏 9:16", description: "1080×1920" },
-  { value: "1080x1080", label: "方形 1:1", description: "1080×1080" },
-  { value: "3840x2160", label: "4K 16:9", description: "3840×2160" },
+  { value: "1920x1080", labelKey: "landscape", description: "1920×1080" },
+  { value: "1080x1920", labelKey: "portrait", description: "1080×1920" },
+  { value: "1080x1080", labelKey: "square", description: "1080×1080" },
+  { value: "3840x2160", labelKey: "4k", description: "3840×2160" },
 ];
 
 /**
@@ -31,9 +32,10 @@ export function ResolutionSelector({
   onValueChange,
   disabled,
 }: ResolutionSelectorProps) {
+  const t = useTranslations("editor.resolutionSelector");
   // 找到当前选中的预设
   const currentPreset = RESOLUTION_PRESETS.find((p) => p.value === value);
-  const displayLabel = currentPreset?.label || value;
+  const displayLabel = currentPreset ? t(currentPreset.labelKey) : value;
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
@@ -45,7 +47,7 @@ export function ResolutionSelector({
         {RESOLUTION_PRESETS.map((preset) => (
           <SelectItem key={preset.value} value={preset.value}>
             <div className="flex items-center justify-between gap-4">
-              <span>{preset.label}</span>
+              <span>{t(preset.labelKey)}</span>
               <span className="text-xs text-muted-foreground">
                 {preset.description}
               </span>

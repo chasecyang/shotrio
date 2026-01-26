@@ -1,6 +1,6 @@
 /**
  * Agent Stream API
- * 
+ *
  * 统一的 Agent 流式 API，使用新的 AgentEngine
  */
 
@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { AgentEngine } from "@/lib/services/agent-engine";
 import type { AgentContext } from "@/types/agent";
+import { getTranslations } from "next-intl/server";
 
 // Next.js 路由配置
 export const runtime = 'nodejs';
@@ -16,18 +17,19 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/agent/stream
- * 
+ *
  * 统一的 Agent 流式 API
  * - 支持新对话
  * - 支持恢复对话（用户确认/拒绝后继续）
  */
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("errors");
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   if (!session?.user?.id) {
-    return new Response(JSON.stringify({ error: "未登录" }), {
+    return new Response(JSON.stringify({ error: t("notLoggedIn") }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
       message?: string;
       context?: AgentContext;
       conversationId?: string;
-      
+
       // 恢复对话参数
       resumeConversationId?: string;
       resumeValue?: {
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
               );
             }
           } else {
-            throw new Error("无效的请求参数");
+            throw new Error(t("agent.invalidRequestParams"));
           }
 
           controller.close();
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
             encoder.encode(
               JSON.stringify({
                 type: "error",
-                data: error instanceof Error ? error.message : "处理失败",
+                data: error instanceof Error ? error.message : t("agent.processingFailed"),
               }) + "\n"
             )
           );
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
     console.error("[Agent Stream API] 错误:", error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "处理失败",
+        error: error instanceof Error ? error.message : t("agent.processingFailed"),
       }),
       {
         status: 500,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ interface ExampleWaterfallProps {
 }
 
 export function ExampleWaterfall({ initialExamples, total }: ExampleWaterfallProps) {
+  const t = useTranslations();
   const [examples, setExamples] = useState(initialExamples);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,7 +29,7 @@ export function ExampleWaterfall({ initialExamples, total }: ExampleWaterfallPro
       const newExamples = await loadMoreExamples(examples.length, 12);
       setExamples([...examples, ...newExamples]);
     } catch (error) {
-      console.error("加载更多失败:", error);
+      console.error("Load more failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -44,7 +46,7 @@ export function ExampleWaterfall({ initialExamples, total }: ExampleWaterfallPro
         <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4 mb-6">
           {examples.map((example) => (
             <div key={example.assetId} className="break-inside-avoid mb-4">
-              <ExampleCard example={example} />
+              <ExampleCard example={example} t={t} />
             </div>
           ))}
         </div>
@@ -62,10 +64,10 @@ export function ExampleWaterfall({ initialExamples, total }: ExampleWaterfallPro
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  加载中...
+                  {t('common.loading')}
                 </>
               ) : (
-                "加载更多"
+                t('common.loadMore')
               )}
             </Button>
           </div>
@@ -75,7 +77,7 @@ export function ExampleWaterfall({ initialExamples, total }: ExampleWaterfallPro
   );
 }
 
-function ExampleCard({ example }: { example: ExampleAssetPreview }) {
+function ExampleCard({ example, t }: { example: ExampleAssetPreview; t: ReturnType<typeof useTranslations> }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -101,7 +103,7 @@ function ExampleCard({ example }: { example: ExampleAssetPreview }) {
   // 计算宽高比用于容器
   // 如果没有宽高比数据，跳过该资产（不应该发生）
   if (!example.aspectRatio) {
-    console.warn(`资产 ${example.assetId} 缺少宽高比数据`);
+    console.warn(`Asset ${example.assetId} missing aspect ratio data`);
   }
   const aspectRatio = parseAspectRatio(example.aspectRatio || "1:1");
   const paddingBottom = `${(1 / aspectRatio) * 100}%`;
@@ -161,7 +163,7 @@ function ExampleCard({ example }: { example: ExampleAssetPreview }) {
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-            暂无预览
+            {t('common.noPreview')}
           </div>
         )}
       </div>

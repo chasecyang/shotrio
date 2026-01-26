@@ -9,6 +9,7 @@ import { UseRemotionPlaybackReturn } from "@/hooks/use-remotion-playback";
 import { TimelineDetail } from "@/types/timeline";
 import { Film, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { useTranslations } from "next-intl";
 
 interface RemotionPreviewProps {
   playback: UseRemotionPlaybackReturn;
@@ -26,6 +27,7 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     handlePlayingChange,
   } = playback;
 
+  const t = useTranslations("editor.timeline");
   const [isPlayerReady, setIsPlayerReady] = useState(false);
 
   const renderLoading = useCallback(() => {
@@ -41,10 +43,10 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-[#1a1a1a]">
         <AlertCircle className="w-12 h-12 text-red-400" />
-        <p className="text-sm text-white/80">视频加载失败</p>
+        <p className="text-sm text-white/80">{t("videoLoadFailed")}</p>
       </div>
     );
-  }, []);
+  }, [t]);
 
   // Track when player is ready
   useEffect(() => {
@@ -89,7 +91,7 @@ export function RemotionPreview({ playback, timeline }: RemotionPreviewProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 text-white/60 h-full">
         <Film className="w-16 h-16" />
-        <p className="text-sm">将素材拖入时间轴开始剪辑</p>
+        <p className="text-sm">{t("dragToStart")}</p>
       </div>
     );
   }

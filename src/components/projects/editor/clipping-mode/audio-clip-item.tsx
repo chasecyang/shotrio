@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatTimeDisplay } from "@/lib/utils/timeline-utils";
 import { deserializeWaveform } from "@/lib/utils/waveform-utils";
 import { useClipInteraction } from "@/hooks/use-clip-interaction";
+import { useTranslations } from "next-intl";
 
 interface AudioClipItemProps {
   clip: TimelineClipWithAsset;
@@ -114,6 +115,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
   disabled = false,
 }: AudioClipItemProps) {
   const clipRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("editor.timeline.audioClip");
 
   // 解析波形数据
   const waveformData = useMemo(() => {
@@ -236,7 +238,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
               "opacity-0 group-hover/clip:opacity-100 transition-opacity z-30",
               "pointer-events-auto"
             )}
-            aria-label="从时间轴移除"
+            aria-label={t("removeFromTimeline")}
           >
             <X className="h-3 w-3" />
           </Button>
@@ -260,7 +262,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
 
             {isTrimmingLeft && (
               <div className="absolute -top-8 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
-                入点: {formatTimeDisplay(tempTrimStart)} | 时长: {formatTimeDisplay(tempDuration)}
+                {t("inPoint")}: {formatTimeDisplay(tempTrimStart)} | {t("duration")}: {formatTimeDisplay(tempDuration)}
               </div>
             )}
           </div>
@@ -284,7 +286,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
 
             {isTrimmingRight && (
               <div className="absolute -top-8 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
-                出点: {formatTimeDisplay(clip.trimStart + tempDuration)} | 时长: {formatTimeDisplay(tempDuration)}
+                {t("outPoint")}: {formatTimeDisplay(clip.trimStart + tempDuration)} | {t("duration")}: {formatTimeDisplay(tempDuration)}
               </div>
             )}
           </div>
@@ -294,7 +296,7 @@ export const AudioClipItem = React.memo(function AudioClipItem({
       <ContextMenuContent>
         <ContextMenuItem onClick={onDelete} className="text-destructive">
           <Trash2 className="h-4 w-4 mr-2" />
-          删除片段
+          {t("deleteClip")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

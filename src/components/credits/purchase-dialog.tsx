@@ -136,8 +136,8 @@ export function PurchaseDialog({
                     )}
 
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">{pkg.name}</CardTitle>
-                      <CardDescription className="text-xs line-clamp-2">{pkg.description}</CardDescription>
+                      <CardTitle className="text-base">{t(`packages.${pkg.type}`)}</CardTitle>
+                      <CardDescription className="text-xs line-clamp-2">{t(`packages.description.${pkg.type}`)}</CardDescription>
                     </CardHeader>
 
                     <CardContent className="space-y-3 flex-1 flex flex-col">

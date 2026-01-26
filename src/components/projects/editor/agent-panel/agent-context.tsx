@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback, useEffect, useRef } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type {
   AgentMessage,
   AgentContext as AgentContextType,
@@ -233,6 +233,7 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
   const [state, dispatch] = useReducer(agentReducer, initialState);
   const editorContext = useEditor();
   const locale = useLocale();
+  const t = useTranslations("editor.agent.floatingCard.stream");
 
   // 防抖：跟踪刷新状态，避免并发刷新
   const isRefreshingRef = useRef(false);
@@ -292,15 +293,15 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
           localStorage.setItem(getConversationStorageKey(projectId), conversationId);
         } catch {}
       } else {
-        toast.error(result.error || "加载对话失败");
+        toast.error(result.error || t("loadConversationFailed"));
       }
     } catch (error) {
       console.error("[Agent] 加载对话失败:", error);
-      toast.error("加载对话失败");
+      toast.error(t("loadConversationFailed"));
     } finally {
       dispatch({ type: "SET_LOADING_CONVERSATION", payload: false });
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   // 初始加载：并行请求对话列表和上次选中的对话
   const initialLoadDoneRef = useRef(false);
@@ -408,15 +409,15 @@ export function AgentProvider({ children, projectId }: AgentProviderProps) {
         }
         // 静默刷新列表（用户已看到删除结果）
         await refreshConversations(true);
-        toast.success("已删除对话");
+        toast.success(t("conversationDeleted"));
       } else {
-        toast.error(result.error || "删除对话失败");
+        toast.error(result.error || t("deleteConversationFailed"));
       }
     } catch (error) {
       console.error("删除对话失败:", error);
-      toast.error("删除对话失败");
+      toast.error(t("deleteConversationFailed"));
     }
-  }, [projectId, state.currentConversationId, refreshConversations]);
+  }, [projectId, state.currentConversationId, refreshConversations, t]);
 
   // 便捷方法
   const addMessage = useCallback((message: Omit<AgentMessage, "timestamp" | "id"> & { id?: string }) => {

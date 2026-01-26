@@ -5,6 +5,7 @@ import { AssetWithFullData } from "@/types/asset";
 import { Button } from "@/components/ui/button";
 import { X, Play, Pause, Volume2, VolumeX, Maximize2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { useTranslations } from "next-intl";
 
 interface AssetPreviewOverlayProps {
   asset: AssetWithFullData;
@@ -22,6 +23,7 @@ export function AssetPreviewOverlay({ asset, onClose }: AssetPreviewOverlayProps
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const t = useTranslations("editor.timeline.assetPreview");
 
   const isVideo = asset.assetType === "video";
   const mediaUrl = asset.mediaUrl;
@@ -107,7 +109,7 @@ export function AssetPreviewOverlay({ asset, onClose }: AssetPreviewOverlayProps
   if (!mediaUrl) {
     return (
       <div className="absolute inset-0 bg-black/95 flex items-center justify-center z-10">
-        <div className="text-white/60 text-sm">素材无法预览</div>
+        <div className="text-white/60 text-sm">{t("cannotPreview")}</div>
         <Button
           variant="ghost"
           size="icon"
@@ -129,7 +131,7 @@ export function AssetPreviewOverlay({ asset, onClose }: AssetPreviewOverlayProps
             {asset.name}
           </span>
           <span className="text-white/50 text-xs">
-            {isVideo ? "视频预览" : "音频预览"}
+            {isVideo ? t("videoPreview") : t("audioPreview")}
           </span>
         </div>
         <Button

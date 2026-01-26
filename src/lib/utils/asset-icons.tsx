@@ -41,11 +41,11 @@ export function getAssetIcon(
 }
 
 /**
- * 获取素材类型的中文名称
+ * 获取素材类型的 i18n key
  * @param assetOrType - AssetWithFullData 对象或 AssetTypeEnum 字符串
- * @returns 中文类型名称
+ * @returns i18n key for the asset type (use with t('common.{key}'))
  */
-export function getAssetTypeName(
+export function getAssetTypeKey(
   assetOrType: AssetWithFullData | AssetTypeEnum
 ): string {
   let type: AssetTypeEnum;
@@ -62,15 +62,15 @@ export function getAssetTypeName(
 
   switch (type) {
     case "image":
-      return "图片";
+      return "image";
     case "video":
-      return "视频";
+      return "video";
     case "audio":
-      return "音频";
+      return "audio";
     case "text":
-      return "文本";
+      return "text";
     default:
-      return "素材";
+      return "asset";
   }
 }
 
@@ -82,13 +82,13 @@ export function getAssetTypeName(
 export function guessAssetTypeFromName(name: string): AssetTypeEnum {
   const lowerName = name.toLowerCase();
 
-  if (lowerName.includes("video") || lowerName.includes("视频")) {
+  if (lowerName.includes("video")) {
     return "video";
   }
-  if (lowerName.includes("audio") || lowerName.includes("音频") || lowerName.includes("bgm")) {
+  if (lowerName.includes("audio") || lowerName.includes("bgm")) {
     return "audio";
   }
-  if (lowerName.includes("text") || lowerName.includes("文本")) {
+  if (lowerName.includes("text")) {
     return "text";
   }
   // 默认为图片

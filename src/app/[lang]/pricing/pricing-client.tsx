@@ -51,8 +51,8 @@ export function PricingClientWrapper() {
                 )}
 
                 <CardHeader className="flex-none">
-                  <CardTitle className="text-xl">{pkg.name}</CardTitle>
-                  <CardDescription>{pkg.description}</CardDescription>
+                  <CardTitle className="text-xl">{t(`packages.${pkg.type}`)}</CardTitle>
+                  <CardDescription>{t(`packages.description.${pkg.type}`)}</CardDescription>
                 </CardHeader>
 
                 <CardContent className="flex-1 flex flex-col justify-between space-y-6">

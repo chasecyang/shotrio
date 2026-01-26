@@ -101,6 +101,23 @@ function TimelinePanelContent({
   const t = useTranslations("editor.timeline");
   const tToasts = useTranslations("toasts");
 
+  // Helper to translate track names
+  const getTrackDisplayName = useCallback((trackName: string) => {
+    // Handle patterns like "video", "video_1", "audio_1", etc.
+    const videoMatch = trackName.match(/^video(?:_(\d+))?$/);
+    const audioMatch = trackName.match(/^audio(?:_(\d+))?$/);
+
+    if (videoMatch) {
+      const num = videoMatch[1];
+      return num ? `${t("tracks.video")} ${num}` : t("tracks.video");
+    }
+    if (audioMatch) {
+      const num = audioMatch[1];
+      return num ? `${t("tracks.audio")} ${num}` : t("tracks.audio");
+    }
+    return trackName;
+  }, [t]);
+
   // Drag state
   const {
     isDragging,
@@ -949,7 +966,7 @@ function TimelinePanelContent({
                   {/* Track name and icon */}
                   <div className="flex items-center gap-1.5">
                     <Video className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs font-medium truncate">{track.name}</span>
+                    <span className="text-xs font-medium truncate">{getTrackDisplayName(track.name)}</span>
                   </div>
                   {/* Delete button */}
                   {canDelete && (
@@ -984,7 +1001,7 @@ function TimelinePanelContent({
                   {/* Track name and controls */}
                   <div className="flex items-center gap-1.5">
                     <AudioLines className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs font-medium truncate">{track.name}</span>
+                    <span className="text-xs font-medium truncate">{getTrackDisplayName(track.name)}</span>
                     {/* Mute button */}
                     <Button
                       variant="ghost"

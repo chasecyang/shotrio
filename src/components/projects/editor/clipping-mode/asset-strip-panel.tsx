@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AssetThumbnailItem } from "./asset-thumbnail-item";
 import { AssetStripDragPreview } from "./asset-strip-drag-preview";
 import { useTimelineDrag } from "./timeline-drag-context";
+import { useTranslations } from "next-intl";
 
 const EXPANDED_KEY = "timeline:assetStrip:expanded";
 
@@ -29,6 +30,7 @@ export function AssetStripPanel({
   const { state } = useEditor();
   const { project } = state;
   const { draggedAsset, dragPreviewPosition } = useTimelineDrag();
+  const t = useTranslations("editor.timeline.assetStrip");
 
   // 展开/收起状态（持久化到 localStorage）
   const [isExpanded, setIsExpanded] = useState(true);
@@ -74,14 +76,14 @@ export function AssetStripPanel({
         setAssets(completedAssets);
       } catch (error) {
         console.error("加载素材失败:", error);
-        toast.error("加载素材失败");
+        toast.error(t("loadFailed"));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadAssets();
-  }, [project?.id]);
+  }, [project?.id, t]);
 
   return (
     <Collapsible
@@ -92,7 +94,7 @@ export function AssetStripPanel({
       {/* 收起状态的标题栏 */}
       {!isExpanded && (
         <div className="h-7 flex items-center justify-between px-4">
-          <span className="text-xs text-muted-foreground">素材</span>
+          <span className="text-xs text-muted-foreground">{t("assets")}</span>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
               <ChevronDown className="h-3 w-3" />
@@ -105,7 +107,7 @@ export function AssetStripPanel({
       <CollapsibleContent>
         <div className="flex items-center gap-3 px-4 py-2">
           {/* 标题 */}
-          <span className="text-xs text-muted-foreground shrink-0">素材库</span>
+          <span className="text-xs text-muted-foreground shrink-0">{t("assetLibrary")}</span>
 
           {/* 素材列表 */}
           {isLoading ? (
@@ -120,7 +122,7 @@ export function AssetStripPanel({
           ) : assets.length === 0 ? (
             <div className="flex items-center justify-center flex-1 py-2 text-xs text-muted-foreground">
               <PackageOpen className="h-4 w-4 mr-2" />
-              暂无素材，请先在素材管理中添加
+              {t("noAssets")}
             </div>
           ) : (
             <ScrollArea className="w-full">

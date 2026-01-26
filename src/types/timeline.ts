@@ -141,11 +141,11 @@ export interface TrackConfig {
  * - 音频轨道从 100 开始
  */
 export const DEFAULT_TRACKS: TrackConfig[] = [
-  { index: 0, type: "video", name: "视频", color: "#8a8177", height: 80 },
+  { index: 0, type: "video", name: "video", color: "#8a8177", height: 80 },
   {
     index: 100,
     type: "audio",
-    name: "音频 1",
+    name: "audio_1",
     color: "#8a8177",
     height: 56,
   },
@@ -267,7 +267,7 @@ export function addTrackToConfig(
       : getNextAudioTrackIndex(tracks);
 
   const trackCount = tracks.filter((t) => t.type === type).length + 1;
-  const name = type === "video" ? `视频 ${trackCount}` : `音频 ${trackCount}`;
+  const name = type === "video" ? `video_${trackCount}` : `audio_${trackCount}`;
 
   const newTrack: TrackConfig = {
     index: newIndex,

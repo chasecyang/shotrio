@@ -5,7 +5,7 @@ import { X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PRESET_TAGS } from "@/lib/constants/asset-tags";
+import { PRESET_TAGS, isPresetTag } from "@/lib/constants/asset-tags";
 import { addAssetTag, removeAssetTagsByValue } from "@/lib/actions/asset";
 import { toast } from "sonner";
 import { AssetTag } from "@/types/asset";
@@ -29,6 +29,14 @@ export function TagEditor({
   const [removingTag, setRemovingTag] = useState<string | null>(null);
   const t = useTranslations("toasts");
   const tTags = useTranslations("tagEditor");
+
+  // Helper to get display name for a tag
+  const getTagDisplayName = (tagValue: string) => {
+    if (isPresetTag(tagValue)) {
+      return tTags(`presetTags.${tagValue}`);
+    }
+    return tagValue;
+  };
 
   const existingTagValues = new Set(tags.map((t) => t.tagValue));
   const availablePresetTags = PRESET_TAGS.filter(
@@ -99,7 +107,7 @@ export function TagEditor({
               variant="secondary"
               className="bg-secondary/50 text-foreground gap-1 pr-1"
             >
-              {tag.tagValue}
+              {getTagDisplayName(tag.tagValue)}
               <button
                 type="button"
                 onClick={() => handleRemoveTag(tag.tagValue)}
@@ -147,7 +155,7 @@ export function TagEditor({
                 disabled={disabled || isAdding}
                 className="px-2 py-0.5 text-xs rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
               >
-                + {tag}
+                + {getTagDisplayName(tag)}
               </button>
             ))}
           </div>

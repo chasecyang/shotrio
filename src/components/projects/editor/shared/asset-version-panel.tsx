@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,8 @@ export function AssetVersionPanel({
   onVersionChange,
   className,
 }: AssetVersionPanelProps) {
+  const t = useTranslations("editor.versionPanel");
+  const tCommon = useTranslations("common");
   const {
     versions,
     activeVersion,
@@ -56,8 +58,6 @@ export function AssetVersionPanel({
     removeVersion,
   } = useAssetVersions(asset, { onVersionChange });
 
-  const [versionToDelete, setVersionToDelete] = useState<string | null>(null);
-
   if (versionCount <= 1) {
     return null;
   }
@@ -67,9 +67,9 @@ export function AssetVersionPanel({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">版本历史</h4>
+        <h4 className="text-sm font-medium">{t("title")}</h4>
         <Badge variant="secondary" className="text-xs">
-          {versionCount} 个版本
+          {t("versionCount", { count: versionCount })}
         </Badge>
       </div>
 
@@ -85,6 +85,7 @@ export function AssetVersionPanel({
               ? (version as ImageData).thumbnailUrl || (version as ImageData).imageUrl
               : (version as VideoData).thumbnailUrl;
             const createdAt = version.createdAt;
+            const versionNumber = versionCount - index;
 
             return (
               <div
@@ -104,7 +105,7 @@ export function AssetVersionPanel({
                     isImage ? (
                       <Image
                         src={thumbnailUrl}
-                        alt={`版本 ${versionCount - index}`}
+                        alt={t("version", { number: versionNumber })}
                         fill
                         className="object-cover"
                         sizes="64px"
@@ -114,7 +115,7 @@ export function AssetVersionPanel({
                       <div className="relative w-full h-full">
                         <Image
                           src={thumbnailUrl}
-                          alt={`版本 ${versionCount - index}`}
+                          alt={t("version", { number: versionNumber })}
                           fill
                           className="object-cover"
                           sizes="64px"
@@ -126,7 +127,7 @@ export function AssetVersionPanel({
                     )
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <span className="text-[10px]">无预览</span>
+                      <span className="text-[10px]">{t("noPreview")}</span>
                     </div>
                   )}
                 </div>
@@ -135,14 +136,14 @@ export function AssetVersionPanel({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
-                      版本 {versionCount - index}
+                      {t("version", { number: versionNumber })}
                     </span>
                     {isActive && (
                       <Badge
                         variant="default"
                         className="text-[10px] px-1.5 py-0"
                       >
-                        当前
+                        {t("current")}
                       </Badge>
                     )}
                   </div>
@@ -186,22 +187,22 @@ export function AssetVersionPanel({
                             </AlertDialogTrigger>
                           </TooltipTrigger>
                           <TooltipContent side="left">
-                            <p>删除此版本</p>
+                            <p>{t("deleteVersion")}</p>
                           </TooltipContent>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除版本</AlertDialogTitle>
+                              <AlertDialogTitle>{t("confirmDeleteTitle")}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                确定要删除版本 {versionCount - index} 吗？此操作无法撤销。
+                                {t("confirmDeleteDescription", { number: versionNumber })}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 onClick={() => removeVersion(version.id)}
                               >
-                                删除
+                                {tCommon("delete")}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -219,7 +220,7 @@ export function AssetVersionPanel({
       {isPending && (
         <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" />
-          <span>处理中...</span>
+          <span>{tCommon("processing")}</span>
         </div>
       )}
     </div>
@@ -237,6 +238,7 @@ export function VersionCountBadge({
   count: number;
   className?: string;
 }) {
+  const t = useTranslations("editor.versionPanel");
   if (count <= 1) return null;
 
   return (
@@ -247,7 +249,7 @@ export function VersionCountBadge({
         className
       )}
     >
-      {count} 版本
+      {t("versionCount", { count })}
     </Badge>
   );
 }

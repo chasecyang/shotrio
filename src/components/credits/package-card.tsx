@@ -46,8 +46,8 @@ export function PackageCard({
         )}
 
         <CardHeader>
-          <CardTitle className="text-2xl">{pkg.name}</CardTitle>
-          <CardDescription>{pkg.description}</CardDescription>
+          <CardTitle className="text-2xl">{t(`packages.${pkg.type}`)}</CardTitle>
+          <CardDescription>{t(`packages.description.${pkg.type}`)}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">

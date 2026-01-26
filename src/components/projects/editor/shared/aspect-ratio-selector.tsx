@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
 import type { AspectRatio } from "@/lib/services/image.service";
+import { useTranslations } from "next-intl";
 
 interface AspectRatioSelectorProps {
   value: AspectRatio | "auto";
@@ -10,16 +11,16 @@ interface AspectRatioSelectorProps {
   videoOnly?: boolean;
 }
 
-const ASPECT_RATIOS: Array<{ value: AspectRatio | "auto"; label: string }> = [
-  { value: "auto", label: "自动" },
-  { value: "21:9", label: "21:9" },
-  { value: "16:9", label: "16:9" },
-  { value: "3:2", label: "3:2" },
-  { value: "4:3", label: "4:3" },
-  { value: "1:1", label: "1:1" },
-  { value: "3:4", label: "3:4" },
-  { value: "2:3", label: "2:3" },
-  { value: "9:16", label: "9:16" },
+const ASPECT_RATIO_VALUES: Array<AspectRatio | "auto"> = [
+  "auto",
+  "21:9",
+  "16:9",
+  "3:2",
+  "4:3",
+  "1:1",
+  "3:4",
+  "2:3",
+  "9:16",
 ];
 
 // 计算比例的宽高
@@ -32,21 +33,29 @@ function getRatioDimensions(ratio: AspectRatio | "auto"): { width: number; heigh
 }
 
 export function AspectRatioSelector({ value, onChange, videoOnly = false }: AspectRatioSelectorProps) {
+  const t = useTranslations("editor.aspectRatios");
+
   const ratios = videoOnly
-    ? ASPECT_RATIOS.filter(r => r.value === "16:9" || r.value === "9:16")
-    : ASPECT_RATIOS;
+    ? ASPECT_RATIO_VALUES.filter(r => r === "16:9" || r === "9:16")
+    : ASPECT_RATIO_VALUES;
+
+  const getLabel = (ratio: AspectRatio | "auto") => {
+    if (ratio === "auto") return t("auto");
+    return ratio;
+  };
 
   return (
     <div className="flex flex-wrap gap-1.5">
       {ratios.map((ratio) => {
-        const isSelected = value === ratio.value;
-        const { width, height } = getRatioDimensions(ratio.value);
+        const isSelected = value === ratio;
+        const { width, height } = getRatioDimensions(ratio);
+        const label = getLabel(ratio);
 
         return (
           <button
-            key={ratio.value}
+            key={ratio}
             type="button"
-            onClick={() => onChange(ratio.value)}
+            onClick={() => onChange(ratio)}
             className={cn(
               "group relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
               "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
@@ -55,9 +64,9 @@ export function AspectRatioSelector({ value, onChange, videoOnly = false }: Aspe
                 ? "bg-primary/10 ring-1 ring-primary/50"
                 : "bg-muted/30 hover:ring-1 hover:ring-border"
             )}
-            title={ratio.label}
+            title={label}
           >
-            {ratio.value === "auto" ? (
+            {ratio === "auto" ? (
               <div
                 className={cn(
                   "flex items-center justify-center rounded-sm transition-colors w-5 h-5",
@@ -83,7 +92,7 @@ export function AspectRatioSelector({ value, onChange, videoOnly = false }: Aspe
                 isSelected ? "text-primary font-medium" : "text-muted-foreground group-hover:text-foreground"
               )}
             >
-              {ratio.value === "auto" ? "自动" : ratio.label}
+              {label}
             </span>
           </button>
         );

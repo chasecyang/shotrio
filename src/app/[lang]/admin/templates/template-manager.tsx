@@ -36,6 +36,7 @@ import {
   updateTemplateInfo,
 } from "@/lib/actions/admin/template-admin";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 interface Template {
   projectId: string;
@@ -64,15 +65,11 @@ interface TemplateManagerProps {
   projects: Project[];
 }
 
-const categoryOptions = [
-  { value: "romance", label: "爱情" },
-  { value: "suspense", label: "悬疑" },
-  { value: "comedy", label: "喜剧" },
-  { value: "action", label: "动作" },
-  { value: "fantasy", label: "奇幻" },
-];
+const categoryKeys = ["romance", "suspense", "comedy", "action", "fantasy"] as const;
 
 export function TemplateManager({ templates, projects }: TemplateManagerProps) {
+  const t = useTranslations("admin.templates.manager");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -91,9 +88,14 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
   // 可以添加为模板的项目（排除已是模板的）
   const availableProjects = projects.filter((p) => !p.isTemplate);
 
+  const getCategoryLabel = (category: string) => {
+    const key = `categories.${category}` as const;
+    return t.has(key) ? t(key) : category;
+  };
+
   const handleAddTemplate = async () => {
     if (!selectedProject) {
-      toast.error("请选择一个项目");
+      toast.error(t("selectProjectPlaceholder"));
       return;
     }
 
@@ -107,16 +109,16 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
       });
 
       if (result.success) {
-        toast.success("模板添加成功");
+        toast.success(t("addSuccess"));
         setIsAddDialogOpen(false);
         setSelectedProject("");
         setFormData({ videoUrl: "", thumbnail: "", category: "", order: 0 });
         router.refresh();
       } else {
-        toast.error(result.error || "添加失败");
+        toast.error(result.error || tCommon("error"));
       }
     } catch {
-      toast.error("添加失败");
+      toast.error(tCommon("error"));
     } finally {
       setIsLoading(false);
     }
@@ -135,34 +137,34 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
       });
 
       if (result.success) {
-        toast.success("模板更新成功");
+        toast.success(t("updateSuccess"));
         setIsEditDialogOpen(false);
         setSelectedTemplate(null);
         router.refresh();
       } else {
-        toast.error(result.error || "更新失败");
+        toast.error(result.error || tCommon("error"));
       }
     } catch {
-      toast.error("更新失败");
+      toast.error(tCommon("error"));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRemoveTemplate = async (projectId: string) => {
-    if (!confirm("确定要取消此项目的模板标记吗？")) return;
+    if (!confirm(t("confirmRemove"))) return;
 
     setIsLoading(true);
     try {
       const result = await unmarkProjectAsTemplate(projectId);
       if (result.success) {
-        toast.success("已取消模板标记");
+        toast.success(t("removeSuccess"));
         router.refresh();
       } else {
-        toast.error(result.error || "操作失败");
+        toast.error(result.error || tCommon("error"));
       }
     } catch {
-      toast.error("操作失败");
+      toast.error(tCommon("error"));
     } finally {
       setIsLoading(false);
     }
@@ -184,34 +186,34 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
       {/* 操作栏 */}
       <div className="flex justify-between items-center">
         <div className="text-sm text-muted-foreground">
-          共 {templates.length} 个模板项目
+          {t("totalCount", { count: templates.length })}
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
           <Plus className="w-4 h-4" />
-          添加模板
+          {t("addTemplate")}
         </Button>
       </div>
 
       {/* 模板列表 */}
       <Card>
         <CardHeader>
-          <CardTitle>模板项目列表</CardTitle>
+          <CardTitle>{t("templateList")}</CardTitle>
         </CardHeader>
         <CardContent>
           {templates.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              暂无模板项目，点击"添加模板"将项目标记为模板
+              {t("emptyState")}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>项目名称</TableHead>
-                  <TableHead>分类</TableHead>
-                  <TableHead>素材数</TableHead>
-                  <TableHead>视频</TableHead>
-                  <TableHead>排序</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+                  <TableHead>{t("projectName")}</TableHead>
+                  <TableHead>{t("category")}</TableHead>
+                  <TableHead>{t("assetCount")}</TableHead>
+                  <TableHead>{t("video")}</TableHead>
+                  <TableHead>{t("order")}</TableHead>
+                  <TableHead className="text-right">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -230,8 +232,7 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
                     <TableCell>
                       {template.category ? (
                         <Badge variant="secondary">
-                          {categoryOptions.find((c) => c.value === template.category)
-                            ?.label || template.category}
+                          {getCategoryLabel(template.category)}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -277,27 +278,27 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加模板项目</DialogTitle>
+            <DialogTitle>{t("addDialogTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>选择项目</Label>
+              <Label>{t("selectProject")}</Label>
               <Select value={selectedProject} onValueChange={setSelectedProject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="选择一个项目" />
+                  <SelectValue placeholder={t("selectProjectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableProjects.length === 0 ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      没有可用的项目
+                      {t("noAvailableProjects")}
                     </div>
                   ) : (
                     availableProjects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         <div className="flex flex-col">
-                          <span>{project.title} ({project.assetCount} 个素材)</span>
+                          <span>{t("projectWithAssets", { title: project.title, count: project.assetCount })}</span>
                           <span className="text-xs text-muted-foreground">
-                            {project.ownerName || project.ownerEmail || "未知用户"}
+                            {project.ownerName || project.ownerEmail || t("unknownUser")}
                           </span>
                         </div>
                       </SelectItem>
@@ -308,7 +309,7 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>展示视频 URL</Label>
+              <Label>{t("videoUrl")}</Label>
               <Input
                 value={formData.videoUrl}
                 onChange={(e) =>
@@ -319,7 +320,7 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>缩略图 URL</Label>
+              <Label>{t("thumbnailUrl")}</Label>
               <Input
                 value={formData.thumbnail}
                 onChange={(e) =>
@@ -330,18 +331,18 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>分类</Label>
+              <Label>{t("category")}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(v) => setFormData({ ...formData, category: v })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择分类" />
+                  <SelectValue placeholder={t("selectCategory")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {categoryKeys.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {getCategoryLabel(key)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -349,7 +350,7 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>排序权重（越大越靠前）</Label>
+              <Label>{t("orderWeight")}</Label>
               <Input
                 type="number"
                 value={formData.order}
@@ -361,11 +362,11 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              取消
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleAddTemplate} disabled={isLoading}>
               {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              添加
+              {tCommon("add")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -375,11 +376,11 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>编辑模板信息</DialogTitle>
+            <DialogTitle>{t("editDialogTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>展示视频 URL</Label>
+              <Label>{t("videoUrl")}</Label>
               <Input
                 value={formData.videoUrl}
                 onChange={(e) =>
@@ -390,7 +391,7 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>缩略图 URL</Label>
+              <Label>{t("thumbnailUrl")}</Label>
               <Input
                 value={formData.thumbnail}
                 onChange={(e) =>
@@ -401,18 +402,18 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>分类</Label>
+              <Label>{t("category")}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(v) => setFormData({ ...formData, category: v })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择分类" />
+                  <SelectValue placeholder={t("selectCategory")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {categoryKeys.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {getCategoryLabel(key)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -420,7 +421,7 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>排序权重（越大越靠前）</Label>
+              <Label>{t("orderWeight")}</Label>
               <Input
                 type="number"
                 value={formData.order}
@@ -432,11 +433,11 @@ export function TemplateManager({ templates, projects }: TemplateManagerProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              取消
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleEditTemplate} disabled={isLoading}>
               {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              保存
+              {tCommon("save")}
             </Button>
           </DialogFooter>
         </DialogContent>

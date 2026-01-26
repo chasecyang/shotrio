@@ -47,13 +47,13 @@ export function RegenerateConfirmDialog({
   const getAssetTypeName = (type: string) => {
     switch (type) {
       case "image":
-        return "图片";
+        return tCommon("image");
       case "video":
-        return "视频";
+        return tCommon("video");
       case "audio":
-        return "音频";
+        return tCommon("audio");
       default:
-        return "素材";
+        return tCommon("asset");
     }
   };
 

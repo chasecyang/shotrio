@@ -20,15 +20,7 @@ import { useRouter } from "@/i18n/routing";
 import { cloneTemplateProject } from "@/lib/actions/project/clone";
 import { toast } from "sonner";
 import type { Project } from "@/types/project";
-
-// 分类标签映射
-const categoryLabels: Record<string, string> = {
-  romance: "爱情",
-  suspense: "悬疑",
-  comedy: "喜剧",
-  action: "动作",
-  fantasy: "奇幻",
-};
+import { useTranslations } from "next-intl";
 
 // 资产类型图标
 const assetTypeIcons: Record<string, React.ElementType> = {
@@ -61,19 +53,21 @@ interface TemplateViewerProps {
 export function TemplateViewer({ project }: TemplateViewerProps) {
   const router = useRouter();
   const [isCloning, setIsCloning] = useState(false);
+  const t = useTranslations("home.templates");
+  const tCommon = useTranslations("common");
 
   const handleClone = async () => {
     setIsCloning(true);
     try {
       const result = await cloneTemplateProject(project.id);
       if (result.success && result.projectId) {
-        toast.success("项目复制成功！");
+        toast.success(t("cloneSuccess"));
         router.push(`/projects/${result.projectId}/editor`);
       } else {
-        toast.error(result.error || "复制失败");
+        toast.error(result.error || t("cloneFailed"));
       }
     } catch {
-      toast.error("复制失败，请重试");
+      toast.error(t("cloneFailedRetry"));
     } finally {
       setIsCloning(false);
     }
@@ -100,7 +94,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
       <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
         <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
           <Lock className="w-5 h-5" />
-          <span className="font-medium">只读模式 - 这是一个示例模板项目</span>
+          <span className="font-medium">{t("viewer.readOnlyMode")}</span>
         </div>
         <Button onClick={handleClone} disabled={isCloning} className="gap-2">
           {isCloning ? (
@@ -108,7 +102,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
           ) : (
             <Copy className="w-4 h-4" />
           )}
-          复制此项目并开始编辑
+          {t("viewer.cloneAndEdit")}
         </Button>
       </div>
 
@@ -120,7 +114,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
         className="mb-6 gap-2"
       >
         <ArrowLeft className="w-4 h-4" />
-        返回首页
+        {t("viewer.backToHome")}
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -145,7 +139,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
               </div>
             ) : (
               <div className="w-full aspect-video bg-muted flex items-center justify-center text-muted-foreground">
-                暂无预览
+                {tCommon("noPreview")}
               </div>
             )}
           </Card>
@@ -156,7 +150,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
               <h1 className="text-3xl font-bold">{project.title}</h1>
               {project.template.category && (
                 <Badge variant="secondary" className="text-sm">
-                  {categoryLabels[project.template.category] ||
+                  {t(`categories.${project.template.category}`) ||
                     project.template.category}
                 </Badge>
               )}
@@ -174,7 +168,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
           {/* 美术风格 */}
           {project.artStyle && (
             <Card className="p-4">
-              <h3 className="font-semibold mb-2">美术风格</h3>
+              <h3 className="font-semibold mb-2">{t("viewer.artStyle")}</h3>
               <p className="text-primary font-medium">{project.artStyle.name}</p>
               {project.artStyle.nameEn && (
                 <p className="text-sm text-muted-foreground">
@@ -186,16 +180,10 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
 
           {/* 素材统计 */}
           <Card className="p-4">
-            <h3 className="font-semibold mb-4">项目素材</h3>
+            <h3 className="font-semibold mb-4">{t("viewer.projectAssets")}</h3>
             <div className="space-y-3">
               {Object.entries(assetsByType).map(([type, assets]) => {
                 const Icon = assetTypeIcons[type] || FileText;
-                const typeLabels: Record<string, string> = {
-                  image: "图片",
-                  video: "视频",
-                  text: "文本",
-                  audio: "音频",
-                };
                 return (
                   <div
                     key={type}
@@ -203,24 +191,24 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
                   >
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Icon className="w-4 h-4" />
-                      <span>{typeLabels[type] || type}</span>
+                      <span>{tCommon(type as "image" | "video" | "text" | "audio")}</span>
                     </div>
-                    <span className="font-medium">{assets?.length || 0} 个</span>
+                    <span className="font-medium">{t("viewer.itemCount", { count: assets?.length || 0 })}</span>
                   </div>
                 );
               })}
             </div>
             <Separator className="my-4" />
             <div className="flex items-center justify-between font-medium">
-              <span>总计</span>
-              <span>{project.assets?.length || 0} 个素材</span>
+              <span>{t("viewer.total")}</span>
+              <span>{t("viewer.totalAssets", { count: project.assets?.length || 0 })}</span>
             </div>
           </Card>
 
           {/* 素材列表预览 */}
           {project.assets && project.assets.length > 0 && (
             <Card className="p-4">
-              <h3 className="font-semibold mb-4">素材列表</h3>
+              <h3 className="font-semibold mb-4">{t("viewer.assetList")}</h3>
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {project.assets.slice(0, 20).map((asset) => {
                   const Icon = assetTypeIcons[asset.assetType] || FileText;
@@ -241,7 +229,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
                 })}
                 {project.assets.length > 20 && (
                   <p className="text-center text-sm text-muted-foreground pt-2">
-                    还有 {project.assets.length - 20} 个素材...
+                    {t("viewer.moreAssets", { count: project.assets.length - 20 })}
                   </p>
                 )}
               </div>
@@ -260,7 +248,7 @@ export function TemplateViewer({ project }: TemplateViewerProps) {
             ) : (
               <Copy className="w-4 h-4" />
             )}
-            复制此项目并开始创作
+            {t("viewer.cloneAndStart")}
           </Button>
         </div>
       </div>

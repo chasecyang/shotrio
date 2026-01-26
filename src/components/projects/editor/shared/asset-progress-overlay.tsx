@@ -23,7 +23,7 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
   if (asset?.runtimeStatus === "failed") {
     const rawError = asset.errorMessage || job?.errorMessage;
     const errorMessage = t(getErrorMessageKey(rawError));
-    
+
     return (
       <div
         className={cn(
@@ -42,15 +42,15 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
               <AlertCircle className="w-8 h-8 text-destructive" />
             </div>
           </div>
-          
+
           <div className="flex flex-col items-center gap-1 max-w-[180px]">
-            <span className="text-sm font-semibold text-destructive">生成失败</span>
+            <span className="text-sm font-semibold text-destructive">{t("editor.assetProgress.generationFailed")}</span>
             <span className="text-xs text-muted-foreground text-center line-clamp-2">
               {errorMessage}
             </span>
           </div>
         </div>
-        
+
         {/* 底部失败指示条 */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-destructive/50" />
       </div>
@@ -63,7 +63,7 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
   }
 
   const progress = job.progress || 0;
-  const message = job.progressMessage || "生成中...";
+  const message = job.progressMessage || t("editor.assetProgress.generating");
   const status = job.status;
 
   // 生成中状态
@@ -132,7 +132,7 @@ export function AssetProgressOverlay({ job, asset, className }: AssetProgressOve
         {/* 状态消息 */}
         <div className="flex flex-col items-center gap-1">
           <div className="text-sm font-semibold text-foreground">
-            {status === "pending" ? "准备生成" : "生成中"}
+            {status === "pending" ? t("editor.assetProgress.preparingGeneration") : t("editor.assetProgress.generatingStatus")}
           </div>
           <div className="text-xs text-muted-foreground text-center max-w-[180px] line-clamp-2 px-2">
             {message}

@@ -85,47 +85,48 @@ export interface CreditPackage {
 }
 
 // 积分包配置常量 (1美金 = 100积分)
+// name 和 description 使用翻译键，在 UI 中通过 t(`credits.packages.${type}.name`) 获取
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     type: "starter" as PackageType,
-    name: "体验包",
+    name: "starter",
     price: 9,
     credits: 900,
     bonusPercent: 0,
-    description: "适合初次体验",
+    description: "starter",
   },
   {
     type: "basic" as PackageType,
-    name: "基础包",
+    name: "basic",
     price: 30,
     credits: 3000,
     bonusPercent: 5,
-    description: "适合轻度使用，赠送5%积分",
+    description: "basic",
   },
   {
     type: "standard" as PackageType,
-    name: "标准包",
+    name: "standard",
     price: 60,
     credits: 6000,
     bonusPercent: 10,
-    description: "适合日常创作，赠送10%积分",
+    description: "standard",
     popular: true,
   },
   {
     type: "pro" as PackageType,
-    name: "专业包",
+    name: "pro",
     price: 120,
     credits: 12000,
     bonusPercent: 15,
-    description: "适合专业创作者，超值赠送15%积分",
+    description: "pro",
   },
   {
     type: "ultimate" as PackageType,
-    name: "旗舰包",
+    name: "ultimate",
     price: 300,
     credits: 30000,
     bonusPercent: 20,
-    description: "适合团队和重度使用，超级赠送20%积分",
+    description: "ultimate",
   },
 ];
 

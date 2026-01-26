@@ -97,7 +97,7 @@ async function OrdersSection() {
               >
                 <div className="space-y-1">
                   <p className="font-semibold">
-                    {CREDIT_PACKAGES.find((p) => p.type === order.packageType)?.name}
+                    {t(`packages.${order.packageType}`)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     ${order.amount} • {order.credits + order.bonusCredits} {t("creditsUnit")}

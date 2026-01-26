@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { CheckSquare, Square, Trash2, Download, Loader2, Star, X, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,8 @@ export function FloatingActionBar({
   isDownloading = false,
   downloadProgress,
 }: FloatingActionBarProps) {
+  const t = useTranslations();
+
   if (selectedCount === 0) {
     return null;
   }
@@ -50,18 +53,18 @@ export function FloatingActionBar({
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
 
   const getDownloadButtonText = () => {
-    if (!isDownloading) return "下载";
-    if (!downloadProgress) return "准备中...";
+    if (!isDownloading) return t('floatingActionBar.download');
+    if (!downloadProgress) return t('floatingActionBar.preparing');
 
     switch (downloadProgress.phase) {
       case "fetching":
         return `${downloadProgress.current}/${downloadProgress.total}`;
       case "zipping":
-        return "打包中...";
+        return t('floatingActionBar.zipping');
       case "downloading":
-        return "下载中...";
+        return t('floatingActionBar.downloading');
       default:
-        return "下载";
+        return t('floatingActionBar.download');
     }
   };
 
@@ -84,7 +87,7 @@ export function FloatingActionBar({
         <div className="flex items-center gap-2 pr-3 border-r">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           <span className="text-sm font-medium text-foreground">
-            已选择 <span className="text-primary font-semibold">{selectedCount}</span> 个素材
+            {t('floatingActionBar.selectedAssets', { count: selectedCount })}
           </span>
         </div>
 
@@ -100,7 +103,7 @@ export function FloatingActionBar({
               className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
             >
               <Square className="h-3.5 w-3.5" />
-              <span className="text-xs font-medium">取消全选</span>
+              <span className="text-xs font-medium">{t('floatingActionBar.deselectAll')}</span>
             </Button>
           ) : (
             <Button
@@ -111,7 +114,7 @@ export function FloatingActionBar({
               className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
             >
               <CheckSquare className="h-3.5 w-3.5" />
-              <span className="text-xs font-medium">全选</span>
+              <span className="text-xs font-medium">{t('floatingActionBar.selectAll')}</span>
             </Button>
           )}
 
@@ -149,26 +152,26 @@ export function FloatingActionBar({
                     className="h-8 gap-1.5"
                   >
                     <Star className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">标记为</span>
+                    <span className="text-xs font-medium">{t('floatingActionBar.markAs')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center">
                   {onMarkSelected && (
                     <DropdownMenuItem onClick={onMarkSelected}>
                       <Star className="h-3.5 w-3.5 mr-2 text-amber-600" />
-                      <span>精选</span>
+                      <span>{t('floatingActionBar.selected')}</span>
                     </DropdownMenuItem>
                   )}
                   {onMarkRejected && (
                     <DropdownMenuItem onClick={onMarkRejected}>
                       <X className="h-3.5 w-3.5 mr-2 text-slate-600" />
-                      <span>废弃</span>
+                      <span>{t('floatingActionBar.rejected')}</span>
                     </DropdownMenuItem>
                   )}
                   {onMarkUnrated && (
                     <DropdownMenuItem onClick={onMarkUnrated}>
                       <Circle className="h-3.5 w-3.5 mr-2" />
-                      <span>未筛选</span>
+                      <span>{t('floatingActionBar.unrated')}</span>
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -188,7 +191,7 @@ export function FloatingActionBar({
             className="h-8 gap-1.5 shadow-sm hover:shadow-md transition-shadow"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">删除</span>
+            <span className="text-xs font-medium">{t('floatingActionBar.delete')}</span>
           </Button>
         </div>
       </div>

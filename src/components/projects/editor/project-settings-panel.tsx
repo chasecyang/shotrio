@@ -4,18 +4,19 @@ import { useEditor } from "./editor-context";
 import { ProjectSettingsForm } from "@/components/projects/settings/project-settings-form";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function ProjectSettingsPanel() {
   const { state, setShowSettings } = useEditor();
   const { project } = state;
+  const t = useTranslations("projects.settings");
 
   if (!project) return null;
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 顶部标题栏 */}
       <div className="border-b shrink-0 px-6 py-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">项目设置</h2>
+        <h2 className="text-lg font-semibold">{t("title")}</h2>
         <Button
           variant="ghost"
           size="icon"
@@ -26,12 +27,11 @@ export function ProjectSettingsPanel() {
         </Button>
       </div>
 
-      {/* 内容区 - 使用原生滚动 */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6">
-          <ProjectSettingsForm 
-            project={project} 
-            userId={project.userId} 
+          <ProjectSettingsForm
+            project={project}
+            userId={project.userId}
           />
         </div>
       </div>

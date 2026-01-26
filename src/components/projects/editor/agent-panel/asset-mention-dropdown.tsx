@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, forwardRef } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { AssetWithFullData } from "@/types/asset";
-import { getAssetIcon, getAssetTypeName } from "@/lib/utils/asset-icons";
+import { getAssetIcon, getAssetTypeKey } from "@/lib/utils/asset-icons";
 
 interface AssetMentionDropdownProps {
   assets: AssetWithFullData[];
@@ -14,6 +15,8 @@ interface AssetMentionDropdownProps {
 
 export const AssetMentionDropdown = forwardRef<HTMLDivElement, AssetMentionDropdownProps>(
   function AssetMentionDropdown({ assets, selectedIndex, position, onSelect }, ref) {
+    const tCommon = useTranslations("common");
+    const t = useTranslations("editor.assetMention");
     const selectedItemRef = useRef<HTMLButtonElement>(null);
 
   // Scroll selected item into view when selection changes
@@ -41,7 +44,7 @@ export const AssetMentionDropdown = forwardRef<HTMLDivElement, AssetMentionDropd
       <div className="max-h-64 overflow-y-auto p-1">
         {assets.length === 0 ? (
           <div className="px-3 py-2 text-sm text-muted-foreground">
-            未找到匹配的素材
+            {t("noMatch")}
           </div>
         ) : (
           assets.map((asset, index) => (
@@ -73,7 +76,7 @@ export const AssetMentionDropdown = forwardRef<HTMLDivElement, AssetMentionDropd
               <div className="flex-1 overflow-hidden">
                 <div className="truncate font-medium">{asset.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {getAssetTypeName(asset)}
+                  {tCommon(getAssetTypeKey(asset))}
                 </div>
               </div>
             </button>
@@ -82,9 +85,9 @@ export const AssetMentionDropdown = forwardRef<HTMLDivElement, AssetMentionDropd
       </div>
 
       <div className="border-t px-3 py-2 text-xs text-muted-foreground">
-        <kbd className="rounded bg-muted px-1.5 py-0.5">↑↓</kbd> 导航{" "}
-        <kbd className="rounded bg-muted px-1.5 py-0.5">Enter</kbd> 选择{" "}
-        <kbd className="rounded bg-muted px-1.5 py-0.5">Esc</kbd> 关闭
+        <kbd className="rounded bg-muted px-1.5 py-0.5">↑↓</kbd> {t("navigate")}{" "}
+        <kbd className="rounded bg-muted px-1.5 py-0.5">Enter</kbd> {t("select")}{" "}
+        <kbd className="rounded bg-muted px-1.5 py-0.5">Esc</kbd> {t("close")}
       </div>
     </div>
   );

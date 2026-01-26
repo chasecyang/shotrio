@@ -1,6 +1,16 @@
 {
   "common": {
     "loading": "加载中...",
+    "image": "图片",
+    "video": "视频",
+    "audio": "音频",
+    "text": "文本",
+    "asset": "素材",
+    "unnamed": "未命名",
+    "processing": "处理中...",
+    "noPreviewAvailable": "无预览",
+    "loadMore": "加载更多",
+    "noPreview": "暂无预览",
     "error": "错误",
     "success": "成功",
     "cancel": "取消",
@@ -45,11 +55,24 @@
   },
   "tagEditor": {
     "addCustomTag": "添加自定义标签...",
-    "quickAdd": "快捷添加"
+    "quickAdd": "快捷添加",
+    "presetTags": {
+      "character": "角色",
+      "scene": "场景",
+      "prop": "道具",
+      "effect": "特效",
+      "reference": "参考",
+      "voiceover": "配音",
+      "soundEffect": "音效",
+      "bgm": "背景音乐",
+      "uncategorized": "未分类"
+    }
   },
   "backgroundTasks": {
     "title": "后台任务",
-    "inProgress": "个进行中",
+    "inProgress": "进行中",
+    "completed": "完成",
+    "failed": "失败",
     "noTasks": "暂无任务",
     "taskNotFound": "任务不存在",
     "downloadStarted": "开始下载导出视频",
@@ -59,6 +82,72 @@
     "viewResult": "查看结果",
     "retry": "重试",
     "cancel": "取消"
+  },
+  "generationHistory": {
+    "title": "创作历史",
+    "empty": "暂无创作历史",
+    "emptyHint": "创作的记录将显示在这里",
+    "clear": "清空",
+    "textToImage": "文字创作",
+    "imageToImage": "图片创作",
+    "imagesCount": "{count} 张",
+    "createdAssets": "创作了 {count} 个素材",
+    "reuse": "复用"
+  },
+  "floatingActionBar": {
+    "selectedAssets": "已选择 {count} 个素材",
+    "deselectAll": "取消全选",
+    "selectAll": "全选",
+    "download": "下载",
+    "preparing": "准备中...",
+    "zipping": "打包中...",
+    "downloading": "下载中...",
+    "markAs": "标记为",
+    "selected": "精选",
+    "rejected": "废弃",
+    "unrated": "未筛选",
+    "delete": "删除"
+  },
+  "actionEditorPanel": {
+    "generateImage": "生成图片素材",
+    "generateVideo": "生成视频素材",
+    "createTextAsset": "创建文本资产",
+    "setProjectTitle": "标题",
+    "setProjectDescription": "描述",
+    "setProjectArtStyle": "美术风格",
+    "setProjectInfo": "设置项目信息",
+    "setProject": "设置项目",
+    "generateImageDesc": "检查并修改图片生成参数，确认后将使用AI生成图片素材",
+    "generateVideoDesc": "检查并修改视频生成参数，确认后将使用AI生成视频素材",
+    "createTextAssetDesc": "检查并修改文本资产的内容和标签信息",
+    "defaultDesc": "检查参数并确认执行",
+    "noEditableParams": "此操作暂无可编辑参数",
+    "credits": "积分",
+    "insufficientBalance": "余额不足 ({balance})",
+    "processing": "处理中...",
+    "executing": "执行中..."
+  },
+  "exportDialog": {
+    "title": "导出视频",
+    "description": "将时间轴渲染为视频文件",
+    "duration": "时长",
+    "resolution": "分辨率",
+    "clips": "片段",
+    "clipsDetail": "片段 ({video}V/{audio}A)",
+    "exportQuality": "导出质量",
+    "qualityDraft": "快速预览，较低质量",
+    "qualityHigh": "完整渲染，最佳质量",
+    "draft": "草稿",
+    "high": "高清",
+    "includeAudio": "包含音频",
+    "audioClipsCount": "包含 {count} 个音频片段",
+    "noAudioInTimeline": "时间轴中没有音频",
+    "emptyTimeline": "时间轴为空，无法导出",
+    "exportTaskCreated": "导出任务已创建，请在后台任务中查看进度",
+    "createTaskFailed": "创建导出任务失败",
+    "exportFailed": "导出失败，请重试",
+    "creatingTask": "创建任务...",
+    "startExport": "开始导出"
   },
   "textAsset": {
     "contentSaved": "内容已保存",
@@ -214,6 +303,38 @@
     },
     "pricing": {
       "viewPricing": "查看定价"
+    },
+    "templates": {
+      "title": "从示例开始",
+      "description": "查看这些精心制作的示例项目，一键复制即可开始你的创作",
+      "cloneSuccess": "项目复制成功！",
+      "cloneFailed": "复制失败",
+      "cloneFailedRetry": "复制失败，请重试",
+      "noPreview": "暂无预览",
+      "viewProject": "查看项目",
+      "cloneAndCreate": "复制并创建",
+      "style": "风格",
+      "assetsCount": "{count} 个素材",
+      "categories": {
+        "romance": "爱情",
+        "suspense": "悬疑",
+        "comedy": "喜剧",
+        "action": "动作",
+        "fantasy": "奇幻"
+      },
+      "viewer": {
+        "readOnlyMode": "只读模式 - 这是一个示例模板项目",
+        "cloneAndEdit": "复制此项目并开始编辑",
+        "backToHome": "返回首页",
+        "artStyle": "美术风格",
+        "projectAssets": "项目素材",
+        "total": "总计",
+        "totalAssets": "{count} 个素材",
+        "assetList": "素材列表",
+        "moreAssets": "还有 {count} 个素材...",
+        "cloneAndStart": "复制此项目并开始创作",
+        "itemCount": "{count} 个"
+      }
     }
   },
   "dashboard": {
@@ -259,7 +380,71 @@
       "conversationNotFound": "对话不存在或未关联项目",
       "cannotLoadState": "无法加载对话状态",
       "noPendingOperation": "没有待执行的操作",
-      "unknownTool": "未知的工具"
+      "unknownTool": "未知的工具",
+      "invalidRequestParams": "无效的请求参数",
+      "processingFailed": "处理失败"
+    },
+    "actions": {
+      "conversation": {
+        "createFailed": "创建对话失败",
+        "listFailed": "获取对话列表失败",
+        "notFound": "对话不存在",
+        "getFailed": "获取对话详情失败",
+        "databaseError": "数据库连接失败，请稍后重试",
+        "timeoutError": "请求超时，请检查网络连接",
+        "updateStatusFailed": "更新对话状态失败",
+        "updateTitleFailed": "更新对话标题失败",
+        "deleteFailed": "删除对话失败",
+        "saveMessageFailed": "保存消息失败",
+        "updateMessageFailed": "更新消息失败",
+        "messageNotFound": "消息不存在",
+        "getMessageFailed": "获取消息失败"
+      },
+      "upload": {
+        "noFile": "未选择文件",
+        "failed": "上传失败",
+        "invalidUrl": "无效的图片地址",
+        "deleteFailed": "删除失败"
+      },
+      "payment": {
+        "invalidPackage": "无效的积分包类型",
+        "createSessionFailed": "创建支付会话失败",
+        "getOrdersFailed": "获取订单列表失败",
+        "orderNotFound": "订单不存在",
+        "getOrderFailed": "获取订单详情失败",
+        "webhookFailed": "处理webhook失败",
+        "missingOrderId": "缺少订单ID"
+      },
+      "artStyle": {
+        "createFailed": "创建风格失败",
+        "notFound": "风格不存在",
+        "noPermission": "无权限修改此风格",
+        "updateFailed": "更新风格失败",
+        "noDeletePermission": "无权限删除此风格",
+        "deleteFailed": "删除风格失败"
+      },
+      "timeline": {
+        "getFailed": "获取时间轴失败",
+        "createFailed": "创建时间轴失败",
+        "createGetFailed": "创建后无法获取时间轴",
+        "notFoundOrNoPermission": "时间轴不存在或无权限",
+        "updateFailed": "更新时间轴失败",
+        "updateGetFailed": "更新后无法获取时间轴",
+        "deleteFailed": "删除时间轴失败",
+        "getOrCreateFailed": "获取或创建时间轴失败",
+        "updateTracksFailed": "更新轨道配置失败",
+        "untitledClip": "未命名剪辑"
+      },
+      "project": {
+        "notFoundOrNoPermission": "项目不存在或无权限"
+      },
+      "task": {
+        "createFailed": "创建任务失败"
+      },
+      "storage": {
+        "r2NotConfigured": "未配置 R2_PUBLIC_DOMAIN，无法生成访问链接",
+        "envNotSet": "{name} 环境变量未设置"
+      }
     }
   },
   "sidebar": {
@@ -289,6 +474,7 @@
       "collapseTemplates": "收起",
       "characterCount": "{count} 字符",
       "noStyleSet": "未设置风格",
+      "noTemplates": "暂无预设模板",
       "settingsButton": "设置",
       "saveButton": "保存设置",
       "dangerZone": "危险区域",
@@ -297,7 +483,10 @@
       "deleteConfirm": "确认删除",
       "deleteConfirmTitle": "确认删除项目？",
       "deleteConfirmDescription": "此操作无法撤销。项目「{title}」及其所有数据（包括素材、视频等）将被永久删除。",
-      "deleteCancel": "取消"
+      "deleteCancel": "取消",
+      "errors": {
+        "titleRequired": "请输入项目名称"
+      }
     },
     "assets": {
       "title": "创作素材",
@@ -692,6 +881,60 @@
     }
   },
   "tools": {},
+  "voices": {
+    "male-qn-qingse": {
+      "name": "青涩青年",
+      "style": "清新、青涩、邻家男孩感"
+    },
+    "male-qn-jingying": {
+      "name": "精英男声",
+      "style": "自信、干练、职场精英"
+    },
+    "male-qn-badao": {
+      "name": "霸道总裁",
+      "style": "低沉、霸气、有压迫感"
+    },
+    "male-qn-daxuesheng": {
+      "name": "阳光大学生",
+      "style": "阳光、活力、正能量"
+    },
+    "presenter_male": {
+      "name": "磁性男主播",
+      "style": "磁性、专业、适合旁白"
+    },
+    "audiobook_male_1": {
+      "name": "沧桑大叔",
+      "style": "沧桑、稳重、有故事感"
+    },
+    "female-shaonv": {
+      "name": "温柔少女",
+      "style": "温柔、甜美、治愈系"
+    },
+    "female-yujie": {
+      "name": "知性御姐",
+      "style": "知性、成熟、有魅力"
+    },
+    "female-chengshu": {
+      "name": "成熟女性",
+      "style": "稳重、可靠、职业感"
+    },
+    "female-tianmei": {
+      "name": "甜美萝莉",
+      "style": "甜美、可爱、元气满满"
+    },
+    "presenter_female": {
+      "name": "女主播",
+      "style": "专业、清晰、适合解说"
+    },
+    "audiobook_female_1": {
+      "name": "温婉女声",
+      "style": "温婉、有书卷气、适合有声书"
+    },
+    "genderLabels": {
+      "male": "男声",
+      "female": "女声"
+    }
+  },
   "feedback": {
     "chatWithUs": "联系我们",
     "needHelp": "需要帮助？",
@@ -1047,13 +1290,75 @@
       "subtitle": "管理首页展示的示例项目模板",
       "sidebarTitle": "示例模板",
       "description": "将现有项目标记为示例模板，展示在首页",
-      "detail": "管理示例项目模板，设置展示视频和分类，吸引用户体验产品"
+      "detail": "管理示例项目模板，设置展示视频和分类，吸引用户体验产品",
+      "manager": {
+        "totalCount": "共 {count} 个模板项目",
+        "addTemplate": "添加模板",
+        "templateList": "模板项目列表",
+        "emptyState": "暂无模板项目，点击\"添加模板\"将项目标记为模板",
+        "projectName": "项目名称",
+        "category": "分类",
+        "assetCount": "素材数",
+        "video": "视频",
+        "order": "排序",
+        "actions": "操作",
+        "addDialogTitle": "添加模板项目",
+        "editDialogTitle": "编辑模板信息",
+        "selectProject": "选择项目",
+        "selectProjectPlaceholder": "选择一个项目",
+        "noAvailableProjects": "没有可用的项目",
+        "projectWithAssets": "{title} ({count} 个素材)",
+        "unknownUser": "未知用户",
+        "videoUrl": "视频URL",
+        "thumbnailUrl": "缩略图URL",
+        "selectCategory": "选择分类",
+        "orderWeight": "排序权重（越大越靠前）",
+        "confirmRemove": "确定要取消此项目的模板标记吗？",
+        "addSuccess": "模板添加成功",
+        "updateSuccess": "模板更新成功",
+        "removeSuccess": "已取消模板标记",
+        "categories": {
+          "romance": "爱情",
+          "suspense": "悬疑",
+          "comedy": "喜剧",
+          "action": "动作",
+          "fantasy": "奇幻"
+        }
+      }
     },
     "examples": {
       "title": "示例资产管理",
       "subtitle": "管理首页展示的示例图片和视频",
       "sidebarTitle": "示例资产",
-      "description": "从用户资产中挑选精彩作品作为示例展示"
+      "description": "从用户资产中挑选精彩作品作为示例展示",
+      "manager": {
+        "currentExamples": "当前示例资产",
+        "browseAssets": "浏览资产",
+        "searchPlaceholder": "搜索资产名称...",
+        "noExamples": "暂无示例资产",
+        "added": "已添加",
+        "addAsExample": "添加为示例资产",
+        "setDisplayInfo": "设置示例资产的展示信息",
+        "displayNameOptional": "展示名称（可选）",
+        "leaveBlankForOriginal": "留空使用原始名称",
+        "descriptionOptional": "描述（可选）",
+        "addDescription": "添加描述信息",
+        "editExampleInfo": "编辑示例信息",
+        "modifyDisplayInfo": "修改示例资产的展示信息",
+        "tablePreview": "预览",
+        "tableName": "名称",
+        "tableType": "类型",
+        "tableCreator": "创建者",
+        "tableActions": "操作",
+        "confirmRemove": "确定要移除这个示例吗？",
+        "reorderFailed": "重排序失败",
+        "addedSuccess": "已添加为示例资产",
+        "addFailed": "添加失败",
+        "updatedSuccess": "已更新示例信息",
+        "updateFailed": "更新失败",
+        "removedSuccess": "已移除示例",
+        "removeFailed": "移除失败"
+      }
     }
   },
   "agent": {
@@ -1202,6 +1507,65 @@
       "description": "Editor 编辑器需要更大的屏幕空间，请使用电脑访问以获得最佳体验。",
       "backToProjects": "返回项目列表"
     },
+    "versionPanel": {
+      "title": "版本历史",
+      "versionCount": "{count} 个版本",
+      "version": "版本 {number}",
+      "current": "当前",
+      "noPreview": "无预览",
+      "deleteVersion": "删除此版本",
+      "confirmDeleteTitle": "确认删除版本",
+      "confirmDeleteDescription": "确定要删除版本 {number} 吗？此操作无法撤销。"
+    },
+    "resolutionSelector": {
+      "landscape": "横屏 16:9",
+      "portrait": "竖屏 9:16",
+      "square": "方形 1:1",
+      "4k": "4K 16:9"
+    },
+    "aspectRatios": {
+      "auto": "自动",
+      "portrait": "竖屏",
+      "widescreen": "宽屏",
+      "square": "正方",
+      "ultrawide": "超宽",
+      "classic": "经典",
+      "retro": "复古",
+      "standard": "方正",
+      "tallPortrait": "竖幅",
+      "tallLong": "竖长",
+      "verticalStandard": "竖版",
+      "8sFixed": "8 秒（固定）"
+    },
+    "actionEditorForms": {
+      "name": "名称",
+      "assetName": "资产名称",
+      "promptRequired": "提示词 *",
+      "describeImage": "描述你想生成的图片",
+      "tags": "标签",
+      "aspectRatio": "宽高比",
+      "referenceImages": "参考图",
+      "cannotParseParams": "无法解析图片生成参数",
+      "title": "标题",
+      "videoTitle": "视频标题",
+      "duration": "时长",
+      "describeVideo": "描述视频内容和镜头运动",
+      "referenceImagesLimit": "参考图（1-3张）*",
+      "maxReferenceWarning": "最多支持 3 张参考图，已自动限制",
+      "nameRequired": "名称 *",
+      "textAssetNameHint": "文本资产名称，如'主角小传'、'第一幕剧本'",
+      "contentRequired": "内容 *",
+      "edit": "编辑",
+      "preview": "预览",
+      "markdownPlaceholder": "支持 Markdown 语法...",
+      "noContent": "*暂无内容*"
+    },
+    "assetMention": {
+      "noMatch": "未找到匹配的素材",
+      "navigate": "导航",
+      "select": "选择",
+      "close": "关闭"
+    },
     "projectSelector": {
       "project": "项目",
       "selectProject": "选择项目",
@@ -1304,6 +1668,12 @@
     "versions": "{count} 个版本",
     "seconds": "{count}秒",
     "times": "{count}次",
+    "assetProgress": {
+      "generationFailed": "生成失败",
+      "generating": "生成中...",
+      "preparingGeneration": "准备生成",
+      "generatingStatus": "生成中"
+    },
     "assetGeneration": {
       "title": "AI 创作素材",
       "advancedParams": "高级参数",
@@ -1321,6 +1691,8 @@
       "multipleReference": "可选择多张图片作为创作参考",
       "selectedImages": "已选择 {count} 张参考图",
       "successGenerated": "成功生成 {count} 张图片",
+      "editing": "正在编辑",
+      "cancelEdit": "取消编辑",
       "aspectRatios": {
         "ultrawide": "21:9 (超宽)",
         "widescreen": "16:9 (宽屏)",
@@ -1540,6 +1912,16 @@
           "sendMessageFailed": "发送消息失败",
           "generationStopped": "已停止生成"
         },
+        "stream": {
+          "responseTimeout": "响应超时",
+          "cannotReadStream": "无法读取响应流",
+          "userInterrupted": "用户中断",
+          "sendFailed": "发送失败",
+          "resumeFailed": "恢复失败",
+          "loadConversationFailed": "加载对话失败",
+          "deleteConversationFailed": "删除对话失败",
+          "conversationDeleted": "已删除对话"
+        },
         "time": {
           "justNow": "刚刚",
           "minutesAgo": "{minutes}分钟前",
@@ -1716,6 +2098,36 @@
       "export": "导出",
       "dragToAddVideo": "拖拽或点击添加视频",
       "dragToAddAudio": "拖拽或点击添加音频",
+      "videoLoadFailed": "视频加载失败",
+      "dragToStart": "将素材拖入时间轴开始剪辑",
+      "tracks": {
+        "video": "视频",
+        "audio": "音频"
+      },
+      "assetStrip": {
+        "assets": "素材",
+        "assetLibrary": "素材库",
+        "loadFailed": "加载素材失败",
+        "noAssets": "暂无素材，请先在素材管理中添加",
+        "trimmed": "已裁剪",
+        "removeFromTimeline": "从时间轴移除"
+      },
+      "audioClip": {
+        "removeFromTimeline": "从时间轴移除",
+        "inPoint": "入点",
+        "outPoint": "出点",
+        "duration": "时长",
+        "deleteClip": "删除片段"
+      },
+      "assetPreview": {
+        "cannotPreview": "素材无法预览",
+        "videoPreview": "视频预览",
+        "audioPreview": "音频预览"
+      },
+      "trackName": {
+        "video": "视频 {number}",
+        "audio": "音频 {number}"
+      },
       "errors": {
         "videoTrackVideoOnly": "视频轨道只能添加视频素材",
         "audioTrackAudioOnly": "音频轨道只能添加音频素材",
