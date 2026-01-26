@@ -16,7 +16,7 @@ import { DependencyNotReadyError } from "../lib/workers/errors/DependencyNotRead
 import type { Job } from "@/types/job";
 
 const POLL_INTERVAL = parseInt(process.env.WORKER_POLL_INTERVAL || '2000'); // 2 秒轮询一次（更短的轮询间隔以充分利用并发能力）
-const MAX_CONCURRENT_JOBS = parseInt(process.env.MAX_CONCURRENT_JOBS || '5'); // 最多同时处理 5 个任务
+const MAX_CONCURRENT_JOBS = parseInt(process.env.MAX_CONCURRENT_JOBS || '10'); // 最多同时处理 10 个任务
 const ERROR_RETRY_DELAY = 5000; // 错误后等待 5 秒再重试
 const IDLE_POLL_INTERVAL = parseInt(process.env.WORKER_IDLE_POLL_INTERVAL || '5000'); // 空闲时 5 秒轮询一次
 const TIMEOUT_CHECK_INTERVAL = 60000; // 每60秒检查一次超时任务

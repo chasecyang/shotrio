@@ -49,10 +49,6 @@ COPY drizzle ./drizzle
 # 复制必要的脚本
 COPY scripts ./scripts
 
-# 健康检查（可选，Worker 没有 HTTP 端口，所以检查进程是否存在）
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD pgrep -f "tsx" || exit 1
-
 # 启动 Worker（使用不带 --env-file 的命令）
 CMD ["npm", "run", "worker:prod"]
 
