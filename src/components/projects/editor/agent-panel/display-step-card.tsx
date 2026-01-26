@@ -56,10 +56,15 @@ export const DisplayStepCard = memo(function DisplayStepCard({
       switch (toolCall.status) {
         case "completed":
           return toolCall.result || t("status.completed");
-        case "failed":
-          return toolCall.error ? t("status.failedWithError", { error: toolCall.error }) : t("status.failed");
+        case "failed": {
+          // Translate error codes
+          const errorText = toolCall.error === "PARSE_RESPONSE_FAILED"
+            ? t("status.parseResponseFailed")
+            : toolCall.error;
+          return errorText ? t("status.failedWithError", { error: errorText }) : t("status.failed");
+        }
         case "rejected":
-          return toolCall.error || t("status.rejected");
+          return t("status.rejected");
         case "executing":
           return t("status.executing");
         case "awaiting_confirmation":

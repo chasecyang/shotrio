@@ -33,24 +33,21 @@ const EXCLUDED_PATHS = [
 function shouldShowFloatingButton(pathname: string): boolean {
   // 移除语言前缀（如 /zh、/en）
   const pathWithoutLocale = pathname.replace(/^\/(zh|en)/, '');
-  
+
   // 检查是否匹配排除路径
-  const isExcludedPath = EXCLUDED_PATHS.some(excludedPath => 
+  const isExcludedPath = EXCLUDED_PATHS.some(excludedPath =>
     pathWithoutLocale.startsWith(excludedPath)
   );
-  
+
   if (isExcludedPath) {
     return false;
   }
-  
-  // 检查是否是 projects 页面（包含 sidebar 的页面）
-  // 在 projects 页面下，客服按钮在 sidebar 中，不显示浮动按钮
-  const isProjectsPage = pathWithoutLocale.startsWith('/projects');
-  
-  if (isProjectsPage) {
-    return false; // projects 页面下不显示浮动按钮，改用 sidebar 中的按钮
+
+  // projects 页面使用 header 中的按钮，不显示浮动按钮
+  if (pathWithoutLocale.startsWith('/projects')) {
+    return false;
   }
-  
+
   return true;
 }
 

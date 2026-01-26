@@ -233,12 +233,12 @@ export class AgentEngine {
       
       yield* this.executeTool(state, finalToolCall, funcDef);
     } else {
-      // 用户拒绝：添加 rejection 消息
-      console.log("[AgentEngine] 用户拒绝");
-      
+      // User rejected: add rejection message
+      console.log("[AgentEngine] User rejected");
+
       const rejectionContent = JSON.stringify({
         success: false,
-        error: "用户拒绝了此操作",
+        error: "USER_REJECTED",
         userRejected: true,
       });
 
@@ -275,14 +275,14 @@ export class AgentEngine {
         rejectionContent
       );
 
-      // 发送 tool_call_end 事件
+      // Send tool_call_end event
       yield {
         type: "tool_call_end",
         data: {
           id: pendingToolCall.id,
           name: pendingToolCall.function.name,
           success: false,
-          error: "用户拒绝了此操作",
+          error: "USER_REJECTED",
         },
       };
 

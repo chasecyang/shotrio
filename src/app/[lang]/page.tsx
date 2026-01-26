@@ -106,10 +106,10 @@ export default async function Home() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative py-8 md:py-12 overflow-hidden">
+        <section className="relative py-6 md:py-8 overflow-hidden">
           {/* Background Elements */}
           <div className="absolute inset-0 bg-noise opacity-[0.03] z-10 pointer-events-none"></div>
-          
+
           <div className="container px-4 mx-auto relative z-20">
             <div className="max-w-5xl mx-auto text-center">
               <FadeIn delay={0}>
@@ -118,18 +118,18 @@ export default async function Home() {
                   <span className="tracking-wide uppercase text-xs font-bold">{t("subtitle")}</span>
                 </div>
               </FadeIn>
-              
+
               <FadeIn delay={0.1}>
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold font-heading tracking-tight mb-8 leading-[1.1]">
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-heading tracking-tight mb-4 leading-[1.1]">
                   {t("hero.title")}{" "}
                   <span className="text-primary italic">
                     {t("hero.titleHighlight")}
                   </span>
                 </h1>
               </FadeIn>
-              
+
               <FadeIn delay={0.2}>
-                <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-2xl mx-auto leading-relaxed">
                   {t("hero.subtitle")}
                 </p>
               </FadeIn>

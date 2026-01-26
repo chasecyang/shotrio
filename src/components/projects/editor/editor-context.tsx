@@ -9,6 +9,7 @@ import { refreshProject } from "@/lib/actions/project/refresh";
 import type { GenerationHistoryItem, AssetWithFullData, ImageResolution } from "@/types/asset";
 import type { AspectRatio } from "@/lib/services/image.service";
 import type { TimelineDetail } from "@/types/timeline";
+import type { CutListItem } from "@/types/cut";
 import { queryAssets } from "@/lib/actions/asset";
 import type { CreditCost } from "@/lib/utils/credit-calculator";
 
@@ -62,11 +63,18 @@ export interface EditorState {
   // 工作模式
   mode: EditorMode;
 
+  // 当前编辑的 Cut ID（null 表示在素材库视图）
+  activeCutId: string | null;
+
   // 项目数据
   project: ProjectDetail | null;
 
-  // 时间轴数据
+  // 时间轴数据（当前编辑的 Cut）
   timeline: TimelineDetail | null;
+
+  // Cut 列表
+  cuts: CutListItem[];
+  cutsLoading: boolean;
 
   // 加载状态
   isLoading: boolean;
@@ -99,6 +107,9 @@ type EditorAction =
   | { type: "UPDATE_PROJECT"; payload: ProjectDetail } // 用于刷新项目数据
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_MODE"; payload: EditorMode }
+  | { type: "SET_ACTIVE_CUT"; payload: string | null } // 设置当前编辑的 Cut
+  | { type: "SET_CUTS"; payload: CutListItem[] } // 设置 Cut 列表
+  | { type: "SET_CUTS_LOADING"; payload: boolean }
   | { type: "SET_TIMELINE"; payload: TimelineDetail | null }
   | { type: "UPDATE_TIMELINE"; payload: TimelineDetail }
   | { type: "SET_ASSETS"; payload: AssetWithFullData[] }
@@ -121,8 +132,11 @@ type EditorAction =
 // 初始状态
 const initialState: EditorState = {
   mode: "asset-management",
+  activeCutId: null,
   project: null,
   timeline: null,
+  cuts: [],
+  cutsLoading: false,
   isLoading: true,
   assets: [],
   assetsLoading: false,
@@ -170,6 +184,29 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return {
         ...state,
         mode: action.payload,
+      };
+
+    case "SET_ACTIVE_CUT":
+      return {
+        ...state,
+        activeCutId: action.payload,
+        // 切换 Cut 时清空 timeline，等待加载
+        timeline: action.payload ? state.timeline : null,
+        // 自动切换模式
+        mode: action.payload ? "clipping" : "asset-management",
+      };
+
+    case "SET_CUTS":
+      return {
+        ...state,
+        cuts: action.payload,
+        cutsLoading: false,
+      };
+
+    case "SET_CUTS_LOADING":
+      return {
+        ...state,
+        cutsLoading: action.payload,
       };
 
     case "SET_TIMELINE":
@@ -370,6 +407,9 @@ interface EditorContextType {
   setMode: (mode: EditorMode) => void; // 切换编辑器模式
   setTimeline: (timeline: TimelineDetail | null) => void; // 设置时间轴数据
   updateTimeline: (timeline: TimelineDetail) => void; // 更新时间轴数据
+  // Cut 相关方法
+  setActiveCut: (cutId: string | null) => void; // 设置当前编辑的 Cut
+  loadCuts: () => Promise<void>; // 加载 Cut 列表
   // 素材相关方法
   loadAssets: (options?: LoadAssetsOptions) => Promise<void>; // 加载素材列表
   // 任务轮询（单例）
@@ -494,6 +534,24 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     dispatch({ type: "UPDATE_TIMELINE", payload: timeline });
   }, []);
 
+  // Cut 相关方法
+  const setActiveCut = useCallback((cutId: string | null) => {
+    dispatch({ type: "SET_ACTIVE_CUT", payload: cutId });
+  }, []);
+
+  const loadCuts = useCallback(async () => {
+    if (!state.project?.id) return;
+    dispatch({ type: "SET_CUTS_LOADING", payload: true });
+    try {
+      const { getProjectCuts } = await import("@/lib/actions/cut");
+      const cuts = await getProjectCuts(state.project.id);
+      dispatch({ type: "SET_CUTS", payload: cuts });
+    } catch (error) {
+      console.error("加载 Cut 列表失败:", error);
+      dispatch({ type: "SET_CUTS_LOADING", payload: false });
+    }
+  }, [state.project?.id]);
+
   // 用于防止重复加载的 ref
   const isLoadingAssetsRef = useRef(false);
 
@@ -601,6 +659,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setMode,
       setTimeline,
       updateTimeline,
+      setActiveCut,
+      loadCuts,
       loadAssets,
       setAssetGenerationMode,
       setSelectedSourceAssets,
@@ -624,6 +684,8 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
       setMode,
       setTimeline,
       updateTimeline,
+      setActiveCut,
+      loadCuts,
       loadAssets,
       setAssetGenerationMode,
       setSelectedSourceAssets,

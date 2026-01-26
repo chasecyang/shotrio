@@ -14,7 +14,7 @@ import { getVideoAssets, queryAssets } from "@/lib/actions/asset";
 import { getSystemArtStyles } from "@/lib/actions/art-style/queries";
 import { analyzeAssetsByType } from "@/lib/actions/asset/stats";
 import { getTextAssetContent } from "@/lib/actions/asset/text-asset";
-import { getOrCreateProjectTimeline } from "@/lib/actions/timeline/timeline-actions";
+import { getOrCreateProjectTimeline } from "@/lib/actions/cut";
 
 /**
  * 统一的查询类处理器

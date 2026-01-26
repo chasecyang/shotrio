@@ -11,13 +11,13 @@ import { getAssetWithFullData } from "@/lib/actions/asset";
 import {
   getOrCreateProjectTimeline,
   getProjectTimeline,
-} from "@/lib/actions/timeline/timeline-actions";
+} from "@/lib/actions/cut";
 import {
   addClipToTimeline,
   removeClip as removeClipAction,
   updateClip as updateClipAction,
   reorderClips,
-} from "@/lib/actions/timeline/clip-actions";
+} from "@/lib/actions/cut";
 
 /**
  * 统一的时间轴操作处理器
@@ -41,13 +41,13 @@ export async function handleTimelineFunctions(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `未知的时间轴函数: ${name}`,
+        error: `Unknown timeline function: ${name}`,
       };
   }
 }
 
 /**
- * 添加片段到时间轴
+ * Add clip to timeline
  */
 async function handleAddClip(
   functionCall: FunctionCall,
@@ -62,30 +62,30 @@ async function handleAddClip(
   const trackIndexParam = parameters.trackIndex as number | undefined;
   const startTimeParam = parameters.startTime as number | undefined;
 
-  // 获取或创建时间轴
+  // Get or create timeline
   const timelineResult = await getOrCreateProjectTimeline(projectId);
   if (!timelineResult.success || !timelineResult.timeline) {
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: timelineResult.error || "无法获取或创建时间轴",
+      error: timelineResult.error || "Failed to get or create timeline",
     };
   }
   const timelineData = timelineResult.timeline;
 
-  // 获取素材信息
+  // Get asset info
   const assetResult = await getAssetWithFullData(assetId);
   if (!assetResult.success || !assetResult.asset) {
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: assetResult.error || `素材 ${assetId} 不存在`,
+      error: assetResult.error || `Asset ${assetId} not found`,
     };
   }
   const assetData = assetResult.asset;
   const isAudioAsset = assetData.assetType === "audio";
 
-  // ========== 轨道选择逻辑 ==========
+  // ========== Track selection logic ==========
   let finalTrackIndex: number;
 
   if (trackIndexParam !== undefined) {
@@ -95,7 +95,7 @@ async function handleAddClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: "音频素材必须放在音频轨道（trackIndex >= 100）",
+        error: "Audio assets must be placed on audio tracks (trackIndex >= 100)",
       };
     }
 
@@ -103,7 +103,7 @@ async function handleAddClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: "视频/图片素材不能放在音频轨道",
+        error: "Video/image assets cannot be placed on audio tracks",
       };
     }
 
@@ -112,7 +112,7 @@ async function handleAddClip(
     finalTrackIndex = isAudioAsset ? 100 : 0;
   }
 
-  // ========== 时长计算 ==========
+  // ========== Duration calculation ==========
   let clipDuration = duration;
   if (!clipDuration) {
     if (assetData.assetType === "video" && assetData.duration) {
@@ -123,12 +123,12 @@ async function handleAddClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: "图片素材必须指定 duration 参数",
+        error: "Image assets require a duration parameter",
       };
     }
   }
 
-  // ========== 位置计算 ==========
+  // ========== Position calculation ==========
   let startTime: number | undefined = startTimeParam;
   let order: number | undefined;
 
@@ -156,12 +156,12 @@ async function handleAddClip(
   });
 
   if (addResult.success) {
-    const trackTypeLabel = finalTrackIndex >= 100 ? "音频轨道" : "视频轨道";
+    const trackTypeLabel = finalTrackIndex >= 100 ? "audio track" : "video track";
     return {
       functionCallId: functionCall.id,
       success: true,
       data: {
-        message: `已添加素材"${assetData.name}"到${trackTypeLabel}（轨道${finalTrackIndex}）`,
+        message: `Added asset "${assetData.name}" to ${trackTypeLabel} (track ${finalTrackIndex})`,
         trackIndex: finalTrackIndex,
         clipCount: addResult.timeline?.clips.length,
         timelineDuration: addResult.timeline?.duration,
@@ -171,13 +171,13 @@ async function handleAddClip(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: addResult.error || "添加片段失败",
+      error: addResult.error || "Failed to add clip",
     };
   }
 }
 
 /**
- * 移除片段
+ * Remove clip
  */
 async function handleRemoveClip(
   functionCall: FunctionCall
@@ -191,7 +191,7 @@ async function handleRemoveClip(
       functionCallId: functionCall.id,
       success: true,
       data: {
-        message: "已移除片段，后续片段已自动前移",
+        message: "Clip removed, subsequent clips shifted forward",
         clipCount: removeResult.timeline?.clips.length,
         timelineDuration: removeResult.timeline?.duration,
       },
@@ -200,13 +200,13 @@ async function handleRemoveClip(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: removeResult.error || "移除片段失败",
+      error: removeResult.error || "Failed to remove clip",
     };
   }
 }
 
 /**
- * 更新片段
+ * Update clip
  */
 async function handleUpdateClip(
   functionCall: FunctionCall,
@@ -225,20 +225,20 @@ async function handleUpdateClip(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: "时间轴不存在",
+      error: "Timeline does not exist",
     };
   }
 
   const updates: string[] = [];
 
-  // 处理素材替换
+  // Handle asset replacement
   if (replaceWithAssetId !== undefined) {
     const targetClip = timelineData.clips.find((c) => c.id === clipId);
     if (!targetClip) {
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `片段 ${clipId} 不存在`,
+        error: `Clip ${clipId} not found`,
       };
     }
 
@@ -247,7 +247,7 @@ async function handleUpdateClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: newAssetResult.error || `素材 ${replaceWithAssetId} 不存在`,
+        error: newAssetResult.error || `Asset ${replaceWithAssetId} not found`,
       };
     }
     const newAsset = newAssetResult.asset;
@@ -262,18 +262,18 @@ async function handleUpdateClip(
       trimEnd,
     });
 
-    updates.push(`素材替换为"${newAsset.name}"`);
+    updates.push(`Asset replaced with "${newAsset.name}"`);
 
     return {
       functionCallId: functionCall.id,
       success: true,
       data: {
-        message: `片段已更新：${updates.join("，")}`,
+        message: `Clip updated: ${updates.join(", ")}`,
       },
     };
   }
 
-  // 普通更新
+  // Normal update
   const updateInput: {
     duration?: number;
     trimStart?: number;
@@ -282,15 +282,15 @@ async function handleUpdateClip(
 
   if (duration !== undefined) {
     updateInput.duration = duration;
-    updates.push(`时长改为 ${duration}ms`);
+    updates.push(`Duration set to ${duration}ms`);
   }
   if (trimStart !== undefined) {
     updateInput.trimStart = trimStart;
-    updates.push(`入点改为 ${trimStart}ms`);
+    updates.push(`Trim start set to ${trimStart}ms`);
   }
   if (trimEnd !== undefined) {
     updateInput.trimEnd = trimEnd;
-    updates.push(`出点改为 ${trimEnd}ms`);
+    updates.push(`Trim end set to ${trimEnd}ms`);
   }
 
   if (Object.keys(updateInput).length > 0) {
@@ -299,19 +299,19 @@ async function handleUpdateClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: updateResult.error || "更新片段失败",
+        error: updateResult.error || "Failed to update clip",
       };
     }
   }
 
-  // 处理移动位置
+  // Handle position move
   if (moveToPosition !== undefined) {
     const currentClip = timelineData.clips.find((c) => c.id === clipId);
     if (!currentClip) {
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `片段 ${clipId} 不存在`,
+        error: `Clip ${clipId} not found`,
       };
     }
 
@@ -334,7 +334,7 @@ async function handleUpdateClip(
     }
 
     await reorderClips(timelineData.id, newOrder);
-    updates.push(`移动到位置 ${moveToPosition}`);
+    updates.push(`Moved to position ${moveToPosition}`);
   }
 
   return {
@@ -343,14 +343,14 @@ async function handleUpdateClip(
     data: {
       message:
         updates.length > 0
-          ? `片段已更新：${updates.join("，")}`
-          : "没有需要更新的内容",
+          ? `Clip updated: ${updates.join(", ")}`
+          : "No updates needed",
     },
   };
 }
 
 /**
- * 添加音频轨道
+ * Add audio track
  */
 async function handleAddAudioTrack(
   functionCall: FunctionCall,
@@ -363,14 +363,14 @@ async function handleAddAudioTrack(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: timelineResult.error || "无法获取或创建时间轴",
+      error: timelineResult.error || "Failed to get or create timeline",
     };
   }
   const timelineData = timelineResult.timeline;
 
   const { getTimelineTracks, addTrackToConfig } = await import("@/types/timeline");
   const { updateTimelineTracks } = await import(
-    "@/lib/actions/timeline/timeline-actions"
+    "@/lib/actions/cut"
   );
 
   const currentTracks = getTimelineTracks(timelineData.metadata);
@@ -394,7 +394,7 @@ async function handleAddAudioTrack(
       functionCallId: functionCall.id,
       success: true,
       data: {
-        message: `已添加音频轨道"${newTrack?.name}"（索引 ${newTrack?.index}）`,
+        message: `Added audio track "${newTrack?.name}" (index ${newTrack?.index})`,
         trackIndex: newTrack?.index,
         totalTracks: newTracks.length,
       },
@@ -403,7 +403,7 @@ async function handleAddAudioTrack(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: updateResult.error || "添加音频轨道失败",
+      error: updateResult.error || "Failed to add audio track",
     };
   }
 }

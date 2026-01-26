@@ -27,8 +27,17 @@ export async function extractFrameAtTimestamp(
     // 创建一个 Promise 来处理 ffmpeg 操作
     const frameBuffer = await new Promise<Buffer>((resolve, reject) => {
       const chunks: Buffer[] = [];
+      let ffmpegEnded = false;
+      let streamEnded = false;
 
-      ffmpeg(videoUrl)
+      const tryResolve = () => {
+        if (ffmpegEnded && streamEnded) {
+          const buffer = Buffer.concat(chunks);
+          resolve(buffer);
+        }
+      };
+
+      const command = ffmpeg(videoUrl)
         .inputOptions([`-ss ${timestamp}`]) // 定位到指定时间戳
         .outputOptions([
           "-vframes 1", // 只提取一帧
@@ -38,24 +47,34 @@ export async function extractFrameAtTimestamp(
         .on("start", (commandLine) => {
           console.log(`[FrameExtractor] FFmpeg 命令: ${commandLine}`);
         })
+        .on("end", () => {
+          ffmpegEnded = true;
+          tryResolve();
+        })
         .on("error", (err: Error) => {
           console.error(`[FrameExtractor] FFmpeg 错误:`, err);
           reject(err);
-        })
-        .pipe()
-        .on("data", (chunk: Buffer) => {
-          chunks.push(chunk);
-        })
-        .on("end", () => {
-          const buffer = Buffer.concat(chunks);
-          resolve(buffer);
-        })
-        .on("error", (err: Error) => {
-          reject(err);
         });
+
+      const stream = command.pipe();
+      stream.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+      stream.on("end", () => {
+        streamEnded = true;
+        tryResolve();
+      });
+      stream.on("error", (err: Error) => {
+        reject(err);
+      });
     });
 
     console.log(`[FrameExtractor] 帧提取成功，大小: ${frameBuffer.length} bytes`);
+
+    // 验证帧数据不为空
+    if (frameBuffer.length === 0) {
+      throw new Error("提取的帧数据为空，可能是时间戳超出视频范围或视频无法访问");
+    }
 
     // 生成唯一的文件名
     const fileName = `frame-${Date.now()}-${randomUUID()}.png`;

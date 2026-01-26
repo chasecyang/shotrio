@@ -843,7 +843,7 @@ function TimelinePanelContent({
         {/* Left: Resolution selector */}
         <div className="flex items-center gap-3">
           <ResolutionSelector
-            value={timeline.resolution}
+            value={timeline.resolution ?? "1080x1920"}
             onValueChange={handleResolutionChange}
           />
         </div>

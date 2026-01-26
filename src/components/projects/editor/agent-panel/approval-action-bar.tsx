@@ -206,8 +206,16 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
     if (isGenerateAssets || isGenerateVideo || isSetProjectInfo || isCreateTextAsset) {
       return [];
     }
-    return formatParametersForConfirmation(parsedArgs);
-  }, [parsedArgs, isGenerateAssets, isGenerateVideo, isSetProjectInfo, isCreateTextAsset]);
+    // 使用翻译函数
+    const tKeys = (key: string) => tAgent(`params.keys.${key}`) || key;
+    const tValues = (key: string, params?: Record<string, string | number>) => {
+      if (params) {
+        return tAgent(`params.values.${key}`, params);
+      }
+      return tAgent(`params.values.${key}`);
+    };
+    return formatParametersForConfirmation(parsedArgs, tKeys, tValues);
+  }, [parsedArgs, isGenerateAssets, isGenerateVideo, isSetProjectInfo, isCreateTextAsset, tAgent]);
 
   // 获取美术风格名称
   useEffect(() => {
@@ -300,7 +308,7 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
       role: "tool",
       content: JSON.stringify({
         success: false,
-        error: "用户拒绝了此操作",
+        error: tAgent("toolExecution.status.rejected"),
         userRejected: true,
       }),
       toolCallId,
@@ -550,18 +558,31 @@ export const ApprovalActionBar = memo(function ApprovalActionBar({
   // 获取操作显示名称
   const getDisplayName = () => {
     const name = approvalInfo.toolCall.function.name;
-    switch (name) {
-      case "generate_image_asset":
-        return tAgent("toolExecution.displayNames.generateImageAsset");
-      case "generate_video_asset":
-        return tAgent("toolExecution.displayNames.generateVideoAsset");
-      case "create_text_asset":
-        return tAgent("toolExecution.displayNames.createTextAsset");
-      case "set_project_info":
-        return tAgent("toolExecution.displayNames.setProjectInfo");
-      default:
-        return approvalInfo.funcDef.displayName || name;
+    // 将 snake_case 转换为 camelCase 用于翻译键
+    const keyMap: Record<string, string> = {
+      query_context: "queryContext",
+      query_assets: "queryAssets",
+      query_text_assets: "queryTextAssets",
+      query_timeline: "queryTimeline",
+      generate_image_asset: "generateImageAsset",
+      generate_video_asset: "generateVideoAsset",
+      create_text_asset: "createTextAsset",
+      set_project_info: "setProjectInfo",
+      update_asset: "updateAsset",
+      delete_asset: "deleteAsset",
+      add_clip: "addClip",
+      remove_clip: "removeClip",
+      update_clip: "updateClip",
+      add_audio_track: "addAudioTrack",
+      generate_sound_effect: "generateSoundEffect",
+      generate_bgm: "generateBgm",
+      generate_dialogue: "generateDialogue",
+    };
+    const key = keyMap[name];
+    if (key) {
+      return tAgent(`toolExecution.displayNames.${key}`);
     }
+    return approvalInfo.funcDef.displayName || name;
   };
 
   return (

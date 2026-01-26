@@ -164,7 +164,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
               "opacity-0 group-hover/clip:opacity-100 transition-opacity z-20",
               "pointer-events-auto"
             )}
-            aria-label="从时间轴移除"
+            aria-label={t("assetStrip.removeFromTimeline")}
           >
             <X className="h-3 w-3" />
           </Button>
@@ -189,7 +189,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
             {/* 裁剪时显示时间提示 */}
             {isTrimmingLeft && (
               <div className="absolute -top-8 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
-                入点: {formatTimeDisplay(tempTrimStart)} | 时长: {formatTimeDisplay(tempDuration)}
+                {t("assetStrip.inPoint")}: {formatTimeDisplay(tempTrimStart)} | {t("assetStrip.duration")}: {formatTimeDisplay(tempDuration)}
               </div>
             )}
           </div>
@@ -214,7 +214,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
             {/* 裁剪时显示时间提示 */}
             {isTrimmingRight && (
               <div className="absolute -top-8 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 pointer-events-none">
-                出点: {formatTimeDisplay(clip.trimStart + tempDuration)} | 时长: {formatTimeDisplay(tempDuration)}
+                {t("assetStrip.outPoint")}: {formatTimeDisplay(clip.trimStart + tempDuration)} | {t("assetStrip.duration")}: {formatTimeDisplay(tempDuration)}
               </div>
             )}
           </div>
@@ -224,7 +224,7 @@ export const TimelineClipItem = React.memo(function TimelineClipItem({
       <ContextMenuContent>
         <ContextMenuItem onClick={onDelete} className="text-destructive">
           <Trash2 className="h-4 w-4 mr-2" />
-          删除片段
+          {t("assetStrip.deleteClip")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

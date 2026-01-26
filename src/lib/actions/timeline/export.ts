@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import db from "@/lib/db";
-import { timeline as timelineTable, project } from "@/lib/db/schemas/project";
+import { cut as cutTable, project } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
 import { createJob } from "@/lib/actions/job/create";
 import type { FinalVideoExportInput } from "@/types/job";
@@ -15,10 +15,10 @@ export interface ExportOptions {
 }
 
 /**
- * 导出时间轴为视频
+ * 导出剪辑为视频
  */
-export async function exportTimeline(
-  timelineId: string,
+export async function exportCut(
+  cutId: string,
   options: ExportOptions
 ): Promise<{ success: boolean; jobId?: string; error?: string }> {
   try {
@@ -42,11 +42,11 @@ export async function exportTimeline(
       return { success: false, error: "项目不存在或无权访问" };
     }
 
-    // 获取时间轴数据
-    const timeline = await db.query.timeline.findFirst({
+    // 获取剪辑数据
+    const cutData = await db.query.cut.findFirst({
       where: and(
-        eq(timelineTable.id, timelineId),
-        eq(timelineTable.projectId, options.projectId)
+        eq(cutTable.id, cutId),
+        eq(cutTable.projectId, options.projectId)
       ),
       with: {
         clips: {
@@ -57,16 +57,16 @@ export async function exportTimeline(
       },
     });
 
-    if (!timeline) {
-      return { success: false, error: "时间轴不存在" };
+    if (!cutData) {
+      return { success: false, error: "剪辑不存在" };
     }
 
-    if (timeline.clips.length === 0) {
-      return { success: false, error: "时间轴为空，无法导出" };
+    if (cutData.clips.length === 0) {
+      return { success: false, error: "剪辑为空，无法导出" };
     }
 
     // 提取视频片段 ID 列表（按顺序）
-    const videoIds = timeline.clips
+    const videoIds = cutData.clips
       .filter((clip) => clip.trackIndex < 100) // 只取视频轨道片段
       .sort((a, b) => a.startTime - b.startTime)
       .map((clip) => clip.assetId);
@@ -74,12 +74,12 @@ export async function exportTimeline(
     // 构建导出输入数据
     const inputData: FinalVideoExportInput = {
       projectId: options.projectId,
-      timelineId,
+      timelineId: cutId, // 保持字段名向后兼容
       videoIds,
       includeAudio: options.includeAudio,
       exportQuality: options.quality,
-      resolution: timeline.resolution ?? undefined,
-      fps: timeline.fps ?? undefined,
+      resolution: cutData.resolution ?? undefined,
+      fps: cutData.fps ?? undefined,
     };
 
     // 创建导出任务
@@ -102,4 +102,15 @@ export async function exportTimeline(
       error: error instanceof Error ? error.message : "创建导出任务失败",
     };
   }
+}
+
+/**
+ * 导出时间轴为视频（向后兼容别名）
+ * @deprecated 使用 exportCut 代替
+ */
+export async function exportTimeline(
+  timelineId: string,
+  options: ExportOptions
+): Promise<{ success: boolean; jobId?: string; error?: string }> {
+  return exportCut(timelineId, options);
 }

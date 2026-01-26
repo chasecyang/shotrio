@@ -3,10 +3,13 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useEditor, type LoadAssetsOptions } from "./editor-context";
 import { AssetGroup } from "./shared/asset-group";
+import { CutCard } from "./shared/cut-card";
 import { deleteAsset, deleteAssets, updateAssetSelectionStatus, batchUpdateSelectionStatus } from "@/lib/actions/asset";
+import { deleteCut } from "@/lib/actions/cut";
 import { AssetWithFullData, AssetTypeEnum, AssetSelectionStatus } from "@/types/asset";
+import type { CutListItem } from "@/types/cut";
 import { toast } from "sonner";
-import { Images, RefreshCw, Upload, Bot } from "lucide-react";
+import { Images, RefreshCw, Upload, Bot, Plus, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { retryJob } from "@/lib/actions/job";
@@ -35,6 +38,22 @@ import {
 } from "./shared/asset-filter";
 import { AssetSelectionTabs } from "./shared/asset-selection-filter";
 import { useTranslations } from "next-intl";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // localStorage keys
 const getSelectionStatusFilterKey = (projectId: string) => `editor:project:${projectId}:selectionStatusFilter`;
@@ -107,9 +126,11 @@ export function AssetGalleryPanel() {
   const {
     state,
     loadAssets,
+    loadCuts,
+    setActiveCut,
     referenceAssetInChat,
   } = useEditor();
-  const { project, assets: allAssets, assetsLoading, assetsLoaded } = state;
+  const { project, assets: allAssets, assetsLoading, assetsLoaded, cuts, cutsLoading } = state;
   const t = useTranslations("editor.assetGallery");
   const tCommon = useTranslations("common");
   const tAssetFilter = useTranslations("editor.assetFilter");
@@ -119,6 +140,7 @@ export function AssetGalleryPanel() {
   const [assetToDelete, setAssetToDelete] = useState<AssetWithFullData | null>(
     null
   );
+  const [cutToDelete, setCutToDelete] = useState<CutListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(
     new Set()
@@ -128,6 +150,10 @@ export function AssetGalleryPanel() {
     DownloadProgress | undefined
   >(undefined);
   const [initialLoadStarted, setInitialLoadStarted] = useState(false);
+  const [cutsExpanded, setCutsExpanded] = useState(true);
+  const [createCutDialogOpen, setCreateCutDialogOpen] = useState(false);
+  const [newCutName, setNewCutName] = useState("");
+  const [isCreatingCut, setIsCreatingCut] = useState(false);
 
   // 重新生成相关状态
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
@@ -198,7 +224,8 @@ export function AssetGalleryPanel() {
     if (!project?.id) return;
     setInitialLoadStarted(true);
     refreshAssets();
-  }, [project?.id, refreshAssets]);
+    loadCuts();
+  }, [project?.id, refreshAssets, loadCuts]);
 
   // 监听素材创建事件
   useEffect(() => {
@@ -276,6 +303,18 @@ export function AssetGalleryPanel() {
       let result;
       let deletedIds: string[] = [];
 
+      // Cut 删除
+      if (cutToDelete) {
+        result = await deleteCut(cutToDelete.id);
+        if (result.success) {
+          toast.success(t("cutDeleteSuccess"));
+          await loadCuts();
+        } else {
+          toast.error(result.error || t("deleteFailed"));
+        }
+        return;
+      }
+
       // assetToDelete 优先级更高（用户点击了未选中素材的删除按钮）
       if (assetToDelete) {
         deletedIds = [assetToDelete.id];
@@ -297,12 +336,56 @@ export function AssetGalleryPanel() {
         toast.error(result.error || t("deleteFailed"));
       }
     } catch (error) {
-      console.error("Delete asset failed:", error);
+      console.error("Delete failed:", error);
       toast.error(t("deleteFailed"));
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
       setAssetToDelete(null);
+      setCutToDelete(null);
+    }
+  };
+
+  // Cut 相关处理
+  const handleCutClick = (cut: CutListItem) => {
+    setActiveCut(cut.id);
+  };
+
+  const handleCutDelete = (cut: CutListItem) => {
+    setCutToDelete(cut);
+    setDeleteDialogOpen(true);
+  };
+
+  // 创建新 Cut - 打开对话框
+  const handleCreateCut = () => {
+    setNewCutName("");
+    setCreateCutDialogOpen(true);
+  };
+
+  // 确认创建 Cut
+  const handleConfirmCreateCut = async () => {
+    if (!project?.id) return;
+    setIsCreatingCut(true);
+    try {
+      const { createCut } = await import("@/lib/actions/cut");
+      const result = await createCut({
+        projectId: project.id,
+        title: newCutName.trim() || undefined,
+      });
+      if (result.success && result.cut) {
+        toast.success(t("cutCreated"));
+        setCreateCutDialogOpen(false);
+        await loadCuts();
+        // 直接进入新创建的 Cut 编辑模式
+        setActiveCut(result.cut.id);
+      } else {
+        toast.error(result.error || t("cutCreateFailed"));
+      }
+    } catch (error) {
+      console.error("Create cut failed:", error);
+      toast.error(t("cutCreateFailed"));
+    } finally {
+      setIsCreatingCut(false);
     }
   };
 
@@ -562,6 +645,15 @@ export function AssetGalleryPanel() {
               variant="outline"
               size="sm"
               className="h-7 gap-1.5"
+              onClick={handleCreateCut}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span className="text-xs">{t("newCut")}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5"
               onClick={() => setUploadDialogOpen(true)}
             >
               <Upload className="h-3.5 w-3.5" />
@@ -651,6 +743,41 @@ export function AssetGalleryPanel() {
           ) : (
             // 分组视图（当前逻辑下始终启用）
             <div className="space-y-2">
+              {/* Cuts 分组 */}
+              {cuts.length > 0 && (
+                <Collapsible open={cutsExpanded} onOpenChange={setCutsExpanded}>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-1 hover:bg-accent/50 rounded-lg transition-colors">
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${
+                        cutsExpanded ? "" : "-rotate-90"
+                      }`}
+                    />
+                    <Film className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{t("groupCuts")}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({cuts.length})
+                    </span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div
+                      className="grid gap-3 pt-2"
+                      style={{
+                        gridTemplateColumns: "repeat(auto-fill, minmax(192px, 1fr))",
+                      }}
+                    >
+                      {cuts.map((cut) => (
+                        <CutCard
+                          key={cut.id}
+                          cut={cut}
+                          onClick={handleCutClick}
+                          onDelete={handleCutDelete}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
               {groupedAssets.map(([groupType, assets]) => {
                 // 获取翻译后的分组名称
                 const groupTitle = groupType === "deprecated"
@@ -694,7 +821,9 @@ export function AssetGalleryPanel() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {assetToDelete
+              {cutToDelete
+                ? t("confirmDeleteCut", { name: cutToDelete.title })
+                : assetToDelete
                 ? t("confirmDeleteSingle", { name: assetToDelete.name })
                 : t("confirmDeleteBatch", { count: selectedAssetIds.size })}
             </AlertDialogDescription>
@@ -711,6 +840,45 @@ export function AssetGalleryPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 创建剪辑对话框 */}
+      <Dialog open={createCutDialogOpen} onOpenChange={setCreateCutDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("createCutTitle")}</DialogTitle>
+            <DialogDescription>{t("createCutDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="cut-name" className="text-sm font-medium">
+              {t("cutNameLabel")}
+            </Label>
+            <Input
+              id="cut-name"
+              value={newCutName}
+              onChange={(e) => setNewCutName(e.target.value)}
+              placeholder={t("cutNamePlaceholder")}
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !isCreatingCut) {
+                  handleConfirmCreateCut();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateCutDialogOpen(false)}
+              disabled={isCreatingCut}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button onClick={handleConfirmCreateCut} disabled={isCreatingCut}>
+              {isCreatingCut ? t("creating") : tCommon("create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 重新生成确认对话框 */}
       <RegenerateConfirmDialog

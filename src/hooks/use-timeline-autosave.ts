@@ -50,7 +50,7 @@ export function useTimelineAutosave(timeline: TimelineDetail | null) {
           description: timeline.description ?? undefined,
           duration: timeline.duration,
           fps: timeline.fps,
-          resolution: timeline.resolution,
+          resolution: timeline.resolution ?? undefined,
         });
         console.log("时间轴已自动保存");
       } catch (error) {

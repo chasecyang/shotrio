@@ -4,7 +4,6 @@ import { useEditor } from "./editor-context";
 import { Button } from "@/components/ui/button";
 import { EditorProvider } from "./editor-context";
 import { EditorHeader } from "./editor-header";
-import { ModeTabBar } from "./mode-tab-bar";
 import { AgentChatContainer } from "./agent-chat-container";
 import { AssetGalleryPanel } from "./asset-gallery-panel";
 import { ClippingModeLayout } from "./clipping-mode/clipping-mode-layout";
@@ -84,9 +83,6 @@ function EditorLayoutInner({
         user={user}
       />
 
-      {/* 居中的模式切换Tab */}
-      <ModeTabBar />
-
       {/* 主内容区 - flex 布局容器 */}
       <div className="flex-1 flex relative overflow-hidden p-3 gap-3">
         {/* Agent 对话组件 - 作为 flex 子元素或浮动 */}
@@ -98,7 +94,7 @@ function EditorLayoutInner({
             <ActionEditorPanel />
           ) : state.showSettings ? (
             <ProjectSettingsPanel />
-          ) : state.mode === "clipping" ? (
+          ) : state.activeCutId ? (
             <ClippingModeLayout />
           ) : (
             <AssetGalleryPanel />

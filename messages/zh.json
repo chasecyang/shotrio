@@ -19,6 +19,7 @@
     "delete": "删除",
     "edit": "编辑",
     "add": "添加",
+    "create": "创建",
     "search": "搜索",
     "submit": "提交",
     "back": "返回",
@@ -1394,6 +1395,50 @@
       "generation": "生成",
       "modification": "修改",
       "deletion": "删除"
+    },
+    "functionDescription": {
+      "queryProjectContext": "查询项目上下文",
+      "queryImageAssets": "查询图片资产",
+      "queryVideoAssets": "查询视频资产",
+      "queryAssets": "查询资产库",
+      "queryAssetsWithTags": "标签：{tags}",
+      "generateImageAsset": "生成图片资产",
+      "generateImageAssetWithName": "生成图片资产 - {name}",
+      "generateImageAssets": "生成 {count} 个图片资产",
+      "generateVideoAsset": "生成视频资产",
+      "generateVideoAssetWithTitle": "生成视频资产 - {title}",
+      "updateAsset": "修改资产",
+      "updateAssetWithName": "修改资产 - {name}",
+      "updateAssets": "修改 {count} 个资产",
+      "setProjectInfo": "设置项目信息",
+      "setProjectFields": "设置项目{fields}",
+      "fieldTitle": "标题",
+      "fieldDescription": "描述",
+      "fieldStyle": "美术风格",
+      "deleteAsset": "删除资产",
+      "deleteAssets": "删除 {count} 个资产"
+    },
+    "functionResult": {
+      "queriedContext": "已查询: {parts}",
+      "queriedProjectContext": "已查询项目上下文",
+      "projectInfo": "项目信息",
+      "episode": "剧集",
+      "videos": "视频({count})",
+      "assets": "素材({count})",
+      "artStyles": "美术风格列表",
+      "foundAssets": "找到 {count} 个资产",
+      "queryComplete": "查询完成",
+      "createdVideoWithTitle": "已创建视频: {title}",
+      "createdVideoTask": "已创建视频生成任务",
+      "createdImageTasks": "已创建 {count} 个生成任务",
+      "createdImageTask": "已创建图片生成任务",
+      "updatedAssets": "已更新 {count} 个资产",
+      "updatedAsset": "已更新资产",
+      "updatedProjectFields": "已更新项目{fields}",
+      "updatedProjectInfo": "已更新项目信息",
+      "deletedAssets": "已删除 {count} 个资产",
+      "completedOperations": "已完成 {count} 项操作",
+      "totalItems": "共 {count} 项"
     }
   },
   "toasts": {
@@ -1601,10 +1646,21 @@
     "assetGallery": {
       "assetsCount": "{count} 个素材",
       "groupDeprecated": "废弃",
+      "groupCuts": "剪辑",
+      "newCut": "新建剪辑",
+      "cutCreated": "剪辑已创建",
+      "cutCreateFailed": "创建剪辑失败",
+      "createCutTitle": "新建剪辑",
+      "createCutDescription": "为新剪辑输入一个名称",
+      "cutNameLabel": "剪辑名称",
+      "cutNamePlaceholder": "输入剪辑名称",
+      "creating": "创建中...",
       "noAssets": "暂无素材",
       "noMatchingAssets": "没有符合条件的素材",
       "tryAdjustFilter": "尝试调整筛选条件查看更多素材",
       "deleteSuccess": "已删除 {count} 个素材",
+      "cutDeleteSuccess": "剪辑已删除",
+      "confirmDeleteCut": "确定要删除剪辑「{name}」吗？此操作无法撤销。",
       "deleteFailed": "删除失败",
       "retrySubmitted": "已重新提交任务",
       "retryFailed": "重试失败",
@@ -1649,6 +1705,11 @@
       "rejected": "废弃",
       "unrated": "未筛选"
     },
+    "cutCard": {
+      "rename": "重命名",
+      "delete": "删除",
+      "clipCount": "{count} 个片段"
+    },
     "regenerateDialog": {
       "title": "确认重新生成",
       "description": "将使用相同的参数重新生成此素材，这将创建一个新版本",
@@ -1664,6 +1725,7 @@
     "expandAgent": "展开 Agent 对话",
     "interrupted": "已中断",
     "clips": "{count} 个片段",
+    "backToGallery": "返回",
     "versionHistory": "版本历史",
     "versions": "{count} 个版本",
     "seconds": "{count}秒",
@@ -1804,13 +1866,27 @@
           "failedWithError": "失败：{error}",
           "rejected": "用户拒绝了此操作",
           "executing": "执行中...",
-          "awaitingConfirmation": "等待用户确认"
+          "awaitingConfirmation": "等待用户确认",
+          "parseResponseFailed": "解析响应失败"
         },
         "displayNames": {
+          "queryContext": "查询项目上下文",
+          "queryAssets": "查询资产库",
+          "queryTextAssets": "查询文本资产",
+          "queryTimeline": "查询时间轴",
           "generateImageAsset": "生成图片素材",
           "generateVideoAsset": "生成视频素材",
           "createTextAsset": "创建文本资产",
-          "setProjectInfo": "设置项目信息"
+          "setProjectInfo": "设置项目信息",
+          "updateAsset": "修改资产",
+          "deleteAsset": "删除资产",
+          "addClip": "添加片段",
+          "removeClip": "移除片段",
+          "updateClip": "更新片段",
+          "addAudioTrack": "添加音频轨道",
+          "generateSoundEffect": "生成音效",
+          "generateBgm": "生成背景音乐",
+          "generateDialogue": "生成台词配音"
         }
       },
       "actionBar": {
@@ -2089,6 +2165,16 @@
         "success": "派生请求已提交",
         "cancel": "取消",
         "nameSuffix": " - 派生"
+      }
+    },
+    "clippingMode": {
+      "assetStrip": {
+        "trimmed": "已裁剪",
+        "removeFromTimeline": "从时间轴移除",
+        "inPoint": "入点",
+        "outPoint": "出点",
+        "duration": "时长",
+        "deleteClip": "删除片段"
       }
     },
     "timeline": {

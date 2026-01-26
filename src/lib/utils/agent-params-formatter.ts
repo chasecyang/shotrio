@@ -16,40 +16,36 @@ export interface PromptPart {
 }
 
 /**
- * 参数键名中文映射
+ * 翻译函数类型
  */
-const PARAM_KEY_LABELS: Record<string, string> = {
-  // 基础 ID
-  episodeId: "剧集ID",
-  projectId: "项目ID",
-  videoId: "视频ID",
-  videoIds: "视频列表",
-  assetId: "素材ID",
-  assetIds: "素材列表",
-  sourceAssetIds: "参考图",
+export type ParamTranslator = (key: string, params?: Record<string, string | number>) => string;
 
-  // 内容属性
-  prompt: "提示词",
-  name: "名称",
-  tags: "标签",
-  reason: "原因",
-  description: "描述",
-  visualPrompt: "视觉提示词",
-  stylePrompt: "美术风格",
-
-  // 生成参数
-  numImages: "生成数量",
-  mode: "生成模式",
-  assetType: "素材类型",
-  autoGenerateImages: "自动生成图片",
-
-  // 视频属性
-  duration: "时长",
-  aspectRatio: "宽高比",
-
-  // 其他
-  limit: "数量限制",
-};
+/**
+ * 参数键名映射（用于翻译键）
+ */
+const PARAM_KEY_NAMES = [
+  "episodeId",
+  "projectId",
+  "videoId",
+  "videoIds",
+  "assetId",
+  "assetIds",
+  "sourceAssetIds",
+  "prompt",
+  "name",
+  "tags",
+  "reason",
+  "description",
+  "visualPrompt",
+  "stylePrompt",
+  "numImages",
+  "mode",
+  "assetType",
+  "autoGenerateImages",
+  "duration",
+  "aspectRatio",
+  "limit",
+] as const;
 
 /**
  * 枚举值中文映射（从统一枚举管理中获取）
@@ -78,8 +74,14 @@ type FormatMode = "detailed" | "concise";
  * @param key 参数键名
  * @param value 参数值
  * @param mode 格式化模式：detailed（详细）或 concise（简洁）
+ * @param t 翻译函数（可选）
  */
-function formatParameterValue(key: string, value: unknown, mode: FormatMode = "detailed"): string {
+function formatParameterValue(
+  key: string,
+  value: unknown,
+  mode: FormatMode = "detailed",
+  t?: ParamTranslator
+): string {
   // null/undefined
   if (value === null || value === undefined) {
     return "-";
@@ -87,7 +89,7 @@ function formatParameterValue(key: string, value: unknown, mode: FormatMode = "d
 
   // 布尔值
   if (typeof value === "boolean") {
-    return value ? "是" : "否";
+    return t ? t(value ? "yes" : "no") : (value ? "Yes" : "No");
   }
 
   // 数字
@@ -95,7 +97,7 @@ function formatParameterValue(key: string, value: unknown, mode: FormatMode = "d
     // 时长特殊处理（毫秒转秒）
     if (key === "duration") {
       const seconds = value / 1000;
-      return `${seconds}秒`;
+      return t ? t("seconds", { value: seconds }) : `${seconds}s`;
     }
     return String(value);
   }
@@ -109,17 +111,17 @@ function formatParameterValue(key: string, value: unknown, mode: FormatMode = "d
 
     // 特殊处理：sourceAssetIds（参考图）
     if (key === "sourceAssetIds" && mode === "concise") {
-      return handleSourceAssetIdsValue(value);
+      return handleSourceAssetIdsValue(value, t);
     }
 
     // 尝试解析 JSON 字符串
     const parsed = safeJSONParse(value);
     if (parsed !== undefined) {
       if (Array.isArray(parsed)) {
-        return formatArrayValue(parsed, key, mode);
+        return formatArrayValue(parsed, key, mode, t);
       }
       if (typeof parsed === "object" && parsed !== null) {
-        return formatObjectValue(parsed as Record<string, unknown>, mode);
+        return formatObjectValue(parsed as Record<string, unknown>, mode, t);
       }
     }
 
@@ -138,12 +140,12 @@ function formatParameterValue(key: string, value: unknown, mode: FormatMode = "d
 
   // 数组
   if (Array.isArray(value)) {
-    return formatArrayValue(value, key, mode);
+    return formatArrayValue(value, key, mode, t);
   }
 
   // 对象
   if (typeof value === "object") {
-    return formatObjectValue(value as Record<string, unknown>, mode);
+    return formatObjectValue(value as Record<string, unknown>, mode, t);
   }
 
   return String(value);
@@ -167,20 +169,23 @@ function handleTagsValue(value: string): string {
 /**
  * 处理参考图值（简洁模式专用）
  */
-function handleSourceAssetIdsValue(value: string): string {
+function handleSourceAssetIdsValue(value: string, t?: ParamTranslator): string {
   const parsed = safeJSONParse<string[]>(value);
   if (Array.isArray(parsed)) {
-    return parsed.length > 0 ? `${parsed.length}张参考图` : "无";
+    if (parsed.length > 0) {
+      return t ? t("referenceImages", { count: parsed.length }) : `${parsed.length} reference image(s)`;
+    }
+    return t ? t("none") : "None";
   }
-  return value ? "有参考图" : "无";
+  return value ? (t ? t("hasReference") : "Has reference") : (t ? t("none") : "None");
 }
 
 /**
  * 格式化数组值
  */
-function formatArrayValue(arr: unknown[], key?: string, mode: FormatMode = "detailed"): string {
+function formatArrayValue(arr: unknown[], key?: string, mode: FormatMode = "detailed", t?: ParamTranslator): string {
   if (arr.length === 0) {
-    return "空";
+    return t ? t("empty") : "Empty";
   }
 
   // 简洁模式：特殊处理
@@ -191,20 +196,23 @@ function formatArrayValue(arr: unknown[], key?: string, mode: FormatMode = "deta
     }
     // 参考图数组
     if (key === "sourceAssetIds") {
-      return arr.length > 0 ? `${arr.length}张参考图` : "无";
+      if (arr.length > 0) {
+        return t ? t("referenceImages", { count: arr.length }) : `${arr.length} reference image(s)`;
+      }
+      return t ? t("none") : "None";
     }
     // 视频或素材数组：显示数量
     if (key === "videos" && arr.length > 0 && typeof arr[0] === "object") {
-      return `${arr.length}个视频`;
+      return t ? t("videos", { count: arr.length }) : `${arr.length} video(s)`;
     }
     if (key === "assets" && arr.length > 0 && typeof arr[0] === "object") {
-      return `${arr.length}个素材`;
+      return t ? t("assets", { count: arr.length }) : `${arr.length} asset(s)`;
     }
     if (key === "videoIds" || key === "assetIds") {
-      return `${arr.length}项`;
+      return t ? t("items", { count: arr.length }) : `${arr.length} item(s)`;
     }
     // 其他数组：显示数量
-    return `${arr.length}项`;
+    return t ? t("items", { count: arr.length }) : `${arr.length} item(s)`;
   }
 
   // 详细模式
@@ -212,13 +220,13 @@ function formatArrayValue(arr: unknown[], key?: string, mode: FormatMode = "deta
     return arr.map((item) => String(item)).join(", ");
   }
 
-  return `[${arr.length}项]`;
+  return t ? `[${t("items", { count: arr.length })}]` : `[${arr.length} item(s)]`;
 }
 
 /**
  * 格式化对象值
  */
-function formatObjectValue(obj: Record<string, unknown>, mode: FormatMode = "detailed"): string {
+function formatObjectValue(obj: Record<string, unknown>, mode: FormatMode = "detailed", t?: ParamTranslator): string {
   const entries = Object.entries(obj);
   if (entries.length === 0) {
     return "{}";
@@ -227,7 +235,7 @@ function formatObjectValue(obj: Record<string, unknown>, mode: FormatMode = "det
   // 简洁模式：只显示属性数量
   if (mode === "concise") {
     const count = Object.keys(obj).length;
-    return `${count}个属性`;
+    return t ? t("properties", { count }) : `${count} propert(y/ies)`;
   }
 
   // 详细模式
@@ -237,18 +245,23 @@ function formatObjectValue(obj: Record<string, unknown>, mode: FormatMode = "det
       .join(", ");
   }
 
-  return `{${entries.length}个属性}`;
+  return t ? `{${t("properties", { count: entries.length })}}` : `{${entries.length} propert(y/ies)}`;
 }
 
 /**
  * 格式化参数对象为可展示的列表（详细模式）
+ * @param parameters 参数对象
+ * @param tKeys 参数键名翻译函数（可选）
+ * @param tValues 参数值翻译函数（可选）
  */
 export function formatParameters(
-  parameters: Record<string, unknown>
+  parameters: Record<string, unknown>,
+  tKeys?: (key: string) => string,
+  tValues?: ParamTranslator
 ): FormattedParameter[] {
   return Object.entries(parameters).map(([key, value]) => {
-    const label = PARAM_KEY_LABELS[key] || key;
-    const formattedValue = formatParameterValue(key, value, "detailed");
+    const label = tKeys ? tKeys(key) : key;
+    const formattedValue = formatParameterValue(key, value, "detailed", tValues);
 
     return {
       key,
@@ -334,9 +347,14 @@ function truncateText(text: string, maxLength: number = 50): string {
 
 /**
  * 格式化参数对象为确认卡片展示（过滤ID，只显示关键参数）
+ * @param parameters 参数对象
+ * @param tKeys 参数键名翻译函数（可选），接收参数键名返回翻译后的标签
+ * @param tValues 参数值翻译函数（可选），用于翻译布尔值、数量等
  */
 export function formatParametersForConfirmation(
-  parameters: Record<string, unknown>
+  parameters: Record<string, unknown>,
+  tKeys?: (key: string) => string,
+  tValues?: ParamTranslator
 ): FormattedParameter[] {
   // 过滤掉技术性ID参数
   const filtered = Object.entries(parameters).filter(([key]) =>
@@ -347,25 +365,26 @@ export function formatParametersForConfirmation(
   filtered.sort(([keyA], [keyB]) => {
     const priorityA = KEY_PARAMS_PRIORITY.indexOf(keyA);
     const priorityB = KEY_PARAMS_PRIORITY.indexOf(keyB);
-    
+
     // 如果都在优先级列表中，按优先级排序
     if (priorityA !== -1 && priorityB !== -1) {
       return priorityA - priorityB;
     }
-    
+
     // 优先级列表中的参数排在前面
     if (priorityA !== -1) return -1;
     if (priorityB !== -1) return 1;
-    
+
     // 都不在优先级列表中，保持原顺序
     return 0;
   });
 
   // 格式化参数（使用简洁模式）
   return filtered.map(([key, value]) => {
-    const label = PARAM_KEY_LABELS[key] || key;
-    const formattedValue = formatParameterValue(key, value, "concise");
-    
+    // 使用翻译函数获取标签，如果没有翻译函数则使用 key 本身
+    const label = tKeys ? tKeys(key) : key;
+    const formattedValue = formatParameterValue(key, value, "concise", tValues);
+
     // 检查是否为素材引用参数
     const isAssetRef = isAssetReferenceParam(key);
     const assetIds = isAssetRef ? extractAssetIds(value) : undefined;

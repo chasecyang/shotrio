@@ -11,6 +11,7 @@ import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
 import { EditorCreditsButton } from "./editor-credits-button";
 import { BetaBadge } from "@/components/ui/beta-badge";
+import { ChatwootButton } from "@/components/integrations/chatwoot-button";
 import { useEditor } from "./editor-context";
 import type { EditorProject, EditorUser } from "./editor-types";
 import { useTranslations } from "next-intl";
@@ -89,6 +90,9 @@ export function EditorHeader({
         <Separator orientation="vertical" className="h-6" />
 
         <ThemeToggle />
+
+        {/* 客服按钮 */}
+        <ChatwootButton />
 
         {/* 用户菜单 */}
         <UserNav user={user} variant="default" />

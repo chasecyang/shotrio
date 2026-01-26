@@ -9,19 +9,21 @@ import {
 } from "@/components/ui/resizable";
 import { RemotionPreview } from "./remotion-preview";
 import { TimelinePanel } from "./timeline-panel";
-import { getOrCreateProjectTimeline } from "@/lib/actions/timeline";
+import { getCut } from "@/lib/actions/cut";
 import { toast } from "sonner";
 import { useTimelineAutosave } from "@/hooks/use-timeline-autosave";
 import { useRemotionPlayback } from "@/hooks/use-remotion-playback";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
-import { DEFAULT_TRACK_STATES, TrackStates, getTimelineTracks, generateTrackStates } from "@/types/timeline";
+import { DEFAULT_TRACK_STATES, TrackStates, getCutTracks, generateTrackStates } from "@/types/cut";
 import { AssetPreviewOverlay } from "./asset-preview-overlay";
 import { AssetWithFullData } from "@/types/asset";
+import { ArrowLeft } from "lucide-react";
 
 export function ClippingModeLayout() {
-  const { state, setTimeline } = useEditor();
-  const { project, timeline } = state;
+  const { state, setTimeline, setActiveCut } = useEditor();
+  const { project, timeline, activeCutId } = state;
   const t = useTranslations("editor");
   const tToast = useTranslations("toasts");
 
@@ -34,7 +36,7 @@ export function ClippingModeLayout() {
   // 当 timeline 加载后，根据其轨道配置更新 trackStates
   useEffect(() => {
     if (timeline) {
-      const tracks = getTimelineTracks(timeline.metadata);
+      const tracks = getCutTracks(timeline.metadata);
       setTrackStates(generateTrackStates(tracks));
     }
   }, [timeline?.id, timeline?.metadata]);
@@ -56,34 +58,53 @@ export function ClippingModeLayout() {
   // 集中管理播放控制（使用 Remotion）
   const playback = useRemotionPlayback({ timeline, trackStates });
 
-  // 加载或创建时间轴
+  // 加载 Cut 数据
   useEffect(() => {
-    if (!project) return;
+    if (!project || !activeCutId) return;
 
-    const loadTimeline = async () => {
-      const result = await getOrCreateProjectTimeline(project.id);
-      if (result.success && result.timeline) {
-        setTimeline(result.timeline);
+    const loadCutData = async () => {
+      const cutData = await getCut(activeCutId);
+      if (cutData) {
+        setTimeline(cutData);
       } else {
-        toast.error(result.error || tToast("error.loadTimelineFailed"));
+        toast.error(tToast("error.loadTimelineFailed"));
+        // 如果加载失败，返回素材库
+        setActiveCut(null);
       }
     };
 
-    loadTimeline();
-  }, [project, setTimeline]);
+    loadCutData();
+  }, [project, activeCutId, setTimeline, setActiveCut, tToast]);
+
+  // 返回素材库
+  const handleBack = () => {
+    setActiveCut(null);
+  };
 
   if (!project) return null;
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 顶部信息栏 - 简化版 */}
-      {timeline && (
-        <div className="flex items-center px-4 py-2 border-b shrink-0">
-          <span className="text-xs text-muted-foreground">
-            {t("clips", { count: timeline.clips.length })}
-          </span>
-        </div>
-      )}
+      {/* 顶部信息栏 */}
+      <div className="flex items-center px-4 py-2 border-b shrink-0 gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5"
+          onClick={handleBack}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-xs">{t("backToGallery")}</span>
+        </Button>
+        {timeline && (
+          <>
+            <span className="text-sm font-medium truncate">{timeline.title}</span>
+            <span className="text-xs text-muted-foreground">
+              {t("clips", { count: timeline.clips.length })}
+            </span>
+          </>
+        )}
+      </div>
 
       {/* 主内容区：根据 timeline 状态条件渲染 */}
       {!timeline ? (

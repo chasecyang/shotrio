@@ -19,6 +19,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
+    "create": "Create",
     "search": "Search",
     "submit": "Submit",
     "back": "Back",
@@ -1394,6 +1395,50 @@
       "generation": "Generation",
       "modification": "Modification",
       "deletion": "Deletion"
+    },
+    "functionDescription": {
+      "queryProjectContext": "Query project context",
+      "queryImageAssets": "Query image assets",
+      "queryVideoAssets": "Query video assets",
+      "queryAssets": "Query assets",
+      "queryAssetsWithTags": "Tags: {tags}",
+      "generateImageAsset": "Generate image asset",
+      "generateImageAssetWithName": "Generate image asset - {name}",
+      "generateImageAssets": "Generate {count} image assets",
+      "generateVideoAsset": "Generate video asset",
+      "generateVideoAssetWithTitle": "Generate video asset - {title}",
+      "updateAsset": "Update asset",
+      "updateAssetWithName": "Update asset - {name}",
+      "updateAssets": "Update {count} assets",
+      "setProjectInfo": "Set project info",
+      "setProjectFields": "Set project {fields}",
+      "fieldTitle": "title",
+      "fieldDescription": "description",
+      "fieldStyle": "style",
+      "deleteAsset": "Delete asset",
+      "deleteAssets": "Delete {count} assets"
+    },
+    "functionResult": {
+      "queriedContext": "Queried: {parts}",
+      "queriedProjectContext": "Queried project context",
+      "projectInfo": "project info",
+      "episode": "episode",
+      "videos": "videos({count})",
+      "assets": "assets({count})",
+      "artStyles": "art styles",
+      "foundAssets": "Found {count} assets",
+      "queryComplete": "Query complete",
+      "createdVideoWithTitle": "Created video: {title}",
+      "createdVideoTask": "Created video generation task",
+      "createdImageTasks": "Created {count} generation tasks",
+      "createdImageTask": "Created image generation task",
+      "updatedAssets": "Updated {count} assets",
+      "updatedAsset": "Updated asset",
+      "updatedProjectFields": "Updated project {fields}",
+      "updatedProjectInfo": "Updated project info",
+      "deletedAssets": "Deleted {count} assets",
+      "completedOperations": "Completed {count} operations",
+      "totalItems": "Total {count} items"
     }
   },
   "toasts": {
@@ -1601,10 +1646,21 @@
     "assetGallery": {
       "assetsCount": "{count} assets",
       "groupDeprecated": "Deprecated",
+      "groupCuts": "Cuts",
+      "newCut": "New Cut",
+      "cutCreated": "Cut created",
+      "cutCreateFailed": "Failed to create cut",
+      "createCutTitle": "Create New Cut",
+      "createCutDescription": "Enter a name for your new cut",
+      "cutNameLabel": "Cut Name",
+      "cutNamePlaceholder": "Enter cut name",
+      "creating": "Creating...",
       "noAssets": "No assets",
       "noMatchingAssets": "No matching assets",
       "tryAdjustFilter": "Try adjusting your filters to see more assets",
       "deleteSuccess": "Deleted {count} asset(s)",
+      "cutDeleteSuccess": "Cut deleted",
+      "confirmDeleteCut": "Are you sure you want to delete the cut \"{name}\"? This action cannot be undone.",
       "deleteFailed": "Delete failed",
       "retrySubmitted": "Task resubmitted",
       "retryFailed": "Retry failed",
@@ -1649,6 +1705,11 @@
       "rejected": "Rejected",
       "unrated": "Unrated"
     },
+    "cutCard": {
+      "rename": "Rename",
+      "delete": "Delete",
+      "clipCount": "{count} clips"
+    },
     "regenerateDialog": {
       "title": "Confirm Regeneration",
       "description": "This will regenerate the asset with the same parameters, creating a new version",
@@ -1664,6 +1725,7 @@
     "expandAgent": "Expand Agent Chat",
     "interrupted": "Interrupted",
     "clips": "{count} clips",
+    "backToGallery": "Back",
     "versionHistory": "Version History",
     "versions": "{count} versions",
     "seconds": "{count}s",
@@ -1736,6 +1798,8 @@
         "title": "Pending Action",
         "executionPlan": "Execution Plan",
         "confirm": "Confirm",
+        "confirmAll": "Confirm All",
+        "confirmAllDescription": "Confirm this action, subsequent actions will be executed automatically",
         "reject": "Reject",
         "edit": "Edit",
         "feedback": "Feedback",
@@ -1802,13 +1866,27 @@
           "failedWithError": "Failed: {error}",
           "rejected": "User rejected this operation",
           "executing": "Executing...",
-          "awaitingConfirmation": "Awaiting user confirmation"
+          "awaitingConfirmation": "Awaiting user confirmation",
+          "parseResponseFailed": "Failed to parse response"
         },
         "displayNames": {
+          "queryContext": "Query Project Context",
+          "queryAssets": "Query Assets",
+          "queryTextAssets": "Query Text Assets",
+          "queryTimeline": "Query Timeline",
           "generateImageAsset": "Generate Image Asset",
           "generateVideoAsset": "Generate Video Asset",
           "createTextAsset": "Create Text Asset",
-          "setProjectInfo": "Set Project Info"
+          "setProjectInfo": "Set Project Info",
+          "updateAsset": "Update Asset",
+          "deleteAsset": "Delete Asset",
+          "addClip": "Add Clip",
+          "removeClip": "Remove Clip",
+          "updateClip": "Update Clip",
+          "addAudioTrack": "Add Audio Track",
+          "generateSoundEffect": "Generate Sound Effect",
+          "generateBgm": "Generate Background Music",
+          "generateDialogue": "Generate Dialogue"
         }
       },
       "actionBar": {
@@ -2087,6 +2165,16 @@
         "success": "Derivation request submitted",
         "cancel": "Cancel",
         "nameSuffix": " - Derived"
+      }
+    },
+    "clippingMode": {
+      "assetStrip": {
+        "trimmed": "Trimmed",
+        "removeFromTimeline": "Remove from timeline",
+        "inPoint": "In",
+        "outPoint": "Out",
+        "duration": "Duration",
+        "deleteClip": "Delete clip"
       }
     },
     "timeline": {

@@ -4,26 +4,48 @@
  */
 
 import type { FunctionCall } from "@/types/agent";
-import { ENUM_VALUE_LABELS } from "./agent-params-formatter";
 
-/**
- * 解析 JSON 字符串中的数组长度
- */
-function parseArrayLength(value: unknown): number {
-  if (!value) return 0;
-  try {
-    const parsed = JSON.parse(value as string);
-    return Array.isArray(parsed) ? parsed.length : 0;
-  } catch {
-    return 0;
-  }
-}
+export type TranslationFunction = (
+  key: string,
+  params?: Record<string, string | number>
+) => string;
 
 /**
  * 生成用户友好的操作描述
  */
-export function generateActionDescription(functionCall: FunctionCall): string {
+export function generateActionDescription(
+  functionCall: FunctionCall,
+  t?: TranslationFunction
+): string {
   const { name, parameters } = functionCall;
+
+  // Default translation function (returns key or English fallback)
+  const translate = t || ((key: string, params?: Record<string, string | number>) => {
+    // Fallback to English
+    const fallbacks: Record<string, string> = {
+      "queryProjectContext": "Query project context",
+      "queryImageAssets": "Query image assets",
+      "queryVideoAssets": "Query video assets",
+      "queryAssets": "Query assets",
+      "queryAssetsWithTags": params?.tags ? `Tags: ${params.tags}` : "Filter by tags",
+      "generateImageAsset": "Generate image asset",
+      "generateImageAssetWithName": params?.name ? `Generate image asset - ${params.name}` : "Generate image asset",
+      "generateImageAssets": params?.count !== undefined ? `Generate ${params.count} image assets` : "Generate image assets",
+      "generateVideoAsset": "Generate video asset",
+      "generateVideoAssetWithTitle": params?.title ? `Generate video asset - ${params.title}` : "Generate video asset",
+      "updateAsset": "Update asset",
+      "updateAssetWithName": params?.name ? `Update asset - ${params.name}` : "Update asset",
+      "updateAssets": params?.count !== undefined ? `Update ${params.count} assets` : "Update assets",
+      "setProjectInfo": "Set project info",
+      "setProjectFields": params?.fields ? `Set project ${params.fields}` : "Set project info",
+      "fieldTitle": "title",
+      "fieldDescription": "description",
+      "fieldStyle": "style",
+      "deleteAsset": "Delete asset",
+      "deleteAssets": params?.count !== undefined ? `Delete ${params.count} assets` : "Delete assets",
+    };
+    return fallbacks[key] || key;
+  });
 
   try {
     switch (name) {
@@ -31,20 +53,20 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       // 查询类操作
       // ============================================
       case "query_context":
-        return "查询项目上下文";
+        return translate("queryProjectContext");
 
       case "query_assets": {
         const parts: string[] = [];
         if (parameters.assetType === "image") {
-          parts.push("查询图片资产");
+          parts.push(translate("queryImageAssets"));
         } else if (parameters.assetType === "video") {
-          parts.push("查询视频资产");
+          parts.push(translate("queryVideoAssets"));
         } else {
-          parts.push("查询资产库");
+          parts.push(translate("queryAssets"));
         }
         if (parameters.tags) {
           const tags = Array.isArray(parameters.tags) ? parameters.tags.join(",") : String(parameters.tags);
-          parts.push(`标签：${tags}`);
+          parts.push(translate("queryAssetsWithTags", { tags }));
         }
         return parts.join(" - ");
       }
@@ -57,21 +79,22 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         const assets = parameters.assets as Array<{ name?: string; prompt?: string }>;
         const count = assets?.length || 0;
         if (count === 1 && assets[0]) {
-          const parts: string[] = ["生成图片资产"];
           if (assets[0].name) {
-            parts.push(assets[0].name);
+            return translate("generateImageAssetWithName", { name: assets[0].name });
           }
-          return parts.join(" - ");
+          return translate("generateImageAsset");
         }
-        return count > 0 ? `生成 ${count} 个图片资产` : "生成图片资产";
+        return count > 0
+          ? translate("generateImageAssets", { count })
+          : translate("generateImageAsset");
       }
 
       case "generate_video_asset": {
         const title = parameters.title as string | undefined;
         if (title) {
-          return `生成视频资产 - ${title}`;
+          return translate("generateVideoAssetWithTitle", { title });
         }
-        return "生成视频资产";
+        return translate("generateVideoAsset");
       }
 
       // ============================================
@@ -81,9 +104,11 @@ export function generateActionDescription(functionCall: FunctionCall): string {
         const updates = parameters.updates as Array<{ assetId: string; name?: string }>;
         const count = updates?.length || 0;
         if (count === 1 && updates[0] && updates[0].name) {
-          return `修改资产 - ${updates[0].name}`;
+          return translate("updateAssetWithName", { name: updates[0].name });
         }
-        return count > 0 ? `修改 ${count} 个资产` : "修改资产";
+        return count > 0
+          ? translate("updateAssets", { count })
+          : translate("updateAsset");
       }
 
       case "set_project_info": {
@@ -94,10 +119,12 @@ export function generateActionDescription(functionCall: FunctionCall): string {
           styleId?: string;
         };
         const fields: string[] = [];
-        if (params.title) fields.push("标题");
-        if (params.description) fields.push("描述");
-        if (params.stylePrompt || params.styleId) fields.push("美术风格");
-        return fields.length > 0 ? `设置项目${fields.join("、")}` : "设置项目信息";
+        if (params.title) fields.push(translate("fieldTitle"));
+        if (params.description) fields.push(translate("fieldDescription"));
+        if (params.stylePrompt || params.styleId) fields.push(translate("fieldStyle"));
+        return fields.length > 0
+          ? translate("setProjectFields", { fields: fields.join(", ") })
+          : translate("setProjectInfo");
       }
 
       // ============================================
@@ -106,14 +133,16 @@ export function generateActionDescription(functionCall: FunctionCall): string {
       case "delete_asset": {
         const assetIds = parameters.assetIds as string[];
         const count = assetIds?.length || 0;
-        return count > 0 ? `删除 ${count} 个资产` : "删除资产";
+        return count > 0
+          ? translate("deleteAssets", { count })
+          : translate("deleteAsset");
       }
 
       default:
         return functionCall.displayName || name;
     }
   } catch (error) {
-    console.error("生成操作描述失败:", error);
+    console.error("Failed to generate action description:", error);
     return functionCall.displayName || name;
   }
 }

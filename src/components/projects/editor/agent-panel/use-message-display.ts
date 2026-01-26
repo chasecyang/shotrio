@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import type { AgentMessage } from "@/types/agent";
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
-import { formatFunctionResult } from "@/lib/services/agent-engine/result-formatter";
+import { formatFunctionResult, type TranslationFunction } from "@/lib/services/agent-engine/result-formatter";
 
 export interface DisplayStep {
   id: string;
@@ -21,22 +22,29 @@ export interface DisplayStep {
 
 /**
  * 从原始 messages 构建前端展示结构
- * 
+ *
  * 将消息流转换为可展示的步骤列表：
  * - assistant 消息 → thinking step (如果有 content)
  * - assistant 消息 + tool_calls → tool_call step
  * - tool 消息 → 更新对应 tool_call step 的状态
  */
 export function useMessageDisplay(messages: AgentMessage[]) {
+  const t = useTranslations("agent.functionResult");
+
+  // Create translation function for formatFunctionResult
+  const translateFn: TranslationFunction = (key, params) => {
+    return t(key, params as Record<string, string | number>);
+  };
+
   return useMemo(() => {
     const displays: Array<{messageId: string; steps: DisplayStep[]}> = [];
-    
+
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-      
+
       if (msg.role === "assistant") {
         const steps: DisplayStep[] = [];
-        
+
         // 1. AI 的思考内容
         if (msg.content) {
           steps.push({
@@ -45,17 +53,17 @@ export function useMessageDisplay(messages: AgentMessage[]) {
             content: msg.content,
           });
         }
-        
+
         // 2. Tool 调用（如果有）
         if (msg.toolCalls && msg.toolCalls.length > 0) {
           const toolCall = msg.toolCalls[0];
           const funcDef = getFunctionDefinition(toolCall.function.name);
-          
+
           // ✅ 使用 toolCallId 精确查找对应的 tool 响应（而不是依赖位置 i+1）
           const toolResponse = messages.find(
             m => m.role === "tool" && m.toolCallId === toolCall.id
           );
-          
+
           let status: "executing" | "completed" | "failed" | "rejected" | "awaiting_confirmation" = "executing";
           let result: string | undefined;
           let error: string | undefined;
@@ -69,7 +77,8 @@ export function useMessageDisplay(messages: AgentMessage[]) {
                 result = formatFunctionResult(
                   toolCall.function.name,
                   JSON.parse(toolCall.function.arguments),
-                  parsedResult.data
+                  parsedResult.data,
+                  translateFn
                 );
               } else if (parsedResult.userRejected) {
                 status = "rejected";
@@ -79,15 +88,15 @@ export function useMessageDisplay(messages: AgentMessage[]) {
                 error = parsedResult.error;
               }
             } catch (e) {
-              console.error("[useMessageDisplay] 解析 tool 响应失败:", e);
+              console.error("[useMessageDisplay] Failed to parse tool response:", e);
               status = "failed";
-              error = "解析响应失败";
+              error = "PARSE_RESPONSE_FAILED";
             }
           } else if (funcDef?.needsConfirmation) {
             // 没有响应，但函数需要确认，说明等待用户确认
             status = "awaiting_confirmation";
           }
-          
+
           steps.push({
             id: `${msg.id}-tool`,
             type: "tool_call",
@@ -101,14 +110,13 @@ export function useMessageDisplay(messages: AgentMessage[]) {
             },
           });
         }
-        
+
         if (steps.length > 0) {
           displays.push({ messageId: msg.id, steps });
         }
       }
     }
-    
-    return displays;
-  }, [messages]);
-}
 
+    return displays;
+  }, [messages, translateFn]);
+}

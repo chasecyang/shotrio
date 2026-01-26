@@ -26,7 +26,7 @@ export function timelineToRemotionProps(
   trackStates: TrackStates
 ): TimelineCompositionProps {
   const fps = timeline.fps || 30;
-  const [width, height] = parseResolution(timeline.resolution);
+  const [width, height] = parseResolution(timeline.resolution ?? "1080x1920");
 
   // 按轨道分组
   const trackMap = new Map<number, RemotionTrackItem[]>();

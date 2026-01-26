@@ -329,6 +329,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   }),
   template: one(projectTemplate), // 模板信息（如果是模板项目）
   assets: many(asset), // 包含图片和视频
+  cuts: many(cut), // 剪辑版本
   jobs: many(job),
   conversations: many(conversation),
 }));
@@ -482,8 +483,8 @@ export const conversationMessageRelations = relations(conversationMessage, ({ on
   }),
 }));
 
-// 7. 时间轴表 (Timeline) - 视频剪辑时间轴
-export const timeline = pgTable("timeline", {
+// 7. 剪辑表 (Cut) - 视频剪辑版本
+export const cut = pgTable("cut", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
     .notNull()
@@ -491,19 +492,19 @@ export const timeline = pgTable("timeline", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  
+
   // 基本信息
   title: text("title").notNull().default("未命名剪辑"),
   description: text("description"),
-  
+
   // 时间轴配置
   duration: integer("duration").default(0).notNull(), // 总时长(毫秒)
   fps: integer("fps").default(30).notNull(), // 帧率
   resolution: text("resolution").default("1080x1920"), // 分辨率 (竖屏)
-  
+
   // 预留扩展字段
   metadata: text("metadata"),
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -511,31 +512,31 @@ export const timeline = pgTable("timeline", {
     .notNull(),
 });
 
-// 8. 时间轴片段表 (Timeline Clip) - 时间轴上的素材片段
-export const timelineClip = pgTable("timeline_clip", {
+// 8. 剪辑片段表 (Cut Clip) - 剪辑中的素材片段
+export const cutClip = pgTable("cut_clip", {
   id: text("id").primaryKey(),
-  timelineId: text("timeline_id")
+  cutId: text("cut_id")
     .notNull()
-    .references(() => timeline.id, { onDelete: "cascade" }),
+    .references(() => cut.id, { onDelete: "cascade" }),
   assetId: text("asset_id")
     .notNull()
     .references(() => asset.id, { onDelete: "cascade" }),
-  
+
   // 轨道和位置
-  trackIndex: integer("track_index").default(0).notNull(), // 轨道索引（1期都是0，预留多轨道）
+  trackIndex: integer("track_index").default(0).notNull(), // 轨道索引（0-99 视频轨道，100+ 音频轨道）
   startTime: integer("start_time").notNull(), // 在时间轴上的开始时间(ms)
   duration: integer("duration").notNull(), // 片段在时间轴上的时长(ms)
-  
+
   // 素材裁剪
   trimStart: integer("trim_start").default(0).notNull(), // 素材入点(ms)
   trimEnd: integer("trim_end"), // 素材出点(ms), null表示到素材结尾
-  
+
   // 排序
   order: integer("order").notNull(), // 在轨道内的排序
-  
+
   // 预留扩展字段
   metadata: text("metadata"), // JSON: 转场效果、音量、滤镜等
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -543,28 +544,34 @@ export const timelineClip = pgTable("timeline_clip", {
     .notNull(),
 });
 
-export const timelineRelations = relations(timeline, ({ one, many }) => ({
+export const cutRelations = relations(cut, ({ one, many }) => ({
   project: one(project, {
-    fields: [timeline.projectId],
+    fields: [cut.projectId],
     references: [project.id],
   }),
   user: one(user, {
-    fields: [timeline.userId],
+    fields: [cut.userId],
     references: [user.id],
   }),
-  clips: many(timelineClip),
+  clips: many(cutClip),
 }));
 
-export const timelineClipRelations = relations(timelineClip, ({ one }) => ({
-  timeline: one(timeline, {
-    fields: [timelineClip.timelineId],
-    references: [timeline.id],
+export const cutClipRelations = relations(cutClip, ({ one }) => ({
+  cut: one(cut, {
+    fields: [cutClip.cutId],
+    references: [cut.id],
   }),
   asset: one(asset, {
-    fields: [timelineClip.assetId],
+    fields: [cutClip.assetId],
     references: [asset.id],
   }),
 }));
+
+// 向后兼容的别名（用于渐进式迁移）
+export const timeline = cut;
+export const timelineClip = cutClip;
+export const timelineRelations = cutRelations;
+export const timelineClipRelations = cutClipRelations;
 
 // 9. 项目模板表 (Project Template) - 与 project 一对一关系
 // 只有被标记为模板的项目才会有记录，避免 project 表字段膨胀
