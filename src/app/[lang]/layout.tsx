@@ -9,6 +9,7 @@ import { routing } from '@/i18n/routing';
 import { ChatwootProvider } from '@/components/integrations/chatwoot-provider';
 import { UmamiScript } from '@/components/integrations/umami-script';
 import { ClarityScript } from '@/components/integrations/clarity-script';
+import { DataFastScript } from '@/components/integrations/datafast-script';
 import { getCurrentUser } from '@/lib/auth/auth-utils';
 import { generatePageMetadata, homepageMetadata } from '@/lib/seo/metadata';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -77,6 +78,7 @@ export default async function RootLayout({
       <head>
         <UmamiScript />
         <ClarityScript />
+        <DataFastScript />
       </head>
       <body
         className={`${manrope.variable} ${notoSansSC.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30 selection:text-primary`}

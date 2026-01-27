@@ -22,14 +22,15 @@ import {
 } from "@/components/ui/select";
 import { Film, Clock, Layers, MonitorPlay, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { exportTimeline } from "@/lib/actions/timeline/export";
-import { TimelineDetail } from "@/types/timeline";
+import { exportCut } from "@/lib/actions/cut";
+import { CutDetail } from "@/types/cut";
+import { useEditor } from "@/components/projects/editor/editor-context";
 import { formatTimeDisplay } from "@/lib/utils/timeline-utils";
 
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  timeline: TimelineDetail;
+  timeline: CutDetail;
   projectId: string;
 }
 
@@ -42,6 +43,7 @@ export function ExportDialog({
   projectId,
 }: ExportDialogProps) {
   const t = useTranslations();
+  const { refreshJobs } = useEditor();
   const [quality, setQuality] = useState<ExportQuality>("high");
   const [includeAudio, setIncludeAudio] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -64,14 +66,14 @@ export function ExportDialog({
     setIsExporting(true);
 
     try {
-      const result = await exportTimeline(timeline.id, {
+      const result = await exportCut(timeline.id, {
         projectId,
         quality,
         includeAudio,
       });
 
       if (result.success) {
-        toast.success(t('exportDialog.exportTaskCreated'));
+        refreshJobs();
         onOpenChange(false);
       } else {
         toast.error(result.error || t('exportDialog.createTaskFailed'));
