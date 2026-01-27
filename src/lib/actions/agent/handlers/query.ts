@@ -3,7 +3,7 @@
 /**
  * 查询类处理器
  *
- * 处理 query_context, query_assets, query_timeline, query_text_assets
+ * 处理 query_context, query_assets, query_cut, query_text_assets
  */
 
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
@@ -14,7 +14,8 @@ import { getVideoAssets, queryAssets } from "@/lib/actions/asset";
 import { getSystemArtStyles } from "@/lib/actions/art-style/queries";
 import { analyzeAssetsByType } from "@/lib/actions/asset/stats";
 import { getTextAssetContent } from "@/lib/actions/asset/text-asset";
-import { getOrCreateProjectTimeline } from "@/lib/actions/cut";
+import { getProjectTimeline, createCut, getProjectCuts, getCut } from "@/lib/actions/cut";
+import { getCutTracks, type CutClipWithAsset, type TrackConfig } from "@/types/cut";
 
 /**
  * 统一的查询类处理器
@@ -30,8 +31,11 @@ export async function handleQueryFunctions(
       return handleQueryContext(functionCall, projectId, parameters);
     case "query_assets":
       return handleQueryAssets(functionCall, projectId, parameters);
-    case "query_timeline":
-      return handleQueryTimeline(functionCall, projectId);
+    case "query_cuts":
+      return handleQueryCuts(functionCall, projectId);
+    case "query_cut":
+    case "query_timeline": // 向后兼容
+      return handleQueryCut(functionCall, projectId, parameters);
     case "query_text_assets":
       return handleQueryTextAssets(functionCall, projectId, parameters);
     default:
@@ -217,30 +221,84 @@ async function handleQueryAssets(
 }
 
 /**
- * 查询时间轴
+ * 查询项目所有剪辑列表
  */
-async function handleQueryTimeline(
+async function handleQueryCuts(
   functionCall: FunctionCall,
   projectId: string
 ): Promise<FunctionExecutionResult> {
-  const timelineResult = await getOrCreateProjectTimeline(projectId);
+  const cuts = await getProjectCuts(projectId);
 
-  if (!timelineResult.success || !timelineResult.timeline) {
-    return {
-      functionCallId: functionCall.id,
-      success: false,
-      error: timelineResult.error || "无法获取或创建时间轴",
-    };
+  const formattedCuts = cuts.map((c) => ({
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    duration: c.duration,
+    clipCount: c.clipCount,
+    resolution: c.resolution,
+    fps: c.fps,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  }));
+
+  return {
+    functionCallId: functionCall.id,
+    success: true,
+    data: {
+      cuts: formattedCuts,
+      total: cuts.length,
+      message:
+        cuts.length === 0
+          ? "项目还没有剪辑，可以使用 create_cut 创建一个"
+          : `项目共有 ${cuts.length} 个剪辑`,
+    },
+  };
+}
+
+/**
+ * 查询剪辑
+ */
+async function handleQueryCut(
+  functionCall: FunctionCall,
+  projectId: string,
+  parameters: Record<string, unknown>
+): Promise<FunctionExecutionResult> {
+  const cutId = parameters.cutId as string | undefined;
+
+  let cutData;
+  if (cutId) {
+    // 查询指定的剪辑
+    cutData = await getCut(cutId);
+    if (!cutData) {
+      return {
+        functionCallId: functionCall.id,
+        success: false,
+        error: `剪辑 ${cutId} 不存在`,
+      };
+    }
+  } else {
+    // 获取项目的第一个剪辑
+    cutData = await getProjectTimeline(projectId);
+
+    // 如果不存在，则创建一个
+    if (!cutData) {
+      const result = await createCut({ projectId });
+      if (!result.success || !result.cut) {
+        return {
+          functionCallId: functionCall.id,
+          success: false,
+          error: result.error || "无法获取或创建剪辑",
+        };
+      }
+      cutData = result.cut;
+    }
   }
 
-  const timelineData = timelineResult.timeline;
-
   // 解析轨道配置
-  const { getTimelineTracks } = await import("@/types/timeline");
-  const trackConfigs = getTimelineTracks(timelineData.metadata);
+  const trackConfigs = getCutTracks(cutData.metadata);
 
   // 格式化返回数据，包含 trackIndex 和素材详情
-  const formattedClips = timelineData.clips.map((clip) => ({
+  const formattedClips = cutData.clips.map((clip: CutClipWithAsset) => ({
     id: clip.id,
     trackIndex: clip.trackIndex,
     order: clip.order,
@@ -253,25 +311,25 @@ async function handleQueryTimeline(
       name: clip.asset.name,
       type: clip.asset.assetType,
       prompt: clip.asset.prompt,
-      tags: clip.asset.tags.map((t) => t.tagValue),
+      tags: clip.asset.tags.map((t: { tagValue: string }) => t.tagValue),
       originalDuration: clip.asset.duration,
     },
   }));
 
   // 按轨道分组统计
-  const videoClips = formattedClips.filter((c) => c.trackIndex < 100);
-  const audioClips = formattedClips.filter((c) => c.trackIndex >= 100);
+  const videoClips = formattedClips.filter((c: { trackIndex: number }) => c.trackIndex < 100);
+  const audioClips = formattedClips.filter((c: { trackIndex: number }) => c.trackIndex >= 100);
 
   return {
     functionCallId: functionCall.id,
     success: true,
     data: {
-      timeline: {
-        id: timelineData.id,
-        duration: timelineData.duration,
-        clipCount: timelineData.clips.length,
+      cut: {
+        id: cutData.id,
+        duration: cutData.duration,
+        clipCount: cutData.clips.length,
       },
-      tracks: trackConfigs.map((t) => ({
+      tracks: trackConfigs.map((t: TrackConfig) => ({
         index: t.index,
         type: t.type,
         name: t.name,
@@ -282,9 +340,9 @@ async function handleQueryTimeline(
         audioClips: audioClips.length,
       },
       message:
-        timelineData.clips.length === 0
-          ? "时间轴为空，没有任何片段"
-          : `时间轴共 ${timelineData.clips.length} 个片段（视频${videoClips.length}个，音频${audioClips.length}个），总时长 ${Math.round(timelineData.duration / 1000)} 秒`,
+        cutData.clips.length === 0
+          ? "剪辑为空，没有任何片段"
+          : `剪辑共 ${cutData.clips.length} 个片段（视频${videoClips.length}个，音频${audioClips.length}个），总时长 ${Math.round(cutData.duration / 1000)} 秒`,
     },
   };
 }

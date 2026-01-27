@@ -130,7 +130,7 @@
   },
   "exportDialog": {
     "title": "导出视频",
-    "description": "将时间轴渲染为视频文件",
+    "description": "将剪辑渲染为视频文件",
     "duration": "时长",
     "resolution": "分辨率",
     "clips": "片段",
@@ -142,8 +142,8 @@
     "high": "高清",
     "includeAudio": "包含音频",
     "audioClipsCount": "包含 {count} 个音频片段",
-    "noAudioInTimeline": "时间轴中没有音频",
-    "emptyTimeline": "时间轴为空，无法导出",
+    "noAudioInTimeline": "剪辑中没有音频",
+    "emptyTimeline": "剪辑为空，无法导出",
     "exportTaskCreated": "导出任务已创建，请在后台任务中查看进度",
     "createTaskFailed": "创建导出任务失败",
     "exportFailed": "导出失败，请重试",
@@ -425,14 +425,14 @@
         "deleteFailed": "删除风格失败"
       },
       "timeline": {
-        "getFailed": "获取时间轴失败",
-        "createFailed": "创建时间轴失败",
-        "createGetFailed": "创建后无法获取时间轴",
-        "notFoundOrNoPermission": "时间轴不存在或无权限",
-        "updateFailed": "更新时间轴失败",
-        "updateGetFailed": "更新后无法获取时间轴",
-        "deleteFailed": "删除时间轴失败",
-        "getOrCreateFailed": "获取或创建时间轴失败",
+        "getFailed": "获取剪辑失败",
+        "createFailed": "创建剪辑失败",
+        "createGetFailed": "创建后无法获取剪辑",
+        "notFoundOrNoPermission": "剪辑不存在或无权限",
+        "updateFailed": "更新剪辑失败",
+        "updateGetFailed": "更新后无法获取剪辑",
+        "deleteFailed": "删除剪辑失败",
+        "getOrCreateFailed": "获取或创建剪辑失败",
         "updateTracksFailed": "更新轨道配置失败",
         "untitledClip": "未命名剪辑"
       },
@@ -1467,7 +1467,7 @@
       "referenceAssetAdded": "已添加参考素材",
       "videoTaskStarted": "已启动视频生成任务",
       "taskCreatedAiProcessing": "任务已创建，AI正在处理中...",
-      "timelineClipAdded": "已添加到时间轴",
+      "timelineClipAdded": "已添加到剪辑",
       "audioTrackAdded": "已添加音频轨道",
       "trackDeleted": "已删除轨道",
       "copied": "已复制到剪贴板",
@@ -1873,7 +1873,7 @@
           "queryContext": "查询项目上下文",
           "queryAssets": "查询资产库",
           "queryTextAssets": "查询文本资产",
-          "queryTimeline": "查询时间轴",
+          "queryTimeline": "查询剪辑",
           "generateImageAsset": "生成图片素材",
           "generateVideoAsset": "生成视频素材",
           "createTextAsset": "创建文本资产",
@@ -1986,7 +1986,8 @@
           "startConversationFailed": "启动对话失败",
           "createConversationFailed": "创建对话失败",
           "sendMessageFailed": "发送消息失败",
-          "generationStopped": "已停止生成"
+          "generationStopped": "已停止生成",
+          "autoModeCompleted": "自动模式已完成"
         },
         "stream": {
           "responseTimeout": "响应超时",
@@ -2170,7 +2171,7 @@
     "clippingMode": {
       "assetStrip": {
         "trimmed": "已裁剪",
-        "removeFromTimeline": "从时间轴移除",
+        "removeFromTimeline": "从剪辑中移除",
         "inPoint": "入点",
         "outPoint": "出点",
         "duration": "时长",
@@ -2185,7 +2186,7 @@
       "dragToAddVideo": "拖拽或点击添加视频",
       "dragToAddAudio": "拖拽或点击添加音频",
       "videoLoadFailed": "视频加载失败",
-      "dragToStart": "将素材拖入时间轴开始剪辑",
+      "dragToStart": "将素材拖入开始剪辑",
       "tracks": {
         "video": "视频",
         "audio": "音频"
@@ -2199,7 +2200,7 @@
         "removeFromTimeline": "从时间轴移除"
       },
       "audioClip": {
-        "removeFromTimeline": "从时间轴移除",
+        "removeFromTimeline": "从剪辑中移除",
         "inPoint": "入点",
         "outPoint": "出点",
         "duration": "时长",

@@ -311,12 +311,12 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
 
   // ============================================
-  // 时间轴剪辑工具
+  // 剪辑工具
   // ============================================
   {
-    name: "query_timeline",
-    description: "查询当前项目的时间轴状态。返回：总时长、片段列表、每个片段的素材详情（ID、名称、prompt、标签、时长、位置等）。执行剪辑前应先调用此函数了解现状。",
-    displayName: "查询时间轴",
+    name: "query_cuts",
+    description: "查询项目的所有剪辑列表。返回每个剪辑的基本信息（ID、标题、时长、片段数量等）。一个项目可以有多个剪辑，用于制作不同版本的视频。",
+    displayName: "查询剪辑列表",
     parameters: {
       type: "object",
       properties: {},
@@ -325,15 +325,80 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     needsConfirmation: false,
   },
   {
+    name: "query_cut",
+    description: "查询单个剪辑的详细状态。返回：总时长、片段列表、每个片段的素材详情（ID、名称、prompt、标签、时长、位置等）。执行剪辑操作前应先调用此函数了解现状。",
+    displayName: "查询剪辑详情",
+    parameters: {
+      type: "object",
+      properties: {
+        cutId: {
+          type: "string",
+          description: "剪辑ID（可选）。不提供则返回项目的第一个剪辑",
+        },
+      },
+    },
+    category: "read",
+    needsConfirmation: false,
+  },
+  {
+    name: "create_cut",
+    description: "创建新的剪辑。每个项目可以有多个剪辑，用于制作不同版本或不同内容的视频。创建后可以使用 add_clip 添加素材到剪辑中。",
+    displayName: "创建剪辑",
+    parameters: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "剪辑标题（可选），如'正片'、'预告片'、'花絮'",
+        },
+        description: {
+          type: "string",
+          description: "剪辑描述（可选）",
+        },
+        resolution: {
+          type: "string",
+          description: "分辨率（可选），如'1920x1080'、'1080x1920'，默认'1080x1920'",
+        },
+        fps: {
+          type: "number",
+          description: "帧率（可选），默认30",
+        },
+      },
+    },
+    category: "generation",
+    needsConfirmation: true,
+  },
+  {
+    name: "delete_cut",
+    description: "删除剪辑。删除后无法恢复，剪辑中的所有片段也会被删除（但素材本身不会被删除）。请谨慎使用。",
+    displayName: "删除剪辑",
+    parameters: {
+      type: "object",
+      properties: {
+        cutId: {
+          type: "string",
+          description: "要删除的剪辑ID（必填）",
+        },
+      },
+      required: ["cutId"],
+    },
+    category: "deletion",
+    needsConfirmation: true,
+  },
+  {
     name: "add_clip",
     description:
-      "添加素材到时间轴。支持视频轨道(0-99)和音频轨道(100+)。" +
+      "添加素材到剪辑。支持视频轨道(0-99)和音频轨道(100+)。" +
       "不指定trackIndex时根据素材类型自动选择（视频/图片→轨道0，音频→轨道100）。" +
       "音频轨道可通过startTime自由定位实现精确同步。",
     displayName: "添加片段",
     parameters: {
       type: "object",
       properties: {
+        cutId: {
+          type: "string",
+          description: "剪辑ID（可选）。不提供则使用项目的第一个剪辑",
+        },
         assetId: {
           type: "string",
           description: "素材ID（必填）",
@@ -349,7 +414,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         startTime: {
           type: "number",
-          description: "在时间轴上的起始位置（毫秒），音频轨道常用此参数精确定位",
+          description: "在剪辑中的起始位置（毫秒），音频轨道常用此参数精确定位",
         },
         insertAt: {
           type: "string",
@@ -372,7 +437,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   },
   {
     name: "remove_clip",
-    description: "从时间轴移除片段。视频轨道删除后自动波纹编辑（后续片段自动前移）；音频轨道删除后保持自由定位，不影响其他片段位置。",
+    description: "从剪辑中移除片段。视频轨道删除后自动波纹编辑（后续片段自动前移）；音频轨道删除后保持自由定位，不影响其他片段位置。",
     displayName: "移除片段",
     parameters: {
       type: "object",
@@ -394,6 +459,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
+        cutId: {
+          type: "string",
+          description: "剪辑ID（可选）。不提供则使用项目的第一个剪辑",
+        },
         clipId: {
           type: "string",
           description: "片段ID（必填）",
@@ -433,6 +502,10 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     parameters: {
       type: "object",
       properties: {
+        cutId: {
+          type: "string",
+          description: "剪辑ID（可选）。不提供则使用项目的第一个剪辑",
+        },
         name: {
           type: "string",
           description: "轨道名称（可选），如'BGM'、'音效'、'对白'",

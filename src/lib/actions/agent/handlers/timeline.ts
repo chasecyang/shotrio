@@ -1,34 +1,42 @@
 "use server";
 
 /**
- * 时间轴操作处理器
+ * 剪辑操作处理器
  *
- * 处理 add_clip, remove_clip, update_clip, add_audio_track
+ * 处理 create_cut, add_clip, remove_clip, update_clip, add_audio_track
  */
 
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import { getAssetWithFullData } from "@/lib/actions/asset";
 import {
-  getOrCreateProjectTimeline,
   getProjectTimeline,
+  createCut,
+  getCut,
+  deleteCut,
 } from "@/lib/actions/cut";
 import {
-  addClipToTimeline,
-  removeClip as removeClipAction,
-  updateClip as updateClipAction,
-  reorderClips,
+  addCutClip,
+  removeCutClip,
+  updateCutClip,
+  reorderCutClips,
 } from "@/lib/actions/cut";
+import { getCutTracks, addTrackToConfig, type TrackConfig } from "@/types/cut";
+import { updateCutTracks } from "@/lib/actions/cut";
 
 /**
- * 统一的时间轴操作处理器
+ * 统一的剪辑操作处理器
  */
-export async function handleTimelineFunctions(
+export async function handleCutFunctions(
   functionCall: FunctionCall,
   projectId: string
 ): Promise<FunctionExecutionResult> {
   const { name } = functionCall;
 
   switch (name) {
+    case "create_cut":
+      return handleCreateCut(functionCall, projectId);
+    case "delete_cut":
+      return handleDeleteCut(functionCall);
     case "add_clip":
       return handleAddClip(functionCall, projectId);
     case "remove_clip":
@@ -41,19 +49,94 @@ export async function handleTimelineFunctions(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `Unknown timeline function: ${name}`,
+        error: `Unknown cut function: ${name}`,
       };
   }
 }
 
+// 向后兼容的别名
+export const handleTimelineFunctions = handleCutFunctions;
+
 /**
- * Add clip to timeline
+ * Create a new cut
+ */
+async function handleCreateCut(
+  functionCall: FunctionCall,
+  projectId: string
+): Promise<FunctionExecutionResult> {
+  const { parameters } = functionCall;
+  const title = parameters.title as string | undefined;
+  const description = parameters.description as string | undefined;
+  const resolution = parameters.resolution as string | undefined;
+  const fps = parameters.fps as number | undefined;
+
+  const result = await createCut({
+    projectId,
+    title,
+    description,
+    resolution,
+    fps,
+  });
+
+  if (result.success && result.cut) {
+    return {
+      functionCallId: functionCall.id,
+      success: true,
+      data: {
+        message: `创建剪辑成功：${result.cut.title}`,
+        cut: {
+          id: result.cut.id,
+          title: result.cut.title,
+          resolution: result.cut.resolution,
+          fps: result.cut.fps,
+        },
+      },
+    };
+  } else {
+    return {
+      functionCallId: functionCall.id,
+      success: false,
+      error: result.error || "创建剪辑失败",
+    };
+  }
+}
+
+/**
+ * Delete a cut
+ */
+async function handleDeleteCut(
+  functionCall: FunctionCall
+): Promise<FunctionExecutionResult> {
+  const cutId = functionCall.parameters.cutId as string;
+
+  const result = await deleteCut(cutId);
+
+  if (result.success) {
+    return {
+      functionCallId: functionCall.id,
+      success: true,
+      data: {
+        message: `剪辑已删除`,
+      },
+    };
+  } else {
+    return {
+      functionCallId: functionCall.id,
+      success: false,
+      error: result.error || "删除剪辑失败",
+    };
+  }
+}
+
+/**
+ * Add clip to cut
  */
 async function handleAddClip(
   functionCall: FunctionCall,
   projectId: string
 ): Promise<FunctionExecutionResult> {
   const { parameters } = functionCall;
+  const cutIdParam = parameters.cutId as string | undefined;
   const assetId = parameters.assetId as string;
   const duration = parameters.duration as number | undefined;
   const insertAt = parameters.insertAt as string | undefined;
@@ -62,16 +145,31 @@ async function handleAddClip(
   const trackIndexParam = parameters.trackIndex as number | undefined;
   const startTimeParam = parameters.startTime as number | undefined;
 
-  // Get or create timeline
-  const timelineResult = await getOrCreateProjectTimeline(projectId);
-  if (!timelineResult.success || !timelineResult.timeline) {
-    return {
-      functionCallId: functionCall.id,
-      success: false,
-      error: timelineResult.error || "Failed to get or create timeline",
-    };
+  // Get cut by cutId or get/create default cut
+  let cutData;
+  if (cutIdParam) {
+    cutData = await getCut(cutIdParam);
+    if (!cutData) {
+      return {
+        functionCallId: functionCall.id,
+        success: false,
+        error: `剪辑 ${cutIdParam} 不存在`,
+      };
+    }
+  } else {
+    cutData = await getProjectTimeline(projectId);
+    if (!cutData) {
+      const result = await createCut({ projectId });
+      if (!result.success || !result.cut) {
+        return {
+          functionCallId: functionCall.id,
+          success: false,
+          error: result.error || "Failed to get or create cut",
+        };
+      }
+      cutData = result.cut;
+    }
   }
-  const timelineData = timelineResult.timeline;
 
   // Get asset info
   const assetResult = await getAssetWithFullData(assetId);
@@ -137,7 +235,7 @@ async function handleAddClip(
       startTime = 0;
       order = 0;
     } else if (insertAt && insertAt !== "end") {
-      const targetClip = timelineData.clips.find((c) => c.id === insertAt);
+      const targetClip = cutData.clips.find((c) => c.id === insertAt);
       if (targetClip) {
         startTime = targetClip.startTime + targetClip.duration;
         order = targetClip.order + 1;
@@ -145,7 +243,7 @@ async function handleAddClip(
     }
   }
 
-  const addResult = await addClipToTimeline(timelineData.id, {
+  const addResult = await addCutClip(cutData.id, {
     assetId,
     trackIndex: finalTrackIndex,
     duration: clipDuration,
@@ -163,8 +261,8 @@ async function handleAddClip(
       data: {
         message: `Added asset "${assetData.name}" to ${trackTypeLabel} (track ${finalTrackIndex})`,
         trackIndex: finalTrackIndex,
-        clipCount: addResult.timeline?.clips.length,
-        timelineDuration: addResult.timeline?.duration,
+        clipCount: addResult.cut?.clips.length,
+        cutDuration: addResult.cut?.duration,
       },
     };
   } else {
@@ -184,7 +282,7 @@ async function handleRemoveClip(
 ): Promise<FunctionExecutionResult> {
   const clipId = functionCall.parameters.clipId as string;
 
-  const removeResult = await removeClipAction(clipId);
+  const removeResult = await removeCutClip(clipId);
 
   if (removeResult.success) {
     return {
@@ -192,8 +290,8 @@ async function handleRemoveClip(
       success: true,
       data: {
         message: "Clip removed, subsequent clips shifted forward",
-        clipCount: removeResult.timeline?.clips.length,
-        timelineDuration: removeResult.timeline?.duration,
+        clipCount: removeResult.cut?.clips.length,
+        cutDuration: removeResult.cut?.duration,
       },
     };
   } else {
@@ -213,6 +311,7 @@ async function handleUpdateClip(
   projectId: string
 ): Promise<FunctionExecutionResult> {
   const { parameters } = functionCall;
+  const cutIdParam = parameters.cutId as string | undefined;
   const clipId = parameters.clipId as string;
   const duration = parameters.duration as number | undefined;
   const trimStart = parameters.trimStart as number | undefined;
@@ -220,20 +319,33 @@ async function handleUpdateClip(
   const moveToPosition = parameters.moveToPosition as number | undefined;
   const replaceWithAssetId = parameters.replaceWithAssetId as string | undefined;
 
-  const timelineData = await getProjectTimeline(projectId);
-  if (!timelineData) {
-    return {
-      functionCallId: functionCall.id,
-      success: false,
-      error: "Timeline does not exist",
-    };
+  // Get cut by cutId or get default cut
+  let cutData;
+  if (cutIdParam) {
+    cutData = await getCut(cutIdParam);
+    if (!cutData) {
+      return {
+        functionCallId: functionCall.id,
+        success: false,
+        error: `剪辑 ${cutIdParam} 不存在`,
+      };
+    }
+  } else {
+    cutData = await getProjectTimeline(projectId);
+    if (!cutData) {
+      return {
+        functionCallId: functionCall.id,
+        success: false,
+        error: "Cut does not exist",
+      };
+    }
   }
 
   const updates: string[] = [];
 
   // Handle asset replacement
   if (replaceWithAssetId !== undefined) {
-    const targetClip = timelineData.clips.find((c) => c.id === clipId);
+    const targetClip = cutData.clips.find((c) => c.id === clipId);
     if (!targetClip) {
       return {
         functionCallId: functionCall.id,
@@ -252,8 +364,8 @@ async function handleUpdateClip(
     }
     const newAsset = newAssetResult.asset;
 
-    await removeClipAction(clipId);
-    await addClipToTimeline(timelineData.id, {
+    await removeCutClip(clipId);
+    await addCutClip(cutData.id, {
       assetId: replaceWithAssetId,
       duration: duration ?? targetClip.duration,
       startTime: targetClip.startTime,
@@ -294,7 +406,7 @@ async function handleUpdateClip(
   }
 
   if (Object.keys(updateInput).length > 0) {
-    const updateResult = await updateClipAction(clipId, updateInput);
+    const updateResult = await updateCutClip(clipId, updateInput);
     if (!updateResult.success) {
       return {
         functionCallId: functionCall.id,
@@ -306,7 +418,7 @@ async function handleUpdateClip(
 
   // Handle position move
   if (moveToPosition !== undefined) {
-    const currentClip = timelineData.clips.find((c) => c.id === clipId);
+    const currentClip = cutData.clips.find((c) => c.id === clipId);
     if (!currentClip) {
       return {
         functionCallId: functionCall.id,
@@ -315,7 +427,7 @@ async function handleUpdateClip(
       };
     }
 
-    const otherClips = timelineData.clips
+    const otherClips = cutData.clips
       .filter((c) => c.id !== clipId)
       .sort((a, b) => a.order - b.order);
 
@@ -333,7 +445,7 @@ async function handleUpdateClip(
       newOrder.push({ clipId, order: newOrder.length });
     }
 
-    await reorderClips(timelineData.id, newOrder);
+    await reorderCutClips(cutData.id, newOrder);
     updates.push(`Moved to position ${moveToPosition}`);
   }
 
@@ -356,38 +468,51 @@ async function handleAddAudioTrack(
   functionCall: FunctionCall,
   projectId: string
 ): Promise<FunctionExecutionResult> {
-  const trackName = functionCall.parameters.name as string | undefined;
+  const { parameters } = functionCall;
+  const cutIdParam = parameters.cutId as string | undefined;
+  const trackName = parameters.name as string | undefined;
 
-  const timelineResult = await getOrCreateProjectTimeline(projectId);
-  if (!timelineResult.success || !timelineResult.timeline) {
-    return {
-      functionCallId: functionCall.id,
-      success: false,
-      error: timelineResult.error || "Failed to get or create timeline",
-    };
+  // Get cut by cutId or get/create default cut
+  let cutData;
+  if (cutIdParam) {
+    cutData = await getCut(cutIdParam);
+    if (!cutData) {
+      return {
+        functionCallId: functionCall.id,
+        success: false,
+        error: `剪辑 ${cutIdParam} 不存在`,
+      };
+    }
+  } else {
+    cutData = await getProjectTimeline(projectId);
+    if (!cutData) {
+      const result = await createCut({ projectId });
+      if (!result.success || !result.cut) {
+        return {
+          functionCallId: functionCall.id,
+          success: false,
+          error: result.error || "Failed to get or create cut",
+        };
+      }
+      cutData = result.cut;
+    }
   }
-  const timelineData = timelineResult.timeline;
 
-  const { getTimelineTracks, addTrackToConfig } = await import("@/types/timeline");
-  const { updateTimelineTracks } = await import(
-    "@/lib/actions/cut"
-  );
-
-  const currentTracks = getTimelineTracks(timelineData.metadata);
+  const currentTracks = getCutTracks(cutData.metadata);
   let newTracks = addTrackToConfig(currentTracks, "audio");
 
   if (trackName) {
     const lastTrack = newTracks[newTracks.length - 1];
-    newTracks = newTracks.map((t) =>
+    newTracks = newTracks.map((t: TrackConfig) =>
       t.index === lastTrack.index ? { ...t, name: trackName } : t
     );
   }
 
-  const updateResult = await updateTimelineTracks(timelineData.id, newTracks);
+  const updateResult = await updateCutTracks(cutData.id, newTracks);
 
   if (updateResult.success) {
     const newTrack = newTracks.find(
-      (t) =>
+      (t: TrackConfig) =>
         t.type === "audio" && !currentTracks.some((ct) => ct.index === t.index)
     );
     return {

@@ -41,13 +41,13 @@ export async function validateFunctionParameters(
       return validateAudioGenerationParams(functionName, params);
     }
 
-    // 时间轴类
+    // 剪辑类
     if (
-      ["add_clip", "remove_clip", "update_clip", "add_audio_track"].includes(
+      ["create_cut", "delete_cut", "add_clip", "remove_clip", "update_clip", "add_audio_track"].includes(
         functionName
       )
     ) {
-      return validateTimelineParams(functionName, params);
+      return validateCutParams(functionName, params);
     }
 
     // 资产操作类
@@ -238,9 +238,9 @@ function validateAudioGenerationParams(
 }
 
 /**
- * 校验时间轴操作参数
+ * 校验剪辑操作参数
  */
-function validateTimelineParams(
+function validateCutParams(
   functionName: string,
   params: Record<string, unknown>
 ): ValidationResult {
@@ -248,6 +248,28 @@ function validateTimelineParams(
   const warnings: string[] = [];
 
   switch (functionName) {
+    case "create_cut": {
+      // title, description, resolution, fps 都是可选的
+      if (params.title !== undefined && typeof params.title !== "string") {
+        errors.push("title 必须是字符串类型");
+      }
+      if (params.description !== undefined && typeof params.description !== "string") {
+        errors.push("description 必须是字符串类型");
+      }
+      if (params.resolution !== undefined && typeof params.resolution !== "string") {
+        errors.push("resolution 必须是字符串类型");
+      }
+      if (params.fps !== undefined && typeof params.fps !== "number") {
+        errors.push("fps 必须是数字类型");
+      }
+      break;
+    }
+    case "delete_cut": {
+      if (!params.cutId || typeof params.cutId !== "string") {
+        errors.push("cutId 是必填字段");
+      }
+      break;
+    }
     case "add_clip": {
       if (!params.assetId || typeof params.assetId !== "string") {
         errors.push("assetId 是必填字段");

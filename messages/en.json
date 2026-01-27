@@ -130,7 +130,7 @@
   },
   "exportDialog": {
     "title": "Export Video",
-    "description": "Render timeline to video file",
+    "description": "Render cut to video file",
     "duration": "Duration",
     "resolution": "Resolution",
     "clips": "Clips",
@@ -142,8 +142,8 @@
     "high": "High",
     "includeAudio": "Include Audio",
     "audioClipsCount": "Includes {count} audio clips",
-    "noAudioInTimeline": "No audio in timeline",
-    "emptyTimeline": "Timeline is empty, cannot export",
+    "noAudioInTimeline": "No audio in cut",
+    "emptyTimeline": "Cut is empty, cannot export",
     "exportTaskCreated": "Export task created, check progress in background tasks",
     "createTaskFailed": "Failed to create export task",
     "exportFailed": "Export failed, please retry",
@@ -633,14 +633,14 @@
         "deleteFailed": "Failed to delete style"
       },
       "timeline": {
-        "getFailed": "Failed to get timeline",
-        "createFailed": "Failed to create timeline",
-        "createGetFailed": "Cannot get timeline after creation",
-        "notFoundOrNoPermission": "Timeline not found or no permission",
-        "updateFailed": "Failed to update timeline",
-        "updateGetFailed": "Cannot get timeline after update",
-        "deleteFailed": "Failed to delete timeline",
-        "getOrCreateFailed": "Failed to get or create timeline",
+        "getFailed": "Failed to get cut",
+        "createFailed": "Failed to create cut",
+        "createGetFailed": "Cannot get cut after creation",
+        "notFoundOrNoPermission": "Cut not found or no permission",
+        "updateFailed": "Failed to update cut",
+        "updateGetFailed": "Cannot get cut after update",
+        "deleteFailed": "Failed to delete cut",
+        "getOrCreateFailed": "Failed to get or create cut",
         "updateTracksFailed": "Failed to update track configuration",
         "untitledClip": "Untitled Clip"
       },
@@ -1467,7 +1467,7 @@
       "referenceAssetAdded": "Reference asset added",
       "videoTaskStarted": "Video generation task started",
       "taskCreatedAiProcessing": "Task created, AI is processing...",
-      "timelineClipAdded": "Added to timeline",
+      "timelineClipAdded": "Added to cut",
       "audioTrackAdded": "Audio track added",
       "trackDeleted": "Track deleted",
       "copied": "Copied to clipboard",
@@ -1873,7 +1873,7 @@
           "queryContext": "Query Project Context",
           "queryAssets": "Query Assets",
           "queryTextAssets": "Query Text Assets",
-          "queryTimeline": "Query Timeline",
+          "queryTimeline": "Query Cut",
           "generateImageAsset": "Generate Image Asset",
           "generateVideoAsset": "Generate Video Asset",
           "createTextAsset": "Create Text Asset",
@@ -1986,7 +1986,8 @@
           "startConversationFailed": "Failed to start conversation",
           "createConversationFailed": "Failed to create conversation",
           "sendMessageFailed": "Failed to send message",
-          "generationStopped": "Generation stopped"
+          "generationStopped": "Generation stopped",
+          "autoModeCompleted": "Auto mode completed"
         },
         "stream": {
           "responseTimeout": "Response timeout",
@@ -2170,7 +2171,7 @@
     "clippingMode": {
       "assetStrip": {
         "trimmed": "Trimmed",
-        "removeFromTimeline": "Remove from timeline",
+        "removeFromTimeline": "Remove from cut",
         "inPoint": "In",
         "outPoint": "Out",
         "duration": "Duration",
@@ -2185,7 +2186,7 @@
       "dragToAddVideo": "Drag or click to add video",
       "dragToAddAudio": "Drag or click to add audio",
       "videoLoadFailed": "Video load failed",
-      "dragToStart": "Drag assets to timeline to start editing",
+      "dragToStart": "Drag assets to start editing",
       "tracks": {
         "video": "Video",
         "audio": "Audio"
@@ -2199,7 +2200,7 @@
         "removeFromTimeline": "Remove from timeline"
       },
       "audioClip": {
-        "removeFromTimeline": "Remove from timeline",
+        "removeFromTimeline": "Remove from cut",
         "inPoint": "In",
         "outPoint": "Out",
         "duration": "Duration",

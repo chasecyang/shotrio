@@ -455,6 +455,10 @@ export function FloatingAgentCard({
     },
     onComplete: () => {
       agent.setLoading(false);
+      // 只有在自动模式开启时才显示完成提示
+      if (agent.state.isAutoAcceptEnabled) {
+        toast.info(tAgent("toasts.autoModeCompleted"));
+      }
       agent.setAutoAccept(false); // 对话结束后自动退出自动模式
       setTimeout(() => agent.refreshConversations(true), 100);
     },
