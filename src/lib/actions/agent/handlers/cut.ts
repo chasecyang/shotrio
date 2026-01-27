@@ -80,7 +80,6 @@ async function handleCreateCut(
       functionCallId: functionCall.id,
       success: true,
       data: {
-        message: `创建剪辑成功：${result.cut.title}`,
         cut: {
           id: result.cut.id,
           title: result.cut.title,
@@ -93,7 +92,7 @@ async function handleCreateCut(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: result.error || "创建剪辑失败",
+      error: result.error || "Failed to create cut",
     };
   }
 }
@@ -113,14 +112,14 @@ async function handleDeleteCut(
       functionCallId: functionCall.id,
       success: true,
       data: {
-        message: `剪辑已删除`,
+        cutId,
       },
     };
   } else {
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: result.error || "删除剪辑失败",
+      error: result.error || "Failed to delete cut",
     };
   }
 }
@@ -150,7 +149,7 @@ async function handleAddClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `剪辑 ${cutIdParam} 不存在`,
+        error: `Cut ${cutIdParam} not found`,
       };
     }
   } else {
@@ -327,7 +326,7 @@ async function handleUpdateClip(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `剪辑 ${cutIdParam} 不存在`,
+        error: `Cut ${cutIdParam} not found`,
       };
     }
   } else {
@@ -483,7 +482,7 @@ async function handleAddAudioTrack(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `剪辑 ${cutIdParam} 不存在`,
+        error: `Cut ${cutIdParam} not found`,
       };
     }
   } else {

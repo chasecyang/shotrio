@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { addCutClip, removeCutClip, reorderCutClips, updateCutClip, updateCutTracks, updateCut } from "@/lib/actions/cut";
 import { ResolutionSelector } from "./resolution-selector";
 import { ExportDialog } from "./export-dialog";
+import { ExportHistoryDropdown } from "./export-history-dropdown";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { AssetWithFullData } from "@/types/asset";
@@ -929,17 +930,20 @@ function TimelinePanelContent({
             </span>
           </div>
 
-          {/* Export button */}
-          <Button
-            variant="default"
-            size="sm"
-            className="h-7 gap-1.5 border-l ml-3 pl-3"
-            onClick={() => onOpenExportDialog ? onOpenExportDialog() : setIsExportDialogOpen(true)}
-            disabled={timeline.clips.length === 0 || isExporting}
-          >
-            <Download className="h-3.5 w-3.5" />
-            {t("export")}
-          </Button>
+          {/* Export history and button */}
+          <div className="flex items-center gap-1 border-l ml-3 pl-3">
+            <ExportHistoryDropdown cutId={timeline.id} />
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 gap-1.5"
+              onClick={() => onOpenExportDialog ? onOpenExportDialog() : setIsExportDialogOpen(true)}
+              disabled={timeline.clips.length === 0 || isExporting}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {t("export")}
+            </Button>
+          </div>
         </div>
       </div>
 

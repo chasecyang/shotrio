@@ -30,7 +30,7 @@ export async function handleAssetOperations(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `未知的资产操作函数: ${name}`,
+        error: `Unknown asset operation function: ${name}`,
       };
   }
 }
@@ -88,7 +88,7 @@ async function handleUpdateAsset(
       updateResults.push({
         assetId,
         success: false,
-        error: error instanceof Error ? error.message : "更新失败",
+        error: error instanceof Error ? error.message : "Update failed",
       });
     }
   }
@@ -107,7 +107,7 @@ async function handleUpdateAsset(
       errors: errors.length > 0 ? errors : undefined,
     },
     error:
-      successCount === 0 ? `所有更新失败: ${errors.join("; ")}` : undefined,
+      successCount === 0 ? `All updates failed: ${errors.join("; ")}` : undefined,
   };
 }
 
@@ -147,7 +147,7 @@ async function handleDeleteAsset(
       errors: errors.length > 0 ? errors : undefined,
     },
     error:
-      successCount === 0 ? `所有删除失败: ${errors.join("; ")}` : undefined,
+      successCount === 0 ? `All deletions failed: ${errors.join("; ")}` : undefined,
   };
 }
 
@@ -169,7 +169,7 @@ async function handleSetProjectInfo(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: "至少需要提供 title、description 或 stylePrompt 中的一个字段",
+      error: "At least one of title, description, or stylePrompt must be provided",
     };
   }
 
@@ -180,11 +180,11 @@ async function handleSetProjectInfo(
 
   const updateResult = await updateProject(projectId, updateData);
 
-  // 构建更新字段列表
+  // Build updated fields list
   const updatedFields: string[] = [];
-  if (title !== undefined) updatedFields.push("标题");
-  if (description !== undefined) updatedFields.push("描述");
-  if (stylePrompt !== undefined) updatedFields.push("美术风格");
+  if (title !== undefined) updatedFields.push("title");
+  if (description !== undefined) updatedFields.push("description");
+  if (stylePrompt !== undefined) updatedFields.push("style");
 
   return {
     functionCallId: functionCall.id,

@@ -3,6 +3,7 @@
 import { ArtStyle } from "@/types/art-style";
 import { Palette } from "lucide-react";
 import Image from "next/image";
+import { useLocale } from "next-intl";
 
 interface TemplateButtonProps {
   style: ArtStyle;
@@ -10,6 +11,9 @@ interface TemplateButtonProps {
 }
 
 export function TemplateButton({ style, onClick }: TemplateButtonProps) {
+  const locale = useLocale();
+  const displayName = locale === "en" && style.nameEn ? style.nameEn : style.name;
+
   return (
     <button
       onClick={onClick}
@@ -19,7 +23,7 @@ export function TemplateButton({ style, onClick }: TemplateButtonProps) {
         {style.previewImage ? (
           <Image
             src={style.previewImage}
-            alt={style.name}
+            alt={displayName}
             width={48}
             height={48}
             className="object-cover w-full h-full"
@@ -30,7 +34,7 @@ export function TemplateButton({ style, onClick }: TemplateButtonProps) {
           </div>
         )}
       </div>
-      <span className="text-xs text-center line-clamp-2 w-full">{style.name}</span>
+      <span className="text-xs text-center line-clamp-2 w-full">{displayName}</span>
     </button>
   );
 }

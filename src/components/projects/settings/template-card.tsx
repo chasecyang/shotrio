@@ -4,6 +4,7 @@ import { ArtStyle } from "@/types/art-style";
 import { Card } from "@/components/ui/card";
 import { Palette } from "lucide-react";
 import Image from "next/image";
+import { useLocale } from "next-intl";
 
 interface TemplateCardProps {
   style: ArtStyle;
@@ -11,6 +12,9 @@ interface TemplateCardProps {
 }
 
 export function TemplateCard({ style, onSelect }: TemplateCardProps) {
+  const locale = useLocale();
+  const displayName = locale === "en" && style.nameEn ? style.nameEn : style.name;
+
   return (
     <Card
       className="cursor-pointer transition-all hover:scale-105 hover:shadow-lg overflow-hidden"
@@ -21,7 +25,7 @@ export function TemplateCard({ style, onSelect }: TemplateCardProps) {
         {style.previewImage ? (
           <Image
             src={style.previewImage}
-            alt={style.name}
+            alt={displayName}
             fill
             className="object-cover"
           />
@@ -34,10 +38,7 @@ export function TemplateCard({ style, onSelect }: TemplateCardProps) {
 
       {/* 风格信息 */}
       <div className="p-3 space-y-1">
-        <h4 className="font-medium text-sm">{style.name}</h4>
-        {style.nameEn && (
-          <p className="text-xs text-muted-foreground">{style.nameEn}</p>
-        )}
+        <h4 className="font-medium text-sm">{displayName}</h4>
         {style.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">
             {style.description}

@@ -27,7 +27,6 @@
 
 ### `layout/` - 布局组件
 - `project-selector.tsx` - 项目选择器（集成在编辑器 Header 中）
-- `background-tasks.tsx` - 后台任务管理
 
 ### `shared/` - 共享组件
 - 跨模块使用的通用组件

@@ -22,24 +22,24 @@ interface AudioTypeConfig {
 const AUDIO_TYPE_CONFIGS: Record<string, AudioTypeConfig> = {
   generate_sound_effect: {
     purpose: "sound_effect",
-    defaultTags: ["音效"],
-    defaultNamePrefix: "音效",
-    successMessage: "音效生成任务已创建",
-    errorMessage: "创建音效生成任务失败",
+    defaultTags: ["sound-effect"],
+    defaultNamePrefix: "SFX",
+    successMessage: "Sound effect generation task created",
+    errorMessage: "Failed to create sound effect generation task",
   },
   generate_bgm: {
     purpose: "bgm",
     defaultTags: ["BGM"],
     defaultNamePrefix: "BGM",
-    successMessage: "背景音乐生成任务已创建",
-    errorMessage: "创建背景音乐生成任务失败",
+    successMessage: "Background music generation task created",
+    errorMessage: "Failed to create background music generation task",
   },
   generate_dialogue: {
     purpose: "voiceover",
-    defaultTags: ["台词", "配音"],
-    defaultNamePrefix: "台词",
-    successMessage: "台词生成任务已创建",
-    errorMessage: "创建台词生成任务失败",
+    defaultTags: ["dialogue", "voiceover"],
+    defaultNamePrefix: "Dialogue",
+    successMessage: "Dialogue generation task created",
+    errorMessage: "Failed to create dialogue generation task",
   },
 };
 
@@ -114,7 +114,7 @@ export async function handleAudioGeneration(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: `未知的音频生成函数: ${name}`,
+      error: `Unknown audio generation function: ${name}`,
     };
   }
 
@@ -137,7 +137,7 @@ export async function handleAudioGeneration(
         return {
           functionCallId: functionCall.id,
           success: false,
-          error: `无效的音色 ID: ${voiceId}，请使用系统预设音色`,
+          error: `Invalid voice ID: ${voiceId}, please use a system preset voice`,
         };
       }
 
@@ -145,7 +145,7 @@ export async function handleAudioGeneration(
       if (!assetName) {
         assetName = `${config.defaultNamePrefix}-${voiceDisplayName}-${Date.now()}`;
       }
-      successMessage = `台词生成任务已创建（音色：${voiceDisplayName}）`;
+      successMessage = `Dialogue generation task created (voice: ${voiceDisplayName})`;
     } else {
       if (!assetName) {
         assetName = `${config.defaultNamePrefix}-${Date.now()}`;
@@ -185,7 +185,7 @@ export async function handleAudioGeneration(
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: error instanceof Error ? error.message : "生成音频失败",
+      error: error instanceof Error ? error.message : "Failed to generate audio",
     };
   }
 }

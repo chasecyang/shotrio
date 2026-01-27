@@ -15,7 +15,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "query_context",
     description: "查询项目完整上下文，包括项目信息（标题、描述、当前画风）、视频列表、素材统计、可用美术风格等。这是一个综合查询工具，适合在对话开始时了解项目全貌。",
-    displayName: "查询项目上下文",
+    displayName: "queryContext",
     parameters: {
       type: "object",
       properties: {
@@ -43,7 +43,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "query_assets",
     description: "查询项目资产库（包括图片素材和视频素材）。支持按类型（image/video）和标签筛选。返回资产的详细信息，包括ID、名称、状态、selectionStatus（用户筛选状态：selected=精选采纳、rejected=废弃、unrated=未评价）、prompt、标签等。生成新内容时应优先引用 selected 的素材，避免使用 rejected 的素材。适合在需要引用现有素材、查看生成结果、或了解资产库内容时使用。",
-    displayName: "查询资产库",
+    displayName: "queryAssets",
     parameters: {
       type: "object",
       properties: {
@@ -83,7 +83,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - 角色三视图/四视图、道具、场景等参考素材必须使用白色或浅灰色背景
 - 场景素材应只表达场景本身，不应包含人物
 `,
-    displayName: "生成图片资产",
+    displayName: "generateImageAsset",
     parameters: {
       type: "object",
       properties: {
@@ -140,7 +140,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 - reference_image_urls（必填）：参考图数组，支持 1-3 张图片的资产ID或URL
 - duration（可选）：兼容字段，Veo 3.1 可能忽略
 `,
-    displayName: "生成视频资产",
+    displayName: "generateVideoAsset",
     parameters: {
       type: "object",
       properties: {
@@ -190,7 +190,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "update_asset",
     description: "修改资产信息（支持单个或批量，同时支持图片素材和视频素材）。只允许修改 name（名称）和 tags（标签），不允许修改 prompt 等生成配置字段。适合批量重命名、添加标签分类、优化素材管理。",
-    displayName: "修改资产",
+    displayName: "updateAsset",
     parameters: {
       type: "object",
       properties: {
@@ -207,7 +207,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "set_project_info",
     description: "设置项目信息，包括标题、描述、美术风格。至少需要提供一个字段。设置美术风格时，可以直接传入英文风格描述文本（如 'Cinematic photorealistic style'），或者先用 query_context 获取可用预设风格列表，然后复制其中某个风格的 prompt 字段作为 stylePrompt 参数。",
-    displayName: "设置项目信息",
+    displayName: "setProjectInfo",
     parameters: {
       type: "object",
       properties: {
@@ -235,7 +235,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "delete_asset",
     description: "删除资产（支持单个或批量，同时支持图片、视频、音频和文本素材）。删除后无法恢复，请谨慎使用。适合清理不需要的素材、删除生成失败的资产。",
-    displayName: "删除资产",
+    displayName: "deleteAsset",
     parameters: {
       type: "object",
       properties: {
@@ -256,7 +256,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "create_text_asset",
     description: "创建文本资产，用于记录角色小传、剧本、分镜设计、世界观设定等文本信息。这些文本可以被后续查询和引用，作为项目的知识库。",
-    displayName: "创建文本资产",
+    displayName: "createTextAsset",
     parameters: {
       type: "object",
       properties: {
@@ -289,7 +289,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "query_text_assets",
     description: "查询并读取文本资产内容。可以按标签筛选，返回完整的文本内容用于参考。适合在需要查看角色设定、剧本内容、分镜设计等信息时使用。",
-    displayName: "查询文本资产",
+    displayName: "queryTextAssets",
     parameters: {
       type: "object",
       properties: {
@@ -316,7 +316,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "query_cuts",
     description: "查询项目的所有剪辑列表。返回每个剪辑的基本信息（ID、标题、时长、片段数量等）。一个项目可以有多个剪辑，用于制作不同版本的视频。",
-    displayName: "查询剪辑列表",
+    displayName: "queryCuts",
     parameters: {
       type: "object",
       properties: {},
@@ -327,7 +327,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "query_cut",
     description: "查询单个剪辑的详细状态。返回：总时长、片段列表、每个片段的素材详情（ID、名称、prompt、标签、时长、位置等）。执行剪辑操作前应先调用此函数了解现状。",
-    displayName: "查询剪辑详情",
+    displayName: "queryCut",
     parameters: {
       type: "object",
       properties: {
@@ -343,7 +343,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "create_cut",
     description: "创建新的剪辑。每个项目可以有多个剪辑，用于制作不同版本或不同内容的视频。创建后可以使用 add_clip 添加素材到剪辑中。",
-    displayName: "创建剪辑",
+    displayName: "createCut",
     parameters: {
       type: "object",
       properties: {
@@ -371,7 +371,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "delete_cut",
     description: "删除剪辑。删除后无法恢复，剪辑中的所有片段也会被删除（但素材本身不会被删除）。请谨慎使用。",
-    displayName: "删除剪辑",
+    displayName: "deleteCut",
     parameters: {
       type: "object",
       properties: {
@@ -391,7 +391,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       "添加素材到剪辑。支持视频轨道(0-99)和音频轨道(100+)。" +
       "不指定trackIndex时根据素材类型自动选择（视频/图片→轨道0，音频→轨道100）。" +
       "音频轨道可通过startTime自由定位实现精确同步。",
-    displayName: "添加片段",
+    displayName: "addClip",
     parameters: {
       type: "object",
       properties: {
@@ -438,7 +438,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "remove_clip",
     description: "从剪辑中移除片段。视频轨道删除后自动波纹编辑（后续片段自动前移）；音频轨道删除后保持自由定位，不影响其他片段位置。",
-    displayName: "移除片段",
+    displayName: "removeClip",
     parameters: {
       type: "object",
       properties: {
@@ -455,7 +455,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "update_clip",
     description: "更新片段属性。可修改：时长、裁剪点、顺序位置、替换素材。一次调用可修改多个属性。",
-    displayName: "更新片段",
+    displayName: "updateClip",
     parameters: {
       type: "object",
       properties: {
@@ -498,7 +498,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
     description:
       "添加新的音频轨道。当需要多条音频同时播放时使用（如背景音乐+音效+对白）。" +
       "默认已有一条音频轨道（索引100），此函数用于添加额外的音频轨道。",
-    displayName: "添加音频轨道",
+    displayName: "addAudioTrack",
     parameters: {
       type: "object",
       properties: {
@@ -546,7 +546,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 \`\`\`
 
 **积分消耗：** 1 积分/次`,
-    displayName: "生成音效",
+    displayName: "generateSoundEffect",
     parameters: {
       type: "object",
       properties: {
@@ -606,7 +606,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 \`\`\`
 
 **积分消耗：** 10 积分/次`,
-    displayName: "生成背景音乐",
+    displayName: "generateBgm",
     parameters: {
       type: "object",
       properties: {
@@ -677,7 +677,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
 **注意：** 同一角色的台词应使用相同的 voice_id 以保持一致性。
 
 **积分消耗：** 约 0.6 积分/100字`,
-    displayName: "生成台词配音",
+    displayName: "generateDialogue",
     parameters: {
       type: "object",
       properties: {

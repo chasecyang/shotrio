@@ -25,7 +25,7 @@ export async function handleTextAssetFunctions(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `未知的文本资产函数: ${name}`,
+        error: `Unknown text asset function: ${name}`,
       };
   }
 }
@@ -56,14 +56,13 @@ async function handleCreateTextAsset(
       data: {
         assetId: createResult.asset?.id,
         name: createResult.asset?.name,
-        message: `已创建文本资产"${name}"`,
       },
     };
   } else {
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: createResult.error || "创建文本资产失败",
+      error: createResult.error || "Failed to create text asset",
     };
   }
 }

@@ -82,7 +82,7 @@ export async function uploadVideoFromUrl(
   category: AssetCategory = AssetCategory.VIDEOS
 ): Promise<{ success: boolean; url?: string; key?: string; error?: string }> {
   try {
-    console.log(`[Upload] 开始下载视频: ${videoUrl}`);
+    console.log(`[Upload] 开始下载视频，长度: ${videoUrl.length}`);
 
     // 直接使用重构后的 uploadVideoToR2（现在支持 URL）
     const result = await uploadVideoToR2(videoUrl, {
@@ -133,4 +133,3 @@ export async function deleteImage(urlOrKey: string) {
     };
   }
 }
-

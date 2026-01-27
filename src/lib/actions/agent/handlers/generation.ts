@@ -43,7 +43,7 @@ export async function handleGenerationFunctions(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `未知的生成函数: ${name}`,
+        error: `Unknown generation function: ${name}`,
       };
   }
 }
@@ -75,7 +75,7 @@ async function handleGenerateImage(
 
   for (const assetData of assets) {
     try {
-      const assetName = assetData.name || `AI生成-${Date.now()}`;
+      const assetName = assetData.name || `AI-Generated-${Date.now()}`;
       const aspectRatio =
         (assetData.aspect_ratio as AspectRatio | undefined) ?? "16:9";
 
@@ -108,7 +108,7 @@ async function handleGenerateImage(
       });
 
       if (!createResult.success || !createResult.asset) {
-        errors.push(`创建素材 ${assetName} 失败: ${createResult.error}`);
+        errors.push(`Failed to create asset ${assetName}: ${createResult.error}`);
         continue;
       }
 
@@ -128,13 +128,13 @@ async function handleGenerateImage(
         jobIds.push(jobResult.jobId);
       } else {
         errors.push(
-          `创建 "${assetData.name || "unnamed"}" 任务失败: ${jobResult.error || "未知错误"}`
+          `Failed to create task for "${assetData.name || "unnamed"}": ${jobResult.error || "Unknown error"}`
         );
       }
     } catch (error) {
-      console.error(`处理素材 ${assetData.name || "unnamed"} 失败:`, error);
+      console.error(`Failed to process asset ${assetData.name || "unnamed"}:`, error);
       errors.push(
-        `处理素材 "${assetData.name || "unnamed"}" 失败: ${error instanceof Error ? error.message : "未知错误"}`
+        `Failed to process asset "${assetData.name || "unnamed"}": ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
   }
@@ -151,7 +151,7 @@ async function handleGenerateImage(
     },
     error:
       errors.length > 0 && jobIds.length === 0
-        ? `所有任务创建失败: ${errors.join("; ")}`
+        ? `All tasks failed: ${errors.join("; ")}`
         : undefined,
   };
 }
@@ -182,7 +182,7 @@ async function handleGenerateVideo(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `参数校验失败: ${validationResult.errors.join("; ")}`,
+        error: `Parameter validation failed: ${validationResult.errors.join("; ")}`,
       };
     }
 
@@ -207,7 +207,7 @@ async function handleGenerateVideo(
     // ========== 创建新素材模式 ==========
     const generateResult = await createVideoAsset({
       projectId,
-      name: title || "未命名视频",
+      name: title || "Untitled Video",
       prompt: finalPrompt,
       generationConfig,
       order,
@@ -221,21 +221,20 @@ async function handleGenerateVideo(
         data: {
           assetId: generateResult.data?.asset.id,
           jobId: generateResult.data?.jobId,
-          message: "视频生成任务已创建",
         },
       };
     } else {
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: generateResult.error || "创建视频生成任务失败",
+        error: generateResult.error || "Failed to create video generation task",
       };
     }
   } catch (error) {
     return {
       functionCallId: functionCall.id,
       success: false,
-      error: error instanceof Error ? error.message : "生成视频失败",
+      error: error instanceof Error ? error.message : "Failed to generate video",
     };
   }
 }

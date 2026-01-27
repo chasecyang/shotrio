@@ -20,28 +20,43 @@ export function formatFunctionResult(
 
   // Default translation function (returns key or fallback)
   const translate = t || ((key: string, params?: Record<string, string | number>) => {
-    // Fallback to Chinese for backward compatibility
+    // Fallback to English
     const fallbacks: Record<string, string> = {
-      "queriedContext": params?.parts ? `已查询: ${params.parts}` : "已查询项目上下文",
-      "queriedProjectContext": "已查询项目上下文",
-      "projectInfo": "项目信息",
-      "episode": "剧集",
-      "videos": params?.count !== undefined ? `视频(${params.count})` : "视频",
-      "assets": params?.count !== undefined ? `素材(${params.count})` : "素材",
-      "artStyles": "美术风格列表",
-      "foundAssets": params?.count !== undefined ? `找到 ${params.count} 个资产` : "找到资产",
-      "queryComplete": "查询完成",
-      "createdVideoWithTitle": params?.title ? `已创建视频: ${params.title}` : "已创建视频",
-      "createdVideoTask": "已创建视频生成任务",
-      "createdImageTasks": params?.count !== undefined ? `已创建 ${params.count} 个生成任务` : "已创建生成任务",
-      "createdImageTask": "已创建图片生成任务",
-      "updatedAssets": params?.count !== undefined ? `已更新 ${params.count} 个资产` : "已更新资产",
-      "updatedAsset": "已更新资产",
-      "updatedProjectFields": params?.fields ? `已更新项目${params.fields}` : "已更新项目信息",
-      "updatedProjectInfo": "已更新项目信息",
-      "deletedAssets": params?.count !== undefined ? `已删除 ${params.count} 个资产` : "已删除资产",
-      "completedOperations": params?.count !== undefined ? `已完成 ${params.count} 项操作` : "已完成操作",
-      "totalItems": params?.count !== undefined ? `共 ${params.count} 项` : "共计",
+      "queriedContext": params?.parts ? `Queried: ${params.parts}` : "Queried project context",
+      "queriedProjectContext": "Queried project context",
+      "projectInfo": "project info",
+      "episode": "episode",
+      "videos": params?.count !== undefined ? `videos(${params.count})` : "videos",
+      "assets": params?.count !== undefined ? `assets(${params.count})` : "assets",
+      "artStyles": "art styles",
+      "foundAssets": params?.count !== undefined ? `Found ${params.count} assets` : "Found assets",
+      "foundAssetsWithStatus": params?.total !== undefined
+        ? `Found ${params.total} assets (${params.completed} completed, ${params.processing} processing${params.failed ? `, ${params.failed} failed` : ""})`
+        : "Found assets",
+      "emptyAssetLibrary": "Asset library is empty",
+      "foundTextAssets": params?.count !== undefined ? `Found ${params.count} text assets` : "Found text assets",
+      "noTextAssetsFound": "No text assets found",
+      "foundCuts": params?.count !== undefined ? `Found ${params.count} cuts` : "Found cuts",
+      "noCutsFound": "No cuts found, use create_cut to create one",
+      "cutEmpty": "Cut is empty, no clips",
+      "cutSummary": params?.clipCount !== undefined
+        ? `Cut has ${params.clipCount} clips (${params.videoClips} video, ${params.audioClips} audio), duration ${params.duration}s`
+        : "Cut summary",
+      "queryComplete": "Query complete",
+      "createdVideoWithTitle": params?.title ? `Created video: ${params.title}` : "Created video",
+      "createdVideoTask": "Created video generation task",
+      "createdImageTasks": params?.count !== undefined ? `Created ${params.count} generation tasks` : "Created generation tasks",
+      "createdImageTask": "Created image generation task",
+      "createdTextAsset": params?.name ? `Created text asset "${params.name}"` : "Created text asset",
+      "createdCut": params?.title ? `Created cut: ${params.title}` : "Created cut",
+      "deletedCut": "Cut deleted",
+      "updatedAssets": params?.count !== undefined ? `Updated ${params.count} assets` : "Updated assets",
+      "updatedAsset": "Updated asset",
+      "updatedProjectFields": params?.fields ? `Updated project ${params.fields}` : "Updated project info",
+      "updatedProjectInfo": "Updated project info",
+      "deletedAssets": params?.count !== undefined ? `Deleted ${params.count} assets` : "Deleted assets",
+      "completedOperations": params?.count !== undefined ? `Completed ${params.count} operations` : "Completed operations",
+      "totalItems": params?.count !== undefined ? `Total ${params.count} items` : "Total",
     };
     return fallbacks[key] || key;
   });
@@ -49,7 +64,7 @@ export function formatFunctionResult(
   try {
     switch (functionName) {
       // ============================================
-      // 查询类
+      // Query functions
       // ============================================
       case "query_context": {
         const contextData = data as {
@@ -71,18 +86,65 @@ export function formatFunctionResult(
       }
 
       case "query_assets": {
-        const queryData = data as { total?: number; message?: string };
-        if (queryData.message) {
-          return queryData.message;
+        const queryData = data as {
+          total?: number;
+          completed?: number;
+          processing?: number;
+          failed?: number;
+          assetType?: string;
+          assets?: unknown[];
+        };
+        if (queryData.total === 0 || (queryData.assets && queryData.assets.length === 0)) {
+          return translate("emptyAssetLibrary");
         }
         if (queryData.total !== undefined) {
-          return translate("foundAssets", { count: queryData.total });
+          return translate("foundAssetsWithStatus", {
+            total: queryData.total,
+            completed: queryData.completed || 0,
+            processing: queryData.processing || 0,
+            failed: queryData.failed || 0,
+          });
+        }
+        return translate("queryComplete");
+      }
+
+      case "query_text_assets": {
+        const textData = data as { total?: number; assets?: unknown[] };
+        if (textData.total === 0 || (textData.assets && textData.assets.length === 0)) {
+          return translate("noTextAssetsFound");
+        }
+        return translate("foundTextAssets", { count: textData.total || textData.assets?.length || 0 });
+      }
+
+      case "query_cuts": {
+        const cutsData = data as { total?: number; cuts?: unknown[] };
+        if (cutsData.total === 0 || (cutsData.cuts && cutsData.cuts.length === 0)) {
+          return translate("noCutsFound");
+        }
+        return translate("foundCuts", { count: cutsData.total || cutsData.cuts?.length || 0 });
+      }
+
+      case "query_cut": {
+        const cutData = data as {
+          cut?: { clipCount?: number };
+          summary?: { videoClips?: number; audioClips?: number; totalDurationSec?: number };
+        };
+        if (cutData.cut?.clipCount === 0) {
+          return translate("cutEmpty");
+        }
+        if (cutData.summary) {
+          return translate("cutSummary", {
+            clipCount: cutData.cut?.clipCount || 0,
+            videoClips: cutData.summary.videoClips || 0,
+            audioClips: cutData.summary.audioClips || 0,
+            duration: cutData.summary.totalDurationSec || 0,
+          });
         }
         return translate("queryComplete");
       }
 
       // ============================================
-      // 创作类
+      // Generation functions
       // ============================================
       case "generate_video_asset": {
         const videoData = data as { videoId?: string; title?: string };
@@ -103,8 +165,22 @@ export function formatFunctionResult(
         return translate("createdImageTask");
       }
 
+      case "create_text_asset": {
+        const textAssetData = data as { name?: string; assetId?: string };
+        return translate("createdTextAsset", { name: textAssetData.name || "" });
+      }
+
+      case "create_cut": {
+        const cutData = data as { cut?: { title?: string } };
+        return translate("createdCut", { title: cutData.cut?.title || "" });
+      }
+
+      case "delete_cut": {
+        return translate("deletedCut");
+      }
+
       // ============================================
-      // 修改类
+      // Modification functions
       // ============================================
       case "update_asset": {
         const updateData = data as { updated?: number; total?: number };
@@ -123,7 +199,7 @@ export function formatFunctionResult(
       }
 
       // ============================================
-      // 删除类
+      // Deletion functions
       // ============================================
       case "delete_asset": {
         const deleteData = data as { deleted?: number };
@@ -132,13 +208,9 @@ export function formatFunctionResult(
       }
 
       default:
-        // 对于未知函数，尝试从 data 中提取有用信息
+        // For unknown functions, try to extract useful info from data
         if (typeof data === "object" && data !== null) {
           const dataObj = data as Record<string, unknown>;
-          // 尝试提取常见的字段
-          if (dataObj.message && typeof dataObj.message === "string") {
-            return dataObj.message;
-          }
           if (dataObj.count !== undefined) {
             return translate("completedOperations", { count: dataObj.count as number });
           }
@@ -149,7 +221,7 @@ export function formatFunctionResult(
         return undefined;
     }
   } catch (error) {
-    console.warn(`[AgentEngine] 格式化函数结果失败:`, error);
+    console.warn(`[AgentEngine] Failed to format function result:`, error);
     return undefined;
   }
 }

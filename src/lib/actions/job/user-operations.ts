@@ -298,3 +298,52 @@ export async function getJobDetail(jobId: string): Promise<{
     };
   }
 }
+
+/**
+ * 获取特定剪辑的导出历史
+ */
+export async function getCutExportHistory(cutId: string): Promise<{
+  success: boolean;
+  jobs?: Job[];
+  error?: string;
+}> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "未登录",
+    };
+  }
+
+  try {
+    // 获取该用户的所有 final_video_export 任务
+    const exportJobs = await db.query.job.findMany({
+      where: and(
+        eq(job.userId, session.user.id),
+        eq(job.type, "final_video_export")
+      ),
+      orderBy: [desc(job.createdAt)],
+      limit: 20,
+    });
+
+    // 过滤出属于该剪辑的导出任务
+    const cutExportJobs = exportJobs.filter((j) => {
+      const inputData = j.inputData as { timelineId?: string } | null;
+      return inputData?.timelineId === cutId;
+    });
+
+    return {
+      success: true,
+      jobs: cutExportJobs.slice(0, 10) as Job[],
+    };
+  } catch (error) {
+    console.error("获取剪辑导出历史失败:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "获取导出历史失败",
+    };
+  }
+}

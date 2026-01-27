@@ -30,10 +30,22 @@ export interface DisplayStep {
  */
 export function useMessageDisplay(messages: AgentMessage[]) {
   const t = useTranslations("agent.functionResult");
+  const tDisplayNames = useTranslations("editor.agent.toolExecution.displayNames");
 
   // Create translation function for formatFunctionResult
   const translateFn: TranslationFunction = (key, params) => {
     return t(key, params as Record<string, string | number>);
+  };
+
+  // Translate displayName key to localized string
+  const translateDisplayName = (displayNameKey: string | undefined): string | undefined => {
+    if (!displayNameKey) return undefined;
+    // Check if translation exists, otherwise return the key as fallback
+    try {
+      return tDisplayNames(displayNameKey as Parameters<typeof tDisplayNames>[0]);
+    } catch {
+      return displayNameKey;
+    }
   };
 
   return useMemo(() => {
@@ -103,7 +115,7 @@ export function useMessageDisplay(messages: AgentMessage[]) {
             toolCall: {
               id: toolCall.id,
               name: toolCall.function.name,
-              displayName: funcDef?.displayName,
+              displayName: translateDisplayName(funcDef?.displayName),
               status,
               result,
               error,
@@ -118,5 +130,5 @@ export function useMessageDisplay(messages: AgentMessage[]) {
     }
 
     return displays;
-  }, [messages, translateFn]);
+  }, [messages, translateFn, translateDisplayName]);
 }

@@ -33,6 +33,7 @@
     "minutesAgo": "分钟前",
     "hoursAgo": "小时前",
     "daysAgo": "天前",
+    "justNow": "刚刚",
     "clickToEdit": "点击编辑",
     "saving": "保存中...",
     "saved": "已保存",
@@ -68,21 +69,6 @@
       "bgm": "背景音乐",
       "uncategorized": "未分类"
     }
-  },
-  "backgroundTasks": {
-    "title": "后台任务",
-    "inProgress": "进行中",
-    "completed": "完成",
-    "failed": "失败",
-    "noTasks": "暂无任务",
-    "taskNotFound": "任务不存在",
-    "downloadStarted": "开始下载导出视频",
-    "exportUrlNotFound": "导出视频URL不存在",
-    "viewNotSupported": "该任务暂不支持查看结果",
-    "parseDataFailed": "无法解析任务数据",
-    "viewResult": "查看结果",
-    "retry": "重试",
-    "cancel": "取消"
   },
   "generationHistory": {
     "title": "创作历史",
@@ -168,6 +154,14 @@
     "exportFailed": "导出失败",
     "retry": "重试",
     "dismiss": "关闭"
+  },
+  "exportHistory": {
+    "title": "导出历史",
+    "noHistory": "暂无导出记录",
+    "download": "下载",
+    "retry": "重试",
+    "exporting": "导出中",
+    "downloadStarted": "开始下载"
   },
   "textAsset": {
     "contentSaved": "内容已保存",
@@ -884,22 +878,6 @@
       }
     }
   },
-  "tasks": {
-    "types": {
-      "asset_image": "图片生成",
-      "asset_video": "视频生成",
-      "asset_audio": "音频生成",
-      "final_video_export": "成片导出",
-      "unknown": "未知任务"
-    },
-    "status": {
-      "pending": "等待中",
-      "processing": "处理中",
-      "completed": "已完成",
-      "failed": "失败",
-      "cancelled": "已取消"
-    }
-  },
   "tools": {},
   "voices": {
     "male-qn-qingse": {
@@ -1446,11 +1424,22 @@
       "assets": "素材({count})",
       "artStyles": "美术风格列表",
       "foundAssets": "找到 {count} 个资产",
+      "foundAssetsWithStatus": "找到 {total} 个资产（{completed} 个已完成，{processing} 个处理中）",
+      "emptyAssetLibrary": "资产库为空",
+      "foundTextAssets": "找到 {count} 个文本资产",
+      "noTextAssetsFound": "没有找到文本资产",
+      "foundCuts": "找到 {count} 个剪辑",
+      "noCutsFound": "项目还没有剪辑，可以使用 create_cut 创建一个",
+      "cutEmpty": "剪辑为空，没有任何片段",
+      "cutSummary": "剪辑共 {clipCount} 个片段（视频{videoClips}个，音频{audioClips}个），总时长 {duration} 秒",
       "queryComplete": "查询完成",
       "createdVideoWithTitle": "已创建视频: {title}",
       "createdVideoTask": "已创建视频生成任务",
       "createdImageTasks": "已创建 {count} 个生成任务",
       "createdImageTask": "已创建图片生成任务",
+      "createdTextAsset": "已创建文本资产\"{name}\"",
+      "createdCut": "创建剪辑成功：{title}",
+      "deletedCut": "剪辑已删除",
       "updatedAssets": "已更新 {count} 个资产",
       "updatedAsset": "已更新资产",
       "updatedProjectFields": "已更新项目{fields}",
@@ -1892,6 +1881,10 @@
           "queryContext": "查询项目上下文",
           "queryAssets": "查询资产库",
           "queryTextAssets": "查询文本资产",
+          "queryCuts": "查询剪辑列表",
+          "queryCut": "查询剪辑详情",
+          "createCut": "创建剪辑",
+          "deleteCut": "删除剪辑",
           "queryTimeline": "查询剪辑",
           "generateImageAsset": "生成图片素材",
           "generateVideoAsset": "生成视频素材",

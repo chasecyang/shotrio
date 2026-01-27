@@ -5,7 +5,6 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Settings } from "lucide-react";
 import { Link } from "@/i18n/routing";
-import { BackgroundTasks } from "../layout/background-tasks";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ProjectSelector } from "../layout/project-selector";
 import { UserNav } from "@/components/auth/user-nav";
@@ -77,15 +76,10 @@ export function EditorHeader({
 
       <div className="flex-1" />
 
-      {/* 右侧：积分 + 后台任务 + 用户菜单 */}
+      {/* 右侧：积分 + 用户菜单 */}
       <div className="flex items-center gap-2">
         {/* 积分显示 */}
         <EditorCreditsButton />
-
-        <Separator orientation="vertical" className="h-6" />
-
-        {/* 后台任务 */}
-        <BackgroundTasks />
 
         <Separator orientation="vertical" className="h-6" />
 

@@ -41,7 +41,7 @@ export async function handleQueryFunctions(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `未知的查询函数: ${name}`,
+        error: `Unknown query function: ${name}`,
       };
   }
 }
@@ -168,13 +168,6 @@ async function handleQueryAssets(
     (a) => a.runtimeStatus === "failed"
   ).length;
 
-  const typeLabel =
-    assetType === "image"
-      ? "图片资产"
-      : assetType === "video"
-        ? "视频资产"
-        : "资产";
-
   // 格式化资产信息，只返回Agent决策所需的字段
   const formattedAssets = queryResult.assets.map((a) => {
     const base: Record<string, unknown> = {
@@ -211,10 +204,7 @@ async function handleQueryAssets(
       completed: completedCount,
       processing: processingCount,
       failed: failedCount,
-      message:
-        queryResult.assets.length === 0
-          ? `${typeLabel}库为空，没有找到任何${typeLabel}`
-          : `找到 ${queryResult.total} 个${typeLabel}（${completedCount} 个已完成，${processingCount} 个处理中${failedCount > 0 ? `，${failedCount} 个失败` : ""}）`,
+      assetType: assetType || "all",
     },
   };
 }
@@ -246,10 +236,6 @@ async function handleQueryCuts(
     data: {
       cuts: formattedCuts,
       total: cuts.length,
-      message:
-        cuts.length === 0
-          ? "项目还没有剪辑，可以使用 create_cut 创建一个"
-          : `项目共有 ${cuts.length} 个剪辑`,
     },
   };
 }
@@ -272,7 +258,7 @@ async function handleQueryCut(
       return {
         functionCallId: functionCall.id,
         success: false,
-        error: `剪辑 ${cutId} 不存在`,
+        error: `Cut ${cutId} not found`,
       };
     }
   } else {
@@ -289,7 +275,7 @@ async function handleQueryCut(
         return {
           functionCallId: functionCall.id,
           success: false,
-          error: result.error || "无法获取或创建剪辑",
+          error: result.error || "Failed to get or create cut",
         };
       }
       cutData = result.cut;
@@ -340,11 +326,8 @@ async function handleQueryCut(
       summary: {
         videoClips: videoClips.length,
         audioClips: audioClips.length,
+        totalDurationSec: Math.round(cutData.duration / 1000),
       },
-      message:
-        cutData.clips.length === 0
-          ? "剪辑为空，没有任何片段"
-          : `剪辑共 ${cutData.clips.length} 个片段（视频${videoClips.length}个，音频${audioClips.length}个），总时长 ${Math.round(cutData.duration / 1000)} 秒`,
     },
   };
 }
@@ -387,10 +370,6 @@ async function handleQueryTextAssets(
     data: {
       assets: textAssets,
       total: queryResult.total,
-      message:
-        textAssets.length === 0
-          ? "没有找到文本资产"
-          : `找到 ${textAssets.length} 个文本资产`,
     },
   };
 }

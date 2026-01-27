@@ -33,6 +33,7 @@
     "minutesAgo": "min ago",
     "hoursAgo": "hr ago",
     "daysAgo": "d ago",
+    "justNow": "just now",
     "clickToEdit": "Click to edit",
     "saving": "Saving...",
     "saved": "Saved",
@@ -68,21 +69,6 @@
       "bgm": "BGM",
       "uncategorized": "Uncategorized"
     }
-  },
-  "backgroundTasks": {
-    "title": "Background Tasks",
-    "inProgress": "in progress",
-    "completed": "completed",
-    "failed": "failed",
-    "noTasks": "No tasks",
-    "taskNotFound": "Task not found",
-    "downloadStarted": "Starting export video download",
-    "exportUrlNotFound": "Export video URL not found",
-    "viewNotSupported": "This task does not support viewing results",
-    "parseDataFailed": "Unable to parse task data",
-    "viewResult": "View Result",
-    "retry": "Retry",
-    "cancel": "Cancel"
   },
   "generationHistory": {
     "title": "Generation History",
@@ -168,6 +154,14 @@
     "exportFailed": "Export Failed",
     "retry": "Retry",
     "dismiss": "Dismiss"
+  },
+  "exportHistory": {
+    "title": "Export History",
+    "noHistory": "No export history",
+    "download": "Download",
+    "retry": "Retry",
+    "exporting": "exporting",
+    "downloadStarted": "Download started"
   },
   "textAsset": {
     "contentSaved": "Content saved",
@@ -1303,22 +1297,6 @@
       "startCreating": "Start Creating"
     }
   },
-  "tasks": {
-    "types": {
-      "asset_image": "Image Generation",
-      "asset_video": "Video Generation",
-      "asset_audio": "Audio Generation",
-      "final_video_export": "Final Video Export",
-      "unknown": "Unknown Task"
-    },
-    "status": {
-      "pending": "Pending",
-      "processing": "Processing",
-      "completed": "Completed",
-      "failed": "Failed",
-      "cancelled": "Cancelled"
-    }
-  },
   "tools": {
   },
   "voices": {
@@ -1446,11 +1424,22 @@
       "assets": "assets({count})",
       "artStyles": "art styles",
       "foundAssets": "Found {count} assets",
+      "foundAssetsWithStatus": "Found {total} assets ({completed} completed, {processing} processing)",
+      "emptyAssetLibrary": "Asset library is empty",
+      "foundTextAssets": "Found {count} text assets",
+      "noTextAssetsFound": "No text assets found",
+      "foundCuts": "Found {count} cuts",
+      "noCutsFound": "No cuts found, use create_cut to create one",
+      "cutEmpty": "Cut is empty, no clips",
+      "cutSummary": "Cut has {clipCount} clips ({videoClips} video, {audioClips} audio), duration {duration}s",
       "queryComplete": "Query complete",
       "createdVideoWithTitle": "Created video: {title}",
       "createdVideoTask": "Created video generation task",
       "createdImageTasks": "Created {count} generation tasks",
       "createdImageTask": "Created image generation task",
+      "createdTextAsset": "Created text asset \"{name}\"",
+      "createdCut": "Created cut: {title}",
+      "deletedCut": "Cut deleted",
       "updatedAssets": "Updated {count} assets",
       "updatedAsset": "Updated asset",
       "updatedProjectFields": "Updated project {fields}",
@@ -1892,6 +1881,10 @@
           "queryContext": "Query Project Context",
           "queryAssets": "Query Assets",
           "queryTextAssets": "Query Text Assets",
+          "queryCuts": "Query Cuts",
+          "queryCut": "Query Cut Details",
+          "createCut": "Create Cut",
+          "deleteCut": "Delete Cut",
           "queryTimeline": "Query Cut",
           "generateImageAsset": "Generate Image Asset",
           "generateVideoAsset": "Generate Video Asset",
