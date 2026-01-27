@@ -1868,6 +1868,9 @@
         }
       },
       "toolExecution": {
+        "reasoning": {
+          "title": "Thinking Process"
+        },
         "status": {
           "completed": "Completed",
           "failed": "Failed",

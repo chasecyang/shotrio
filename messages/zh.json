@@ -1868,6 +1868,9 @@
         }
       },
       "toolExecution": {
+        "reasoning": {
+          "title": "思考过程"
+        },
         "status": {
           "completed": "完成",
           "failed": "失败",

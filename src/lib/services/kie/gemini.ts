@@ -134,7 +134,7 @@ export async function geminiChat(
   messages: GeminiMessage[],
   options: GeminiChatOptions = {}
 ): Promise<GeminiChatResult> {
-  const { includeThoughts = false, reasoningEffort = "high", tools } = options;
+  const { includeThoughts = true, reasoningEffort = "low", tools } = options;
 
   const body: GeminiChatRequest = {
     messages,
@@ -180,7 +180,7 @@ export async function* geminiChatStream(
   messages: GeminiMessage[],
   options: GeminiChatOptions = {}
 ): AsyncGenerator<GeminiStreamChunk, void, unknown> {
-  const { includeThoughts = true, reasoningEffort = "high", tools } = options;
+  const { includeThoughts = true, reasoningEffort = "low", tools } = options;
 
   const body: GeminiChatRequest = {
     messages,
@@ -292,7 +292,7 @@ export function createTextMessage(
   role: GeminiMessageRole,
   text: string
 ): GeminiMessage {
-  return { role, content: text };
+  return { role, content: [{ type: "text", text }] };
 }
 
 /**

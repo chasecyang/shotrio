@@ -143,6 +143,11 @@ export async function getConversation(conversationId: string) {
         timestamp: msg.createdAt,
       };
 
+      // 解析 reasoningContent (Gemini 思考过程)
+      if (msg.reasoningContent) {
+        message.reasoningContent = msg.reasoningContent;
+      }
+
       // 解析 toolCallId (tool 消息)
       if (msg.toolCallId) {
         message.toolCallId = msg.toolCallId;

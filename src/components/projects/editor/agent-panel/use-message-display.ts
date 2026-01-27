@@ -8,7 +8,7 @@ import { formatFunctionResult, type TranslationFunction } from "@/lib/services/a
 
 export interface DisplayStep {
   id: string;
-  type: "thinking" | "tool_call";
+  type: "thinking" | "reasoning" | "tool_call";
   content?: string;
   toolCall?: {
     id: string;
@@ -56,6 +56,15 @@ export function useMessageDisplay(messages: AgentMessage[]) {
 
       if (msg.role === "assistant") {
         const steps: DisplayStep[] = [];
+
+        // 0. AI 的思考过程（Gemini reasoning）
+        if (msg.reasoningContent) {
+          steps.push({
+            id: `${msg.id}-reasoning`,
+            type: "reasoning",
+            content: msg.reasoningContent,
+          });
+        }
 
         // 1. AI 的思考内容
         if (msg.content) {

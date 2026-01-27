@@ -1,10 +1,10 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { DisplayStep } from "./use-message-display";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
-import { CheckCircle2, XCircle, Loader2, Clock, Ban } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Clock, Ban, Brain, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DisplayStepCardProps {
@@ -17,6 +17,36 @@ export const DisplayStepCard = memo(function DisplayStepCard({
   isStreaming,
 }: DisplayStepCardProps) {
   const t = useTranslations("editor.agent.toolExecution");
+  const [isReasoningExpanded, setIsReasoningExpanded] = useState(false);
+
+  if (step.type === "reasoning") {
+    // 思考过程（Gemini reasoning）- 可折叠
+    return (
+      <div className="text-sm">
+        <button
+          onClick={() => setIsReasoningExpanded(!isReasoningExpanded)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {isStreaming ? (
+            <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+          ) : (
+            <Brain className="h-3 w-3 shrink-0" />
+          )}
+          <span>{t("reasoning.title")}</span>
+          {isReasoningExpanded ? (
+            <ChevronDown className="h-3 w-3 shrink-0" />
+          ) : (
+            <ChevronRight className="h-3 w-3 shrink-0" />
+          )}
+        </button>
+        {isReasoningExpanded && (
+          <div className="mt-2 pl-4 border-l border-border text-muted-foreground">
+            <MarkdownRenderer content={step.content || ""} className="text-xs" />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (step.type === "thinking") {
     // 思考内容

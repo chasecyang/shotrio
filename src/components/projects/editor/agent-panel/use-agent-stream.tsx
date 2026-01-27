@@ -27,6 +27,7 @@ interface UseAgentStreamOptions {
 interface StreamState {
   messageId: string | null;
   content: string;
+  reasoningContent: string;
   toolCalls: Array<{
     id: string;
     type: "function";
@@ -46,6 +47,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
   const streamStateRef = useRef<StreamState>({
     messageId: null,
     content: "",
+    reasoningContent: "",
     toolCalls: [],
   });
   
@@ -63,6 +65,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
     streamStateRef.current = {
       messageId: null,
       content: "",
+      reasoningContent: "",
       toolCalls: [],
     };
     
@@ -113,8 +116,9 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                   // 恢复已有消息（用于恢复对话场景）
                   console.log("[Agent Stream] 复用已有消息:", messageId);
                   streamStateRef.current.content = existingMessage.content || "";
+                  streamStateRef.current.reasoningContent = existingMessage.reasoningContent || "";
                   streamStateRef.current.toolCalls = existingMessage.toolCalls || [];
-                  
+
                   agent.updateMessage(messageId, {
                     isStreaming: true,
                   });
@@ -122,6 +126,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                   // 创建新消息（正常场景）
                   console.log("[Agent Stream] 创建新消息:", messageId);
                   streamStateRef.current.content = "";
+                  streamStateRef.current.reasoningContent = "";
                   streamStateRef.current.toolCalls = [];
                   
                   agent.addMessage({
@@ -145,10 +150,22 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
                 // 内容增量更新：累积到 ref，然后更新到 state
                 const messageId = streamStateRef.current.messageId;
                 if (!messageId) break;
-                
+
                 streamStateRef.current.content += event.data;
                 agent.updateMessage(messageId, {
                   content: streamStateRef.current.content,
+                });
+                break;
+              }
+
+              case "reasoning_delta": {
+                // 思考内容增量更新：累积到 ref，然后更新到 state
+                const messageId = streamStateRef.current.messageId;
+                if (!messageId) break;
+
+                streamStateRef.current.reasoningContent += event.data;
+                agent.updateMessage(messageId, {
+                  reasoningContent: streamStateRef.current.reasoningContent,
                 });
                 break;
               }
@@ -297,6 +314,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
       streamStateRef.current = {
         messageId: null,
         content: "",
+        reasoningContent: "",
         toolCalls: [],
       };
     }

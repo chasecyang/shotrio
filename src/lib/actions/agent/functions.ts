@@ -53,6 +53,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         tags: {
           type: "array",
+          items: { type: "string" },
           description: "标签筛选数组，如 ['角色','男性'] 或 ['场景','室外']。可同时筛选多个标签",
         },
         limit: {
@@ -171,6 +172,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         tags: {
           type: "array",
+          items: { type: "string" },
           description: "标签数组（可选），用于分类和筛选，如 ['开场', '动作', '对话']",
         },
         order: {
@@ -196,6 +198,14 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         updates: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              assetId: { type: "string", description: "资产ID（必填）" },
+              name: { type: "string", description: "新名称（可选）" },
+              tags: { type: "array", items: { type: "string" }, description: "新标签数组（可选）" },
+            },
+          },
           description: "更新数组，每项包含 assetId（必填，可以是图片或视频的ID）和要修改的字段（name, tags）",
         },
       },
@@ -241,6 +251,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       properties: {
         assetIds: {
           type: "array",
+          items: { type: "string" },
           description: "要删除的资产ID数组（可以是图片、视频、音频或文本的ID）",
         },
       },

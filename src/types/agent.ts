@@ -40,6 +40,7 @@ export interface AgentMessage {
   id: string;
   role: AgentMessageRole;
   content: string;
+  reasoningContent?: string; // Gemini 思考过程
   timestamp: Date;
   // Tool 消息字段
   toolCallId?: string; // tool 消息的关联 ID

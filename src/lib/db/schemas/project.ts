@@ -452,15 +452,16 @@ export const conversationMessage = pgTable("conversation_message", {
   conversationId: text("conversation_id")
     .notNull()
     .references(() => conversation.id, { onDelete: "cascade" }),
-  
+
   // 消息内容
   role: messageRoleEnum("role").notNull(),
   content: text("content").notNull(),
-  
+  reasoningContent: text("reasoning_content"), // Gemini 思考过程
+
   // Tool 消息相关字段
   toolCallId: text("tool_call_id"), // tool 消息关联的 tool_call_id
   toolCalls: text("tool_calls"), // assistant 消息的 tool_calls (JSON)
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

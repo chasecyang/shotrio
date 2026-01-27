@@ -93,13 +93,15 @@ export async function createAssistantMessage(conversationId: string): Promise<st
 export async function saveAssistantResponse(
   messageId: string,
   content: string,
-  toolCalls?: Array<{id: string; type: "function"; function: {name: string; arguments: string}}>
+  toolCalls?: Array<{id: string; type: "function"; function: {name: string; arguments: string}}>,
+  reasoningContent?: string
 ): Promise<void> {
   await db
     .update(conversationMessage)
     .set({
       content,
       toolCalls: toolCalls ? JSON.stringify(toolCalls) : null,
+      reasoningContent: reasoningContent || null,
     })
     .where(eq(conversationMessage.id, messageId));
 }

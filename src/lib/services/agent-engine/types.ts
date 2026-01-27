@@ -11,6 +11,7 @@ export type AgentStreamEvent =
   | { type: "user_message_id"; data: string }
   | { type: "assistant_message_id"; data: string }
   | { type: "content_delta"; data: string }
+  | { type: "reasoning_delta"; data: string }
   | { type: "tool_call_start"; data: { id: string; name: string; displayName?: string; arguments: string } }
   | { type: "tool_call_end"; data: { id: string; name: string; success: boolean; result?: string; error?: string } }
   | { type: "interrupt"; data: { action: "approval_required" } }

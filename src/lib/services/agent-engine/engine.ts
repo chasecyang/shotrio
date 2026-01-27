@@ -2,7 +2,6 @@
  * Agent Engine 核心类
  */
 
-import OpenAI from "openai";
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 import { executeFunction } from "@/lib/actions/agent/executor";
 import { collectContext } from "@/lib/actions/agent/context-collector";
@@ -20,7 +19,7 @@ import type {
   ConversationState,
 } from "./types";
 import { buildSystemPrompt } from "./prompts";
-import { convertToOpenAITools, getOpenAIClient } from "./openai-utils";
+import { getAgentProvider, convertToAgentTools } from "./providers";
 import { formatFunctionResult } from "./result-formatter";
 import {
   saveUserMessage,
@@ -328,32 +327,30 @@ export class AgentEngine {
         yield { type: "assistant_message_id", data: newAssistantMessageId };
       }
 
-      // 调用 OpenAI (流式)
-      const openai = getOpenAIClient();
-      
-      // 使用原生 OpenAI 流式输出
+      // 使用 Provider 抽象层调用 LLM
+      const provider = getAgentProvider();
+      const tools = convertToAgentTools();
+
       let currentContent = "";
+      let currentReasoning = "";
       let sentContentLength = 0; // 追踪已发送内容的长度
+      let sentReasoningLength = 0; // 追踪已发送思考内容的长度
       const toolCalls: Array<{ id: string; name: string; args: string }> = [];
       let lastUpdateTime = Date.now();
       const throttleInterval = 50; // 50ms 节流
-      
-      const stream = await openai.chat.completions.create({
-        model: this.config.modelName,
-        messages: state.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-        tools: convertToOpenAITools(),
+
+      const stream = provider.streamChat(state.messages, tools, {
         temperature: 0.7,
-        max_tokens: 4096,
-        stream: true,
+        maxTokens: 4096,
       });
 
       for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta;
-        
+        const delta = chunk.delta;
+
         // 处理内容增量
         if (delta?.content) {
           currentContent += delta.content;
-          
+
           // 节流：只在距离上次更新超过 throttleInterval 时发送更新
           const now = Date.now();
           if (now - lastUpdateTime >= throttleInterval) {
@@ -366,14 +363,42 @@ export class AgentEngine {
               };
               sentContentLength = currentContent.length;
             }
+            // 发送所有累积的未发送思考内容
+            const unsentReasoning = currentReasoning.slice(sentReasoningLength);
+            if (unsentReasoning) {
+              yield {
+                type: "reasoning_delta",
+                data: unsentReasoning,
+              };
+              sentReasoningLength = currentReasoning.length;
+            }
             lastUpdateTime = now;
           }
         }
-        
+
+        // 处理思考内容增量
+        if (delta?.reasoningContent) {
+          currentReasoning += delta.reasoningContent;
+
+          // 节流发送
+          const now = Date.now();
+          if (now - lastUpdateTime >= throttleInterval) {
+            const unsentReasoning = currentReasoning.slice(sentReasoningLength);
+            if (unsentReasoning) {
+              yield {
+                type: "reasoning_delta",
+                data: unsentReasoning,
+              };
+              sentReasoningLength = currentReasoning.length;
+            }
+            lastUpdateTime = now;
+          }
+        }
+
         // 检测工具调用
-        if (delta?.tool_calls && delta.tool_calls.length > 0) {
+        if (delta?.toolCalls && delta.toolCalls.length > 0) {
           // 合并工具调用信息
-          for (const tc of delta.tool_calls) {
+          for (const tc of delta.toolCalls) {
             if (tc.index !== undefined) {
               if (!toolCalls[tc.index]) {
                 toolCalls[tc.index] = {
@@ -398,6 +423,15 @@ export class AgentEngine {
         yield {
           type: "content_delta",
           data: remainingContent,
+        };
+      }
+
+      // 发送剩余未发送的思考内容
+      const remainingReasoning = currentReasoning.slice(sentReasoningLength);
+      if (remainingReasoning) {
+        yield {
+          type: "reasoning_delta",
+          data: remainingReasoning,
         };
       }
 
@@ -450,7 +484,8 @@ export class AgentEngine {
         await saveAssistantResponse(
           state.assistantMessageId!,
           currentContent,
-          undefined
+          undefined,
+          currentReasoning || undefined
         );
 
         await updateConversationStatus(state.conversationId, "completed");
@@ -491,17 +526,18 @@ export class AgentEngine {
         
         if (!validationResult.valid) {
           console.log("[AgentEngine] 参数校验失败，返回错误给 AI:", validationResult.errors);
-          
+
           // 保存 assistant message（包含 tool_calls）
           await saveAssistantResponse(
             state.assistantMessageId!,
             currentContent,
-            aiMessage.tool_calls
+            aiMessage.tool_calls,
+            currentReasoning || undefined
           );
-          
+
           // 执行失败的 tool（返回错误给 AI，让它修正）
           yield* this.executeToolWithError(state, toolCall, funcDef, validationResult.errors);
-          
+
           // 继续对话循环，让 AI 看到错误并修正参数
           continue;
         }
@@ -523,7 +559,8 @@ export class AgentEngine {
           saveAssistantResponse(
             state.assistantMessageId!,
             currentContent,
-            aiMessage.tool_calls
+            aiMessage.tool_calls,
+            currentReasoning || undefined
           ),
           updateConversationStatus(state.conversationId, "awaiting_approval"),
         ]);
@@ -542,15 +579,16 @@ export class AgentEngine {
 
       // 不需要确认，直接执行
       console.log("[AgentEngine] 直接执行工具（无需确认）");
-      
+
       // 在执行tool之前保存assistant message（包括tool_calls）
       // 确保刷新页面时能恢复tool_calls
       await saveAssistantResponse(
         state.assistantMessageId!,
         currentContent,
-        aiMessage.tool_calls
+        aiMessage.tool_calls,
+        currentReasoning || undefined
       );
-      
+
       yield* this.executeTool(state, toolCall, funcDef);
 
         // 继续下一轮迭代
