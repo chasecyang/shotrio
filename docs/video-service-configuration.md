@@ -6,7 +6,7 @@
 
 ### 1. Veo 3.1 (默认)
 
-**提供商**: kie.ai (默认) / yunwu.ai (可选)
+**提供商**: kie.ai
 **模型**: Veo 3.1 Fast 4K
 **特点**:
 - Google 最新的视频生成模型
@@ -21,7 +21,24 @@
 - 不支持视频续写 (video-to-video)
 - 视频时长约8秒（固定）
 
-### 2. Kling O1
+### 2. Sora2 Pro
+
+**提供商**: kie.ai
+**模型**: Sora2 Pro
+**特点**:
+- OpenAI 的视频生成模型
+- 支持图生视频
+- 支持 10s 和 15s 时长
+
+### 3. Seedance 1.5 Pro
+
+**提供商**: kie.ai
+**模型**: Seedance 1.5 Pro
+**特点**:
+- 字节跳动的视频生成模型
+- 支持 4s、8s、12s 时长
+
+### 4. Kling O1
 
 **提供商**: fal.ai
 **模型**: Kling Video O1 Standard
@@ -42,51 +59,35 @@
 
 ```bash
 # 视频服务提供商选择
-# 可选值: "veo" (默认) | "kling"
+# 可选值: "veo" (默认) | "sora2pro" | "seedance" | "kling"
 VIDEO_SERVICE_PROVIDER=veo
 
-# Veo 服务配置
-# 平台选择: "kie" (默认) | "yunwu"
-VEO_PLATFORM=kie
+# KIE 服务配置
 KIE_API_KEY=your_kie_api_key
-
-# 可选：yunwu.ai 平台
-# YUNWU_API_KEY=your_yunwu_api_key
-# VEO_PLATFORM=yunwu
 
 # Kling 服务配置 (fal.ai) - 备用
 FAL_KEY=your_fal_api_key
 ```
 
-### 切换到 Kling O1
+### 切换到 Sora2 Pro
 
-如果要使用 Kling O1 服务，修改环境变量：
+```bash
+VIDEO_SERVICE_PROVIDER=sora2pro
+KIE_API_KEY=your_kie_api_key
+```
+
+### 切换到 Seedance
+
+```bash
+VIDEO_SERVICE_PROVIDER=seedance
+KIE_API_KEY=your_kie_api_key
+```
+
+### 切换到 Kling O1
 
 ```bash
 VIDEO_SERVICE_PROVIDER=kling
 FAL_KEY=your_fal_api_key
-```
-
-### 使用默认 Veo 3.1 (kie.ai)
-
-Veo 3.1 是默认服务，使用 kie.ai 平台：
-
-```bash
-VIDEO_SERVICE_PROVIDER=veo
-KIE_API_KEY=your_kie_api_key
-# VEO_PLATFORM=kie  # 默认值，可省略
-```
-
-或者直接移除 `VIDEO_SERVICE_PROVIDER` 环境变量（默认使用 Veo 3.1 + kie.ai）。
-
-### 切换到 yunwu.ai 平台
-
-如果要使用 yunwu.ai 平台的 Veo 3.1：
-
-```bash
-VIDEO_SERVICE_PROVIDER=veo
-VEO_PLATFORM=yunwu
-YUNWU_API_KEY=your_yunwu_api_key
 ```
 
 ## 使用方法
@@ -130,17 +131,17 @@ Agent 的 `generate_video_asset` 功能会自动使用配置的服务：
 
 ## 服务对比
 
-| 特性 | Kling O1 | Veo 3.1 |
-|------|----------|---------|
-| 首尾帧过渡 | ✅ | ✅ |
-| 多图参考生成 | ✅ (最多7张) | ✅ (最多3张) |
-| 视频续写 | ✅ | ❌ |
-| 角色一致性 | ✅ (elements) | ⚠️ (需转换) |
-| 纯文本生成 | ⚠️ (需单独调用) | ✅ |
-| 视频时长 | 5秒或10秒 | 约8秒(固定) |
-| 宽高比 | 16:9, 9:16, 1:1 | 16:9, 9:16, Auto |
-| 音频 | ✅ | ✅ |
-| 价格 | 标准价格 | Google 官方的 25% |
+| 特性 | Kling O1 | Veo 3.1 | Sora2 Pro | Seedance |
+|------|----------|---------|-----------|----------|
+| 首尾帧过渡 | ✅ | ✅ | ✅ | ✅ |
+| 多图参考生成 | ✅ (最多7张) | ✅ (最多3张) | ✅ | ✅ |
+| 视频续写 | ✅ | ❌ | ❌ | ❌ |
+| 角色一致性 | ✅ (elements) | ⚠️ (需转换) | ❌ | ❌ |
+| 纯文本生成 | ⚠️ (需单独调用) | ✅ | ✅ | ✅ |
+| 视频时长 | 5秒或10秒 | 约8秒(固定) | 10s/15s | 4s/8s/12s |
+| 宽高比 | 16:9, 9:16, 1:1 | 16:9, 9:16 | 16:9, 9:16 | 16:9, 9:16 |
+| 音频 | ✅ | ✅ | ❌ | ❌ |
+| 价格 | 标准价格 | Google 官方的 25% | 标准价格 | 标准价格 |
 
 ## 最佳实践
 
@@ -158,6 +159,16 @@ Agent 的 `generate_video_asset` 功能会自动使用配置的服务：
 - 简单的首尾帧过渡
 - 不超过3张参考图的场景
 
+### 选择 Sora2 Pro 的场景
+
+- 需要 OpenAI 的视频生成质量
+- 需要 10s 或 15s 的视频时长
+
+### 选择 Seedance 的场景
+
+- 需要字节跳动的视频生成质量
+- 需要灵活的时长选择（4s/8s/12s）
+
 ## 故障排查
 
 ### 问题：视频生成失败
@@ -170,7 +181,7 @@ Agent 的 `generate_video_asset` 功能会自动使用配置的服务：
 
 **原因**: Veo 3.1 不支持视频续写功能
 
-**解决方案**: 
+**解决方案**:
 - 切换到 Kling O1: `VIDEO_SERVICE_PROVIDER=kling`
 - 或者提取视频关键帧作为参考图使用
 
@@ -219,13 +230,13 @@ VIDEO_SERVICE_PROVIDER=veo
        ┌──────┴──────┐
        ▼             ▼
 ┌──────────┐  ┌──────────────┐
-│ Kling    │  │ Veo 3.1      │
-│ Adapter  │  │ Adapter      │
+│ Kling    │  │ Veo/Sora2/   │
+│ Adapter  │  │ Seedance     │
 └──────────┘  └──────────────┘
        │             │
        ▼             ▼
 ┌──────────┐  ┌──────────────┐
-│ fal.ai   │  │ yunwu.ai     │
+│ fal.ai   │  │ kie.ai       │
 └──────────┘  └──────────────┘
 ```
 
@@ -233,7 +244,7 @@ VIDEO_SERVICE_PROVIDER=veo
 
 - `src/lib/services/video-service.ts` - 统一抽象层
 - `src/lib/services/fal/` - Kling 服务实现
-- `src/lib/services/yunwu.ts` - Veo 3.1 服务实现
+- `src/lib/services/kie/` - Veo/Sora2/Seedance 服务实现
 - `src/lib/workers/processors/video-processors.ts` - Worker 处理器
 
 ## 未来扩展
@@ -245,33 +256,7 @@ VIDEO_SERVICE_PROVIDER=veo
 3. 更新 `VideoServiceProvider` 类型
 4. 添加环境变量配置
 
-例如，添加 Runway Gen-3:
-
-```typescript
-// video-service.ts
-export type VideoServiceProvider = "kling" | "veo" | "runway";
-
-async function generateVideoWithRunway(config: VideoGenerationConfig) {
-  // 实现 Runway 适配器
-}
-
-export async function generateVideo(config: VideoGenerationConfig) {
-  const provider = getVideoServiceProvider();
-
-  switch (provider) {
-    case "runway":
-      return await generateVideoWithRunway(config);
-    case "kling":
-      return await generateVideoWithKling(config);
-    case "veo":
-    default:
-      return await generateVideoWithVeo(config);
-  }
-}
-```
-
 ## 相关文档
 
 - [Kling O1 API 文档](https://fal.ai/models/fal-ai/kling-video/o1)
-- [Veo 3.1 API 文档](https://yunwu.apifox.cn/api-311044999)
 - [KIE 集成指南](./kie-integration.md)

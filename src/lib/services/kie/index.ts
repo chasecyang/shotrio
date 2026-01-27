@@ -1,5 +1,28 @@
 // Kie.ai 服务统一导出
 
+// Gemini 3 Flash Chat
+export {
+  geminiChat,
+  geminiChatStream,
+  geminiChatStreamCollect,
+  createTextMessage,
+  createImageMessage,
+  type GeminiMessageRole,
+  type GeminiReasoningEffort,
+  type GeminiTextContent,
+  type GeminiImageContent,
+  type GeminiContentPart,
+  type GeminiMessage,
+  type GeminiFunctionDefinition,
+  type GeminiTool,
+  type GeminiChatRequest,
+  type GeminiChatOptions,
+  type GeminiChatResult,
+  type GeminiStreamChunk,
+  type GeminiChatResponse,
+  type GeminiUsage,
+} from "./gemini";
+
 // 图像生成
 export {
   generateImage,
