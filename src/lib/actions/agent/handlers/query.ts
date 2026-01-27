@@ -14,7 +14,7 @@ import { getVideoAssets, queryAssets } from "@/lib/actions/asset";
 import { getSystemArtStyles } from "@/lib/actions/art-style/queries";
 import { analyzeAssetsByType } from "@/lib/actions/asset/stats";
 import { getTextAssetContent } from "@/lib/actions/asset/text-asset";
-import { getProjectTimeline, createCut, getProjectCuts, getCut } from "@/lib/actions/cut";
+import { createCut, getProjectCuts, getCut } from "@/lib/actions/cut";
 import { getCutTracks, type CutClipWithAsset, type TrackConfig } from "@/types/cut";
 
 /**
@@ -34,7 +34,6 @@ export async function handleQueryFunctions(
     case "query_cuts":
       return handleQueryCuts(functionCall, projectId);
     case "query_cut":
-    case "query_timeline": // 向后兼容
       return handleQueryCut(functionCall, projectId, parameters);
     case "query_text_assets":
       return handleQueryTextAssets(functionCall, projectId, parameters);
@@ -278,7 +277,10 @@ async function handleQueryCut(
     }
   } else {
     // 获取项目的第一个剪辑
-    cutData = await getProjectTimeline(projectId);
+    const cuts = await getProjectCuts(projectId);
+    if (cuts.length > 0) {
+      cutData = await getCut(cuts[0].id);
+    }
 
     // 如果不存在，则创建一个
     if (!cutData) {

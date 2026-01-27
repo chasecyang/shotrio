@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef } from "react";
-import type { TimelineDetail } from "@/types/timeline";
-import { updateTimeline } from "@/lib/actions/timeline";
+import { useEffect, useRef } from "react";
+import type { CutDetail } from "@/types/cut";
+import { updateCut } from "@/lib/actions/cut";
 
 /**
  * 防抖自动保存 Hook
- * 自动保存时间轴的修改
+ * 自动保存剪辑的修改
  */
-export function useTimelineAutosave(timeline: TimelineDetail | null) {
+export function useTimelineAutosave(timeline: CutDetail | null) {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevTimelineRef = useRef<string | null>(null);
 
@@ -45,14 +45,14 @@ export function useTimelineAutosave(timeline: TimelineDetail | null) {
     // 设置新的保存定时器（2秒后保存）
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        await updateTimeline(timeline.id, {
+        await updateCut(timeline.id, {
           title: timeline.title,
           description: timeline.description ?? undefined,
           duration: timeline.duration,
           fps: timeline.fps,
           resolution: timeline.resolution ?? undefined,
         });
-        console.log("时间轴已自动保存");
+        console.log("剪辑已自动保存");
       } catch (error) {
         console.error("自动保存失败:", error);
       }
@@ -66,5 +66,3 @@ export function useTimelineAutosave(timeline: TimelineDetail | null) {
     };
   }, [timeline]);
 }
-
-

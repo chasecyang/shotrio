@@ -24,7 +24,7 @@ import { AudioClipItem } from "./audio-clip-item";
 import { AssetStripPanel } from "./asset-strip-panel";
 import { TimelineDragProvider, useTimelineDrag } from "./timeline-drag-context";
 import { cn } from "@/lib/utils";
-import { addClipToTimeline, removeClip, reorderClips, updateClip, updateTimelineTracks, updateTimeline as updateTimelineAction } from "@/lib/actions/timeline";
+import { addCutClip, removeCutClip, reorderCutClips, updateCutClip, updateCutTracks, updateCut } from "@/lib/actions/cut";
 import { ResolutionSelector } from "./resolution-selector";
 import { ExportDialog } from "./export-dialog";
 import { toast } from "sonner";
@@ -53,6 +53,8 @@ interface TimelinePanelProps {
   trackStates: TrackStates;
   onToggleTrackMute: (trackIndex: number) => void;
   onPreviewAsset?: (asset: AssetWithFullData) => void;
+  isExporting?: boolean;
+  onOpenExportDialog?: () => void;
 }
 
 /**
@@ -95,6 +97,8 @@ function TimelinePanelContent({
   trackStates,
   onToggleTrackMute,
   onPreviewAsset,
+  isExporting = false,
+  onOpenExportDialog,
 }: TimelinePanelProps) {
   const { state, updateTimeline } = useEditor();
   const { timeline } = state;
@@ -174,9 +178,9 @@ function TimelinePanelContent({
   // Handle resolution change
   const handleResolutionChange = useCallback(async (newResolution: string) => {
     if (!timeline) return;
-    const result = await updateTimelineAction(timeline.id, { resolution: newResolution });
-    if (result.success && result.timeline) {
-      updateTimeline(result.timeline);
+    const result = await updateCut(timeline.id, { resolution: newResolution });
+    if (result.success && result.cut) {
+      updateTimeline(result.cut);
     } else {
       toast.error(tToasts("error.resolutionUpdateFailed"));
     }
@@ -378,7 +382,7 @@ function TimelinePanelContent({
     }
 
     // Add clip to timeline
-    const result = await addClipToTimeline(timeline.id, {
+    const result = await addCutClip(timeline.id, {
       assetId: asset.id,
       trackIndex,
       startTime: Math.round(startTime),
@@ -386,8 +390,8 @@ function TimelinePanelContent({
       trimStart: 0,
     });
 
-    if (result.success && result.timeline) {
-      updateTimeline(result.timeline);
+    if (result.success && result.cut) {
+      updateTimeline(result.cut);
       toast.success(tToasts("success.timelineClipAdded"));
     } else {
       toast.error(result.error || tToasts("error.addFailed"));
@@ -480,11 +484,11 @@ function TimelinePanelContent({
       });
 
       // Call API to delete
-      const result = await removeClip(clipId);
+      const result = await removeCutClip(clipId);
 
-      if (result.success && result.timeline) {
+      if (result.success && result.cut) {
         // API success, use server-returned data
-        updateTimeline(result.timeline);
+        updateTimeline(result.cut);
       } else {
         // API failed, rollback
         updateTimeline(originalTimeline);
@@ -600,11 +604,11 @@ function TimelinePanelContent({
       });
 
       // Call API to update
-      const result = await reorderClips(timeline.id, reorderData);
+      const result = await reorderCutClips(timeline.id, reorderData);
 
-      if (result.success && result.timeline) {
+      if (result.success && result.cut) {
         // API success, use server-returned data to ensure consistency
-        updateTimeline(result.timeline);
+        updateTimeline(result.cut);
       } else {
         // API failed, rollback to original state
         updateTimeline(originalTimeline);
@@ -697,26 +701,26 @@ function TimelinePanelContent({
       });
 
       // 1. Update clip's trim parameters
-      const result = await updateClip(clipId, {
+      const result = await updateCutClip(clipId, {
         trimStart,
         duration,
       });
 
-      if (result.success && result.timeline) {
+      if (result.success && result.cut) {
         if (isAudioTrack(trimmedTrackIndex)) {
           // Audio track: no ripple reordering needed, use returned result directly
-          updateTimeline(result.timeline);
+          updateTimeline(result.cut);
         } else {
           // Video track: apply ripple effect - reorder only this track's clips
-          const reorderData = recalculateTrackClipPositions(result.timeline.clips, trimmedTrackIndex);
-          const rippleResult = await reorderClips(result.timeline.id, reorderData);
+          const reorderData = recalculateTrackClipPositions(result.cut.clips, trimmedTrackIndex);
+          const rippleResult = await reorderCutClips(result.cut.id, reorderData);
 
-          if (rippleResult.success && rippleResult.timeline) {
+          if (rippleResult.success && rippleResult.cut) {
             // API success, use server-returned data
-            updateTimeline(rippleResult.timeline);
+            updateTimeline(rippleResult.cut);
           } else {
             // Reorder failed, but trim succeeded
-            updateTimeline(result.timeline);
+            updateTimeline(result.cut);
             toast.warning(tToasts("warning.clipTrimmedButAutoArrangeFailed"));
           }
         }
@@ -752,10 +756,10 @@ function TimelinePanelContent({
     if (!timeline) return;
 
     const newTracks = addTrackToConfig(tracks, "audio");
-    const result = await updateTimelineTracks(timeline.id, newTracks);
+    const result = await updateCutTracks(timeline.id, newTracks);
 
-    if (result.success && result.timeline) {
-      updateTimeline(result.timeline);
+    if (result.success && result.cut) {
+      updateTimeline(result.cut);
       toast.success(tToasts("success.audioTrackAdded"));
     } else {
       toast.error(result.error || tToasts("error.addTrackFailed"));
@@ -784,10 +788,10 @@ function TimelinePanelContent({
     }
 
     const newTracks = removeTrackFromConfig(tracks, trackIndex);
-    const result = await updateTimelineTracks(timeline.id, newTracks);
+    const result = await updateCutTracks(timeline.id, newTracks);
 
-    if (result.success && result.timeline) {
-      updateTimeline(result.timeline);
+    if (result.success && result.cut) {
+      updateTimeline(result.cut);
       toast.success(tToasts("success.trackDeleted"));
     } else {
       toast.error(result.error || tToasts("error.deleteTrackFailed"));
@@ -855,7 +859,7 @@ function TimelinePanelContent({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={skipToPrevious}
-            disabled={timeline.clips.length === 0}
+            disabled={timeline.clips.length === 0 || isExporting}
           >
             <SkipBack className="h-4 w-4" />
           </Button>
@@ -864,7 +868,7 @@ function TimelinePanelContent({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={togglePlayPause}
-            disabled={timeline.clips.length === 0}
+            disabled={timeline.clips.length === 0 || isExporting}
           >
             {isPlaying ? (
               <Pause className="h-4 w-4" />
@@ -877,7 +881,7 @@ function TimelinePanelContent({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={skipToNext}
-            disabled={timeline.clips.length === 0}
+            disabled={timeline.clips.length === 0 || isExporting}
           >
             <SkipForward className="h-4 w-4" />
           </Button>
@@ -930,8 +934,8 @@ function TimelinePanelContent({
             variant="default"
             size="sm"
             className="h-7 gap-1.5 border-l ml-3 pl-3"
-            onClick={() => setIsExportDialogOpen(true)}
-            disabled={timeline.clips.length === 0}
+            onClick={() => onOpenExportDialog ? onOpenExportDialog() : setIsExportDialogOpen(true)}
+            disabled={timeline.clips.length === 0 || isExporting}
           >
             <Download className="h-3.5 w-3.5" />
             {t("export")}

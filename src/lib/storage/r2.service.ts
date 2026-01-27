@@ -178,7 +178,10 @@ export async function uploadImageToR2(
       const ext = contentType.split("/")[1] || "png";
       fileName = `downloaded-image.${ext}`;
 
-      metadata.originalUrl = input;
+      // 只有非 data URL 才存储原始 URL（data URL 太大会超出 R2 metadata 限制）
+      if (!input.startsWith("data:")) {
+        metadata.originalUrl = input;
+      }
     } else {
       // File 对象
       const validation = validateFile(input);
@@ -301,7 +304,10 @@ export async function uploadVideoToR2(
       const ext = contentType.split("/")[1] || "mp4";
       fileName = `downloaded-video.${ext}`;
 
-      metadata.originalUrl = input;
+      // 只有非 data URL 才存储原始 URL（data URL 太大会超出 R2 metadata 限制）
+      if (!input.startsWith("data:")) {
+        metadata.originalUrl = input;
+      }
     } else {
       // File 对象
       const validation = validateVideoFile(input);
@@ -365,10 +371,33 @@ export async function uploadVideoToR2(
       key,
     };
   } catch (error) {
-    console.error("上传视频到 R2 失败:", error);
+    console.error("[R2] Failed to upload video:", error);
+
+    // Extract R2/S3 error details
+    let errorMessage = "Upload failed";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      // Check for AWS SDK raw response
+      const awsError = error as Error & {
+        $response?: { body?: unknown };
+        $metadata?: { httpStatusCode?: number };
+        Code?: string;
+        name?: string;
+      };
+      if (awsError.$metadata?.httpStatusCode) {
+        console.error(`[R2] HTTP status code: ${awsError.$metadata.httpStatusCode}`);
+      }
+      if (awsError.Code) {
+        console.error(`[R2] Error code: ${awsError.Code}`);
+      }
+      if (awsError.name) {
+        console.error(`[R2] Error name: ${awsError.name}`);
+      }
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : "上传失败",
+      error: errorMessage,
     };
   }
 }
@@ -429,7 +458,10 @@ export async function uploadAudioToR2(
       else if (contentType.includes("webm")) ext = "webm";
 
       fileName = `downloaded-audio.${ext}`;
-      metadata.originalUrl = input;
+      // 只有非 data URL 才存储原始 URL（data URL 太大会超出 R2 metadata 限制）
+      if (!input.startsWith("data:")) {
+        metadata.originalUrl = input;
+      }
     } else {
       // File 对象
       if (input.size > MAX_AUDIO_SIZE) {

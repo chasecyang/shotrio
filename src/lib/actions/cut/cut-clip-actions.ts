@@ -130,22 +130,6 @@ export async function addCutClip(
 }
 
 /**
- * Add clip to timeline (backward compatible alias)
- * @deprecated Use addCutClip instead
- */
-export async function addClipToTimeline(
-  timelineId: string,
-  input: AddCutClipInput
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await addCutClip(timelineId, input);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
-}
-
-/**
  * Update clip
  */
 export async function updateCutClip(
@@ -214,22 +198,6 @@ export async function updateCutClip(
     console.error("Failed to update clip:", error);
     return { success: false, error: "Failed to update clip" };
   }
-}
-
-/**
- * Update clip (backward compatible alias)
- * @deprecated Use updateCutClip instead
- */
-export async function updateClip(
-  clipId: string,
-  input: UpdateCutClipInput
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await updateCutClip(clipId, input);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
 }
 
 /**
@@ -319,21 +287,6 @@ export async function removeCutClip(
 }
 
 /**
- * Delete clip (backward compatible alias)
- * @deprecated Use removeCutClip instead
- */
-export async function removeClip(
-  clipId: string
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await removeCutClip(clipId);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
-}
-
-/**
  * Batch reorder clips
  */
 export async function reorderCutClips(
@@ -398,22 +351,6 @@ export async function reorderCutClips(
     console.error("Failed to reorder clips:", error);
     return { success: false, error: "Failed to reorder clips" };
   }
-}
-
-/**
- * Batch reorder clips (backward compatible alias)
- * @deprecated Use reorderCutClips instead
- */
-export async function reorderClips(
-  timelineId: string,
-  clipOrders: ReorderCutClipInput[]
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await reorderCutClips(timelineId, clipOrders);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
 }
 
 /**

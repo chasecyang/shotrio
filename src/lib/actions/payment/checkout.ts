@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import db from "@/lib/db";
 import { orders, OrderStatus } from "@/lib/db/schemas/payment";
 import { eq, and, count } from "drizzle-orm";
@@ -32,6 +32,11 @@ export async function createCheckoutSession(params: {
     if (!session?.user) {
       return { success: false, error: "未登录" };
     }
+
+    // Get DataFast tracking cookies for revenue attribution
+    const cookieStore = await cookies();
+    const datafastVisitorId = cookieStore.get("datafast_visitor_id")?.value;
+    const datafastSessionId = cookieStore.get("datafast_session_id")?.value;
 
     const userId = session.user.id;
     const { packageType } = params;
@@ -98,6 +103,9 @@ export async function createCheckoutSession(params: {
         userId,
         packageType,
         packageName: pkg.name,
+        // DataFast revenue attribution
+        ...(datafastVisitorId && { datafast_visitor_id: datafastVisitorId }),
+        ...(datafastSessionId && { datafast_session_id: datafastSessionId }),
       },
     });
 

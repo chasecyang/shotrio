@@ -150,6 +150,25 @@
     "creatingTask": "创建任务...",
     "startExport": "开始导出"
   },
+  "exportStatus": {
+    "exporting": "正在导出视频...",
+    "preparing": "准备中...",
+    "cancelling": "取消中...",
+    "cancelExport": "取消导出",
+    "cancelSuccess": "导出已取消",
+    "cancelFailed": "取消导出失败",
+    "retryFailed": "重试导出失败",
+    "exportComplete": "导出完成！",
+    "duration": "时长",
+    "fileSize": "文件大小",
+    "download": "下载",
+    "downloadStarted": "开始下载",
+    "newExport": "重新导出",
+    "continueEditing": "继续编辑",
+    "exportFailed": "导出失败",
+    "retry": "重试",
+    "dismiss": "关闭"
+  },
   "textAsset": {
     "contentSaved": "内容已保存",
     "markdownPlaceholder": "支持 Markdown 语法...\n\n# 标题\n\n**粗体** *斜体*\n\n- 列表项",

@@ -9,7 +9,7 @@
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import { getAssetWithFullData } from "@/lib/actions/asset";
 import {
-  getProjectTimeline,
+  getProjectCuts,
   createCut,
   getCut,
   deleteCut,
@@ -53,9 +53,6 @@ export async function handleCutFunctions(
       };
   }
 }
-
-// 向后兼容的别名
-export const handleTimelineFunctions = handleCutFunctions;
 
 /**
  * Create a new cut
@@ -157,7 +154,10 @@ async function handleAddClip(
       };
     }
   } else {
-    cutData = await getProjectTimeline(projectId);
+    const cuts = await getProjectCuts(projectId);
+    if (cuts.length > 0) {
+      cutData = await getCut(cuts[0].id);
+    }
     if (!cutData) {
       const result = await createCut({ projectId });
       if (!result.success || !result.cut) {
@@ -331,7 +331,10 @@ async function handleUpdateClip(
       };
     }
   } else {
-    cutData = await getProjectTimeline(projectId);
+    const cuts = await getProjectCuts(projectId);
+    if (cuts.length > 0) {
+      cutData = await getCut(cuts[0].id);
+    }
     if (!cutData) {
       return {
         functionCallId: functionCall.id,
@@ -484,7 +487,10 @@ async function handleAddAudioTrack(
       };
     }
   } else {
-    cutData = await getProjectTimeline(projectId);
+    const cuts = await getProjectCuts(projectId);
+    if (cuts.length > 0) {
+      cutData = await getCut(cuts[0].id);
+    }
     if (!cutData) {
       const result = await createCut({ projectId });
       if (!result.success || !result.cut) {

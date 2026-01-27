@@ -23,8 +23,7 @@ import { DependencyNotReadyError } from "../errors/DependencyNotReadyError";
 
 function getVideoModelUsed(provider: ReturnType<typeof getVideoServiceProvider>): string {
   if (provider === "veo") {
-    const platform = process.env.VEO_PLATFORM?.toLowerCase() || "yunwu";
-    return platform === "yunwu" ? "veo_3_1-fast-components-4K" : "veo3_fast";
+    return "veo3_fast";
   }
   if (provider === "seedance") {
     return "seedance";
@@ -32,8 +31,8 @@ function getVideoModelUsed(provider: ReturnType<typeof getVideoServiceProvider>)
   if (provider === "kling") {
     return "kling_o1";
   }
-  if (provider === "sora2" || provider === "sora2pro") {
-    return provider;
+  if (provider === "sora2pro") {
+    return "sora2pro";
   }
   return provider;
 }

@@ -6,7 +6,7 @@ import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
 import { handleQueryFunctions } from "./query";
 import { handleGenerationFunctions } from "./generation";
 import { handleAudioGeneration } from "./audio-generation";
-import { handleTimelineFunctions } from "./timeline";
+import { handleCutFunctions } from "./cut";
 import { handleAssetOperations } from "./asset-ops";
 import { handleTextAssetFunctions } from "./text-asset";
 
@@ -35,7 +35,8 @@ const HANDLER_MAP: Record<string, Handler> = {
   // 查询类（基础处理器）
   query_context: handleQueryFunctions,
   query_assets: handleQueryFunctions,
-  query_timeline: handleQueryFunctions,
+  query_cuts: handleQueryFunctions,
+  query_cut: handleQueryFunctions,
   query_text_assets: handleQueryFunctions,
 
   // 生成类（完整处理器，需要 userId）
@@ -47,11 +48,13 @@ const HANDLER_MAP: Record<string, Handler> = {
   generate_bgm: handleAudioGeneration,
   generate_dialogue: handleAudioGeneration,
 
-  // 时间轴操作类（基础处理器）
-  add_clip: handleTimelineFunctions,
-  remove_clip: handleTimelineFunctions,
-  update_clip: handleTimelineFunctions,
-  add_audio_track: handleTimelineFunctions,
+  // 剪辑操作类（基础处理器）
+  create_cut: handleCutFunctions,
+  delete_cut: handleCutFunctions,
+  add_clip: handleCutFunctions,
+  remove_clip: handleCutFunctions,
+  update_clip: handleCutFunctions,
+  add_audio_track: handleCutFunctions,
 
   // 资产操作类（基础处理器）
   update_asset: handleAssetOperations,
@@ -89,7 +92,7 @@ export {
   handleQueryFunctions,
   handleGenerationFunctions,
   handleAudioGeneration,
-  handleTimelineFunctions,
+  handleCutFunctions,
   handleAssetOperations,
   handleTextAssetFunctions,
 };

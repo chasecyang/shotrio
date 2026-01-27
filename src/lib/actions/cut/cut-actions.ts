@@ -153,46 +153,6 @@ export async function getCut(
 }
 
 /**
- * 获取项目的第一个剪辑（向后兼容）
- * @deprecated 使用 getProjectCuts 或 getCut 代替
- */
-export async function getProjectTimeline(
-  projectId: string
-): Promise<CutDetail | null> {
-  try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user) {
-      throw new Error("未登录");
-    }
-
-    // 查询项目的第一个剪辑
-    const cuts = await db
-      .select()
-      .from(cut)
-      .where(
-        and(
-          eq(cut.projectId, projectId),
-          eq(cut.userId, session.user.id)
-        )
-      )
-      .orderBy(desc(cut.createdAt))
-      .limit(1);
-
-    if (cuts.length === 0) {
-      return null;
-    }
-
-    return getCut(cuts[0].id);
-  } catch (error) {
-    console.error("获取剪辑失败:", error);
-    throw error;
-  }
-}
-
-/**
  * 创建剪辑
  */
 export async function createCut(
@@ -241,21 +201,6 @@ export async function createCut(
     console.error("创建剪辑失败:", error);
     return { success: false, error: "创建剪辑失败" };
   }
-}
-
-/**
- * 创建时间轴（向后兼容别名）
- * @deprecated 使用 createCut 代替
- */
-export async function createTimeline(
-  input: CreateCutInput
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await createCut(input);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
 }
 
 /**
@@ -311,22 +256,6 @@ export async function updateCut(
 }
 
 /**
- * 更新时间轴（向后兼容别名）
- * @deprecated 使用 updateCut 代替
- */
-export async function updateTimeline(
-  timelineId: string,
-  input: UpdateCutInput
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await updateCut(timelineId, input);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
-}
-
-/**
  * 删除剪辑
  */
 export async function deleteCut(
@@ -361,43 +290,6 @@ export async function deleteCut(
   } catch (error) {
     console.error("删除剪辑失败:", error);
     return { success: false, error: "删除剪辑失败" };
-  }
-}
-
-/**
- * 删除时间轴（向后兼容别名）
- * @deprecated 使用 deleteCut 代替
- */
-export async function deleteTimeline(
-  timelineId: string
-): Promise<{ success: boolean; error?: string }> {
-  return deleteCut(timelineId);
-}
-
-/**
- * 获取或创建项目的剪辑（向后兼容）
- * @deprecated 使用 getProjectCuts + createCut 代替
- */
-export async function getOrCreateProjectTimeline(
-  projectId: string
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  try {
-    // 先尝试获取现有剪辑
-    let cutData = await getProjectTimeline(projectId);
-
-    // 如果不存在，则创建一个
-    if (!cutData) {
-      const result = await createCut({ projectId });
-      if (!result.success || !result.cut) {
-        return { success: false, error: result.error };
-      }
-      cutData = result.cut;
-    }
-
-    return { success: true, timeline: cutData };
-  } catch (error) {
-    console.error("获取或创建剪辑失败:", error);
-    return { success: false, error: "获取或创建剪辑失败" };
   }
 }
 
@@ -453,20 +345,4 @@ export async function updateCutTracks(
     console.error("更新轨道配置失败:", error);
     return { success: false, error: "更新轨道配置失败" };
   }
-}
-
-/**
- * 更新时间轴轨道配置（向后兼容别名）
- * @deprecated 使用 updateCutTracks 代替
- */
-export async function updateTimelineTracks(
-  timelineId: string,
-  tracks: TrackConfig[]
-): Promise<{ success: boolean; timeline?: CutDetail; error?: string }> {
-  const result = await updateCutTracks(timelineId, tracks);
-  return {
-    success: result.success,
-    timeline: result.cut,
-    error: result.error,
-  };
 }

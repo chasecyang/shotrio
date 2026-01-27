@@ -150,6 +150,25 @@
     "creatingTask": "Creating task...",
     "startExport": "Start Export"
   },
+  "exportStatus": {
+    "exporting": "Exporting Video...",
+    "preparing": "Preparing...",
+    "cancelling": "Cancelling...",
+    "cancelExport": "Cancel Export",
+    "cancelSuccess": "Export cancelled",
+    "cancelFailed": "Failed to cancel export",
+    "retryFailed": "Failed to retry export",
+    "exportComplete": "Export Complete!",
+    "duration": "Duration",
+    "fileSize": "File Size",
+    "download": "Download",
+    "downloadStarted": "Download started",
+    "newExport": "New Export",
+    "continueEditing": "Continue Editing",
+    "exportFailed": "Export Failed",
+    "retry": "Retry",
+    "dismiss": "Dismiss"
+  },
   "textAsset": {
     "contentSaved": "Content saved",
     "markdownPlaceholder": "Supports Markdown syntax...\n\n# Heading\n\n**Bold** *Italic*\n\n- List item",
