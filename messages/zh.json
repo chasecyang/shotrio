@@ -960,68 +960,68 @@
     "openChat": "打开聊天"
   },
   "pricing": {
-    "title": "定价方案",
-    "subtitle": "选择适合您的积分包，开始创作之旅",
+    "title": "简单定价",
+    "subtitle": "为你的创意加油",
     "viewPricing": "查看定价",
     "loginToPurchase": "登录后购买",
     "features": {
-      "title": "使用积分创作精彩内容",
+      "title": "强大的 AI 创作工具",
       "imageGeneration": {
         "title": "AI 图片生成",
-        "description": "使用 AI 生成高质量的角色、场景、道具图片",
+        "description": "使用顶尖 AI 创作精美角色、场景和道具",
         "feature1": "6 积分/张",
-        "feature2": "多种分辨率可选",
-        "feature3": "支持参考图创作"
+        "feature2": "多种分辨率",
+        "feature3": "支持参考图"
       },
       "videoGeneration": {
         "title": "AI 视频生成",
-        "description": "基于 Google Veo 3.1 — 业界领先的视频生成模型",
+        "description": "基于 Google Veo 3.1 — 业界领先的视频模型",
         "feature1": "6 积分/秒",
-        "feature2": "约 8 秒视频",
+        "feature2": "最长 8 秒/片段",
         "feature3": "自带音频"
       },
       "audioGeneration": {
         "title": "AI 音频生成",
-        "description": "基于 ElevenLabs 和 Suno — 专业的音效和音乐生成",
+        "description": "ElevenLabs & Suno 提供专业音效和音乐",
         "feature1": "1 积分/音效",
         "feature2": "10 积分/音乐",
-        "feature3": "高质量音频输出"
+        "feature3": "专业级音质"
       }
     },
     "faq": {
       "title": "常见问题",
       "q1": {
         "question": "积分可以用来做什么？",
-        "answer": "积分用于生成 AI 图片和视频。图片生成消耗 6 积分/张，视频生成消耗 6 积分/秒。"
+        "answer": "积分用于所有 AI 生成功能：图片（6积分/张）、视频（6积分/秒）、音效（1积分）、音乐（10积分）。"
       },
       "q2": {
-        "question": "积分有有效期吗？",
-        "answer": "积分永久有效，不会过期。您可以随时使用。"
+        "question": "积分会过期吗？",
+        "answer": "永不过期。你的积分永久有效，随时可用。"
       },
       "q3": {
-        "question": "购买赠送是什么？",
-        "answer": "购买积分包时，根据套餐不同可获得 5%-20% 的额外积分赠送。购买越多，赠送比例越高。例如购买专业包（12000积分）可额外获得15%赠送，总共获得13800积分。"
+        "question": "赠送积分是怎么回事？",
+        "answer": "大额套餐自动包含赠送积分。标准包赠送 5%，专业包赠送 7%，旗舰包赠送 10%。"
       },
       "q4": {
         "question": "支持哪些支付方式？",
-        "answer": "我们支持信用卡、借记卡等多种支付方式，由 Creem 安全处理。"
+        "answer": "支持所有主流信用卡、借记卡和数字钱包，通过安全支付通道处理。"
       },
       "q5": {
         "question": "可以退款吗？",
-        "answer": "由于积分的数字性质，一旦购买成功无法退款。但如果遇到技术问题导致生成失败，我们会自动退还消耗的积分。"
+        "answer": "积分购买后不支持退款。但如果因技术问题导致生成失败，积分会自动退还到账户。"
       }
     }
   },
   "credits": {
     "title": "积分中心",
-    "description": "购买积分用于生成图片和视频",
-    "purchase": "购买积分",
+    "description": "用积分驱动你的 AI 创作",
+    "purchase": "获取积分",
     "addCredits": "充值",
     "insufficientTitle": "积分不足",
-    "insufficientDescription": "您的积分不足以完成此操作，请充值后继续",
+    "insufficientDescription": "充值积分，继续创作精彩内容",
     "currency": "美元",
     "creditsUnit": "积分",
-    "bonusLabel": "额外赠送 {percent}%",
+    "bonusLabel": "+{percent}% 赠送",
     "welcome": {
       "title": "新手礼包",
       "description": "感谢加入 ShotRio！领取你的专属新手奖励",
@@ -1043,33 +1043,33 @@
     },
     "packages": {
       "title": "选择积分包",
-      "bonusHint": "购买越多，赠送越多！",
+      "bonusHint": "大额套餐享额外赠送！",
       "starter": "体验包",
       "basic": "基础包",
       "standard": "标准包",
       "pro": "专业包",
       "ultimate": "旗舰包",
-      "popular": "热门",
+      "popular": "超值",
       "bonus5": "5% OFF",
       "bonus10": "10% OFF",
       "bonus15": "15% OFF",
       "bonus20": "20% OFF",
       "baseCredits": "基础积分",
       "bonusCredits": "额外赠送",
-      "agentChatFree": "Agent规划与聊天，免费",
+      "agentChatFree": "AI 对话无限免费",
       "total": "您将获得",
       "valuePerDollar": "性价比",
       "creditsPerDollar": "积分/$1",
-      "buyNow": "立即购买",
+      "buyNow": "立即开始",
       "processing": "处理中...",
       "description": {
-        "starter": "适合初次体验",
-        "basic": "适合轻度使用",
-        "standard": "适合日常创作",
-        "pro": "适合专业创作者",
-        "ultimate": "适合团队和重度使用"
+        "starter": "尝鲜体验",
+        "basic": "轻度使用",
+        "standard": "最受欢迎",
+        "pro": "专业创作",
+        "ultimate": "超值之选"
       },
-      "value": "可生成约 {images} 张图片或 {seconds} 秒视频"
+      "value": "约 {images} 张图片或 {seconds} 秒视频"
     },
     "redeem": {
       "title": "兑换码",

@@ -10,12 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper";
+import { FadeIn } from "@/components/ui/motion-wrapper";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Sparkles } from "lucide-react";
+import { Coins } from "lucide-react";
 import { redirect } from "next/navigation";
-import { CREDIT_PACKAGES } from "@/types/payment";
-import { CreditsPurchaseClient } from "./purchase-client";
 import { getTranslations } from "next-intl/server";
 
 import type { Metadata } from "next";
@@ -180,33 +178,6 @@ export default async function CreditsPage() {
                   <BalanceSection />
                 </Suspense>
               </FadeIn>
-            </div>
-          </div>
-        </section>
-
-        {/* Credit packages section */}
-        <section className="py-16 md:py-24 relative">
-          <div className="container px-4 mx-auto relative z-10">
-            <div className="max-w-7xl mx-auto">
-              <FadeIn>
-                <div className="text-center mb-12">
-                  <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4">
-                    {t("packages.title")}
-                  </h2>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-500/10 to-purple-500/10 border border-yellow-500/20 text-foreground">
-                    <Sparkles className="w-4 h-4 text-yellow-600" />
-                    <span className="text-sm font-medium">{t("packages.bonusHint")}</span>
-                  </div>
-                </div>
-              </FadeIn>
-
-              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                {CREDIT_PACKAGES.map((pkg) => (
-                  <StaggerItem key={pkg.type}>
-                    <CreditsPurchaseClient package={pkg} />
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
             </div>
           </div>
         </section>

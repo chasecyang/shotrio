@@ -1107,68 +1107,68 @@
     }
   },
   "pricing": {
-    "title": "Pricing Plans",
-    "subtitle": "Choose the credit package that suits you and start creating",
+    "title": "Simple Pricing",
+    "subtitle": "Fuel Your Creative Vision",
     "viewPricing": "View Pricing",
     "loginToPurchase": "Login to Purchase",
     "features": {
-      "title": "Create Amazing Content with Credits",
+      "title": "Powerful AI Creation Tools",
       "imageGeneration": {
         "title": "AI Image Generation",
-        "description": "Generate high-quality character, scene, and prop images with AI",
+        "description": "Create stunning characters, scenes, and props with state-of-the-art AI",
         "feature1": "6 credits per image",
-        "feature2": "Multiple resolutions available",
-        "feature3": "Support for reference images"
+        "feature2": "Multiple resolutions",
+        "feature3": "Reference image support"
       },
       "videoGeneration": {
         "title": "AI Video Generation",
         "description": "Powered by Google Veo 3.1 — Industry-leading video model",
-        "feature1": "6 credits/sec",
-        "feature2": "~8 seconds per video",
+        "feature1": "6 credits per second",
+        "feature2": "Up to 8 seconds per clip",
         "feature3": "Audio included"
       },
       "audioGeneration": {
         "title": "AI Audio Generation",
-        "description": "Sound effects and background music powered by ElevenLabs & Suno",
+        "description": "Professional sound effects and music by ElevenLabs & Suno",
         "feature1": "1 credit per sound effect",
         "feature2": "10 credits per music track",
-        "feature3": "High-quality audio output"
+        "feature3": "Studio-quality output"
       }
     },
     "faq": {
       "title": "Frequently Asked Questions",
       "q1": {
         "question": "What can I use credits for?",
-        "answer": "Credits are used to generate AI images and videos. Image generation costs 6 credits per image, video generation costs 6 credits per second."
+        "answer": "Credits power all AI generation features: images (6 credits each), videos (6 credits per second), sound effects (1 credit), and music tracks (10 credits)."
       },
       "q2": {
         "question": "Do credits expire?",
-        "answer": "Credits are valid forever and never expire. You can use them anytime."
+        "answer": "Never. Your credits are yours forever — use them whenever inspiration strikes."
       },
       "q3": {
-        "question": "What is the purchase bonus?",
-        "answer": "When purchasing credit packages, you get 5%-20% extra credits based on the package tier. Buy more, get more bonus. For example, purchasing the Pro package (12000 credits) gets you an extra 15% bonus, totaling 13800 credits."
+        "question": "How do bonus credits work?",
+        "answer": "Larger packages include bonus credits automatically. Standard adds 5%, Pro adds 7%, and Ultimate adds 10% extra credits to your purchase."
       },
       "q4": {
-        "question": "What payment methods are supported?",
-        "answer": "We support credit cards, debit cards, and other payment methods, securely processed by Creem."
+        "question": "What payment methods are accepted?",
+        "answer": "We accept all major credit cards, debit cards, and digital wallets through our secure payment processor."
       },
       "q5": {
-        "question": "Can I get a refund?",
-        "answer": "Due to the digital nature of credits, purchases cannot be refunded once completed. However, if generation fails due to technical issues, we will automatically refund the consumed credits."
+        "question": "What's your refund policy?",
+        "answer": "Credits are non-refundable once purchased. However, if generation fails due to technical issues, credits are automatically restored to your account."
       }
     }
   },
   "credits": {
     "title": "Credit Center",
-    "description": "Purchase credits for generating images and videos",
-    "purchase": "Purchase Credits",
+    "description": "Power your AI creations with credits",
+    "purchase": "Get Credits",
     "addCredits": "Add Credits",
-    "insufficientTitle": "Insufficient Credits",
-    "insufficientDescription": "You don't have enough credits to complete this action. Please add credits to continue",
+    "insufficientTitle": "Need More Credits",
+    "insufficientDescription": "Add credits to continue creating amazing content",
     "currency": "USD",
     "creditsUnit": "Credits",
-    "bonusLabel": "{percent}% extra bonus",
+    "bonusLabel": "+{percent}% bonus",
     "welcome": {
       "title": "Welcome Gift",
       "description": "Thanks for joining ShotRio! Claim your exclusive welcome bonus",
@@ -1190,33 +1190,33 @@
     },
     "packages": {
       "title": "Select Credit Package",
-      "bonusHint": "Buy more, get more bonus!",
+      "bonusHint": "Larger packages include bonus credits!",
       "starter": "Starter",
       "basic": "Basic",
       "standard": "Standard",
       "pro": "Pro",
       "ultimate": "Ultimate",
-      "popular": "Popular",
+      "popular": "Best Value",
       "bonus5": "5% OFF",
       "bonus10": "10% OFF",
       "bonus15": "15% OFF",
       "bonus20": "20% OFF",
       "baseCredits": "Base Credits",
       "bonusCredits": "Extra Bonus",
-      "agentChatFree": "Agent Planning & Chat, Free",
+      "agentChatFree": "Unlimited AI Chat Included",
       "total": "You'll Get",
       "valuePerDollar": "Value",
       "creditsPerDollar": "credits/$1",
-      "buyNow": "Buy Now",
+      "buyNow": "Get Started",
       "processing": "Processing...",
       "description": {
-        "starter": "Perfect for first-time users",
-        "basic": "Great for light usage",
-        "standard": "Ideal for daily creation",
-        "pro": "Best for professional creators",
-        "ultimate": "Perfect for teams and heavy users"
+        "starter": "Try it out",
+        "basic": "For casual creators",
+        "standard": "Most popular choice",
+        "pro": "For power users",
+        "ultimate": "Maximum value"
       },
-      "value": "Generate approx. {images} images or {seconds} seconds of video"
+      "value": "~{images} images or {seconds}s video"
     },
     "redeem": {
       "title": "Redeem Code",
