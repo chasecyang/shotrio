@@ -1740,7 +1740,9 @@
       "currentStatus": "Current status",
       "selected": "Selected",
       "rejected": "Rejected",
-      "unrated": "Unrated"
+      "unrated": "Unrated",
+      "durationSeconds": "{seconds}s",
+      "usageCount": "{count}x"
     },
     "cutCard": {
       "rename": "Rename",

@@ -1740,7 +1740,9 @@
       "currentStatus": "当前状态",
       "selected": "精选",
       "rejected": "废弃",
-      "unrated": "未筛选"
+      "unrated": "未筛选",
+      "durationSeconds": "{seconds}秒",
+      "usageCount": "{count}次"
     },
     "cutCard": {
       "rename": "重命名",

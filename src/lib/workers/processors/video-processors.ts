@@ -613,12 +613,14 @@ export async function processFinalVideoExport(jobData: Job, workerToken: string)
       durationInFrames = 30;
     }
 
-    // 构建轨道状态（默认所有音频轨道不静音）
+    // 构建轨道状态（使用输入的 trackStates，如果没有则默认不静音）
+    const inputTrackStates = input.trackStates || {};
     const trackStates: Record<number, { volume: number; isMuted: boolean }> = {};
     tracks.forEach((track) => {
-      if (track.type === "audio") {
-        trackStates[track.trackIndex] = { volume: 1, isMuted: false };
-      }
+      trackStates[track.trackIndex] = inputTrackStates[track.trackIndex] || {
+        volume: 1,
+        isMuted: false,
+      };
     });
 
     const compositionProps = {

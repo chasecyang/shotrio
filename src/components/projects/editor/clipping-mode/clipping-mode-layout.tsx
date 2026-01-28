@@ -270,6 +270,7 @@ export function ClippingModeLayout() {
           onOpenChange={setShowExportDialog}
           timeline={timeline}
           projectId={project.id}
+          trackStates={trackStates}
         />
       )}
     </div>

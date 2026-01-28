@@ -78,6 +78,7 @@ export interface FinalVideoExportInput {
   exportQuality?: "draft" | "high"; // 草稿/高清
   resolution?: string; // 分辨率（新增）
   fps?: number; // 帧率（新增）
+  trackStates?: Record<number, { volume: number; isMuted: boolean }>; // 轨道状态（静音/音量）
   transitions?: Array<{
     fromVideoId?: string;
     toVideoId: string;

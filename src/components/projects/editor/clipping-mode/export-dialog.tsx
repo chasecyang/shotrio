@@ -23,7 +23,7 @@ import {
 import { Film, Clock, Layers, MonitorPlay, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { exportCut } from "@/lib/actions/cut";
-import { CutDetail } from "@/types/cut";
+import { CutDetail, TrackStates } from "@/types/cut";
 import { useEditor } from "@/components/projects/editor/editor-context";
 import { formatTimeDisplay } from "@/lib/utils/timeline-utils";
 
@@ -32,6 +32,7 @@ interface ExportDialogProps {
   onOpenChange: (open: boolean) => void;
   timeline: CutDetail;
   projectId: string;
+  trackStates: TrackStates;
 }
 
 type ExportQuality = "draft" | "high";
@@ -41,6 +42,7 @@ export function ExportDialog({
   onOpenChange,
   timeline,
   projectId,
+  trackStates,
 }: ExportDialogProps) {
   const t = useTranslations();
   const { refreshJobs } = useEditor();
@@ -70,6 +72,7 @@ export function ExportDialog({
         projectId,
         quality,
         includeAudio,
+        trackStates,
       });
 
       if (result.success) {

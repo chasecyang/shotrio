@@ -12,6 +12,7 @@ export interface ExportOptions {
   projectId: string;
   quality: "draft" | "high";
   includeAudio: boolean;
+  trackStates?: Record<number, { volume: number; isMuted: boolean }>;
 }
 
 /**
@@ -80,6 +81,7 @@ export async function exportCut(
       exportQuality: options.quality,
       resolution: cutData.resolution ?? undefined,
       fps: cutData.fps ?? undefined,
+      trackStates: options.trackStates,
     };
 
     // 创建导出任务

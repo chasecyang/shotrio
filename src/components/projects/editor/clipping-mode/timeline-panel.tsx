@@ -962,6 +962,7 @@ function TimelinePanelContent({
 
             {/* Video track area */}
             {videoTracks.map((track) => {
+              const trackState = trackStates[track.index] || { volume: 1, isMuted: false };
               const trackClips = clipsByTrack.get(track.index) || [];
               const canDelete = videoTracks.length > 1 && trackClips.length === 0;
 
@@ -971,10 +972,23 @@ function TimelinePanelContent({
                   className="border-b flex items-center justify-between px-2 group"
                   style={{ height: track.height }}
                 >
-                  {/* Track name and icon */}
+                  {/* Track name and controls */}
                   <div className="flex items-center gap-1.5">
                     <Video className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs font-medium truncate">{getTrackDisplayName(track.name)}</span>
+                    {/* Mute button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => onToggleTrackMute(track.index)}
+                    >
+                      {trackState.isMuted ? (
+                        <VolumeX className="h-3 w-3 text-destructive" />
+                      ) : (
+                        <Volume2 className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </Button>
                   </div>
                   {/* Delete button */}
                   {canDelete && (
@@ -1289,6 +1303,7 @@ function TimelinePanelContent({
           onOpenChange={setIsExportDialogOpen}
           timeline={timeline}
           projectId={state.project.id}
+          trackStates={trackStates}
         />
       )}
     </div>

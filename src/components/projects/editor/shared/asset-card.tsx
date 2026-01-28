@@ -193,7 +193,7 @@ export function AssetCard({
               </span>
               {asset.duration && (
                 <span className="text-xs text-muted-foreground mt-1">
-                  {Math.round(asset.duration / 1000)}秒
+                  {t("durationSeconds", { seconds: Math.round(asset.duration / 1000) })}
                 </span>
               )}
             </div>
@@ -515,7 +515,7 @@ export function AssetCard({
           {/* 视频时长 - 仅在非生成和非失败状态显示 */}
           {isVideo && asset.duration && !isGenerating && !isFailed && (
             <Badge variant="secondary" className="text-xs px-2 py-0 shrink-0">
-              {Math.round(asset.duration / 1000)}秒
+              {t("durationSeconds", { seconds: Math.round(asset.duration / 1000) })}
             </Badge>
           )}
           {/* 标签 - 根据容器宽度自适应显示，始终单行 */}
@@ -553,7 +553,7 @@ export function AssetCard({
           )}
           {asset.usageCount > 0 && !isGenerating && !isFailed && (
             <Badge variant="outline" className="text-xs ml-auto shrink-0">
-              {asset.usageCount}次
+              {t("usageCount", { count: asset.usageCount })}
             </Badge>
           )}
         </div>
