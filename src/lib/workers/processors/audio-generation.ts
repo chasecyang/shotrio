@@ -16,6 +16,7 @@ import type { Job, AudioGenerationResult } from "@/types/job";
 import type { AudioMeta, AudioPurpose } from "@/types/asset";
 import { asset, audioData } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
+import { getVideoDuration } from "@/lib/utils/video-thumbnail";
 
 /**
  * 处理音频生成任务
@@ -354,6 +355,18 @@ async function processAudioGenerationInternal(
       modelUsed = "suno/v4.5";
     } else {
       modelUsed = "minimax/speech-2.6-turbo";
+    }
+
+    // 如果 API 没有返回 duration，使用 ffprobe 从上传的音频获取时长
+    if (!duration || duration <= 0) {
+      console.log("[Worker] API 未返回音频时长，尝试使用 ffprobe 获取...");
+      const probedDuration = await getVideoDuration(uploadResult.url);
+      if (probedDuration && probedDuration > 0) {
+        duration = probedDuration;
+        console.log(`[Worker] 通过 ffprobe 获取到音频时长: ${duration}ms`);
+      } else {
+        console.warn("[Worker] 无法获取音频时长，将保存为 null");
+      }
     }
 
     // 先将所有版本设为非 active

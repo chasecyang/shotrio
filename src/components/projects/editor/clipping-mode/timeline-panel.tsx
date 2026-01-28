@@ -382,12 +382,18 @@ function TimelinePanelContent({
       return;
     }
 
+    // Validate asset has duration
+    if (!asset.duration || asset.duration <= 0) {
+      toast.error(t("errors.assetNoDuration"));
+      return;
+    }
+
     // Add clip to timeline
     const result = await addCutClip(timeline.id, {
       assetId: asset.id,
       trackIndex,
       startTime: Math.round(startTime),
-      duration: asset.duration || 0,
+      duration: asset.duration,
       trimStart: 0,
     });
 

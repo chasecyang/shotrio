@@ -8,6 +8,7 @@ import {
   Ticket,
   FileVideo,
   Image,
+  Wrench,
   // Users,
   // Settings,
   // FileText,
@@ -60,6 +61,11 @@ const navItems: NavItem[] = [
     titleKey: "redeemCodes.title",
     href: "/admin/redeem-codes",
     icon: Ticket,
+  },
+  {
+    titleKey: "maintenance.sidebarTitle",
+    href: "/admin/maintenance",
+    icon: Wrench,
   },
   // 未来可以添加更多管理功能
   // {

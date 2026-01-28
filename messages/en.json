@@ -436,6 +436,32 @@
         "removedSuccess": "Example removed",
         "removeFailed": "Remove failed"
       }
+    },
+    "maintenance": {
+      "title": "Maintenance Tools",
+      "subtitle": "System maintenance and repair tools",
+      "sidebarTitle": "Maintenance",
+      "audioDuration": {
+        "title": "Fix Audio Duration",
+        "description": "Repair audio assets missing duration information",
+        "detail": "Scan and fix audio assets that are missing duration data. This may happen when audio generation services don't return duration information.",
+        "scan": "Scan Issues",
+        "fix": "Fix All",
+        "noIssuesFound": "No audio assets with missing duration found",
+        "issuesFound": "Found {count} fixable audio assets",
+        "onlyUnfixable": "Found issues but none can be fixed (audio still generating)",
+        "nothingToFix": "No fixable issues found",
+        "scanFailed": "Scan failed",
+        "fixSuccess": "Successfully fixed {count} audio assets",
+        "fixPartial": "{failed} audio assets could not be fixed",
+        "fixFailed": "Fix operation failed",
+        "fixable": "fixable",
+        "unfixable": "generating",
+        "unfixableHint": "These audio assets are still generating and cannot be fixed yet",
+        "clickFixToRepair": "Click 'Fix All' to repair these assets",
+        "fixed": "fixed",
+        "failed": "failed"
+      }
     }
   },
   "auth": {
@@ -1685,6 +1711,7 @@
       "groupDeprecated": "Deprecated",
       "groupCuts": "Cuts",
       "newCut": "New Cut",
+      "create": "Create",
       "cutCreated": "Cut created",
       "cutCreateFailed": "Failed to create cut",
       "createCutTitle": "Create New Cut",
@@ -2276,6 +2303,7 @@
       "errors": {
         "videoTrackVideoOnly": "Video tracks can only contain video assets",
         "audioTrackAudioOnly": "Audio tracks can only contain audio assets",
+        "assetNoDuration": "This asset has no duration information. Please wait for processing to complete.",
         "cannotDeleteNonEmptyTrack": "Cannot delete non-empty track. Please remove clips first.",
         "mustKeepOneTrack": "Must keep at least one {type} track"
       }
@@ -2310,6 +2338,40 @@
         "results": "Generation Results",
         "savedToLibrary": "Images saved to asset library"
       }
+    }
+  },
+  "createMaterial": {
+    "title": "Create Material",
+    "tabs": {
+      "upload": "Upload",
+      "aiGenerate": "AI Generate",
+      "text": "Text"
+    },
+    "aiGenerate": {
+      "selectType": "What would you like to create?",
+      "image": "Image",
+      "video": "Video",
+      "imageDesc": "AI-generated image",
+      "videoDesc": "AI-generated video",
+      "back": "Back",
+      "referenceImages": "Reference Images (optional)",
+      "prompt": "Prompt",
+      "creditCost": "Estimated cost: {cost} credits",
+      "cancel": "Cancel",
+      "generate": "Generate",
+      "generating": "Generating...",
+      "videoReferenceHint": "Supports 1-3 reference images",
+      "videoPromptPlaceholder": "Describe the video you want to generate...",
+      "aspectRatio": "Aspect Ratio",
+      "landscape": "Landscape",
+      "portrait": "Portrait",
+      "generatingVideo": "Generating video...",
+      "videoGenerated": "Video generated successfully",
+      "selectedImages": "{count} image(s) selected"
+    },
+    "text": {
+      "creating": "Creating...",
+      "create": "Create"
     }
   }
 }
