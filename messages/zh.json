@@ -106,13 +106,23 @@
     "setProject": "设置项目",
     "generateImageDesc": "检查并修改图片生成参数，确认后将使用AI生成图片素材",
     "generateVideoDesc": "检查并修改视频生成参数，确认后将使用AI生成视频素材",
+    "generateVideoBatchDesc": "检查并修改 {count} 个视频的生成参数，使用标签页切换不同视频",
     "createTextAssetDesc": "检查并修改文本资产的内容和标签信息",
     "defaultDesc": "检查参数并确认执行",
     "noEditableParams": "此操作暂无可编辑参数",
     "credits": "积分",
     "insufficientBalance": "余额不足 ({balance})",
     "processing": "处理中...",
-    "executing": "执行中..."
+    "executing": "执行中...",
+    "video": "视频",
+    "image": "图片",
+    "text": "文本",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "willBeSkipped": "此项将被跳过",
+    "enabledCount": "已启用 {enabled}/{total} 项",
+    "selectAll": "全选",
+    "batchActions": "批量操作 ({count})"
   },
   "exportDialog": {
     "title": "导出视频",
@@ -498,6 +508,16 @@
       "deleteConfirmTitle": "确认删除项目？",
       "deleteConfirmDescription": "此操作无法撤销。项目「{title}」及其所有数据（包括素材、视频等）将被永久删除。",
       "deleteCancel": "取消",
+      "videoProvider": "视频模型",
+      "videoProviderDescription": "选择用于生成视频的 AI 模型，不同模型有不同的能力和参数要求",
+      "videoProviderPlaceholder": "选择视频模型（使用系统默认）",
+      "videoProviderMode": "参考模式",
+      "videoProviderDuration": "时长",
+      "videoProviderAspectRatio": "宽高比",
+      "videoProviderSubjectsMode": "主体引用（最多 {maxSubjects} 个主体，每个 {maxImages} 张图）",
+      "videoProviderReferenceMode": "参考图片（最多 {maxImages} 张）",
+      "videoProviderFixedDuration": "固定 {duration} 秒",
+      "videoProviderDurationRange": "{min}-{max} 秒可配置",
       "errors": {
         "titleRequired": "请输入项目名称"
       }
@@ -1602,7 +1622,10 @@
       "title": "标题",
       "videoTitle": "视频标题",
       "duration": "时长",
+      "videoDuration": "视频时长",
       "describeVideo": "描述视频内容和镜头运动",
+      "describeVideoWithSubjects": "描述视频内容，使用 @主体名称 引用主体（如 @detective、@侦探）",
+      "subjectReferenceHint": "在提示词中使用 @主体名称 引用主体，如 @detective、@woman",
       "referenceImagesLimit": "参考图（1-3张）*",
       "maxReferenceWarning": "最多支持 3 张参考图，已自动限制",
       "nameRequired": "名称 *",
@@ -1611,7 +1634,13 @@
       "edit": "编辑",
       "preview": "预览",
       "markdownPlaceholder": "支持 Markdown 语法...",
-      "noContent": "*暂无内容*"
+      "noContent": "*暂无内容*",
+      "subjects": "主体",
+      "subjectNamePlaceholder": "主体名称（如 detective、侦探）",
+      "subjectImages": "参考图（1-3张）",
+      "addSubject": "添加主体",
+      "noSubjectsHint": "请添加至少一个主体及其参考图",
+      "fixedDuration": "固定时长：{seconds}秒"
     },
     "assetMention": {
       "noMatch": "未找到匹配的素材",
@@ -1880,6 +1909,9 @@
           "awaitingConfirmation": "等待用户确认",
           "parseResponseFailed": "解析响应失败"
         },
+        "batch": {
+          "count": "共 {count} 项操作"
+        },
         "displayNames": {
           "queryContext": "查询项目上下文",
           "queryAssets": "查询资产库",
@@ -1910,6 +1942,7 @@
           "prompt": "提示词",
           "tags": "标签",
           "referenceImages": "参考图",
+          "subjects": "主体",
           "title": "标题",
           "duration": "时长",
           "aspectRatio": "宽高比",
@@ -1919,6 +1952,11 @@
           "description": "描述",
           "artStyle": "美术风格",
           "contentPreview": "内容预览"
+        },
+        "types": {
+          "video": "视频",
+          "image": "图片",
+          "text": "文本"
         },
         "units": {
           "seconds": "秒",
@@ -2043,7 +2081,10 @@
           "autoGenerateImages": "自动生成图片",
           "duration": "时长",
           "aspectRatio": "宽高比",
-          "limit": "数量限制"
+          "limit": "数量限制",
+          "title": "标题",
+          "resolution": "分辨率",
+          "fps": "帧率"
         },
         "values": {
           "yes": "是",

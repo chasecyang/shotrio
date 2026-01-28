@@ -16,6 +16,8 @@ export interface ValidationResult {
 
 /**
  * 校验 Function 参数
+ * @param functionName 函数名称
+ * @param argumentsJson 参数 JSON 字符串
  */
 export async function validateFunctionParameters(
   functionName: string,
@@ -79,7 +81,10 @@ export async function validateFunctionParameters(
 }
 
 /**
- * 校验 generate_video_asset 参数
+ * 校验 generate_video_asset 参数（Veo 3.1 模式）
+ * - 支持 1-3 张参考图片
+ * - 固定 8 秒时长
+ * - 支持 16:9 和 9:16 比例
  */
 function validateGenerateVideoParams(
   params: Record<string, unknown>
@@ -94,23 +99,29 @@ function validateGenerateVideoParams(
     errors.push("prompt 必须至少包含 10 个字符");
   }
 
-  // 校验 reference_image_urls（必填）
-  if (!params.reference_image_urls || !Array.isArray(params.reference_image_urls)) {
-    errors.push("reference_image_urls 是必填字段，必须是数组");
-  } else if (params.reference_image_urls.length === 0) {
-    errors.push("reference_image_urls 至少需要 1 张参考图");
-  } else if (params.reference_image_urls.length > 3) {
-    errors.push("reference_image_urls 最多支持 3 张参考图");
+  // 校验 reference_image_ids（必填）
+  if (!params.reference_image_ids || !Array.isArray(params.reference_image_ids)) {
+    errors.push("reference_image_ids 是必填字段，必须是数组");
+  } else if (params.reference_image_ids.length === 0) {
+    errors.push("reference_image_ids 至少需要 1 张参考图片");
+  } else if (params.reference_image_ids.length > 3) {
+    errors.push("reference_image_ids 最多支持 3 张参考图片");
   }
 
   // 校验 aspect_ratio 格式
+  const supportedAspectRatios = ["16:9", "9:16"];
   if (
     params.aspect_ratio &&
     typeof params.aspect_ratio === "string" &&
-    !["16:9", "9:16"].includes(params.aspect_ratio)
+    !supportedAspectRatios.includes(params.aspect_ratio)
   ) {
-    errors.push("aspect_ratio 必须是 '16:9' 或 '9:16'");
+    errors.push(`aspect_ratio 必须是 '16:9' 或 '9:16'`);
   }
+
+  // 构建 normalizedConfig
+  const referenceImageIds = Array.isArray(params.reference_image_ids)
+    ? (params.reference_image_ids as string[])
+    : [];
 
   return {
     valid: errors.length === 0,
@@ -118,9 +129,9 @@ function validateGenerateVideoParams(
     warnings,
     normalizedConfig: {
       prompt: typeof params.prompt === "string" ? params.prompt.trim() : "",
-      reference_image_urls: params.reference_image_urls as string[],
-      aspect_ratio: params.aspect_ratio as "16:9" | "9:16" | undefined,
-      negative_prompt: params.negative_prompt as string | undefined,
+      reference_image_ids: referenceImageIds,
+      aspect_ratio: (params.aspect_ratio as "16:9" | "9:16") || "16:9",
+      duration: 8, // Veo 3.1 固定 8 秒
     },
   };
 }
@@ -229,7 +240,6 @@ function validateAudioGenerationParams(
       if (!params.voice_id) {
         errors.push("voice_id 不能为空");
       }
-      // voice_id 格式验证延迟到执行时（需要动态导入）
       break;
     }
   }
@@ -249,7 +259,6 @@ function validateCutParams(
 
   switch (functionName) {
     case "create_cut": {
-      // title, description, resolution, fps 都是可选的
       if (params.title !== undefined && typeof params.title !== "string") {
         errors.push("title 必须是字符串类型");
       }
@@ -298,7 +307,6 @@ function validateCutParams(
       break;
     }
     case "add_audio_track": {
-      // name 是可选的
       if (params.name !== undefined && typeof params.name !== "string") {
         errors.push("name 必须是字符串类型");
       }
@@ -410,3 +418,4 @@ function validateSetProjectInfoParams(
     warnings,
   };
 }
+

@@ -7,29 +7,30 @@ import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 import type { EngineMessage } from "@/types/agent";
 
 /**
- * 待审批信息
+ * 批量待审批信息
  */
-export interface ApprovalInfo {
-  toolCall: {
+export interface BatchApprovalInfo {
+  toolCalls: Array<{
     id: string;
     type: "function";
     function: {
       name: string;
       arguments: string;
     };
-  };
+  }>;
   assistantContent: string;
+  // 使用第一个 tool call 的信息作为代表
   displayName?: string;
   category: "read" | "generation" | "modification" | "deletion";
 }
 
 /**
- * 从消息历史中查找待审批的 tool call
- * 
+ * 从消息历史中查找所有待审批的 tool calls
+ *
  * 核心逻辑：找到最后一条 assistant 消息中，
- * 第一个需要确认且未执行的 tool call
+ * 所有需要确认且未执行的 tool calls
  */
-export function findPendingApproval(messages: EngineMessage[]): ApprovalInfo | null {
+export function findAllPendingApprovals(messages: EngineMessage[]): BatchApprovalInfo | null {
   // 1. 找到最后一条 assistant 消息
   const lastAssistant = messages
     .filter(m => m.role === "assistant")
@@ -39,13 +40,16 @@ export function findPendingApproval(messages: EngineMessage[]): ApprovalInfo | n
     return null;
   }
 
-  // 2. 遍历 tool_calls，找到第一个需要确认且未执行的
+  // 2. 收集所有需要确认且未执行的 tool calls
+  const pendingToolCalls: BatchApprovalInfo["toolCalls"] = [];
+  let firstFuncDef: ReturnType<typeof getFunctionDefinition> | undefined;
+
   for (const toolCall of lastAssistant.tool_calls) {
     // 检查是否已有对应的 tool message
     const hasToolMessage = messages.some(
       m => m.role === "tool" && m.tool_call_id === toolCall.id
     );
-    
+
     if (hasToolMessage) {
       continue; // 已执行，跳过
     }
@@ -53,31 +57,29 @@ export function findPendingApproval(messages: EngineMessage[]): ApprovalInfo | n
     // 检查是否需要确认
     const funcDef = getFunctionDefinition(toolCall.function.name);
     if (funcDef?.needsConfirmation) {
-      return {
-        toolCall,
-        assistantContent: lastAssistant.content || "",
-        displayName: funcDef.displayName,
-        category: funcDef.category,
-      };
+      pendingToolCalls.push(toolCall);
+      if (!firstFuncDef) {
+        firstFuncDef = funcDef;
+      }
     }
   }
 
-  return null;
+  if (pendingToolCalls.length === 0) {
+    return null;
+  }
+
+  return {
+    toolCalls: pendingToolCalls,
+    assistantContent: lastAssistant.content || "",
+    displayName: firstFuncDef?.displayName,
+    category: firstFuncDef?.category || "generation",
+  };
 }
 
 /**
  * 检查对话是否处于等待审批状态
  */
 export function isAwaitingApproval(messages: EngineMessage[]): boolean {
-  return findPendingApproval(messages) !== null;
+  const batch = findAllPendingApprovals(messages);
+  return batch !== null && batch.toolCalls.length > 0;
 }
-
-/**
- * 获取需要确认的 tool call（用于执行）
- * 返回原始的 tool call 对象
- */
-export function getPendingToolCall(messages: EngineMessage[]) {
-  const approval = findPendingApproval(messages);
-  return approval?.toolCall || null;
-}
-

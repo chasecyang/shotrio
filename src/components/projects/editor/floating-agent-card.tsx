@@ -34,7 +34,7 @@ import type { AssetWithFullData } from "@/types/asset";
 import { createAssetReference } from "@/lib/utils/asset-reference";
 import { createConversation, saveInterruptMessage, updateConversationTitle } from "@/lib/actions/conversation/crud";
 import { generateConversationTitle } from "@/lib/actions/conversation/title-generator";
-import { isAwaitingApproval, findPendingApproval } from "@/lib/services/agent-engine/approval-utils";
+import { isAwaitingApproval, findAllPendingApprovals } from "@/lib/services/agent-engine/approval-utils";
 import { useCreditsInfo } from "@/hooks/use-credits-info";
 import {
   DropdownMenu,
@@ -344,7 +344,7 @@ export function FloatingAgentCard({
   // 空状态判断
   const isEmptyState = agent.state.isNewConversation || (agent.state.messages.length === 0 && !agent.state.isLoading);
 
-  // 检测待审批操作
+  // 检测待审批操作（支持批量）
   const pendingApproval = useMemo(() => {
     const messages = agent.state.messages.map(msg => ({
       role: msg.role,
@@ -353,15 +353,33 @@ export function FloatingAgentCard({
       tool_call_id: msg.toolCallId,
     }));
 
-    const approval = findPendingApproval(messages as any[]);
-    if (!approval) return null;
+    const batchApproval = findAllPendingApprovals(messages as any[]);
+    if (!batchApproval || batchApproval.toolCalls.length === 0) return null;
 
-    const funcDef = getFunctionDefinition(approval.toolCall.function.name);
-    if (!funcDef) return null;
+    // 获取所有 tool calls 的 funcDef
+    const toolCallsWithDef = batchApproval.toolCalls.map(tc => {
+      const funcDef = getFunctionDefinition(tc.function.name);
+      return { toolCall: tc, funcDef };
+    }).filter(item => item.funcDef !== null);
 
+    if (toolCallsWithDef.length === 0) return null;
+
+    // 如果只有一个，保持向后兼容的格式
+    if (toolCallsWithDef.length === 1) {
+      return {
+        toolCall: toolCallsWithDef[0].toolCall,
+        funcDef: toolCallsWithDef[0].funcDef!,
+      };
+    }
+
+    // 多个 tool calls，返回批量格式
     return {
-      toolCall: approval.toolCall,
-      funcDef,
+      toolCalls: toolCallsWithDef.map(item => ({
+        toolCall: item.toolCall,
+        funcDef: item.funcDef!,
+      })),
+      // 使用第一个作为代表
+      funcDef: toolCallsWithDef[0].funcDef!,
     };
   }, [agent.state.messages]);
 

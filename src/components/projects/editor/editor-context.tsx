@@ -43,19 +43,28 @@ export interface PlaybackState {
   currentClipIndex: number; // 当前播放的片段索引
 }
 
+// 单个 function call 数据
+export interface FunctionCallData {
+  id: string;
+  name: string;
+  displayName?: string;
+  arguments: Record<string, unknown>;
+  category: string;
+}
+
 // 参数编辑数据
 export interface ActionEditorData {
-  functionCall: {
-    id: string;
-    name: string;
-    displayName?: string;
-    arguments: Record<string, unknown>;
-    category: string;
-  };
+  // 单个模式（向后兼容）
+  functionCall: FunctionCallData;
+  // 批量模式（可选）
+  functionCalls?: FunctionCallData[];
   creditCost?: CreditCost;
   currentBalance?: number;
+  // 单个模式回调
   onConfirm: (id: string, modifiedParams?: Record<string, unknown>) => void;
   onCancel: (id: string) => void;
+  // 批量模式回调（可选）
+  onBatchConfirm?: (modifiedParamsMap: Map<string, Record<string, unknown>>, disabledIds?: Set<string>) => void;
 }
 
 // 编辑器状态
@@ -705,7 +714,9 @@ export function EditorProvider({ children, initialProject }: EditorProviderProps
     ]
   );
 
-  return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
+  return (
+    <EditorContext.Provider value={value}>{children}</EditorContext.Provider>
+  );
 }
 
 // Hook

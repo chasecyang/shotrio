@@ -9,19 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ImageIcon, X, Plus, AlertCircle } from "lucide-react";
+import { Loader2, ImageIcon, X, Plus, AlertCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PRESET_TAGS, isPresetTag } from "@/lib/constants/asset-tags";
 import { Button } from "@/components/ui/button";
@@ -613,143 +606,6 @@ export function ImageGenerationForm({ params, onChange }: ImageGenerationFormPro
   );
 }
 
-// 单选素材选择器组件
-interface SingleAssetSelectorProps {
-  projectId: string;
-  selectedAssetId: string | undefined;
-  onSelect: (assetId: string | undefined) => void;
-  label: string;
-  allowClear?: boolean;
-  assetType?: "image" | "video";
-}
-
-function SingleAssetSelector({
-  projectId,
-  selectedAssetId,
-  onSelect,
-  label,
-  allowClear = false,
-  assetType = "image",
-}: SingleAssetSelectorProps) {
-  const tAgent = useTranslations("editor.agent.actionEditor");
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<{
-    id: string;
-    name: string;
-    displayUrl: string | null;
-  } | null>(null);
-
-  // 加载选中的素材信息
-  useEffect(() => {
-    if (!selectedAssetId) {
-      setSelectedAsset(null);
-      return;
-    }
-
-    getAssetsByIds([selectedAssetId]).then((result) => {
-      if (result.success && result.assets && result.assets.length > 0) {
-        setSelectedAsset(result.assets[0]);
-      }
-    });
-  }, [selectedAssetId]);
-
-  const { assets, isLoading } = useAssetList({
-    projectId,
-    assetType,
-    isOpen,
-  });
-
-  const readyAssets = useMemo(() => assets.filter(isAssetReady), [assets]);
-
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex items-center gap-2">
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "relative w-20 h-20 rounded-lg border-2 border-dashed",
-                "flex items-center justify-center overflow-hidden",
-                "hover:border-primary/50 transition-colors",
-                selectedAsset ? "border-solid border-border" : "border-muted-foreground/30"
-              )}
-            >
-              {selectedAsset?.displayUrl ? (
-                <Image
-                  src={selectedAsset.displayUrl}
-                  alt={selectedAsset.name}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-3" align="start">
-            <ScrollArea className="h-[280px]">
-              <AssetGrid
-                assets={readyAssets}
-                isLoading={isLoading}
-                emptyLabel={tAgent("labels.noAssets")}
-                renderItem={(asset) => (
-                  <button
-                    key={asset.id}
-                    type="button"
-                    onClick={() => {
-                      onSelect(asset.id);
-                      setIsOpen(false);
-                    }}
-                    className={cn(
-                      "relative aspect-square rounded-lg overflow-hidden",
-                      "border-2 transition-all",
-                      selectedAssetId === asset.id
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-transparent hover:border-muted-foreground/30"
-                    )}
-                  >
-                    {asset.displayUrl ? (
-                      <Image
-                        src={asset.displayUrl}
-                        alt={asset.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-muted" />
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-                      <p className="text-[10px] text-white truncate">{asset.name}</p>
-                    </div>
-                  </button>
-                )}
-              />
-            </ScrollArea>
-          </PopoverContent>
-        </Popover>
-        {selectedAsset && (
-          <div className="flex-1 min-w-0">
-            <p className="text-sm truncate">{selectedAsset.name}</p>
-          </div>
-        )}
-        {allowClear && selectedAssetId && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onSelect(undefined)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // 多选素材选择器组件
 interface MultiAssetSelectorProps {
   projectId: string;
@@ -909,7 +765,7 @@ function MultiAssetSelector({
   );
 }
 
-// 视频生成表单
+// 视频生成表单 - 根据 provider 动态切换
 interface VideoGenerationFormProps {
   params: Record<string, unknown>;
   onChange: (params: Record<string, unknown>) => void;
@@ -920,11 +776,27 @@ const VIDEO_ASPECT_RATIOS = [
   { value: "16:9", labelKey: "widescreen" },
 ];
 
+// Veo 3.1 capabilities (fixed)
+const VEO_CAPABILITIES = {
+  maxReferenceImages: 3,
+  supportedAspectRatios: ["16:9", "9:16"] as const,
+  fixedDuration: 8,
+};
+
+/**
+ * 视频生成表单 - Veo 3.1 参考图片模式
+ */
 export function VideoGenerationForm({ params, onChange }: VideoGenerationFormProps) {
   const { state } = useEditor();
   const projectId = state.project?.id || "";
   const tForms = useTranslations("editor.actionEditorForms");
   const tRatios = useTranslations("editor.aspectRatios");
+
+  // 解析 reference_image_ids 参数
+  const referenceImageIds = useMemo(() => {
+    const ids = params.reference_image_ids;
+    return Array.isArray(ids) ? (ids as string[]) : [];
+  }, [params.reference_image_ids]);
 
   return (
     <div className="space-y-4">
@@ -949,82 +821,64 @@ export function VideoGenerationForm({ params, onChange }: VideoGenerationFormPro
         />
       </div>
 
-      {/* 时长和宽高比 */}
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label>{tForms("duration")}</Label>
-          <Select
-            value={(params.duration as string) || "8"}
-            onValueChange={(value) => onChange({ ...params, duration: value })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="8">{tRatios("8sFixed")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-2">
-          <Label>{tForms("aspectRatio")}</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {VIDEO_ASPECT_RATIOS.map((ratio) => {
-              const isSelected = (params.aspect_ratio as string || "16:9") === ratio.value;
-              const [w, h] = ratio.value.split(":").map(Number);
-              return (
-                <button
-                  key={ratio.value}
-                  type="button"
-                  onClick={() => onChange({ ...params, aspect_ratio: ratio.value })}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    "rounded-md border px-1.5 py-1 text-left transition flex-shrink-0",
-                    "hover:border-primary/60 hover:bg-primary/5",
-                    isSelected
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border/60 bg-muted/30 text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "inline-block rounded-sm border flex-shrink-0",
-                        isSelected ? "border-primary/60" : "border-border/60"
-                      )}
-                      style={{ aspectRatio: `${w} / ${h}`, height: "10px" }}
-                    />
-                    <div className="leading-tight whitespace-nowrap">
-                      <div className="text-[10px] font-medium">{tRatios(ratio.labelKey)}</div>
-                      <div className="text-[9px] text-muted-foreground">
-                        {ratio.value}
-                      </div>
+      {/* 参考图片 */}
+      <MultiAssetSelector
+        projectId={projectId}
+        selectedAssetIds={referenceImageIds}
+        onSelect={(assetIds) => {
+          const limitedIds = assetIds.slice(0, VEO_CAPABILITIES.maxReferenceImages);
+          onChange({ ...params, reference_image_ids: limitedIds });
+        }}
+        label={`${tForms("referenceImages")} (${referenceImageIds.length}/${VEO_CAPABILITIES.maxReferenceImages})`}
+        assetType="image"
+      />
+
+      {/* 宽高比 */}
+      <div className="grid gap-2">
+        <Label>{tForms("aspectRatio")}</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {VIDEO_ASPECT_RATIOS.map((ratio) => {
+            const isSelected = (params.aspect_ratio as string || "16:9") === ratio.value;
+            const [w, h] = ratio.value.split(":").map(Number);
+            return (
+              <button
+                key={ratio.value}
+                type="button"
+                onClick={() => onChange({ ...params, aspect_ratio: ratio.value })}
+                aria-pressed={isSelected}
+                className={cn(
+                  "rounded-md border px-1.5 py-1 text-left transition flex-shrink-0",
+                  "hover:border-primary/60 hover:bg-primary/5",
+                  isSelected
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/60 bg-muted/30 text-foreground"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "inline-block rounded-sm border flex-shrink-0",
+                      isSelected ? "border-primary/60" : "border-border/60"
+                    )}
+                    style={{ aspectRatio: `${w} / ${h}`, height: "10px" }}
+                  />
+                  <div className="leading-tight whitespace-nowrap">
+                    <div className="text-[10px] font-medium">{tRatios(ratio.labelKey)}</div>
+                    <div className="text-[9px] text-muted-foreground">
+                      {ratio.value}
                     </div>
                   </div>
-                </button>
-              );
-            })}
-          </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 参考图（支持 1-3 张） */}
-      <div>
-        <MultiAssetSelector
-          projectId={projectId}
-          selectedAssetIds={(params.reference_image_urls as string[]) || []}
-          onSelect={(assetIds) => {
-            // 限制最多 3 张参考图
-            const limitedAssetIds = assetIds.slice(0, 3);
-            onChange({ ...params, reference_image_urls: limitedAssetIds });
-          }}
-          label={tForms("referenceImagesLimit")}
-          assetType="image"
-        />
-        {(params.reference_image_urls as string[])?.length > 3 && (
-          <p className="text-sm text-yellow-600 mt-1">
-            {tForms("maxReferenceWarning")}
-          </p>
-        )}
+      {/* 固定时长提示 */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Clock className="h-3.5 w-3.5" />
+        <span>{tForms("fixedDuration", { seconds: VEO_CAPABILITIES.fixedDuration })}</span>
       </div>
     </div>
   );

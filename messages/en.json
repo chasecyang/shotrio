@@ -106,13 +106,23 @@
     "setProject": "Set Project",
     "generateImageDesc": "Review and modify image generation parameters, AI will generate image assets after confirmation",
     "generateVideoDesc": "Review and modify video generation parameters, AI will generate video assets after confirmation",
+    "generateVideoBatchDesc": "Review and modify parameters for {count} videos, use tabs to switch between videos",
     "createTextAssetDesc": "Review and modify text asset content and tags",
     "defaultDesc": "Review parameters and confirm execution",
     "noEditableParams": "No editable parameters for this action",
     "credits": "credits",
     "insufficientBalance": "Insufficient balance ({balance})",
     "processing": "Processing...",
-    "executing": "Executing..."
+    "executing": "Executing...",
+    "video": "Video",
+    "image": "Image",
+    "text": "Text",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "willBeSkipped": "This item will be skipped",
+    "enabledCount": "{enabled}/{total} enabled",
+    "selectAll": "Select All",
+    "batchActions": "Batch Actions ({count})"
   },
   "exportDialog": {
     "title": "Export Video",
@@ -706,6 +716,16 @@
       "deleteConfirmTitle": "Confirm Project Deletion?",
       "deleteConfirmDescription": "This action cannot be undone. Project \"{title}\" and all its data (including assets, videos, etc.) will be permanently deleted.",
       "deleteCancel": "Cancel",
+      "videoProvider": "Video Model",
+      "videoProviderDescription": "Select the AI model for video generation. Different models have different capabilities and parameter requirements",
+      "videoProviderPlaceholder": "Select video model (use system default)",
+      "videoProviderMode": "Reference Mode",
+      "videoProviderDuration": "Duration",
+      "videoProviderAspectRatio": "Aspect Ratio",
+      "videoProviderSubjectsMode": "Subject references (max {maxSubjects} subjects, {maxImages} images each)",
+      "videoProviderReferenceMode": "Reference images (max {maxImages} images)",
+      "videoProviderFixedDuration": "Fixed {duration} seconds",
+      "videoProviderDurationRange": "{min}-{max} seconds configurable",
       "errors": {
         "titleRequired": "Please enter a project name"
       }
@@ -1602,7 +1622,10 @@
       "title": "Title",
       "videoTitle": "Video Title",
       "duration": "Duration",
+      "videoDuration": "Video Duration",
       "describeVideo": "Describe video content and camera movement",
+      "describeVideoWithSubjects": "Describe video content, use @subject_name to reference subjects (e.g., @detective)",
+      "subjectReferenceHint": "Use @subject_name in prompt to reference subjects, e.g., @detective, @woman",
       "referenceImagesLimit": "Reference Images (1-3) *",
       "maxReferenceWarning": "Maximum 3 reference images, automatically limited",
       "nameRequired": "Name *",
@@ -1611,7 +1634,13 @@
       "edit": "Edit",
       "preview": "Preview",
       "markdownPlaceholder": "Supports Markdown syntax...",
-      "noContent": "*No content*"
+      "noContent": "*No content*",
+      "subjects": "Subjects",
+      "subjectNamePlaceholder": "Subject name (e.g., detective)",
+      "subjectImages": "Reference Images (1-3)",
+      "addSubject": "Add Subject",
+      "noSubjectsHint": "Add at least one subject with reference images",
+      "fixedDuration": "Fixed duration: {seconds}s"
     },
     "assetMention": {
       "noMatch": "No matching assets found",
@@ -1880,6 +1909,9 @@
           "awaitingConfirmation": "Awaiting user confirmation",
           "parseResponseFailed": "Failed to parse response"
         },
+        "batch": {
+          "count": "{count} operations"
+        },
         "displayNames": {
           "queryContext": "Query Project Context",
           "queryAssets": "Query Assets",
@@ -1910,6 +1942,7 @@
           "prompt": "Prompt",
           "tags": "Tags",
           "referenceImages": "Reference Images",
+          "subjects": "Subjects",
           "title": "Title",
           "duration": "Duration",
           "aspectRatio": "Aspect Ratio",
@@ -1919,6 +1952,11 @@
           "description": "Description",
           "artStyle": "Art Style",
           "contentPreview": "Content Preview"
+        },
+        "types": {
+          "video": "Video",
+          "image": "Image",
+          "text": "Text"
         },
         "units": {
           "seconds": "s",
@@ -2043,7 +2081,10 @@
           "autoGenerateImages": "Auto Generate Images",
           "duration": "Duration",
           "aspectRatio": "Aspect Ratio",
-          "limit": "Limit"
+          "limit": "Limit",
+          "title": "Title",
+          "resolution": "Resolution",
+          "fps": "FPS"
         },
         "values": {
           "yes": "Yes",

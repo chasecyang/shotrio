@@ -376,12 +376,24 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
       conversationId: string,
       approved: boolean,
       modifiedParams?: Record<string, unknown>,
-      feedback?: string
+      feedback?: string,
+      batchModifiedParams?: Map<string, Record<string, unknown>>,
+      disabledIds?: Set<string>
     ) => {
       // 创建 abort controller
       abortControllerRef.current = new AbortController();
 
       try {
+        // 将 Map 转换为普通对象以便 JSON 序列化
+        const batchModifiedParamsObj = batchModifiedParams
+          ? Object.fromEntries(batchModifiedParams)
+          : undefined;
+
+        // 将 Set 转换为数组以便 JSON 序列化
+        const disabledIdsArray = disabledIds
+          ? Array.from(disabledIds)
+          : undefined;
+
         const response = await fetch("/api/agent/stream", {
           method: "POST",
           headers: {
@@ -393,6 +405,8 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
               approved,
               modifiedParams,
               feedback, // 用户反馈理由
+              batchModifiedParams: batchModifiedParamsObj, // 批量修改参数
+              disabledIds: disabledIdsArray, // 被禁用的 tool call IDs
             },
           }),
           signal: abortControllerRef.current.signal,

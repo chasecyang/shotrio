@@ -6,18 +6,34 @@ import type { AgentMessage } from "@/types/agent";
 import { getFunctionDefinition } from "@/lib/actions/agent/functions";
 import { formatFunctionResult, type TranslationFunction } from "@/lib/services/agent-engine/result-formatter";
 
+export type ToolCallStatus = "executing" | "completed" | "failed" | "rejected" | "awaiting_confirmation";
+
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  displayName?: string;
+  arguments: string;
+  status: ToolCallStatus;
+  result?: string;
+  error?: string;
+}
+
 export interface DisplayStep {
   id: string;
   type: "thinking" | "reasoning" | "tool_call";
   content?: string;
+  isComplete?: boolean; // 标识该步骤是否已完成（用于控制 loading 状态）
+  // 单个 tool call（向后兼容）
   toolCall?: {
     id: string;
     name: string;
     displayName?: string;
-    status: "executing" | "completed" | "failed" | "rejected" | "awaiting_confirmation";
+    status: ToolCallStatus;
     result?: string;
     error?: string;
   };
+  // 多个 tool calls（批量模式）
+  toolCalls?: ToolCallInfo[];
 }
 
 /**
@@ -59,10 +75,13 @@ export function useMessageDisplay(messages: AgentMessage[]) {
 
         // 0. AI 的思考过程（Gemini reasoning）
         if (msg.reasoningContent) {
+          // reasoning 完成的标志：消息有 content 或 toolCalls，说明已经进入下一阶段
+          const isReasoningComplete = !!(msg.content || (msg.toolCalls && msg.toolCalls.length > 0));
           steps.push({
             id: `${msg.id}-reasoning`,
             type: "reasoning",
             content: msg.reasoningContent,
+            isComplete: isReasoningComplete,
           });
         }
 
@@ -75,61 +94,85 @@ export function useMessageDisplay(messages: AgentMessage[]) {
           });
         }
 
-        // 2. Tool 调用（如果有）
+        // 2. Tool 调用（如果有）- 支持多个 tool calls
         if (msg.toolCalls && msg.toolCalls.length > 0) {
-          const toolCall = msg.toolCalls[0];
-          const funcDef = getFunctionDefinition(toolCall.function.name);
+          const toolCallInfos: ToolCallInfo[] = [];
 
-          // ✅ 使用 toolCallId 精确查找对应的 tool 响应（而不是依赖位置 i+1）
-          const toolResponse = messages.find(
-            m => m.role === "tool" && m.toolCallId === toolCall.id
-          );
+          for (const toolCall of msg.toolCalls) {
+            const funcDef = getFunctionDefinition(toolCall.function.name);
 
-          let status: "executing" | "completed" | "failed" | "rejected" | "awaiting_confirmation" = "executing";
-          let result: string | undefined;
-          let error: string | undefined;
+            // 使用 toolCallId 精确查找对应的 tool 响应
+            const toolResponse = messages.find(
+              m => m.role === "tool" && m.toolCallId === toolCall.id
+            );
 
-          if (toolResponse) {
-            try {
-              const parsedResult = JSON.parse(toolResponse.content);
+            let status: ToolCallStatus = "executing";
+            let result: string | undefined;
+            let error: string | undefined;
 
-              if (parsedResult.success) {
-                status = "completed";
-                result = formatFunctionResult(
-                  toolCall.function.name,
-                  JSON.parse(toolCall.function.arguments),
-                  parsedResult.data,
-                  translateFn
-                );
-              } else if (parsedResult.userRejected) {
-                status = "rejected";
-                error = parsedResult.error;
-              } else {
+            if (toolResponse) {
+              try {
+                const parsedResult = JSON.parse(toolResponse.content);
+
+                if (parsedResult.success) {
+                  status = "completed";
+                  result = formatFunctionResult(
+                    toolCall.function.name,
+                    JSON.parse(toolCall.function.arguments),
+                    parsedResult.data,
+                    translateFn
+                  );
+                } else if (parsedResult.userRejected) {
+                  status = "rejected";
+                  error = parsedResult.error;
+                } else {
+                  status = "failed";
+                  error = parsedResult.error;
+                }
+              } catch (e) {
+                console.error("[useMessageDisplay] Failed to parse tool response:", e);
                 status = "failed";
-                error = parsedResult.error;
+                error = "PARSE_RESPONSE_FAILED";
               }
-            } catch (e) {
-              console.error("[useMessageDisplay] Failed to parse tool response:", e);
-              status = "failed";
-              error = "PARSE_RESPONSE_FAILED";
+            } else if (funcDef?.needsConfirmation) {
+              // 没有响应，但函数需要确认，说明等待用户确认
+              status = "awaiting_confirmation";
             }
-          } else if (funcDef?.needsConfirmation) {
-            // 没有响应，但函数需要确认，说明等待用户确认
-            status = "awaiting_confirmation";
-          }
 
-          steps.push({
-            id: `${msg.id}-tool`,
-            type: "tool_call",
-            toolCall: {
+            toolCallInfos.push({
               id: toolCall.id,
               name: toolCall.function.name,
               displayName: translateDisplayName(funcDef?.displayName),
+              arguments: toolCall.function.arguments,
               status,
               result,
               error,
-            },
-          });
+            });
+          }
+
+          // 如果只有一个 tool call，保持向后兼容
+          if (toolCallInfos.length === 1) {
+            const tc = toolCallInfos[0];
+            steps.push({
+              id: `${msg.id}-tool`,
+              type: "tool_call",
+              toolCall: {
+                id: tc.id,
+                name: tc.name,
+                displayName: tc.displayName,
+                status: tc.status,
+                result: tc.result,
+                error: tc.error,
+              },
+            });
+          } else {
+            // 多个 tool calls，使用批量模式
+            steps.push({
+              id: `${msg.id}-tools`,
+              type: "tool_call",
+              toolCalls: toolCallInfos,
+            });
+          }
         }
 
         if (steps.length > 0) {

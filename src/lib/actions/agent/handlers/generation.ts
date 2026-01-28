@@ -7,6 +7,7 @@
  */
 
 import type { FunctionCall, FunctionExecutionResult } from "@/types/agent";
+import type { VideoGenerationConfig } from "@/types/asset";
 import db from "@/lib/db";
 import { project } from "@/lib/db/schemas/project";
 import { eq } from "drizzle-orm";
@@ -70,12 +71,29 @@ async function handleGenerateImage(
   const assetIds: string[] = [];
   const errors: string[] = [];
 
+  // Per-item 状态跟踪
+  const items: Array<{
+    index: number;
+    name: string;
+    assetId?: string;
+    jobId?: string;
+    status: "pending" | "success" | "failed";
+    error?: string;
+  }> = [];
+
   const stylePrompt = await getProjectStylePrompt(projectId);
   const { createAssetInternal } = await import("@/lib/actions/asset/base-crud");
 
-  for (const assetData of assets) {
+  for (let i = 0; i < assets.length; i++) {
+    const assetData = assets[i];
+    const assetName = assetData.name || `AI-Generated-${Date.now()}`;
+    const itemStatus: (typeof items)[number] = {
+      index: i,
+      name: assetName,
+      status: "pending",
+    };
+
     try {
-      const assetName = assetData.name || `AI-Generated-${Date.now()}`;
       const aspectRatio =
         (assetData.aspect_ratio as AspectRatio | undefined) ?? "16:9";
 
@@ -108,12 +126,17 @@ async function handleGenerateImage(
       });
 
       if (!createResult.success || !createResult.asset) {
-        errors.push(`Failed to create asset ${assetName}: ${createResult.error}`);
+        const errorMsg = `Failed to create asset ${assetName}: ${createResult.error}`;
+        errors.push(errorMsg);
+        itemStatus.status = "failed";
+        itemStatus.error = createResult.error || "Unknown error";
+        items.push(itemStatus);
         continue;
       }
 
       const assetId = createResult.asset.id;
       assetIds.push(assetId);
+      itemStatus.assetId = assetId;
 
       const jobResult = await createJob({
         userId,
@@ -126,23 +149,30 @@ async function handleGenerateImage(
 
       if (jobResult.success && jobResult.jobId) {
         jobIds.push(jobResult.jobId);
+        itemStatus.jobId = jobResult.jobId;
+        itemStatus.status = "success";
       } else {
-        errors.push(
-          `Failed to create task for "${assetData.name || "unnamed"}": ${jobResult.error || "Unknown error"}`
-        );
+        const errorMsg = `Failed to create task for "${assetData.name || "unnamed"}": ${jobResult.error || "Unknown error"}`;
+        errors.push(errorMsg);
+        itemStatus.status = "failed";
+        itemStatus.error = jobResult.error || "Unknown error";
       }
     } catch (error) {
       console.error(`Failed to process asset ${assetData.name || "unnamed"}:`, error);
-      errors.push(
-        `Failed to process asset "${assetData.name || "unnamed"}": ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      const errorMsg = `Failed to process asset "${assetData.name || "unnamed"}": ${error instanceof Error ? error.message : "Unknown error"}`;
+      errors.push(errorMsg);
+      itemStatus.status = "failed";
+      itemStatus.error = error instanceof Error ? error.message : "Unknown error";
     }
+
+    items.push(itemStatus);
   }
 
   return {
     functionCallId: functionCall.id,
     success: jobIds.length > 0,
     data: {
+      items,
       jobIds,
       assetIds,
       createdCount: jobIds.length,
@@ -158,6 +188,7 @@ async function handleGenerateImage(
 
 /**
  * 生成视频资产
+ * 根据当前 provider 构建不同的生成配置
  */
 async function handleGenerateVideo(
   functionCall: FunctionCall,
@@ -194,14 +225,15 @@ async function handleGenerateVideo(
       ? `${stylePrompt}. ${normalizedConfig.prompt}`
       : (normalizedConfig.prompt as string);
 
-    // 构建生成配置
-    const generationConfig = {
+    // Veo 3.1 模式：使用 reference_image_urls
+    const referenceImageIds = normalizedConfig.reference_image_ids as string[];
+
+    const generationConfig: VideoGenerationConfig = {
       type: "reference-to-video",
       prompt: finalPrompt,
-      reference_image_urls: normalizedConfig.reference_image_urls as string[],
-      aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16" | undefined,
-      negative_prompt: normalizedConfig.negative_prompt as string | undefined,
-      duration: normalizedConfig.duration as "10" | "15" | undefined,
+      reference_image_urls: referenceImageIds, // 这里传的是 asset IDs，worker 会解析为 URLs
+      aspect_ratio: normalizedConfig.aspect_ratio as "16:9" | "9:16",
+      duration: normalizedConfig.duration as number,
     };
 
     // ========== 创建新素材模式 ==========

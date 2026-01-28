@@ -30,7 +30,7 @@ import {
   loadConversationState,
   saveToolMessage,
 } from "./state-manager";
-import { getPendingToolCall } from "./approval-utils";
+import { findAllPendingApprovals } from "./approval-utils";
 
 /**
  * Agent 引擎类
@@ -95,7 +95,7 @@ export class AgentEngine {
       // 有历史消息：加载完整对话状态
       console.log("[AgentEngine] 检测到历史消息，加载完整对话状态");
       const loadedState = await loadConversationState(conversationId);
-      
+
       if (!loadedState) {
         yield { type: "error", data: "无法加载对话状态" };
         return;
@@ -136,9 +136,11 @@ export class AgentEngine {
     conversationId: string,
     approved: boolean,
     modifiedParams?: Record<string, unknown>,
-    feedback?: string
+    feedback?: string,
+    batchModifiedParams?: Record<string, Record<string, unknown>>,
+    disabledIds?: Set<string>
   ): AsyncGenerator<AgentStreamEvent> {
-    console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`, modifiedParams ? "使用修改后的参数" : "");
+    console.log(`[AgentEngine] 恢复对话: ${conversationId}, 批准: ${approved}`, modifiedParams ? "使用修改后的参数" : "", batchModifiedParams ? "使用批量修改参数" : "", disabledIds?.size ? `禁用 ${disabledIds.size} 个操作` : "");
     const trimmedFeedback = feedback?.trim();
 
     // 1. 加载对话状态
@@ -148,43 +150,95 @@ export class AgentEngine {
       return;
     }
 
-    // 2. 从消息历史推导待执行的 tool call
-    const pendingToolCall = getPendingToolCall(state.messages);
-    
-    if (!pendingToolCall) {
+    // 2. 从消息历史推导待执行的 tool calls（支持批量）
+    const pendingApprovals = findAllPendingApprovals(state.messages);
+
+    if (!pendingApprovals || pendingApprovals.toolCalls.length === 0) {
       yield { type: "error", data: "没有待执行的操作" };
       return;
     }
 
-    // 3. 获取 function 定义
-    const funcDef = getFunctionDefinition(pendingToolCall.function.name);
-    if (!funcDef) {
-      yield { type: "error", data: `未知的工具: ${pendingToolCall.function.name}` };
-      return;
-    }
-
-    // 4. 更新对话状态为活跃
+    // 3. 更新对话状态为活跃
     await updateConversationStatus(conversationId, "active");
 
-    // 5. 发送复用的 assistant 消息 ID
+    // 4. 发送复用的 assistant 消息 ID
     yield { type: "assistant_message_id", data: state.assistantMessageId! };
 
-    // 6. 处理用户决定
+    // 5. 处理用户决定
     if (approved) {
-      // 用户同意：执行 tool
-      console.log("[AgentEngine] 用户同意，执行 tool");
+      // 过滤出启用的 tool calls（排除被禁用的）
+      const enabledToolCalls = disabledIds && disabledIds.size > 0
+        ? pendingApprovals.toolCalls.filter(tc => !disabledIds.has(tc.id))
+        : pendingApprovals.toolCalls;
+      const disabledToolCalls = disabledIds && disabledIds.size > 0
+        ? pendingApprovals.toolCalls.filter(tc => disabledIds.has(tc.id))
+        : [];
 
-      // 🆕 积分检查：在执行消耗积分的操作前验证余额
+      // 用户同意：执行启用的 tool calls
+      console.log(`[AgentEngine] 用户同意，执行 ${enabledToolCalls.length} 个 tool calls（跳过 ${disabledToolCalls.length} 个）`);
+
+      // 为被禁用的 tool calls 添加跳过消息
+      for (const disabledToolCall of disabledToolCalls) {
+        const skippedContent = JSON.stringify({
+          success: false,
+          error: "USER_SKIPPED",
+          userSkipped: true,
+        });
+
+        const toolMessage: EngineMessage = {
+          role: "tool",
+          content: skippedContent,
+          tool_call_id: disabledToolCall.id,
+        };
+
+        // 找到包含 tool call 的 assistant 消息位置
+        const lastAssistantIndex = state.messages.findLastIndex(
+          m => m.role === "assistant" &&
+          m.tool_calls?.some((tc: ToolCall) => tc.id === disabledToolCall.id)
+        );
+
+        if (lastAssistantIndex !== -1) {
+          state.messages.splice(lastAssistantIndex + 1, 0, toolMessage);
+        } else {
+          state.messages.push(toolMessage);
+        }
+
+        // 发送跳过事件（使用 tool_call_end 类型）
+        yield {
+          type: "tool_call_end",
+          data: {
+            id: disabledToolCall.id,
+            name: disabledToolCall.function.name,
+            success: false,
+            error: "USER_SKIPPED",
+          },
+        };
+      }
+
+      // 计算启用的 tool calls 的积分成本
       const { calculateTotalCredits } = await import("@/lib/utils/credit-calculator");
-      const toolCallArgs = JSON.parse(modifiedParams ? JSON.stringify(modifiedParams) : pendingToolCall.function.arguments);
-      const creditCost = calculateTotalCredits([{
-        id: pendingToolCall.id,
-        name: pendingToolCall.function.name,
-        displayName: funcDef.displayName,
-        parameters: toolCallArgs,
-        category: funcDef.category,
-        needsConfirmation: funcDef.needsConfirmation,
-      }]);
+      const allFunctionCalls = enabledToolCalls.map(tc => {
+        const funcDef = getFunctionDefinition(tc.function.name);
+        // 获取修改后的参数（优先使用批量参数，其次使用单个参数）
+        let toolCallArgs: Record<string, unknown>;
+        if (batchModifiedParams && batchModifiedParams[tc.id]) {
+          toolCallArgs = batchModifiedParams[tc.id];
+        } else if (modifiedParams && pendingApprovals.toolCalls.length === 1) {
+          toolCallArgs = modifiedParams;
+        } else {
+          toolCallArgs = JSON.parse(tc.function.arguments);
+        }
+        return {
+          id: tc.id,
+          name: tc.function.name,
+          displayName: funcDef?.displayName,
+          parameters: toolCallArgs,
+          category: funcDef?.category || "generation",
+          needsConfirmation: funcDef?.needsConfirmation || false,
+        };
+      });
+
+      const creditCost = calculateTotalCredits(allFunctionCalls);
 
       if (creditCost.total > 0) {
         const { hasEnoughCreditsForUser } = await import("@/lib/actions/credits/balance");
@@ -203,87 +257,94 @@ export class AgentEngine {
         }
       }
 
-      // 🆕 如果用户修改了参数，更新 tool call 的参数
-      let finalToolCall = pendingToolCall;
-      if (modifiedParams) {
-        console.log("[AgentEngine] 使用用户修改的参数:", modifiedParams);
-        finalToolCall = {
-          ...pendingToolCall,
-          function: {
-            ...pendingToolCall.function,
-            arguments: JSON.stringify(modifiedParams),
-          },
-        };
-        
-        // 🔄 同时更新消息历史中的 tool call 参数
-        // 找到包含此 tool call 的 assistant 消息
-        const assistantMsg = state.messages.find(
-          (m): m is EngineMessage & { tool_calls: ToolCall[] } =>
-            m.role === "assistant" &&
-            m.tool_calls?.some((tc: ToolCall) => tc.id === pendingToolCall.id) === true
-        );
-        if (assistantMsg) {
-          const toolCallIndex = assistantMsg.tool_calls.findIndex((tc: ToolCall) => tc.id === pendingToolCall.id);
-          if (toolCallIndex !== -1) {
-            assistantMsg.tool_calls[toolCallIndex].function.arguments = JSON.stringify(modifiedParams);
+      // 执行启用的 tool calls
+      for (const pendingToolCall of enabledToolCalls) {
+        const funcDef = getFunctionDefinition(pendingToolCall.function.name);
+        if (!funcDef) {
+          yield { type: "error", data: `未知的工具: ${pendingToolCall.function.name}` };
+          continue;
+        }
+
+        // 获取修改后的参数
+        let finalToolCall = pendingToolCall;
+        const modifiedParamsForThis = batchModifiedParams?.[pendingToolCall.id] ||
+          (modifiedParams && enabledToolCalls.length === 1 ? modifiedParams : undefined);
+
+        if (modifiedParamsForThis) {
+          console.log(`[AgentEngine] 使用修改的参数 (${pendingToolCall.id}):`, modifiedParamsForThis);
+          finalToolCall = {
+            ...pendingToolCall,
+            function: {
+              ...pendingToolCall.function,
+              arguments: JSON.stringify(modifiedParamsForThis),
+            },
+          };
+
+          // 更新消息历史中的 tool call 参数
+          const assistantMsg = state.messages.find(
+            (m): m is EngineMessage & { tool_calls: ToolCall[] } =>
+              m.role === "assistant" &&
+              m.tool_calls?.some((tc: ToolCall) => tc.id === pendingToolCall.id) === true
+          );
+          if (assistantMsg) {
+            const toolCallIndex = assistantMsg.tool_calls.findIndex((tc: ToolCall) => tc.id === pendingToolCall.id);
+            if (toolCallIndex !== -1) {
+              assistantMsg.tool_calls[toolCallIndex].function.arguments = JSON.stringify(modifiedParamsForThis);
+            }
           }
         }
+
+        yield* this.executeTool(state, finalToolCall, funcDef);
       }
-      
-      yield* this.executeTool(state, finalToolCall, funcDef);
     } else {
-      // User rejected: add rejection message
-      console.log("[AgentEngine] User rejected");
+      // User rejected: add rejection messages for all tool calls
+      console.log(`[AgentEngine] User rejected ${pendingApprovals.toolCalls.length} tool calls`);
 
-      const rejectionContent = JSON.stringify({
-        success: false,
-        error: "USER_REJECTED",
-        userRejected: true,
-      });
-
-      // 关键修复：找到包含 pending tool call 的 assistant 消息位置
-      // 需要将 tool message 插入到该 assistant 消息之后（紧跟着）
-      // 以确保符合 OpenAI API 的要求：tool messages 必须紧跟 assistant message with tool_calls
-      
-      const lastAssistantIndex = state.messages.findLastIndex(
-        m => m.role === "assistant" &&
-        m.tool_calls?.some((tc: ToolCall) => tc.id === pendingToolCall.id)
-      );
-
-      const toolMessage: EngineMessage = {
-        role: "tool",
-        content: rejectionContent,
-        tool_call_id: pendingToolCall.id,
-      };
-
-      if (lastAssistantIndex !== -1) {
-        // 将 tool message 插入到 assistant message 之后
-        // 这样即使后面有用户的"打断消息"，顺序也是正确的
-        state.messages.splice(lastAssistantIndex + 1, 0, toolMessage);
-        console.log(`[AgentEngine] 将 tool message 插入到位置 ${lastAssistantIndex + 1}`);
-      } else {
-        // 降级处理：如果找不到（理论上不应该发生），就追加到末尾
-        console.warn("[AgentEngine] 未找到包含 tool_call 的 assistant 消息，追加到末尾");
-        state.messages.push(toolMessage);
-      }
-      
-      // 保存到数据库
-      await saveToolMessage(
-        state.conversationId,
-        pendingToolCall.id,
-        rejectionContent
-      );
-
-      // Send tool_call_end event
-      yield {
-        type: "tool_call_end",
-        data: {
-          id: pendingToolCall.id,
-          name: pendingToolCall.function.name,
+      for (const pendingToolCall of pendingApprovals.toolCalls) {
+        const rejectionContent = JSON.stringify({
           success: false,
           error: "USER_REJECTED",
-        },
-      };
+          userRejected: true,
+        });
+
+        // 找到包含 pending tool call 的 assistant 消息位置
+        const lastAssistantIndex = state.messages.findLastIndex(
+          m => m.role === "assistant" &&
+          m.tool_calls?.some((tc: ToolCall) => tc.id === pendingToolCall.id)
+        );
+
+        const toolMessage: EngineMessage = {
+          role: "tool",
+          content: rejectionContent,
+          tool_call_id: pendingToolCall.id,
+        };
+
+        if (lastAssistantIndex !== -1) {
+          state.messages.splice(lastAssistantIndex + 1, 0, toolMessage);
+          console.log(`[AgentEngine] 将 tool message 插入到位置 ${lastAssistantIndex + 1}`);
+        } else {
+          console.warn("[AgentEngine] 未找到包含 tool_call 的 assistant 消息，追加到末尾");
+          state.messages.push(toolMessage);
+        }
+
+        // 保存到数据库
+        await saveToolMessage(
+          state.conversationId,
+          pendingToolCall.id,
+          rejectionContent
+        );
+
+        // Send tool_call_end event
+        yield {
+          type: "tool_call_end",
+          data: {
+            id: pendingToolCall.id,
+            name: pendingToolCall.function.name,
+            success: false,
+            error: "USER_REJECTED",
+          },
+        };
+      }
 
       // 无反馈拒绝：只记录拒绝，不继续对话
       if (!trimmedFeedback) {
@@ -296,12 +357,12 @@ export class AgentEngine {
       await saveUserMessage(state.conversationId, trimmedFeedback);
     }
 
-    // 7. 创建新 assistant 消息，继续对话
+    // 6. 创建新 assistant 消息，继续对话
     const newAssistantMessageId = await createAssistantMessage(state.conversationId);
     state.assistantMessageId = newAssistantMessageId;
     yield { type: "assistant_message_id", data: newAssistantMessageId };
 
-    // 8. 继续执行循环
+    // 7. 继续执行循环
     yield* this.executeConversationLoop(state);
   }
 
@@ -398,19 +459,34 @@ export class AgentEngine {
         // 检测工具调用
         if (delta?.toolCalls && delta.toolCalls.length > 0) {
           // 合并工具调用信息
+          // 注意：Gemini 对多个 tool calls 可能都使用 index: 0，需要通过 id 区分
           for (const tc of delta.toolCalls) {
             if (tc.index !== undefined) {
-              if (!toolCalls[tc.index]) {
-                toolCalls[tc.index] = {
+              // 如果有新的 id，说明是新的 tool call，即使 index 相同也要创建新条目
+              const isNewToolCall = tc.id && (!toolCalls[tc.index] || (toolCalls[tc.index].id && toolCalls[tc.index].id !== tc.id));
+
+              if (!toolCalls[tc.index] || isNewToolCall) {
+                // 如果是新的 tool call 但 index 已存在，需要找一个新的 index
+                let targetIndex = tc.index;
+                if (isNewToolCall && toolCalls[tc.index]) {
+                  targetIndex = toolCalls.length;
+                }
+
+                toolCalls[targetIndex] = {
                   id: tc.id || "",
                   name: tc.function?.name || "",
                   args: "",
                 };
-              }
-              if (tc.id) toolCalls[tc.index].id = tc.id;
-              if (tc.function?.name) toolCalls[tc.index].name = tc.function.name;
-              if (tc.function?.arguments) {
-                toolCalls[tc.index].args += tc.function.arguments;
+
+                if (tc.function?.arguments) {
+                  toolCalls[targetIndex].args += tc.function.arguments;
+                }
+              } else {
+                if (tc.id) toolCalls[tc.index].id = tc.id;
+                if (tc.function?.name) toolCalls[tc.index].name = tc.function.name;
+                if (tc.function?.arguments) {
+                  toolCalls[tc.index].args += tc.function.arguments;
+                }
               }
             }
           }
@@ -440,6 +516,15 @@ export class AgentEngine {
         .filter(tc => tc && tc.name)
         .map(tc => {
           try {
+            // 如果 args 已经是对象（某些 API 直接返回对象而非字符串）
+            if (typeof tc.args === "object") {
+              return {
+                id: tc.id,
+                name: tc.name,
+                args: tc.args || {},
+              };
+            }
+
             return {
               id: tc.id,
               name: tc.name,
@@ -517,7 +602,7 @@ export class AgentEngine {
       // 🆕 对需要确认的 function 先进行参数校验
       if (funcDef.needsConfirmation) {
         console.log("[AgentEngine] 需要确认的 function，先进行参数校验");
-        
+
         const { validateFunctionParameters } = await import("@/lib/actions/agent/validation");
         const validationResult = await validateFunctionParameters(
           toolCall.function.name,
@@ -698,13 +783,23 @@ export class AgentEngine {
       };
 
       // 确保 tool message 紧跟包含 tool_calls 的 assistant message（OpenAI 要求）
+      // 注意：当有多个 tool calls 时，需要按顺序插入，不能都插入到同一位置
       const lastAssistantIndex = state.messages.findLastIndex(
         (m) =>
           m.role === "assistant" &&
           m.tool_calls?.some((tc: ToolCall) => tc.id === toolCallId) === true
       );
       if (lastAssistantIndex !== -1) {
-        state.messages.splice(lastAssistantIndex + 1, 0, toolMessage);
+        // 找到该 assistant message 之后已有的 tool messages 数量
+        // 新的 tool message 应该插入到这些 tool messages 之后
+        let insertIndex = lastAssistantIndex + 1;
+        while (
+          insertIndex < state.messages.length &&
+          state.messages[insertIndex].role === "tool"
+        ) {
+          insertIndex++;
+        }
+        state.messages.splice(insertIndex, 0, toolMessage);
       } else {
         state.messages.push(toolMessage);
       }
@@ -761,7 +856,15 @@ export class AgentEngine {
           m.tool_calls?.some((tc: ToolCall) => tc.id === toolCallId) === true
       );
       if (lastAssistantIndex !== -1) {
-        state.messages.splice(lastAssistantIndex + 1, 0, errorToolMessage);
+        // 找到该 assistant message 之后已有的 tool messages 数量
+        let insertIndex = lastAssistantIndex + 1;
+        while (
+          insertIndex < state.messages.length &&
+          state.messages[insertIndex].role === "tool"
+        ) {
+          insertIndex++;
+        }
+        state.messages.splice(insertIndex, 0, errorToolMessage);
       } else {
         state.messages.push(errorToolMessage);
       }

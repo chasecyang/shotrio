@@ -5,7 +5,7 @@
 import type { AgentProvider, AgentTool } from "./types";
 import { OpenAIProvider } from "./openai";
 import { GeminiProvider } from "./gemini";
-import { AGENT_FUNCTIONS } from "@/lib/actions/agent/functions";
+import { getAgentFunctions } from "@/lib/actions/agent/functions";
 
 export type { AgentProvider, AgentTool, AgentStreamChunk } from "./types";
 
@@ -28,7 +28,7 @@ export function getAgentProvider(): AgentProvider {
  * 将 Function 定义转换为 Agent Tools 格式
  */
 export function convertToAgentTools(): AgentTool[] {
-  return AGENT_FUNCTIONS.map((func) => ({
+  return getAgentFunctions().map((func) => ({
     type: "function" as const,
     function: {
       name: func.name,

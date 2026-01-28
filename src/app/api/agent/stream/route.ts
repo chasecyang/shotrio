@@ -46,8 +46,10 @@ export async function POST(request: NextRequest) {
       resumeConversationId?: string;
       resumeValue?: {
         approved: boolean;
-        modifiedParams?: Record<string, unknown>; // 🆕 用户修改的参数
-        feedback?: string; // 🆕 拒绝时的反馈（只有有反馈的拒绝才会继续对话）
+        modifiedParams?: Record<string, unknown>; // 用户修改的参数（单个模式）
+        feedback?: string; // 拒绝时的反馈
+        batchModifiedParams?: Record<string, Record<string, unknown>>; // 批量修改参数
+        disabledIds?: string[]; // 被禁用的 tool call IDs
       };
     } = await request.json();
 
@@ -79,14 +81,18 @@ export async function POST(request: NextRequest) {
               "[Agent Stream] 恢复对话:",
               input.resumeConversationId,
               input.resumeValue.approved ? "（用户同意）" : "（用户拒绝）",
-              input.resumeValue.modifiedParams ? "使用修改后的参数" : ""
+              input.resumeValue.modifiedParams ? "使用修改后的参数" : "",
+              input.resumeValue.batchModifiedParams ? "使用批量修改参数" : "",
+              input.resumeValue.disabledIds?.length ? `禁用 ${input.resumeValue.disabledIds.length} 个操作` : ""
             );
 
             for await (const event of engine.resumeConversation(
               input.resumeConversationId,
               input.resumeValue.approved,
-              input.resumeValue.modifiedParams, // 🆕 传递修改的参数
-              input.resumeValue.feedback // 🆕 传递拒绝反馈
+              input.resumeValue.modifiedParams,
+              input.resumeValue.feedback,
+              input.resumeValue.batchModifiedParams,
+              input.resumeValue.disabledIds ? new Set(input.resumeValue.disabledIds) : undefined
             )) {
               controller.enqueue(
                 encoder.encode(JSON.stringify(event) + "\n")

@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import db from "@/lib/db";
 import { asset, videoData } from "@/lib/db/schemas/project";
 import { eq, and } from "drizzle-orm";
-import { generateVideo, getVideoServiceProvider } from "@/lib/services/video-service";
+import { generateVideo } from "@/lib/services/video-service";
 import { uploadVideoFromUrl } from "@/lib/actions/upload-actions";
 import { updateJobProgress, completeJob } from "@/lib/actions/job";
 import { spendCredits, refundCredits } from "@/lib/actions/credits/spend";
@@ -21,21 +21,8 @@ import { extractVideoThumbnail } from "@/lib/utils/video-thumbnail";
 import { checkImageDependencies, extractDependenciesFromSnapshot } from "../utils/dependency-checker";
 import { DependencyNotReadyError } from "../errors/DependencyNotReadyError";
 
-function getVideoModelUsed(provider: ReturnType<typeof getVideoServiceProvider>): string {
-  if (provider === "veo") {
-    return "veo3_fast";
-  }
-  if (provider === "seedance") {
-    return "seedance";
-  }
-  if (provider === "kling") {
-    return "kling_o1";
-  }
-  if (provider === "sora2pro") {
-    return "sora2pro";
-  }
-  return provider;
-}
+// Veo 3.1 固定使用的模型名称
+const VIDEO_MODEL_USED = "veo3_fast";
 
 /**
  * 处理视频生成任务（新架构：使用 asset 表）
@@ -181,29 +168,33 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       return activeImageData.imageUrl;
     };
 
-    // 解析参考图的真实 URL（传入版本快照）
-    const resolvedUrls: string[] = [];
+    // 解析参考图的真实 URL（Veo 3.1 模式）
     const versionIds = versionSnapshot?.reference_image_version_ids || [];
 
-    for (let i = 0; i < config.reference_image_urls.length; i++) {
-      const imageIdOrUrl = config.reference_image_urls[i];
-      const versionId = versionIds[i];
+    if (config.reference_image_urls && config.reference_image_urls.length > 0) {
+      // 解析 reference_image_urls
+      const resolvedUrls: string[] = [];
 
-      const resolvedUrl = await resolveImageUrl(imageIdOrUrl, versionId);
-      if (!resolvedUrl) {
-        throw new Error(`无法找到参考图 ${i + 1} 的 URL: ${imageIdOrUrl}`);
+      for (let i = 0; i < config.reference_image_urls.length; i++) {
+        const imageIdOrUrl = config.reference_image_urls[i];
+        const versionId = versionIds[i];
+
+        const resolvedUrl = await resolveImageUrl(imageIdOrUrl, versionId);
+        if (!resolvedUrl) {
+          throw new Error(`无法找到参考图 ${i + 1} 的 URL: ${imageIdOrUrl}`);
+        }
+        resolvedUrls.push(resolvedUrl);
+        console.log(`[Worker] 参考图 ${i + 1} URL: ${resolvedUrl}`);
       }
-      resolvedUrls.push(resolvedUrl);
-      console.log(`[Worker] 参考图 ${i + 1} URL: ${resolvedUrl}`);
-    }
 
-    config.reference_image_urls = resolvedUrls;
+      config.reference_image_urls = resolvedUrls;
+    }
 
     // 注意：不需要手动更新asset状态为processing
     // 状态从关联的job动态计算，job已经在startJob时被设置为processing
 
     // 3. 计算积分消费（根据配置的时长）
-    const videoDuration = config.duration ? parseInt(config.duration) : 8;
+    const videoDuration = config.duration ?? 4;
     const creditsNeeded = CREDIT_COSTS.VIDEO_GENERATION_PER_SECOND * videoDuration;
 
     await updateJobProgress(
@@ -237,9 +228,8 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
 
     const transactionId = spendResult.transactionId;
 
-    // 获取当前视频服务提供商
-    const provider = getVideoServiceProvider();
-    const providerName = provider === "seedance" ? "Seedance" : provider === "veo" ? "Veo 3.1" : "Kling";
+    // Veo 3.1 视频服务
+    const providerName = "Veo 3.1";
 
     await updateJobProgress(
       {
@@ -251,7 +241,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
     );
 
     // 5. 调用统一的视频生成服务
-    console.log(`[Worker] 使用 ${provider} 服务生成视频 (${type}, ${videoDuration}s)`);
+    console.log(`[Worker] 使用 Veo 3.1 服务生成视频 (${type}, ${videoDuration}s)`);
     console.log(`[Worker] 完整配置:`, JSON.stringify(config, null, 2));
 
     let videoResult;
@@ -260,7 +250,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       videoResult = await generateVideo(config);
     } catch (error) {
       // 打印详细错误信息
-      console.error(`[Worker] ${provider} API 调用失败 (${type}):`, error);
+      console.error(`[Worker] Veo 3.1 API 调用失败 (${type}):`, error);
       if (error && typeof error === 'object' && 'body' in error) {
         console.error(`[Worker] 错误详情:`, JSON.stringify((error as any).body, null, 2));
       }
@@ -277,7 +267,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
             originalTransactionId: transactionId,
             reason: "generation_failed",
             type,
-            provider,
+            provider: "veo",
             translationParams: { type },
           },
         });
@@ -293,7 +283,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
       throw new Error("视频生成失败：未返回视频URL");
     }
 
-    console.log(`[Worker] ${provider} API (${type}) 返回视频URL: ${videoResult.videoUrl}`);
+    console.log(`[Worker] Veo 3.1 API (${type}) 返回视频URL: ${videoResult.videoUrl}`);
 
     await updateJobProgress(
       {
@@ -396,7 +386,7 @@ export async function processVideoGeneration(jobData: Job, workerToken: string):
           videoUrl: uploadResult.url,
           thumbnailUrl: thumbnailUrl || null,
           duration: actualDuration, // 使用真实时长
-          modelUsed: getVideoModelUsed(provider),
+          modelUsed: VIDEO_MODEL_USED,
           isActive: true,
         })
         .where(eq(videoData.id, videoDataId));
