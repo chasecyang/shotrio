@@ -578,66 +578,82 @@ export class AgentEngine {
         return;
       }
 
-      // 有工具调用
-      const toolCall = aiMessage.tool_calls[0];
-      const toolCallArgs = JSON.parse(toolCall.function.arguments);
-      const funcDef = getFunctionDefinition(toolCall.function.name);
+      // 有工具调用 - 检查所有 tool calls 的定义
+      const allToolCalls = aiMessage.tool_calls;
+      const toolCallsWithDefs = allToolCalls.map(tc => ({
+        toolCall: tc,
+        funcDef: getFunctionDefinition(tc.function.name),
+      }));
 
-      if (!funcDef) {
-        yield { type: "error", data: `未知的工具: ${toolCall.function.name}` };
+      // 检查是否有未知的工具
+      const unknownTool = toolCallsWithDefs.find(t => !t.funcDef);
+      if (unknownTool) {
+        yield { type: "error", data: `未知的工具: ${unknownTool.toolCall.function.name}` };
         return;
       }
 
-      // 发送 tool_call_start 事件
-      yield {
-        type: "tool_call_start",
-        data: {
-          id: toolCall.id || `fc-${Date.now()}`,
-          name: toolCall.function.name,
-          displayName: funcDef.displayName,
-          arguments: toolCall.function.arguments,
-        },
-      };
+      // 🔑 关键修复：检查是否有任何一个 tool call 需要确认
+      // 如果有任何一个需要确认，就应该中断等待用户确认所有需要确认的操作
+      const hasAnyConfirmationRequired = toolCallsWithDefs.some(t => t.funcDef?.needsConfirmation);
+      const confirmationRequiredCalls = toolCallsWithDefs.filter(t => t.funcDef?.needsConfirmation);
+      const autoExecuteCalls = toolCallsWithDefs.filter(t => !t.funcDef?.needsConfirmation);
 
-      // 🆕 对需要确认的 function 先进行参数校验
-      if (funcDef.needsConfirmation) {
-        console.log("[AgentEngine] 需要确认的 function，先进行参数校验");
+      // 发送所有 tool_call_start 事件
+      for (const { toolCall, funcDef } of toolCallsWithDefs) {
+        yield {
+          type: "tool_call_start",
+          data: {
+            id: toolCall.id || `fc-${Date.now()}`,
+            name: toolCall.function.name,
+            displayName: funcDef!.displayName,
+            arguments: toolCall.function.arguments,
+          },
+        };
+      }
+
+      // 如果有需要确认的 tool calls，先进行参数校验
+      if (hasAnyConfirmationRequired) {
+        console.log(`[AgentEngine] 有 ${confirmationRequiredCalls.length} 个 tool calls 需要确认`);
 
         const { validateFunctionParameters } = await import("@/lib/actions/agent/validation");
-        const validationResult = await validateFunctionParameters(
-          toolCall.function.name,
-          toolCall.function.arguments
-        );
-        
-        if (!validationResult.valid) {
-          console.log("[AgentEngine] 参数校验失败，返回错误给 AI:", validationResult.errors);
 
-          // 保存 assistant message（包含 tool_calls）
-          await saveAssistantResponse(
-            state.assistantMessageId!,
-            currentContent,
-            aiMessage.tool_calls,
-            currentReasoning || undefined
+        // 对所有需要确认的 tool calls 进行参数校验
+        let hasValidationError = false;
+        for (const { toolCall, funcDef } of confirmationRequiredCalls) {
+          const validationResult = await validateFunctionParameters(
+            toolCall.function.name,
+            toolCall.function.arguments
           );
 
-          // 执行失败的 tool（返回错误给 AI，让它修正）
-          yield* this.executeToolWithError(state, toolCall, funcDef, validationResult.errors);
+          if (!validationResult.valid) {
+            console.log(`[AgentEngine] 参数校验失败 (${toolCall.function.name}):`, validationResult.errors);
+            hasValidationError = true;
 
+            // 保存 assistant message（包含 tool_calls）
+            await saveAssistantResponse(
+              state.assistantMessageId!,
+              currentContent,
+              aiMessage.tool_calls,
+              currentReasoning || undefined
+            );
+
+            // 执行失败的 tool（返回错误给 AI，让它修正）
+            yield* this.executeToolWithError(state, toolCall, funcDef!, validationResult.errors);
+            break; // 遇到第一个校验失败就停止，让 AI 修正
+          }
+
+          // 如果有警告，记录日志
+          if (validationResult.warnings && validationResult.warnings.length > 0) {
+            console.log(`[AgentEngine] 参数校验警告 (${toolCall.function.name}):`, validationResult.warnings);
+          }
+        }
+
+        if (hasValidationError) {
           // 继续对话循环，让 AI 看到错误并修正参数
           continue;
         }
-        
-        console.log("[AgentEngine] 参数校验通过，请求用户确认");
-        
-        // 如果有警告，记录日志
-        if (validationResult.warnings && validationResult.warnings.length > 0) {
-          console.log("[AgentEngine] 参数校验警告:", validationResult.warnings);
-        }
-      }
 
-      // 检查是否需要确认
-      if (funcDef.needsConfirmation) {
-        console.log("[AgentEngine] 需要用户确认");
+        console.log("[AgentEngine] 所有需要确认的 tool calls 参数校验通过，请求用户确认");
 
         // 批量保存：合并多个数据库操作
         await Promise.all([
@@ -662,8 +678,8 @@ export class AgentEngine {
         return;
       }
 
-      // 不需要确认，直接执行
-      console.log("[AgentEngine] 直接执行工具（无需确认）");
+      // 所有 tool calls 都不需要确认，直接执行
+      console.log(`[AgentEngine] 直接执行 ${autoExecuteCalls.length} 个工具（无需确认）`);
 
       // 在执行tool之前保存assistant message（包括tool_calls）
       // 确保刷新页面时能恢复tool_calls
@@ -674,7 +690,10 @@ export class AgentEngine {
         currentReasoning || undefined
       );
 
-      yield* this.executeTool(state, toolCall, funcDef);
+      // 执行所有不需要确认的 tool calls
+      for (const { toolCall, funcDef } of autoExecuteCalls) {
+        yield* this.executeTool(state, toolCall, funcDef!);
+      }
 
         // 继续下一轮迭代
       }
